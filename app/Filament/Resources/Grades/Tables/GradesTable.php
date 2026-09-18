@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Filament\Resources\Grades\Tables;
+
+use App\Filament\Support\WorkspaceTable;
+use App\Models\Grade;
+use App\Models\Section;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
+use Filament\Tables\Table;
+
+class GradesTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                WorkspaceTable::column(),
+                TextColumn::make('student.name')
+                    ->label('Student')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('section.name')
+                    ->label('Section')
+                    ->badge()
+                    ->color('primary')
+                    ->sortable(),
+                TextColumn::make('subject')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('period')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—'),
+                TextColumn::make('score')
+                    ->formatStateUsing(fn ($record) => number_format((float) $record->score, 2).' / '.number_format((float) $record->max_score, 2))
+                    ->sortable()
+                    ->label('Score'),
+                TextColumn::make('percentage')
+                    ->label('%')
+                    ->state(function ($record) {
+                        if ((float) $record->max_score <= 0) {
+                            return 0;
+                        }
+
+                        return round(((float) $record->score / (float) $record->max_score) * 100, 2);
+                    })
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2).'%')
+                    ->color(fn ($state) => match (true) {
+                        (float) $state >= 85 => 'success',
+                        (float) $state >= 70 => 'warning',
+                        default => 'danger',
+                    })
+                    ->badge(),
+                TextColumn::make('recorder.name')
+                    ->label('Recorded by')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->dateTime('M d, Y H:i')
+                    ->label('Updated')
+                    ->sortable(),
+            ])
+            ->groups([
+                Group::make('section.name')
+                    ->label('Section')
+                    ->collapsible(),
+                Group::make('subject')
+                    ->label('Subject')
+                    ->collapsible(),
+                Group::make('student.name')
+                    ->label('Student')
+                    ->collapsible(),
+                Group::make('period')
+                    ->label('Period')
+                    ->collapsible(),
+            ])
+            ->defaultGroup('section.name')
+            ->defaultSort('updated_at', 'desc')
+            ->filters([
+                WorkspaceTable::filter(),
+                SelectFilter::make('section_id')
+                    ->label('Section')
+                    ->options(fn () => Section::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                    )
+                    ->searchable(),
+                SelectFilter::make('subject')
+                    ->options(fn () => Grade::query()
+                        ->select('subject')
+                        ->distinct()
+                        ->orderBy('subject')
+                        ->pluck('subject', 'subject')
+                        ->toArray()),
+            ])
+            ->actions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+}

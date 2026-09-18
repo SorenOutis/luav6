@@ -1,0 +1,98 @@
+<script setup lang="ts">
+import { Head, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import {
+    normalizeJsonLd,
+    resolveCanonicalUrl,
+    resolveOgImage,
+    useSeoConfig,
+} from '@/lib/seo';
+import type { JsonLdObject } from '@/lib/seo';
+
+const props = withDefaults(
+    defineProps<{
+        noindex?: boolean;
+        /** Canonical overrides the auto-derived URL (rarely needed). */
+        canonical?: string;
+        description?: string;
+        ogImage?: string;
+        type?: string;
+        title?: string;
+        jsonld?: JsonLdObject | JsonLdObject[];
+    }>(),
+    {
+        noindex: false,
+        canonical: '',
+        description: '',
+        ogImage: '',
+        type: 'website',
+        title: '',
+        jsonld: () => [],
+    },
+);
+
+const seo = useSeoConfig();
+
+const metaDescription = computed(
+    () => props.description || seo.description || '',
+);
+const robots = computed(() =>
+    props.noindex ? 'noindex, nofollow' : 'index, follow',
+);
+const canonical = computed(
+    () =>
+        props.canonical ||
+        resolveCanonicalUrl(String(usePage().url ?? '/'), seo),
+);
+const image = computed(() => resolveOgImage(props.ogImage, seo));
+const jsonldNodes = computed(() => normalizeJsonLd(props.jsonld));
+const lang = computed(() => seo.locale ?? 'en_US');
+const ogTitle = computed(
+    () =>
+        props.title ||
+        (usePage().props as unknown as { title?: string }).title ||
+        seo.tagline ||
+        seo.siteName ||
+        '',
+);
+</script>
+
+<template>
+    <Head>
+        <link rel="canonical" :href="canonical" />
+        <meta name="robots" :content="robots" />
+        <meta name="description" :content="metaDescription" />
+
+        <meta property="og:type" :content="type" />
+        <meta property="og:site_name" :content="seo.siteName || 'LSI'" />
+        <meta property="og:title" :content="ogTitle" />
+        <meta property="og:description" :content="metaDescription" />
+        <meta property="og:url" :content="canonical" />
+        <meta v-if="image" property="og:image" :content="image" />
+        <meta v-if="image" property="og:image:width" content="1200" />
+        <meta v-if="image" property="og:image:height" content="630" />
+        <meta v-if="image" property="og:image:alt" :content="ogTitle" />
+        <meta property="og:locale" :content="lang" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" :content="ogTitle" />
+        <meta name="twitter:description" :content="metaDescription" />
+        <meta v-if="image" name="twitter:image" :content="image" />
+
+        <!--
+            JSON-LD must be rendered via a dynamic <component> because the Vue
+            SFC compiler ignores literal <script> tags inside templates (they are
+            reserved for the <script setup> block). Inertia's <Head> serializes
+            the resulting script element back into <head> as a real
+            <script type="application/ld+json"> node.
+        -->
+        <component
+            :is="'script'"
+            v-for="block in jsonldNodes"
+            :key="JSON.stringify(block)"
+            type="application/ld+json"
+        >
+            {{ JSON.stringify(block) }}
+        </component>
+    </Head>
+</template>

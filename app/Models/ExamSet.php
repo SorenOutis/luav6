@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Models;
+
+use App\Services\ExamSetAssignmentService;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
+
+/**
+ * One interchangeable version ("Set A", "Set B", …) of an exam.
+ *
+ * A set owns its own parts and questions. Students are handed a set when they
+ * start the exam and keep it for the whole attempt — see
+ * App\Services\ExamSetAssignmentService.
+ */
+class ExamSet extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'exam_id',
+        'title',
+        'sort_order',
+    ];
+
+    protected $casts = [
+        'sort_order' => 'integer',
+    ];
+
+    protected static function booted(): void
+    {
+        // Admin convenience: sets added without a title are named in rotation
+        // order (Set A, Set B, …) instead of being left blank.
+        static::creating(function (ExamSet $set): void {
+            if (blank($set->title)) {
+                $set->title = static::titleForIndex(
+                    (int) static::query()->where('exam_id', $set->exam_id)->count()
+                );
+            }
+
+            if (blank($set->sort_order)) {
+                $set->sort_order = static::nextSortOrder((int) $set->exam_id);
+            }
+        });
+
+        static::saved(function (ExamSet $set): void {
+            Cache::forget("exam_structure_{$set->exam_id}");
+        });
+
+        // A set that has just appeared can only reach students if the ones who
+        // have not started yet are re-dealt: sets are handed out on the first
+        // page view, so a class that merely browsed the exam while it still had
+        // a single set would otherwise stay pinned to that set forever.
+        static::created(function (ExamSet $set): void {
+            $set->redealUnstartedStudents();
+        });
+
+        // Deleting a set cascades to its parts (and their submissions), so the
+        // cached structure has to go too. Students who held it but never
+        // started are re-dealt from whatever is left.
+        static::deleted(function (ExamSet $set): void {
+            Cache::forget("exam_structure_{$set->exam_id}");
+            $set->redealUnstartedStudents();
+        });
+    }
+
+    /**
+     * Re-deal every student of this exam who has not answered anything yet.
+     *
+     * Only meaningful once the exam ships more than one set — a single-set exam
+     * would simply hand the same set back.
+     */
+    public function redealUnstartedStudents(): void
+    {
+        $exam = $this->exam()->first();
+
+        if ($exam === null || $exam->sets()->count() < 2) {
+            return;
+        }
+
+        app(ExamSetAssignmentService::class)->redealUnstarted($exam);
+    }
+
+    public function exam(): BelongsTo
+    {
+        return $this->belongsTo(Exam::class);
+    }
+
+    public function parts(): HasMany
+    {
+        return $this->hasMany(ExamPart::class)->orderBy('sort_order');
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(ExamSetAssignment::class);
+    }
+
+    /**
+     * Human label for a zero-based rotation index: 0 → "Set A", 26 → "Set 27".
+     */
+    public static function titleForIndex(int $index): string
+    {
+        if ($index < 0) {
+            $index = 0;
+        }
+
+        if ($index < 26) {
+            return 'Set '.chr(ord('A') + $index);
+        }
+
+        return 'Set '.($index + 1);
+    }
+
+    public static function nextSortOrder(int $examId): int
+    {
+        return ((int) static::query()->where('exam_id', $examId)->max('sort_order')) + 1;
+    }
+
+    /**
+     * The set that owns any part created without an explicit set.
+     *
+     * Every exam has at least one set, so old write paths (CSV import, AI
+     * drafts, factories) keep working untouched: their parts simply land in the
+     * first set.
+     */
+    public static function ensureDefaultForExam(int $examId): ExamSet
+    {
+        $existing = static::query()
+            ->where('exam_id', $examId)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+
+        return $existing ?? static::query()->create([
+            'exam_id' => $examId,
+            'title' => static::titleForIndex(0),
+            'sort_order' => 0,
+        ]);
+    }
+}

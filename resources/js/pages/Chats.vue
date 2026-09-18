@@ -1,0 +1,2130 @@
+<script setup lang="ts">
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { useFileDialog } from '@vueuse/core';
+import axios from 'axios';
+import {
+    Bot,
+    ChevronDown,
+    FileText,
+    History,
+    Image as ImageIcon,
+    Paperclip,
+    Plus,
+    Send,
+    Sparkles,
+    Square,
+    Trash2,
+    User,
+    X,
+} from 'lucide-vue-next';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
+import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import ChatNavigation from '@/components/ChatNavigation.vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
+import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+} from '@/components/ui/card';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Textarea } from '@/components/ui/textarea';
+import { useMobile } from '@/composables/useMobile';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { resolveChatError, withErrorReference } from '@/lib/chatErrors';
+import { renderMarkdown } from '@/lib/markdown';
+import type { TourStep } from '@/lib/onboarding';
+import { dashboard } from '@/routes';
+import {
+    destroy as chatsDestroy,
+    index as chatsIndex,
+    message as chatsMessage,
+    show as chatsShow,
+    store as chatsStore,
+    stream as chatsStream,
+} from '@/routes/chats';
+import type { BreadcrumbItem } from '@/types';
+import type { PendingAiAction } from '@/types/aiActions';
+
+interface ChatMessage {
+    id?: number;
+    role: 'user' | 'assistant';
+    content: string;
+    attachments?: ChatAttachment[];
+    /** True while the reply is still streaming/typing into this bubble. */
+    typing?: boolean;
+    /** The assistant's reasoning ("thinking") text, if the model emitted it. */
+    thinking?: string;
+    /** Whether the thinking collapsible is currently expanded. */
+    thinkingOpen?: boolean;
+    /** How long the model thought for (seconds), once the reply starts. */
+    thinkingMs?: number;
+    /** Internal: when the first thinking delta arrived (epoch ms). */
+    thinkingStartedAt?: number;
+}
+
+interface ChatAttachment {
+    name: string;
+    size: number;
+    mime: string;
+    kind: 'image' | 'document';
+    file?: File;
+    url?: string;
+}
+
+interface ChatSession {
+    id: number;
+    title: string;
+    messageCount?: number;
+    messages?: ChatMessage[];
+    messagePagination?: {
+        hasMore: boolean;
+        nextBeforeId: number | null;
+    };
+    updatedAt?: string | null;
+    updatedAtHuman?: string;
+}
+
+const props = defineProps<{
+    sessions: ChatSession[];
+    sessionPagination?: {
+        hasMore: boolean;
+        nextCursor: string | null;
+    };
+    activeSession?: ChatSession | null;
+}>();
+
+const page = usePage();
+const { isCoarsePointer } = useMobile();
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: dashboard() },
+    { title: 'Chats', href: chatsIndex().url },
+];
+
+// ─── Onboarding tour ────────────────────────────────────────────────────────
+// Per user + per device (localStorage). Targets exist in both the mobile and
+// desktop layouts (composer, history) — the tour spotlights whichever variant
+// is visible; missing ones (e.g. suggestions on an ongoing chat) are skipped.
+const chatsTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Meet Echo, your AI study buddy',
+        body: 'Ask about assignments, exams or your study progress — Echo knows your school context. Here’s a quick tour.',
+    },
+    {
+        id: 'composer',
+        target: 'chats-composer',
+        title: 'Ask anything',
+        body: 'Type your question here. You can also attach images and documents with the paperclip, or just drag files in.',
+    },
+    {
+        id: 'suggestions',
+        target: 'chats-suggestions',
+        title: 'Quick starters',
+        body: 'Not sure where to begin? Tap a suggestion chip to start a conversation instantly.',
+    },
+    {
+        id: 'history',
+        target: 'chats-history',
+        title: 'Your chat history',
+        body: 'Every conversation is saved. Jump back into a past chat, or start a fresh one with the new-chat button.',
+    },
+];
+
+const branding = computed<{ logoUrl?: string | null; name?: string }>(
+    () =>
+        (page.props.schoolBranding ?? {}) as {
+            logoUrl?: string | null;
+            name?: string;
+        },
+);
+
+const suggestions = computed<{ label: string; message: string }[]>(() => {
+    const fromProps = (
+        page.props.aiChat as {
+            suggestions?: { label: string; message: string }[];
+        }
+    )?.suggestions;
+
+    return fromProps?.length
+        ? fromProps
+        : [
+              {
+                  label: '📋 My Assignments',
+                  message: 'What are my upcoming assignments?',
+              },
+              {
+                  label: '📊 My Progress',
+                  message: 'Show me my learning progress',
+              },
+              { label: '🏆 My Streak', message: "What's my current streak?" },
+              {
+                  label: '📝 Upcoming Exams',
+                  message: 'What exams do I have coming up?',
+              },
+          ];
+});
+
+/* ──────────────── Local state ──────────────── */
+
+const sessions = ref<ChatSession[]>([...(props.sessions ?? [])]);
+const activeSession = ref<ChatSession | null>(
+    props.activeSession ? { ...props.activeSession } : null,
+);
+const messages = ref<ChatMessage[]>(props.activeSession?.messages ?? []);
+const sessionCursor = ref<string | null>(
+    props.sessionPagination?.nextCursor ?? null,
+);
+const hasMoreSessions = ref(props.sessionPagination?.hasMore ?? false);
+const isLoadingSessions = ref(false);
+const hasOlderMessages = ref(
+    props.activeSession?.messagePagination?.hasMore ?? false,
+);
+const nextBeforeMessageId = ref<number | null>(
+    props.activeSession?.messagePagination?.nextBeforeId ?? null,
+);
+const isLoadingOlderMessages = ref(false);
+const isPrependingHistory = ref(false);
+const inputMessage = ref('');
+const isLoading = ref(false);
+const sessionToDelete = ref<ChatSession | null>(null);
+const isCreatingSession = ref(false);
+const isDeletingSession = ref(false);
+const isMobileHistoryOpen = ref(false);
+const aiActions = ref<PendingAiAction[]>([]);
+
+// Abort controller for the in-flight reply, so the user can stop generation.
+let streamAbortController: AbortController | null = null;
+
+const isAbortError = (error: unknown): boolean =>
+    error instanceof DOMException && error.name === 'AbortError';
+
+const stopGenerating = () => {
+    streamAbortController?.abort();
+    streamAbortController = null;
+    isLoading.value = false;
+};
+const scrollContainer = ref<HTMLElement | null>(null);
+const welcomeInputRef = ref<{ $el?: HTMLTextAreaElement | null } | null>(null);
+
+// Attachment drag & drop / picker state
+const attachments = ref<ChatAttachment[]>([]);
+const isDragging = ref(false);
+const dragDepth = ref(0);
+const attachmentError = ref<string | null>(null);
+let attachmentErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+const ALLOWED_MIMES = [
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif',
+    'application/pdf',
+    'text/plain',
+    'text/csv',
+    'text/markdown',
+    'text/html',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+];
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_MESSAGE_CHARACTERS = 8000;
+
+const aiChatEnabled = computed(
+    () => (page.props.aiChat as { enabled?: boolean })?.enabled !== false,
+);
+const maintenanceMessage = computed(
+    () =>
+        (page.props.aiChat as { maintenanceMessage?: string })
+            ?.maintenanceMessage ||
+        'Echo is currently under maintenance. Please try again later.',
+);
+const isAdmin = computed(() =>
+    Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin),
+);
+
+const loadAiActions = async (sessionId = activeSession.value?.id) => {
+    if (!isAdmin.value || !sessionId) {
+        aiActions.value = [];
+        return;
+    }
+
+    try {
+        const response = await axios.get('/api/ai-actions', {
+            params: { session_id: sessionId },
+        });
+        aiActions.value = (response.data.data ?? []) as PendingAiAction[];
+    } catch (error) {
+        console.error('Failed to load AI approval actions:', error);
+    }
+};
+
+const updateAiAction = (updated: PendingAiAction) => {
+    const index = aiActions.value.findIndex(
+        (action) => action.id === updated.id,
+    );
+    if (index === -1) {
+        aiActions.value.unshift(updated);
+    } else {
+        aiActions.value.splice(index, 1, updated);
+    }
+};
+
+const showSuggestions = computed(() => {
+    if (messages.value.length === 0) return true;
+    return !messages.value.some((m) => m.role === 'user');
+});
+
+const currentTitle = computed(() => activeSession.value?.title || 'New chat');
+
+// True whenever the welcome view should be shown — either no conversation is
+// open yet (the Chats index) or the open conversation has no messages.
+const isNewChat = computed(() => messages.value.length === 0);
+
+const firstName = computed(() => {
+    const user = page.props.auth.user;
+    if (user?.first_name) return user.first_name;
+    const fallback = user?.name?.trim().split(/\s+/)[0];
+    return fallback || '';
+});
+
+const timeGreeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    return 'Good evening';
+});
+
+const greetingLine = computed(() =>
+    firstName.value
+        ? `${timeGreeting.value}, ${firstName.value}`
+        : timeGreeting.value,
+);
+
+const activeSubtitle = computed(() => {
+    if (isAdmin.value) return 'Teacher mode — workspace tools enabled';
+    return 'Your intelligent companion';
+});
+
+/* ──────────────── Chat actions ──────────────── */
+
+const scrollToBottom = async () => {
+    await nextTick();
+    const container = scrollContainer.value as
+        | (HTMLElement & { $el?: HTMLElement })
+        | null;
+    const el = container?.$el || container;
+    if (el) {
+        el.scrollTop = el.scrollHeight;
+    }
+};
+
+watch(
+    messages,
+    () => {
+        if (!isPrependingHistory.value) scrollToBottom();
+    },
+    { deep: true },
+);
+
+// Focus the centered input whenever a brand-new chat opens so the user can
+// start typing immediately — except on touch devices (coarse pointer), where
+// auto-focus would pop open the on-screen keyboard as soon as the chat is
+// created. Coarse pointer covers phones in any orientation (landscape phones
+// are wider than the 640px mobile breakpoint) plus tablets.
+watch(
+    isNewChat,
+    async (newChat) => {
+        if (!newChat || !aiChatEnabled.value) return;
+        await nextTick();
+        if (isCoarsePointer.value) return;
+        welcomeInputRef.value?.$el?.focus();
+    },
+    { immediate: true },
+);
+
+const thinkingLabel = (msg: ChatMessage): string => {
+    if (msg.typing && !msg.content) return 'Thinking…';
+    if (msg.thinkingMs) return `Thought for ${msg.thinkingMs}s`;
+    return 'View thinking';
+};
+
+const typeMessage = async (
+    fullText: string,
+    index?: number,
+    signal?: AbortSignal,
+) => {
+    const messageIndex =
+        index ??
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
+
+    let currentText = '';
+    const speed = 8;
+
+    for (let i = 0; i < fullText.length; i++) {
+        if (signal?.aborted) {
+            break;
+        }
+        currentText += fullText[i];
+        messages.value[messageIndex].content = currentText;
+        await new Promise((resolve) => setTimeout(resolve, speed));
+        scrollToBottom();
+    }
+
+    messages.value[messageIndex].typing = false;
+};
+
+const updateSessionInList = (session: ChatSession) => {
+    const enriched: ChatSession = {
+        ...session,
+        messageCount: session.messages?.length ?? session.messageCount,
+        updatedAtHuman: 'Now',
+    };
+
+    const index = sessions.value.findIndex((s) => s.id === session.id);
+
+    if (index !== -1) {
+        sessions.value.splice(index, 1);
+    }
+
+    sessions.value.unshift(enriched);
+};
+
+const useSuggestion = (suggestion: string) => {
+    if (!aiChatEnabled.value) return;
+    inputMessage.value = suggestion;
+    sendMessage();
+};
+
+const handleComposerKeydown = (event: KeyboardEvent) => {
+    if (!aiChatEnabled.value) return;
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+};
+
+/* ──────────────── Attachment helpers ──────────────── */
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const isImageMime = (mime: string): boolean => mime.startsWith('image/');
+
+const showAttachmentError = (message: string) => {
+    attachmentError.value = message;
+    if (attachmentErrorTimer) clearTimeout(attachmentErrorTimer);
+    attachmentErrorTimer = setTimeout(() => {
+        attachmentError.value = null;
+    }, 4000);
+};
+
+const addFiles = (fileList: FileList | File[] | null) => {
+    if (!aiChatEnabled.value || !fileList) return;
+
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+
+    const remaining = MAX_ATTACHMENTS - attachments.value.length;
+    if (remaining <= 0) {
+        showAttachmentError(
+            `You can attach up to ${MAX_ATTACHMENTS} files at once.`,
+        );
+        return;
+    }
+
+    const accepted: ChatAttachment[] = [];
+    let rejected = 0;
+
+    for (const file of files) {
+        if (accepted.length >= remaining) break;
+
+        if (!ALLOWED_MIMES.includes(file.type)) {
+            rejected++;
+            continue;
+        }
+
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+            rejected++;
+            continue;
+        }
+
+        accepted.push({
+            name: file.name,
+            size: file.size,
+            mime: file.type,
+            kind: isImageMime(file.type) ? 'image' : 'document',
+            file,
+            url: isImageMime(file.type) ? URL.createObjectURL(file) : undefined,
+        });
+    }
+
+    if (rejected > 0) {
+        showAttachmentError(
+            'Some files were skipped — images and documents up to 5 MB each.',
+        );
+    }
+
+    if (accepted.length > 0) {
+        attachments.value.push(...accepted);
+    }
+};
+
+const removeAttachment = (index: number) => {
+    const removed = attachments.value[index];
+    if (removed?.url && removed?.file) {
+        URL.revokeObjectURL(removed.url);
+    }
+    attachments.value.splice(index, 1);
+};
+
+const { open: openFileDialog, onChange: onFilesChanged } = useFileDialog({
+    accept: ALLOWED_MIMES.join(','),
+    multiple: true,
+});
+
+onFilesChanged((files) => addFiles(files));
+
+// Drag & drop state (depth counter handles nested dragenter/leave events)
+const onDragEnter = (event: DragEvent) => {
+    if (!aiChatEnabled.value || !event.dataTransfer?.types.includes('Files'))
+        return;
+    event.preventDefault();
+    dragDepth.value++;
+    isDragging.value = true;
+};
+
+const onDragOver = (event: DragEvent) => {
+    if (!aiChatEnabled.value || !event.dataTransfer?.types.includes('Files'))
+        return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+};
+
+const onDragLeave = (event: DragEvent) => {
+    event.preventDefault();
+    dragDepth.value = Math.max(0, dragDepth.value - 1);
+    if (dragDepth.value === 0) isDragging.value = false;
+};
+
+const onDrop = (event: DragEvent) => {
+    if (!aiChatEnabled.value) return;
+    event.preventDefault();
+    dragDepth.value = 0;
+    isDragging.value = false;
+    addFiles(event.dataTransfer?.files ?? null);
+};
+
+/* ──────────────── Streaming helpers ──────────────── */
+
+const getXsrfToken = (): string | null => {
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+};
+
+const normalizeMessages = (incoming: ChatMessage[]): ChatMessage[] => {
+    return incoming.map((msg) => ({
+        ...msg,
+        attachments: Array.isArray(msg.attachments)
+            ? msg.attachments.map((att) => ({
+                  name: att.name,
+                  size: att.size,
+                  mime: att.mime,
+                  kind: att.kind === 'image' ? 'image' : 'document',
+              }))
+            : undefined,
+        thinking: msg.thinking || undefined,
+        thinkingMs: msg.thinkingMs,
+        thinkingOpen: false,
+    }));
+};
+
+const loadOlderSessions = async () => {
+    if (!hasMoreSessions.value || isLoadingSessions.value) return;
+
+    isLoadingSessions.value = true;
+    try {
+        const response = await axios.get('/api/chats', {
+            params: { cursor: sessionCursor.value },
+        });
+        const incoming = (response.data.data ?? []) as ChatSession[];
+        const known = new Set(sessions.value.map((session) => session.id));
+        sessions.value.push(
+            ...incoming.filter((session) => !known.has(session.id)),
+        );
+        sessionCursor.value = response.data.meta?.nextCursor ?? null;
+        hasMoreSessions.value = Boolean(response.data.meta?.hasMore);
+    } catch (error) {
+        console.error('Failed to load older chats:', error);
+    } finally {
+        isLoadingSessions.value = false;
+    }
+};
+
+const loadOlderMessages = async () => {
+    if (
+        !activeSession.value ||
+        !hasOlderMessages.value ||
+        !nextBeforeMessageId.value ||
+        isLoadingOlderMessages.value
+    ) {
+        return;
+    }
+
+    const container = scrollContainer.value as
+        | (HTMLElement & { $el?: HTMLElement })
+        | null;
+    const element = container?.$el || container;
+    const previousHeight = element?.scrollHeight ?? 0;
+
+    isLoadingOlderMessages.value = true;
+    isPrependingHistory.value = true;
+    try {
+        const response = await axios.get(
+            `/api/chats/${activeSession.value.id}/messages`,
+            { params: { before_id: nextBeforeMessageId.value } },
+        );
+        const incoming = normalizeMessages(response.data.data ?? []);
+        const known = new Set(messages.value.map((message) => message.id));
+        messages.value.unshift(
+            ...incoming.filter(
+                (message) => message.id === undefined || !known.has(message.id),
+            ),
+        );
+        hasOlderMessages.value = Boolean(response.data.meta?.hasMore);
+        nextBeforeMessageId.value = response.data.meta?.nextBeforeId ?? null;
+
+        await nextTick();
+        if (element) {
+            element.scrollTop += element.scrollHeight - previousHeight;
+        }
+    } catch (error) {
+        console.error('Failed to load earlier messages:', error);
+    } finally {
+        isPrependingHistory.value = false;
+        isLoadingOlderMessages.value = false;
+    }
+};
+
+const sendMessageNonStreaming = async (userMessage: string) => {
+    const messageIndex =
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
+
+    const controller = new AbortController();
+    streamAbortController = controller;
+
+    try {
+        const response = await axios.post(
+            chatsMessage({ session: activeSession.value!.id }).url,
+            {
+                message: userMessage,
+            },
+            { signal: controller.signal },
+        );
+
+        const aiResponse = response.data.response as string;
+        await typeMessage(aiResponse, messageIndex, controller.signal);
+
+        if (controller.signal.aborted) {
+            // User stopped the reply — keep the partial text as-is.
+            return;
+        }
+
+        const updatedSession = response.data.session as ChatSession;
+        if (updatedSession) {
+            activeSession.value = { ...updatedSession };
+            messages.value = normalizeMessages(updatedSession.messages ?? []);
+            hasOlderMessages.value = Boolean(
+                updatedSession.messagePagination?.hasMore,
+            );
+            nextBeforeMessageId.value =
+                updatedSession.messagePagination?.nextBeforeId ?? null;
+            updateSessionInList(updatedSession);
+        }
+    } catch (error) {
+        const aborted =
+            isAbortError(error) ||
+            (error as { code?: string })?.code === 'ERR_CANCELED';
+
+        if (aborted) {
+            // User pressed stop — keep whatever typed so far (or drop the
+            // placeholder if nothing arrived yet).
+            const content = messages.value[messageIndex].content;
+            if (!content) {
+                messages.value.splice(messageIndex, 1);
+            } else {
+                messages.value[messageIndex].typing = false;
+            }
+            return;
+        }
+
+        messages.value.splice(messageIndex, 1);
+        const resolved = resolveChatError(error);
+        console.error('Chat error:', {
+            reference: resolved.reference,
+            detail: resolved.detail,
+            cause: resolved.cause,
+        });
+        await typeMessage(
+            withErrorReference(resolved.message, resolved.reference),
+            undefined,
+            controller.signal,
+        );
+    } finally {
+        isLoading.value = false;
+        if (streamAbortController === controller) {
+            streamAbortController = null;
+        }
+    }
+};
+
+const streamMessage = async (
+    userMessage: string,
+    sessionIdValue: number,
+    userAttachments: ChatAttachment[],
+) => {
+    // Show Echo's bubble (with typing dots) up front so the reply streams into
+    // a single bubble instead of a separate loading indicator in between.
+    const assistantIndex =
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
+
+    const controller = new AbortController();
+    streamAbortController = controller;
+
+    try {
+        const formData = new FormData();
+        formData.append('message', userMessage);
+        for (const attachment of userAttachments) {
+            if (attachment.file) {
+                formData.append(
+                    'attachments[]',
+                    attachment.file,
+                    attachment.name,
+                );
+            }
+        }
+
+        const headers: HeadersInit = {};
+        const xsrf = getXsrfToken();
+        if (xsrf) headers['X-XSRF-TOKEN'] = xsrf;
+
+        const response = await fetch(
+            chatsStream({ session: sessionIdValue }).url,
+            {
+                method: 'POST',
+                headers,
+                body: formData,
+                credentials: 'same-origin',
+                signal: controller.signal,
+            },
+        );
+
+        if (!response.ok) {
+            let streamErrorData: unknown;
+            try {
+                streamErrorData = await response.json();
+            } catch {
+                // Non-JSON error body — fall through with undefined data.
+            }
+            const streamError = new Error(
+                `Stream request failed with status ${response.status}`,
+            ) as Error & { response?: { status: number; data?: unknown } };
+            streamError.response = {
+                status: response.status,
+                data: streamErrorData,
+            };
+            throw streamError;
+        }
+
+        const contentType = response.headers.get('content-type') ?? '';
+        if (!contentType.includes('text/event-stream')) {
+            throw new Error('Streaming is not available right now.');
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Streaming is not supported by this browser.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let assistantText = '';
+
+        try {
+            let streamDone = false;
+
+            while (!streamDone) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                let boundary;
+                while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+                    const chunk = buffer.slice(0, boundary);
+                    buffer = buffer.slice(boundary + 2);
+
+                    const line = chunk
+                        .split('\n')
+                        .find((l) => l.startsWith('data: '));
+
+                    if (!line) continue;
+
+                    const payload = line.slice(6);
+                    if (payload === '[DONE]') {
+                        streamDone = true;
+                        break;
+                    }
+
+                    try {
+                        const event = JSON.parse(payload);
+                        const target = messages.value[assistantIndex];
+
+                        if (event.type === 'reasoning_delta' && event.delta) {
+                            // The model is thinking — stream its reasoning
+                            // into the collapsible above the reply bubble.
+                            if (!target.thinking) {
+                                target.thinking = '';
+                                target.thinkingOpen = true;
+                                target.thinkingStartedAt = Date.now();
+                            }
+                            target.thinking += event.delta;
+                            scrollToBottom();
+                        } else if (event.type === 'text_delta' && event.delta) {
+                            // The answer started — freeze the thinking timer
+                            // and collapse the reasoning out of the way.
+                            if (
+                                target.thinkingStartedAt &&
+                                !target.thinkingMs
+                            ) {
+                                target.thinkingMs = Math.max(
+                                    1,
+                                    Math.round(
+                                        (Date.now() -
+                                            target.thinkingStartedAt) /
+                                            1000,
+                                    ),
+                                );
+                                target.thinkingOpen = false;
+                            }
+                            assistantText += event.delta;
+                            target.content = assistantText;
+                            scrollToBottom();
+                        }
+                    } catch {
+                        // Ignore malformed frames.
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+
+        if (!assistantText) {
+            // The stream ended without any content. Instead of silently
+            // removing the placeholder (which made Echo's reply appear to
+            // never arrive), type a soft error into the same bubble.
+            await typeMessage(
+                'Sorry, something went wrong. Please try again in a moment.',
+                assistantIndex,
+            );
+        } else {
+            messages.value[assistantIndex].typing = false;
+        }
+
+        return assistantText;
+    } catch (error) {
+        if (isAbortError(error)) {
+            // User pressed stop — keep whatever streamed so far (or drop the
+            // placeholder if neither answer nor thinking arrived yet).
+            const target = messages.value[assistantIndex];
+            if (!target.content && !target.thinking) {
+                messages.value.splice(assistantIndex, 1);
+            } else {
+                target.typing = false;
+            }
+            return target.content;
+        }
+        // Remove the placeholder bubble so the non-streaming fallback can
+        // present the reply cleanly instead of leaving an empty bubble stuck.
+        messages.value.splice(assistantIndex, 1);
+        throw error;
+    } finally {
+        if (streamAbortController === controller) {
+            streamAbortController = null;
+        }
+    }
+};
+
+const truncateTitle = (text: string, length = 60): string =>
+    text.length > length ? `${text.slice(0, length).trimEnd()}…` : text;
+
+const sendMessage = async () => {
+    if (!aiChatEnabled.value || !inputMessage.value.trim() || isLoading.value)
+        return;
+    // Claim the loading state up front — session creation below is async, and
+    // without this a quick double-Enter could create two sessions.
+    isLoading.value = true;
+
+    // Sending from the welcome view with no open conversation — create the
+    // persisted session first so the first message lands somewhere.
+    if (!activeSession.value) {
+        try {
+            const response = await axios.post(chatsStore().url);
+            const created = response.data.session as { id: number };
+            activeSession.value = {
+                id: created.id,
+                title: 'New chat',
+                messages: [],
+            };
+        } catch (error) {
+            console.error('Failed to create a new chat:', error);
+            isLoading.value = false;
+            return;
+        }
+    }
+
+    const userMessage = inputMessage.value.trim();
+    const sessionId = activeSession.value.id;
+    const userAttachments = [...attachments.value];
+
+    // Mirror the server's auto-titling (first user message) so the header and
+    // sidebar reflect the real title immediately instead of "New chat".
+    if (
+        !activeSession.value.title ||
+        activeSession.value.title === 'New chat'
+    ) {
+        activeSession.value = {
+            ...activeSession.value,
+            title: truncateTitle(userMessage),
+        };
+        updateSessionInList({
+            ...activeSession.value,
+            messages: [
+                ...messages.value,
+                { role: 'user', content: userMessage },
+            ],
+        });
+    }
+
+    messages.value.push({
+        role: 'user',
+        content: userMessage,
+        attachments: userAttachments.length > 0 ? userAttachments : undefined,
+    });
+    inputMessage.value = '';
+    attachments.value = [];
+    await scrollToBottom();
+
+    try {
+        // Try streaming first; fall back to the classic JSON endpoint.
+        await streamMessage(userMessage, sessionId, userAttachments);
+    } catch (error) {
+        const resolved = resolveChatError(error);
+        console.warn('Streaming failed, falling back to non-streaming:', {
+            reference: resolved.reference,
+            detail: resolved.detail,
+            cause: resolved.cause,
+        });
+        await sendMessageNonStreaming(userMessage);
+    } finally {
+        isLoading.value = false;
+        await loadAiActions(sessionId);
+        await scrollToBottom();
+    }
+};
+
+const createNewChat = async () => {
+    if (!aiChatEnabled.value || isLoading.value || isCreatingSession.value)
+        return;
+
+    isCreatingSession.value = true;
+
+    try {
+        const response = await axios.post(chatsStore().url);
+        const sessionId = (response.data.session as { id: number }).id;
+        router.visit(chatsShow({ session: sessionId }).url, {
+            preserveScroll: true,
+        });
+    } catch (error) {
+        console.error('Failed to create a new chat:', error);
+    } finally {
+        isCreatingSession.value = false;
+    }
+};
+
+const openDeleteModal = (session: ChatSession) => {
+    sessionToDelete.value = session;
+};
+
+const confirmDelete = async () => {
+    if (!sessionToDelete.value || isDeletingSession.value) return;
+
+    const target = sessionToDelete.value;
+    const wasActive = activeSession.value?.id === target.id;
+    isDeletingSession.value = true;
+
+    try {
+        await axios.delete(chatsDestroy({ session: target.id }).url);
+
+        sessions.value = sessions.value.filter((s) => s.id !== target.id);
+        sessionToDelete.value = null;
+
+        if (wasActive) {
+            router.visit(chatsIndex().url, { preserveScroll: true });
+        }
+    } catch (error) {
+        console.error('Failed to delete chat:', error);
+    } finally {
+        isDeletingSession.value = false;
+    }
+};
+
+/* ──────────────── Lifecycle ──────────────── */
+
+onMounted(() => {
+    if (messages.value.length === 0) {
+        scrollToBottom();
+    }
+    loadAiActions();
+});
+
+watch(
+    () => activeSession.value?.id,
+    (sessionId) => loadAiActions(sessionId),
+);
+
+onBeforeUnmount(() => {
+    if (attachmentErrorTimer) clearTimeout(attachmentErrorTimer);
+    attachments.value.forEach((att) => {
+        if (att.url) URL.revokeObjectURL(att.url);
+    });
+});
+</script>
+
+<template>
+    <Head title="Chats" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <template #chat-navigation>
+            <ChatNavigation
+                data-tour="chats-history"
+                :sessions="sessions"
+                :active-session-id="activeSession?.id"
+                :creating="isCreatingSession || !aiChatEnabled"
+                :has-more="hasMoreSessions"
+                :loading-more="isLoadingSessions"
+                @create="createNewChat"
+                @delete="openDeleteModal"
+                @load-more="loadOlderSessions"
+            />
+        </template>
+
+        <div
+            class="mobile-ui-page flex h-[calc(100dvh-7.25rem)] min-h-0 w-full md:h-[calc(100dvh-4.5rem)]"
+        >
+            <!-- ─── Chat Pane ─── -->
+            <Card
+                data-testid="chat-workspace"
+                class="relative min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-none border-0 py-0 shadow-none md:rounded-xl md:border md:border-border/40"
+                @dragenter="onDragEnter"
+                @dragover="onDragOver"
+                @dragleave="onDragLeave"
+                @drop="onDrop"
+            >
+                <!-- Drop overlay shown while dragging files over the chat -->
+                <transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0"
+                    enter-to-class="opacity-100"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
+                >
+                    <div
+                        v-if="isDragging"
+                        class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center border-2 border-dashed border-primary/60 bg-background/80 p-4 backdrop-blur-sm"
+                    >
+                        <div
+                            class="flex flex-col items-center gap-2 rounded-2xl border border-primary/20 bg-card/90 px-6 py-5 text-center shadow-lg"
+                        >
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
+                            >
+                                <Paperclip class="h-5 w-5 text-primary" />
+                            </div>
+                            <p class="text-xs font-semibold text-foreground">
+                                Drop files to attach
+                            </p>
+                            <p class="text-[10px] text-muted-foreground">
+                                Images &amp; documents up to 5 MB
+                            </p>
+                        </div>
+                    </div>
+                </transition>
+
+                <CardHeader
+                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 px-3 py-2 md:py-3 md:pr-3 md:pl-4"
+                >
+                    <div class="flex min-w-0 items-center gap-2">
+                        <div
+                            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10"
+                        >
+                            <img
+                                v-if="branding.logoUrl"
+                                :src="branding.logoUrl"
+                                alt="Echo"
+                                class="h-5 w-5 object-contain"
+                            />
+                            <AppLogoIcon v-else class="h-4 w-4 text-primary" />
+                        </div>
+                        <div class="min-w-0">
+                            <h1
+                                class="truncate text-sm font-bold tracking-tight"
+                            >
+                                {{ currentTitle }}
+                            </h1>
+                            <p
+                                class="truncate text-[11px] text-muted-foreground"
+                            >
+                                {{ activeSubtitle }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1 md:hidden">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="h-9 w-9 rounded-xl"
+                            title="New chat"
+                            :disabled="
+                                !aiChatEnabled || isCreatingSession || isLoading
+                            "
+                            @click="createNewChat"
+                        >
+                            <Plus class="h-4 w-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="h-9 w-9 rounded-xl"
+                            title="Chat history"
+                            aria-haspopup="dialog"
+                            data-tour="chats-history"
+                            :aria-expanded="isMobileHistoryOpen"
+                            @click="isMobileHistoryOpen = true"
+                        >
+                            <History class="h-4 w-4" />
+                        </Button>
+                    </div>
+                </CardHeader>
+
+                <CardContent
+                    ref="scrollContainer"
+                    class="min-h-0 flex-1 scrollbar-thin space-y-3 overflow-y-auto p-3 sm:p-4"
+                >
+                    <div
+                        v-if="!isNewChat && hasOlderMessages"
+                        class="flex justify-center pb-1"
+                    >
+                        <button
+                            type="button"
+                            class="rounded-full border border-border/60 bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            :disabled="isLoadingOlderMessages"
+                            @click="loadOlderMessages"
+                        >
+                            {{
+                                isLoadingOlderMessages
+                                    ? 'Loading earlier messages…'
+                                    : 'Load earlier messages'
+                            }}
+                        </button>
+                    </div>
+
+                    <template v-if="isNewChat">
+                        <!-- The inner wrapper centers itself with auto margins,
+                             so the welcome content can't be clipped at the top
+                             on short viewports (unlike justify-center). -->
+                        <div
+                            class="flex h-full flex-col items-center px-3 py-4 text-center sm:px-4 sm:py-8"
+                        >
+                            <div
+                                class="m-auto flex w-full max-w-xl flex-col items-center"
+                            >
+                                <!-- System logo -->
+                                <div
+                                    class="welcome-logo mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 shadow-lg ring-1 shadow-primary/10 ring-primary/20 sm:mb-6 sm:h-20 sm:w-20 sm:rounded-3xl"
+                                >
+                                    <img
+                                        v-if="branding.logoUrl"
+                                        :src="branding.logoUrl"
+                                        alt="Echo"
+                                        class="h-8 w-8 object-contain sm:h-12 sm:w-12"
+                                    />
+                                    <AppLogoIcon
+                                        v-else
+                                        class="h-7 w-7 text-primary sm:h-10 sm:w-10"
+                                    />
+                                </div>
+
+                                <!-- Greeting -->
+                                <div class="welcome-greeting">
+                                    <p
+                                        class="text-xs font-medium tracking-wide text-primary sm:text-sm"
+                                    >
+                                        {{ greetingLine }}
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-bold tracking-tight text-foreground sm:mt-1.5 sm:text-3xl"
+                                    >
+                                        How can I help you today?
+                                    </h2>
+                                </div>
+
+                                <!-- Centered input -->
+                                <form
+                                    v-if="aiChatEnabled"
+                                    data-tour="chats-composer"
+                                    class="welcome-input mt-5 w-full max-w-xl sm:mt-8"
+                                    @submit.prevent="sendMessage"
+                                >
+                                    <div
+                                        v-if="attachmentError"
+                                        class="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive"
+                                    >
+                                        {{ attachmentError }}
+                                    </div>
+                                    <div
+                                        v-if="attachments.length > 0"
+                                        class="mb-3 flex flex-wrap gap-2 text-left"
+                                    >
+                                        <div
+                                            v-for="(att, index) in attachments"
+                                            :key="att.name + index"
+                                            class="group flex max-w-[220px] items-center gap-2 rounded-xl border border-border/50 bg-background/80 p-1.5 shadow-xs"
+                                        >
+                                            <img
+                                                v-if="
+                                                    att.kind === 'image' &&
+                                                    att.url
+                                                "
+                                                :src="att.url"
+                                                :alt="att.name"
+                                                class="h-10 w-10 shrink-0 rounded-lg object-cover"
+                                            />
+                                            <div
+                                                v-else
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                            >
+                                                <FileText class="h-4 w-4" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p
+                                                    class="truncate text-xs font-medium text-foreground"
+                                                >
+                                                    {{ att.name }}
+                                                </p>
+                                                <p
+                                                    class="text-[10px] text-muted-foreground"
+                                                >
+                                                    {{
+                                                        formatFileSize(att.size)
+                                                    }}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                                :aria-label="`Remove ${att.name}`"
+                                                @click="removeAttachment(index)"
+                                            >
+                                                <X class="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="group relative">
+                                        <Textarea
+                                            ref="welcomeInputRef"
+                                            v-model="inputMessage"
+                                            placeholder="Ask about assignments, exams, or your study progress..."
+                                            :maxlength="MAX_MESSAGE_CHARACTERS"
+                                            class="min-h-[56px] resize-none rounded-2xl border-border/40 bg-background/70 py-3 pr-12 pl-12 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30 sm:min-h-[72px] sm:py-3.5 sm:pr-14 sm:pl-14"
+                                            @keydown="handleComposerKeydown"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            class="absolute bottom-2.5 left-2.5 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+                                            title="Attach files"
+                                            :disabled="isLoading"
+                                            @click="openFileDialog"
+                                        >
+                                            <Paperclip class="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            size="icon"
+                                            class="absolute right-2.5 bottom-2.5 h-9 w-9 rounded-xl shadow-md transition-transform duration-200 group-focus-within:scale-105"
+                                            :disabled="
+                                                !inputMessage.trim() ||
+                                                isLoading
+                                            "
+                                        >
+                                            <Send class="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <p
+                                        class="mt-3 text-[11px] text-muted-foreground/60"
+                                    >
+                                        Drag in files or use the paperclip. Echo
+                                        can make mistakes — double-check
+                                        important answers.
+                                    </p>
+                                </form>
+                                <div
+                                    v-else
+                                    data-testid="chat-maintenance-message"
+                                    class="welcome-input mt-5 w-full max-w-xl rounded-2xl border border-dashed border-border/60 bg-muted/30 px-5 py-4 text-sm leading-relaxed text-muted-foreground sm:mt-8"
+                                    role="status"
+                                >
+                                    {{ maintenanceMessage }}
+                                </div>
+
+                                <!-- Suggestions -->
+                                <div
+                                    v-if="aiChatEnabled"
+                                    data-tour="chats-suggestions"
+                                    class="welcome-suggestions mt-4 flex flex-wrap justify-center gap-1.5 sm:mt-6"
+                                >
+                                    <button
+                                        v-for="(chip, i) in suggestions"
+                                        :key="i"
+                                        @click="useSuggestion(chip.message)"
+                                        class="cursor-pointer rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-95"
+                                    >
+                                        {{ chip.label }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <!-- Keyed by index (not id): chat messages only ever
+                             append, and the non-streaming fallback replaces
+                             the locally-pushed messages with persisted server
+                             messages after each reply. A stable index key keeps
+                             the same DOM node, so bubbles don't replay their
+                             entrance animation when the server data arrives. -->
+                        <div
+                            v-for="(msg, index) in messages"
+                            :key="index"
+                            class="message-enter flex w-full max-w-[88%] gap-2"
+                            :class="[
+                                msg.role === 'user'
+                                    ? 'message-enter-user ml-auto flex-row-reverse'
+                                    : 'message-enter-assistant',
+                            ]"
+                        >
+                            <div
+                                :class="[
+                                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-xs',
+                                    msg.role === 'user'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'overflow-hidden border border-border/60 bg-muted/80',
+                                ]"
+                            >
+                                <User
+                                    v-if="msg.role === 'user'"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <img
+                                    v-else-if="branding.logoUrl"
+                                    :src="branding.logoUrl"
+                                    alt="Echo"
+                                    class="h-full w-full object-contain p-1"
+                                />
+                                <Bot v-else class="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div
+                                v-if="msg.role === 'user'"
+                                :class="[
+                                    'rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-xs',
+                                    'rounded-tr-sm bg-primary text-primary-foreground',
+                                ]"
+                            >
+                                <div
+                                    v-if="msg.attachments?.length"
+                                    class="mb-1.5 flex flex-wrap gap-1"
+                                >
+                                    <div
+                                        v-for="(
+                                            att, attIndex
+                                        ) in msg.attachments"
+                                        :key="attIndex"
+                                        class="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-1.5 py-0.5"
+                                    >
+                                        <img
+                                            v-if="
+                                                att.kind === 'image' && att.url
+                                            "
+                                            :src="att.url"
+                                            :alt="att.name"
+                                            class="h-4 w-4 rounded object-cover"
+                                        />
+                                        <FileText
+                                            v-else-if="att.kind === 'document'"
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <ImageIcon
+                                            v-else
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <span
+                                            class="max-w-[100px] truncate text-[10px] font-medium"
+                                        >
+                                            {{ att.name }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {{ msg.content }}
+                            </div>
+                            <!-- Assistant side (chained to the user-bubble
+                                 v-if above — user messages must NEVER fall
+                                 through here): an optional thinking
+                                 collapsible stacked above the reply bubble. -->
+                            <div
+                                v-else
+                                class="flex min-w-0 flex-1 flex-col items-start gap-1.5"
+                            >
+                                <Collapsible
+                                    v-if="msg.thinking"
+                                    v-model:open="msg.thinkingOpen"
+                                    class="w-full"
+                                >
+                                    <CollapsibleTrigger
+                                        class="flex cursor-pointer items-center gap-1.5 rounded-md py-0.5 pr-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        <Sparkles
+                                            class="h-3 w-3 shrink-0 text-primary/70"
+                                            :class="{
+                                                'animate-pulse':
+                                                    msg.typing && !msg.content,
+                                            }"
+                                        />
+                                        <span>{{ thinkingLabel(msg) }}</span>
+                                        <ChevronDown
+                                            class="h-3 w-3 shrink-0 transition-transform duration-200"
+                                            :class="{
+                                                'rotate-180': msg.thinkingOpen,
+                                            }"
+                                        />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <!-- flex-col-reverse keeps the scroll
+                                             pinned to the newest reasoning
+                                             lines while they stream in. -->
+                                        <div
+                                            class="flex max-h-44 scrollbar-thin flex-col-reverse overflow-y-auto border-l-2 border-border/60 pl-2.5"
+                                        >
+                                            <div
+                                                class="text-[11px] leading-relaxed whitespace-pre-wrap text-muted-foreground/90"
+                                            >
+                                                {{ msg.thinking }}
+                                            </div>
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                <div
+                                    v-if="
+                                        msg.typing &&
+                                        !msg.content &&
+                                        !msg.thinking
+                                    "
+                                    class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 shadow-xs"
+                                >
+                                    <div class="flex items-center gap-1.5">
+                                        <span
+                                            class="text-[11px] font-medium text-muted-foreground/80"
+                                            >Thinking</span
+                                        >
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 150ms"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 300ms"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <span
+                                    v-else-if="msg.typing && msg.content"
+                                    class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground shadow-xs"
+                                    >{{ msg.content }}</span
+                                >
+                                <div
+                                    v-else-if="msg.content"
+                                    class="chat-markdown max-w-full rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground shadow-xs"
+                                    v-html="renderMarkdown(msg.content)"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="isAdmin && aiActions.length > 0"
+                            class="message-enter ml-9 flex max-w-3xl flex-col gap-3"
+                        >
+                            <AiActionApprovalCard
+                                v-for="action in aiActions"
+                                :key="action.id"
+                                :action="action"
+                                @updated="updateAiAction"
+                            />
+                        </div>
+
+                        <div
+                            v-if="showSuggestions"
+                            class="message-enter flex flex-wrap gap-1.5"
+                        >
+                            <button
+                                v-for="(chip, i) in suggestions"
+                                :key="i"
+                                @click="useSuggestion(chip.message)"
+                                class="cursor-pointer rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-95"
+                            >
+                                {{ chip.label }}
+                            </button>
+                        </div>
+                    </template>
+                </CardContent>
+
+                <CardFooter
+                    v-if="!isNewChat"
+                    class="border-t border-border/40 bg-muted/20 px-2 py-2 pt-2 sm:p-3 sm:pt-3"
+                >
+                    <!-- Attachment validation error -->
+                    <transition
+                        enter-active-class="transition duration-300 ease-out"
+                        enter-from-class="translate-y-2 opacity-0"
+                        enter-to-class="translate-y-0 opacity-100"
+                        leave-active-class="transition duration-200 ease-in"
+                        leave-from-class="translate-y-0 opacity-100"
+                        leave-to-class="translate-y-2 opacity-0"
+                    >
+                        <div
+                            v-if="aiChatEnabled && attachmentError"
+                            class="w-full rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[11px] text-red-700/80 dark:text-red-300/70"
+                        >
+                            ⚠ {{ attachmentError }}
+                        </div>
+                    </transition>
+
+                    <form
+                        v-if="aiChatEnabled"
+                        data-tour="chats-composer"
+                        class="flex w-full flex-col items-stretch gap-1.5"
+                        @submit.prevent="sendMessage"
+                    >
+                        <!-- Attached files -->
+                        <div
+                            v-if="attachments.length > 0"
+                            class="flex flex-wrap gap-1.5"
+                        >
+                            <div
+                                v-for="(att, index) in attachments"
+                                :key="att.name + index"
+                                class="group flex max-w-[240px] items-center gap-1.5 rounded-lg border border-border/50 bg-background/70 py-1 pr-1 pl-1.5"
+                            >
+                                <img
+                                    v-if="att.kind === 'image' && att.url"
+                                    :src="att.url"
+                                    :alt="att.name"
+                                    class="h-6 w-6 shrink-0 rounded object-cover"
+                                />
+                                <div
+                                    v-else
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary/10 text-primary"
+                                >
+                                    <FileText class="h-3.5 w-3.5" />
+                                </div>
+                                <div class="min-w-0">
+                                    <p
+                                        class="max-w-[130px] truncate text-[10px] leading-tight font-medium text-foreground"
+                                    >
+                                        {{ att.name }}
+                                    </p>
+                                    <p
+                                        class="text-[9px] leading-tight text-muted-foreground"
+                                    >
+                                        {{ formatFileSize(att.size) }}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
+                                    :aria-label="`Remove ${att.name}`"
+                                    @click="removeAttachment(index)"
+                                >
+                                    <X class="h-3 w-3" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Textarea row -->
+                        <div class="flex w-full items-end gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                class="h-10 w-10 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+                                title="Attach a file"
+                                :disabled="isLoading"
+                                @click="openFileDialog"
+                            >
+                                <Paperclip class="h-4 w-4" />
+                            </Button>
+                            <Textarea
+                                v-model="inputMessage"
+                                placeholder="Continue the conversation... (drag & drop files)"
+                                :maxlength="MAX_MESSAGE_CHARACTERS"
+                                class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30"
+                                @keydown="handleComposerKeydown"
+                            />
+                            <Button
+                                v-if="isLoading"
+                                type="button"
+                                size="icon"
+                                class="h-10 w-10 shrink-0 rounded-xl shadow-md"
+                                title="Stop generating"
+                                aria-label="Stop generating"
+                                @click="stopGenerating"
+                            >
+                                <Square class="h-4 w-4" />
+                            </Button>
+                            <Button
+                                v-else
+                                type="submit"
+                                size="icon"
+                                class="h-10 w-10 shrink-0 rounded-xl shadow-md"
+                                :disabled="!inputMessage.trim() || isLoading"
+                            >
+                                <Send class="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </form>
+                    <div
+                        v-else
+                        data-testid="chat-maintenance-message"
+                        class="w-full rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-3 text-center text-xs leading-relaxed text-muted-foreground"
+                        role="status"
+                    >
+                        {{ maintenanceMessage }}
+                    </div>
+                </CardFooter>
+            </Card>
+        </div>
+
+        <!-- ─── Mobile chat history ─── -->
+        <MobileBottomSheet
+            :open="isMobileHistoryOpen"
+            title="Chats"
+            @close="isMobileHistoryOpen = false"
+        >
+            <div class="sheet-section px-1 pb-1">
+                <button
+                    type="button"
+                    class="sheet-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all hover:bg-muted/50 active:scale-[0.98]"
+                    :disabled="!aiChatEnabled || isCreatingSession || isLoading"
+                    @click="
+                        isMobileHistoryOpen = false;
+                        createNewChat();
+                    "
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Plus class="h-4 w-4" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-foreground">
+                            New chat
+                        </p>
+                        <p class="text-[11px] text-muted-foreground">
+                            Start a fresh conversation
+                        </p>
+                    </div>
+                </button>
+            </div>
+
+            <div class="sheet-section mx-3 my-2 h-px bg-border/60" />
+
+            <div class="sheet-section space-y-0.5 px-1 pb-2">
+                <MascotEmptyState
+                    v-if="sessions.length === 0"
+                    mascot="chat"
+                    :size="120"
+                    bare
+                    title="No conversations yet"
+                    description="Start a chat with Echo and it will appear here."
+                />
+                <div
+                    v-for="session in sessions"
+                    :key="session.id"
+                    class="sheet-item flex items-center gap-1"
+                >
+                    <Link
+                        :href="chatsShow({ session: session.id }).url"
+                        class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
+                        :class="
+                            activeSession?.id === session.id
+                                ? 'bg-muted/60'
+                                : ''
+                        "
+                        @click="isMobileHistoryOpen = false"
+                    >
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground"
+                        >
+                            <Bot class="h-4 w-4" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-semibold">
+                                {{ session.title }}
+                            </p>
+                            <p class="text-[11px] text-muted-foreground">
+                                {{ session.updatedAtHuman || 'Recent' }}
+                                <span v-if="session.messageCount">
+                                    · {{ session.messageCount }}
+                                </span>
+                            </p>
+                        </div>
+                    </Link>
+                    <button
+                        type="button"
+                        class="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        :aria-label="`Delete ${session.title}`"
+                        @click="
+                            isMobileHistoryOpen = false;
+                            openDeleteModal(session);
+                        "
+                    >
+                        <Trash2 class="h-4 w-4" />
+                    </button>
+                </div>
+                <button
+                    v-if="hasMoreSessions"
+                    type="button"
+                    class="mt-2 w-full rounded-xl border border-border/60 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
+                    :disabled="isLoadingSessions"
+                    @click="loadOlderSessions"
+                >
+                    {{ isLoadingSessions ? 'Loading…' : 'Load older chats' }}
+                </button>
+            </div>
+        </MobileBottomSheet>
+
+        <!-- ─── Delete Confirmation ─── -->
+        <ResponsiveModal
+            :open="!!sessionToDelete"
+            title="Delete chat?"
+            description="This conversation and all of its messages will be permanently deleted."
+            @close="sessionToDelete = null"
+        >
+            <div
+                class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+            >
+                <Button
+                    variant="outline"
+                    class="w-full sm:w-auto"
+                    :disabled="isDeletingSession"
+                    @click="sessionToDelete = null"
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="destructive"
+                    class="w-full gap-2 sm:w-auto"
+                    :disabled="isDeletingSession"
+                    @click="confirmDelete"
+                >
+                    <Trash2 class="h-4 w-4" />
+                    {{ isDeletingSession ? 'Deleting…' : 'Delete chat' }}
+                </Button>
+            </div>
+        </ResponsiveModal>
+
+        <!-- First-visit walkthrough (per user, per device) -->
+        <OnboardingTour
+            tour-id="chats"
+            :steps="chatsTourSteps"
+            :can-start="!sessionToDelete && !isMobileHistoryOpen"
+            :start-delay="900"
+        />
+    </AppLayout>
+</template>
+
+<style scoped>
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 999px;
+}
+
+.reka-collapsible-content {
+    overflow: hidden;
+}
+
+.reka-collapsible-content[data-state='open'] {
+    animation: slide-down 0.2s ease-out;
+}
+
+.reka-collapsible-content[data-state='closed'] {
+    animation: slide-up 0.15s ease-out;
+}
+
+@keyframes slide-down {
+    from {
+        height: 0;
+        opacity: 0;
+    }
+    to {
+        height: var(--reka-collapsible-content-height);
+        opacity: 1;
+    }
+}
+
+@keyframes slide-up {
+    from {
+        height: var(--reka-collapsible-content-height);
+        opacity: 1;
+    }
+    to {
+        height: 0;
+        opacity: 0;
+    }
+}
+
+/* Entrance animation for chat elements — new message bubbles, the suggestion
+   chips and the loading indicator fade in and slide up. Bubbles are
+   directional: user messages slide in from the right, assistant replies from
+   the left. */
+.message-enter {
+    animation: message-enter 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.message-enter-user {
+    animation-name: message-enter-user;
+}
+
+.message-enter-assistant {
+    animation-name: message-enter-assistant;
+}
+
+@keyframes message-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes message-enter-user {
+    from {
+        opacity: 0;
+        transform: translate(14px, 6px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes message-enter-assistant {
+    from {
+        opacity: 0;
+        transform: translate(-14px, 6px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes message-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message-enter {
+        animation: message-fade 0.15s ease-out both;
+    }
+}
+
+/* Staggered entrance for the new-chat welcome view (claude.ai-style).
+   Each block fades up in sequence; the logo pops in with a subtle scale. */
+.welcome-logo,
+.welcome-greeting,
+.welcome-input,
+.welcome-suggestions {
+    animation: welcome-enter 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.welcome-logo {
+    animation-name: welcome-logo-in;
+}
+
+.welcome-greeting {
+    animation-delay: 70ms;
+}
+
+.welcome-input {
+    animation-delay: 140ms;
+}
+
+.welcome-suggestions {
+    animation-delay: 210ms;
+}
+
+@keyframes welcome-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes welcome-logo-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes welcome-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-logo,
+    .welcome-greeting,
+    .welcome-input,
+    .welcome-suggestions {
+        animation: welcome-fade 0.2s ease-out both;
+    }
+}
+
+/* Rendered markdown inside Echo's assistant messages (v-html content needs
+   :deep() to be reached by scoped styles). Mirrors the widget's styling. */
+.chat-markdown :deep(p) {
+    margin: 0.25rem 0;
+}
+
+.chat-markdown :deep(p:first-child) {
+    margin-top: 0;
+}
+
+.chat-markdown :deep(p:last-child) {
+    margin-bottom: 0;
+}
+
+.chat-markdown :deep(strong) {
+    font-weight: 600;
+}
+
+.chat-markdown :deep(em) {
+    font-style: italic;
+}
+
+.chat-markdown :deep(ul),
+.chat-markdown :deep(ol) {
+    margin: 0.25rem 0;
+    padding-left: 1.125rem;
+}
+
+.chat-markdown :deep(ul) {
+    list-style: disc;
+}
+
+.chat-markdown :deep(ol) {
+    list-style: decimal;
+}
+
+.chat-markdown :deep(li) {
+    margin: 0.125rem 0;
+}
+
+.chat-markdown :deep(h1),
+.chat-markdown :deep(h2),
+.chat-markdown :deep(h3),
+.chat-markdown :deep(h4) {
+    margin: 0.375rem 0 0.125rem;
+    font-weight: 600;
+}
+
+.chat-markdown :deep(h1) {
+    font-size: 0.95rem;
+}
+
+.chat-markdown :deep(h2) {
+    font-size: 0.875rem;
+}
+
+.chat-markdown :deep(h3),
+.chat-markdown :deep(h4) {
+    font-size: 0.8125rem;
+}
+
+.chat-markdown :deep(code) {
+    border-radius: 0.25rem;
+    background: color-mix(
+        in srgb,
+        var(--color-muted-foreground) 12%,
+        transparent
+    );
+    padding: 0 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+}
+
+.chat-markdown :deep(img) {
+    margin: 0.375rem 0;
+    max-width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+}
+
+.chat-markdown :deep(pre) {
+    margin: 0.375rem 0;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    background: color-mix(
+        in srgb,
+        var(--color-muted-foreground) 10%,
+        transparent
+    );
+    padding: 0.5rem 0.625rem;
+    line-height: 1.5;
+}
+
+.chat-markdown :deep(pre code) {
+    background: transparent;
+    padding: 0;
+}
+
+.chat-markdown :deep(blockquote) {
+    margin: 0.375rem 0;
+    border-left: 2px solid var(--color-border);
+    padding-left: 0.5rem;
+    opacity: 0.85;
+}
+
+.chat-markdown :deep(a) {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.chat-markdown :deep(table) {
+    margin: 0.375rem 0;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.chat-markdown :deep(th),
+.chat-markdown :deep(td) {
+    border: 1px solid var(--color-border);
+    padding: 0.125rem 0.375rem;
+    text-align: left;
+}
+
+.chat-markdown :deep(hr) {
+    margin: 0.5rem 0;
+    border-color: var(--color-border);
+}
+
+.chat-markdown :deep(input[type='checkbox']) {
+    margin-right: 0.375rem;
+    accent-color: var(--color-primary);
+}
+</style>

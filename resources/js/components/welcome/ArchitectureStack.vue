@@ -1,0 +1,199 @@
+<script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import gsap from 'gsap';
+import { ArrowRight } from 'lucide-vue-next';
+import { ref, onMounted } from 'vue';
+
+const archContainer = ref<HTMLElement | null>(null);
+
+const archStack = [
+    {
+        title: 'AI Learning Support',
+        desc: 'AI-assisted checking, smart feedback, and guided evaluation tools.',
+        color: 'primary',
+    },
+    {
+        title: 'Assessment Workflows',
+        desc: 'Exams, assignments, submissions, and classroom activity in one flow.',
+        color: 'muted',
+    },
+    {
+        title: 'Student Progress Data',
+        desc: 'Scores, rankings, and learning analytics tracked over time.',
+        color: 'muted',
+    },
+    {
+        title: 'Academic Platform Core',
+        desc: 'Secure infrastructure for students, teachers, sections, and seasons.',
+        color: 'primary',
+    },
+];
+
+onMounted(() => {
+    if (!archContainer.value) return;
+
+    gsap.set('.arch-stack-wrapper', {
+        rotationX: 55,
+        rotationZ: -35,
+        y: 10,
+    });
+
+    gsap.set('.arch-layer-card', {
+        z: (i) => i * 30,
+        opacity: 0.7,
+    });
+
+    const tl = gsap.timeline({
+        scrollTrigger: {
+            trigger: archContainer.value,
+            start: 'top 80%',
+            end: 'bottom 20%',
+            scrub: 1,
+        },
+    });
+
+    tl.to('.arch-stack-wrapper', {
+        rotationZ: -45,
+        y: -40,
+        duration: 1,
+    }).to(
+        '.arch-layer-card',
+        {
+            z: (i) => i * 80,
+            opacity: (i) => 0.5 + i * 0.15,
+            stagger: 0,
+            duration: 1,
+        },
+        0,
+    );
+
+    gsap.to('.arch-stack-idle', {
+        y: '+=25',
+        x: '+=12',
+        rotationZ: '+=3',
+        duration: 4.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+    });
+
+    gsap.to('.arch-card-content', {
+        y: () => (Math.random() - 0.5) * 20,
+        x: () => (Math.random() - 0.5) * 10,
+        rotationZ: () => (Math.random() - 0.5) * 2,
+        duration: () => 3 + Math.random() * 2,
+        repeat: -1,
+        repeatRefresh: true,
+        yoyo: true,
+        ease: 'sine.inOut',
+        stagger: {
+            each: 0.4,
+            from: 'random',
+        },
+    });
+});
+</script>
+
+<template>
+    <section
+        ref="archContainer"
+        class="reveal-section relative mt-32 overflow-hidden py-20 lg:mt-56"
+    >
+        <div class="flex flex-col items-center gap-16 lg:flex-row lg:gap-24">
+            <div
+                class="relative flex w-full justify-center perspective-[2000px] lg:w-1/2"
+            >
+                <div
+                    class="arch-stack-wrapper preserve-3d relative h-64 w-64 sm:h-80 sm:w-80"
+                >
+                    <div
+                        class="arch-stack-idle preserve-3d relative h-full w-full"
+                    >
+                        <div
+                            v-for="(layer, i) in [...archStack].reverse()"
+                            :key="'layer-' + i"
+                            class="arch-layer-card absolute inset-0 overflow-hidden rounded-2xl border border-primary/30 bg-background/90 shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-colors dark:bg-[#050507]/90 dark:shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+                        >
+                            <div
+                                class="arch-card-content flex h-full w-full flex-col items-center justify-center p-6 text-center"
+                            >
+                                <div
+                                    class="absolute top-4 left-4 text-[10px] font-black tracking-widest text-primary/60"
+                                >
+                                    0{{ i + 1 }}
+                                </div>
+                                <h4
+                                    class="mb-2 text-xs font-black tracking-widest text-foreground uppercase sm:text-sm"
+                                >
+                                    {{ layer.title }}
+                                </h4>
+                                <div class="mb-2 h-px w-8 bg-primary/40"></div>
+                                <p
+                                    class="px-4 text-[10px] leading-tight text-muted-foreground opacity-80"
+                                >
+                                    {{ layer.desc }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full space-y-8 lg:w-1/2 lg:space-y-12">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <div class="h-px w-12 bg-primary"></div>
+                        <span
+                            class="text-[10px] font-black tracking-[0.4em] text-primary uppercase lg:text-xs"
+                            data-scramble
+                            >Learning Framework</span
+                        >
+                    </div>
+                    <h2
+                        class="text-3xl leading-none font-black tracking-tight uppercase sm:text-5xl"
+                    >
+                        Learning Platform <br />
+                        Architecture
+                    </h2>
+                </div>
+
+                <div class="grid gap-6">
+                    <div
+                        v-for="(layer, i) in archStack"
+                        :key="'text-' + i"
+                        class="group flex gap-6"
+                    >
+                        <span
+                            class="text-xl font-black text-primary/20 tabular-nums transition-colors group-hover:text-primary/60"
+                            >0{{ archStack.length - i }}</span
+                        >
+                        <div>
+                            <h5
+                                class="mb-1 text-sm font-black tracking-widest uppercase"
+                            >
+                                {{ layer.title }}
+                            </h5>
+                            <p
+                                class="text-xs leading-relaxed text-muted-foreground"
+                            >
+                                {{ layer.desc }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-8">
+                    <Link
+                        href="/register"
+                        class="group inline-flex items-center gap-6 border border-border px-8 py-5 text-[10px] font-black tracking-[0.4em] uppercase transition-all hover:bg-foreground hover:text-background"
+                    >
+                        Explore Learning Hub
+                        <ArrowRight
+                            class="h-4 w-4 transition-transform group-hover:translate-x-1"
+                        />
+                    </Link>
+                </div>
+            </div>
+        </div>
+    </section>
+</template>

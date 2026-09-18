@@ -1,0 +1,320 @@
+<?php
+
+use App\Http\Controllers\AboutController;
+use App\Http\Controllers\ActivityHubController;
+use App\Http\Controllers\Admin\ExamAnswerReportController;
+use App\Http\Controllers\Admin\ExamSubmissionController;
+use App\Http\Controllers\AnonymousMessageController;
+use App\Http\Controllers\Api\BonusClaimController;
+use App\Http\Controllers\Api\ClaimXpController;
+use App\Http\Controllers\Api\DashboardExamsController;
+use App\Http\Controllers\Api\LeaderboardController;
+use App\Http\Controllers\Api\LeaderboardToggleBlurController;
+use App\Http\Controllers\Api\MaintenanceStatusController;
+use App\Http\Controllers\Api\StreakRestoreController;
+use App\Http\Controllers\Api\XpHistoryController;
+use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AssignmentGroupController;
+use App\Http\Controllers\AssignmentInviteController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CookiePolicyController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CspReportController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExamController;
+use App\Http\Controllers\FaviconController;
+use App\Http\Controllers\Games\GamesController;
+use App\Http\Controllers\Games\TowerDefenseController;
+use App\Http\Controllers\GradeController;
+use App\Http\Controllers\HowItWorksController;
+use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
+use App\Http\Controllers\LeaveImpersonationController;
+use App\Http\Controllers\LibraryHubController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PendingAiActionController;
+use App\Http\Controllers\PrivacyPolicyController;
+use App\Http\Controllers\ProfileKudoController;
+use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\RobotsController;
+use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SupportTicketController;
+use App\Http\Controllers\TermsController;
+use App\Http\Controllers\UserFollowController;
+use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\WorkspaceController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Facades\Route;
+
+// ─── Public routes ────────────────────────────────────────────────────────
+
+Route::get('/', WelcomeController::class)->name('home');
+Route::get('/about', AboutController::class)->name('about');
+Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+Route::get('/privacy', PrivacyPolicyController::class)->name('privacy');
+Route::get('/terms', TermsController::class)->name('terms');
+Route::get('/cookies', CookiePolicyController::class)->name('cookies');
+Route::get('/blog/assessment-to-next-lesson', [BlogController::class, 'pillar'])->name('blog.pillar');
+
+// ─── Social login (Google / GitHub) ───────────────────────────────────────
+// Plain GET redirects: OAuth needs real browser navigation, not Inertia visits.
+// Not restricted to guests — an authenticated visit links the provider to the
+// account that is already signed in.
+
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('throttle:10,1')
+    ->name('social.redirect');
+
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('throttle:10,1')
+    ->name('social.callback');
+
+// ─── Crawler-facing routes ────────────────────────────────────────────────
+
+Route::get('/robots.txt', RobotsController::class);
+Route::get('/sitemap.xml', SitemapController::class);
+Route::post('/csp/report', CspReportController::class)
+    ->withoutMiddleware(ValidateCsrfToken::class)
+    ->middleware('throttle:csp-reports')
+    ->name('csp.report');
+
+// ─── Branding ───────────────────────────────────────────────────────────────
+
+// Serves the uploaded school logo as the site favicon (falling back to the
+// bundled /favicon.ico when no logo is set).
+Route::get('/favicon.png', FaviconController::class)->name('favicon');
+
+// Polled by the Maintenance page (every 30s) so students are brought back
+// automatically when maintenance turns off. Public on purpose: logged-out
+// students stare at the maintenance screen too. Stays reachable during
+// maintenance via the EnsurePlatformMaintenance allowlist.
+Route::get('api/maintenance-status', MaintenanceStatusController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.maintenance-status');
+
+// ─── Authenticated routes ─────────────────────────────────────────────────
+
+Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
+    Route::get('grades', [GradeController::class, 'index'])
+        ->middleware('student.page:grades')
+        ->name('grades');
+    Route::get('api/grades', [GradeController::class, 'apiIndex'])
+        ->middleware('student.page:grades')
+        ->name('api.grades');
+
+    Route::get('dashboard', DashboardController::class)
+        ->middleware('student.page:dashboard')
+        ->name('dashboard');
+
+    Route::get('calendar', CalendarController::class)
+        ->middleware('student.page:calendar')
+        ->name('calendar');
+
+    Route::get('impersonation/leave', LeaveImpersonationController::class);
+
+    Route::get('leaderboard', LeaderboardPageController::class)
+        ->middleware('student.page:leaderboard')
+        ->name('leaderboard');
+
+    Route::post('workspaces/{workspace:public_id}/activate', [WorkspaceController::class, 'activate'])
+        ->name('workspaces.activate');
+    Route::post('workspaces/{workspace:public_id}/inspect', [WorkspaceController::class, 'inspect'])
+        ->name('workspaces.inspect');
+    Route::delete('workspaces/inspection', [WorkspaceController::class, 'stopInspecting'])
+        ->name('workspaces.inspection.stop');
+
+    // Onboarding tours: recorded on the account so a finished/skipped tour
+    // never replays, on any device.
+    Route::post('onboarding/{tour}', [OnboardingController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('onboarding.store');
+    Route::delete('onboarding/{tour}', [OnboardingController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('onboarding.destroy');
+
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    Route::get('u/{user:public_id}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::post('u/{user:public_id}/follow', [UserFollowController::class, 'store'])->name('users.follow');
+    Route::delete('u/{user:public_id}/follow', [UserFollowController::class, 'destroy'])->name('users.unfollow');
+    Route::post('u/{user:public_id}/kudos', [ProfileKudoController::class, 'store'])->name('users.kudos');
+    Route::get('users/{user:public_id}/xp-history', XpHistoryController::class)->name('users.xp-history');
+    Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
+    Route::post('sections/join-by-code', [ProfileController::class, 'joinByCode'])->name('sections.join-by-code');
+    Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
+
+    Route::post('api/leaderboard/toggle-blur', LeaderboardToggleBlurController::class)
+        ->middleware(['auth', 'verified'])
+        ->name('api.leaderboard.toggle-blur');
+
+    Route::get('assignments', [AssignmentController::class, 'index'])->middleware('student.page:assignments')->name('assignments.index');
+    Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->middleware('student.page:assignments')->name('assignments.submit');
+
+    // Student-formed groups for group activities (shared submission).
+    Route::get('assignments/{assignment}/groups/candidates', [AssignmentGroupController::class, 'candidates'])->middleware('student.page:assignments')->name('assignments.groups.candidates');
+    Route::delete('assignments/{assignment}/groups/members/{user}', [AssignmentGroupController::class, 'removeMember'])->middleware('student.page:assignments')->name('assignments.groups.members.destroy');
+    Route::post('assignments/{assignment}/invites', [AssignmentInviteController::class, 'store'])->middleware('student.page:assignments')->name('assignments.invites.store');
+    Route::post('assignments/{assignment}/invites/{invite}/respond', [AssignmentInviteController::class, 'respond'])->middleware('student.page:assignments')->name('assignments.invites.respond');
+    Route::delete('assignments/{assignment}/invites/{invite}', [AssignmentInviteController::class, 'destroy'])->middleware('student.page:assignments')->name('assignments.invites.destroy');
+    Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
+
+    // Activities Hub — focused exam workspace.
+    Route::get('activities', [ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('activities.index');
+    Route::get('api/activities', [ActivityHubController::class, 'listing'])->middleware('student.page:exams')->name('activities.listing');
+
+    // Legacy /exams route kept for backward compat — now serves the same hub
+    Route::get('exams', [ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
+    Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');
+    Route::get('exams/{exam}/review', [ExamController::class, 'review'])->middleware('student.page:exams')->name('exams.review');
+    Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
+    Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->middleware('student.page:exams')->name('exams.preWarmAI');
+    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:exams.progress'])->name('exams.monitorProgress');
+    // ℹ️ Scope binding via explicit controller check rather than
+    // ->scopeBindings(), because the route parameter `{examPart}` does not
+    // match the relationship name (`parts`) and Laravel's automatic scoping
+    // would call the non-existent method Exam::examParts().
+    Route::post('exams/{exam}/parts/{examPart}/start', [ExamController::class, 'startPart'])
+        ->middleware(['student.page:exams', 'throttle:exams.start'])
+        ->name('exams.startPart');
+    Route::put('exams/{exam}/parts/{examPart}/answers', [ExamController::class, 'saveAnswers'])
+        ->middleware(['student.page:exams', 'throttle:exams.answers'])
+        ->name('exams.saveAnswers');
+    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])
+        ->middleware(['student.page:exams', 'throttle:exams.submit'])
+        ->name('exams.submitPart');
+    Route::get('exams/{exam}/parts/{examPart}/status', [ExamController::class, 'partStatus'])
+        ->middleware(['student.page:exams', 'throttle:exams.status'])
+        ->name('exams.partStatus');
+
+    Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
+    Route::get('api/ngl', [AnonymousMessageController::class, 'feed'])->middleware('student.page:ngl')->name('ngl.feed');
+    Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');
+    Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->middleware('student.page:ngl')->name('ngl.like');
+
+    // ─── API routes (season-scoped) ─────────────────────────────────
+    Route::get('api/leaderboard', LeaderboardController::class)
+        ->middleware(['auth', 'verified'])
+        ->name('api.leaderboard');
+
+    Route::get('api/dashboard-exams', DashboardExamsController::class)
+        ->middleware(['auth', 'verified'])
+        ->name('api.dashboard-exams');
+
+    // Daily XP Claim
+    Route::post('api/claim-xp', ClaimXpController::class)
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
+        ->name('api.claim-xp');
+
+    Route::post('api/claim-xp/prompt-shown', [ClaimXpController::class, 'promptShown'])
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
+        ->name('api.claim-xp.prompt-shown');
+
+    // Bonus XP Claim (flat amount, inside Level → XP History modal)
+    Route::post('api/claim-bonus-xp', BonusClaimController::class)
+        ->middleware(['auth', 'verified', 'throttle:claim-bonus-xp'])
+        ->name('api.claim-bonus-xp');
+
+    // Streak Restore (spend seasonal XP to backfill a missed day)
+    Route::post('api/streak-restore', StreakRestoreController::class)
+        ->middleware(['auth', 'verified', 'throttle:streak-restore'])
+        ->name('api.streak-restore');
+
+    Route::post('api/chat', ChatController::class)->middleware('throttle:chat')->name('chat');
+    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:chat')->name('chat.stream');
+    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:chat')->name('chat.history');
+    Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:chat')->name('chat.clear');
+
+    // Human approval boundary for AI write tools. The AI can only stage an
+    // immutable preview; these nonce-protected endpoints are browser actions.
+    Route::get('api/ai-actions', [PendingAiActionController::class, 'index'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.index');
+    Route::post('api/ai-actions/{action:public_id}/approve', [PendingAiActionController::class, 'approve'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.approve');
+    Route::post('api/ai-actions/{action:public_id}/reject', [PendingAiActionController::class, 'reject'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.reject');
+
+    // Chats history (persisted conversations from the AI widget)
+    Route::get('chats', [ChatHistoryController::class, 'index'])
+        ->middleware('student.page:chats')
+        ->name('chats.index');
+    Route::get('chats/{session}', [ChatHistoryController::class, 'show'])
+        ->middleware('student.page:chats')
+        ->name('chats.show');
+    Route::get('api/chats', [ChatHistoryController::class, 'sessions'])
+        ->middleware(['student.page:chats', 'throttle:chats'])
+        ->name('chats.sessions');
+    Route::post('api/chats', [ChatHistoryController::class, 'store'])
+        ->middleware('throttle:chats')
+        ->name('chats.store');
+    Route::get('api/chats/{session}/messages', [ChatHistoryController::class, 'messages'])
+        ->middleware(['student.page:chats', 'throttle:chats'])
+        ->name('chats.messages');
+    Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
+        ->middleware('throttle:chats')
+        ->name('chats.message');
+    Route::post('api/chats/{session}/stream', [ChatHistoryController::class, 'stream'])
+        ->middleware('throttle:chats')
+        ->name('chats.stream');
+    Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
+        ->middleware('throttle:chats')
+        ->name('chats.destroy');
+
+    // Games hub
+    Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');
+
+    // Tower Defense game routes
+    // ─────────────────────────────────────────────
+    // Courses (LMS Learning Portal)
+    // ─────────────────────────────────────────────
+    Route::get('courses', [CourseController::class, 'index'])
+        ->middleware('student.page:courses')
+        ->name('courses.index');
+    Route::get('courses/{course}', [CourseController::class, 'show'])
+        ->middleware('student.page:courses')
+        ->name('courses.show');
+    Route::get('courses/{course}/lessons/{lesson}', [CourseController::class, 'lesson'])
+        ->middleware('student.page:courses')
+        ->name('courses.lesson');
+    Route::post('courses/{course}/lessons/{lesson}/quiz', [CourseController::class, 'submitQuiz'])
+        ->middleware(['student.page:courses', 'throttle:10,1'])
+        ->name('courses.lesson.quiz');
+
+    // Library Hub — free PDF learning materials per section
+    Route::get('library', [LibraryHubController::class, 'index'])
+        ->middleware('student.page:library')
+        ->name('library.index');
+    Route::get('library/{material}/file', [LibraryHubController::class, 'file'])
+        ->middleware('student.page:library')
+        ->name('library.file');
+
+    Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
+        Route::get('/', [TowerDefenseController::class, 'index'])->middleware('student.page:games')->name('index');
+        Route::get('/play/{level}', [TowerDefenseController::class, 'play'])->middleware('student.page:games')->name('play');
+        Route::post('/runs', [TowerDefenseController::class, 'startRun'])->middleware(['student.page:games', 'throttle:30,1'])->name('runs.start');
+        Route::post('/runs/{run}/finish', [TowerDefenseController::class, 'finishRun'])->middleware(['student.page:games', 'throttle:30,1'])->name('runs.finish');
+        Route::get('/leaderboard/{level}', [TowerDefenseController::class, 'leaderboard'])->middleware('student.page:games')->name('leaderboard');
+    });
+
+    // Support — submit concerns, track status and replies.
+    Route::get('support', [SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('support', [SupportTicketController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+    Route::post('support/{ticket}/reply', [SupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('support.reply');
+
+    // Admin routes
+    Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
+    Route::get('admin/exams/{exam}/submissions', [ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
+    Route::get('admin/exams/{exam}/answer-report', [ExamAnswerReportController::class, 'show'])->name('admin.exams.answer-report');
+});
+
+require __DIR__.'/settings.php';

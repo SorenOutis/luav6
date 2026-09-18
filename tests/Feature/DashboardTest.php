@@ -1,0 +1,92 @@
+<?php
+
+use App\Models\Badge;
+use App\Models\Season;
+use App\Models\SeasonProgress;
+use App\Models\User;
+use App\Models\Workspace;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('guests are redirected to the login page', function () {
+    $response = $this->get(route('dashboard'));
+    $response->assertRedirect(route('login'));
+});
+
+test('authenticated users can visit the dashboard', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->get(route('dashboard'));
+    $response->assertOk();
+});
+
+test('dashboard page component uses the student dashboard shell', function () {
+    $source = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+
+    expect($source)->toContain('dashboard-ui')
+        ->and($source)->not->toContain('SpotlightCard');
+});
+
+test('grades page component uses the student page shell', function () {
+    $source = file_get_contents(resource_path('js/pages/Grades.vue'));
+
+    expect($source)->toContain('student-ui')
+        ->and($source)->toContain('dash-btn')
+        ->and($source)->not->toContain('tracking-wider');
+});
+
+test('dashboard awards eligible lifetime badges and keeps the earning season', function () {
+    $season = Season::create([
+        'name' => 'Season Alpha',
+        'start_date' => now()->subDay(),
+        'end_date' => now()->addMonth(),
+        'is_active' => true,
+    ]);
+
+    $user = User::factory()->create();
+
+    $badge = Badge::create([
+        'name' => 'Level 3 Achiever',
+        'required_level' => 3,
+    ]);
+
+    SeasonProgress::create([
+        'user_id' => $user->id,
+        'season_id' => $season->id,
+        'exp' => 250,
+        'points' => 0,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    $this->assertDatabaseHas('badge_user', [
+        'user_id' => $user->id,
+        'badge_id' => $badge->id,
+        'season_id' => $season->id,
+    ]);
+});
+
+test('dashboard exposes the workspace active season for the season progress card', function () {
+    // The season stat card only renders when activeSeason resolves, and
+    // Season::current() is workspace-scoped — a season left outside the
+    // student's workspace hid the card on the dashboard.
+    $workspace = Workspace::factory()->create();
+
+    $season = Season::factory()->active()->create([
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $user = User::factory()->create();
+    $user->joinWorkspace($workspace->id);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activeSeason.id', $season->id)
+            ->where('activeSeason.name', $season->name)
+            ->etc()
+        );
+});

@@ -1,0 +1,22 @@
+<?php
+
+test('registration screen can be rendered', function () {
+    $response = $this->get(route('register'));
+
+    $response->assertOk();
+});
+
+test('new users can register', function () {
+    $response = $this->post(route('register.store'), [
+        'first_name' => 'Test',
+        'middle_name' => 'Middle',
+        'last_name' => 'User',
+        'email' => 'test@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'terms' => 'on',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('dashboard', absolute: false));
+});

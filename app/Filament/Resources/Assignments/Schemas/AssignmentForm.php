@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Filament\Resources\Assignments\Schemas;
+
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Schema;
+
+class AssignmentForm
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->columns(2)
+            ->components([
+                TextInput::make('title')
+                    ->required()
+                    ->maxLength(255)
+                    ->columnSpanFull(),
+                Select::make('sections')
+                    ->label('Assign to sections')
+                    ->relationship('sections', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->required()
+                    ->minItems(1)
+                    ->helperText('Only students in the selected sections receive this assignment and can submit to it.')
+                    ->columnSpanFull(),
+                Textarea::make('description')
+                    ->label('Instructions')
+                    ->maxLength(65535)
+                    ->columnSpanFull(),
+                Select::make('status')
+                    ->options([
+                        'draft' => 'Draft',
+                        'published' => 'Published',
+                        'closed' => 'Closed',
+                    ])
+                    ->required()
+                    ->default('draft')
+                    ->helperText('Draft is hidden from students. Published is open for submissions. Closed stays visible but no longer accepts work.')
+                    ->columnSpan(1),
+                DateTimePicker::make('due_date')
+                    ->label('Due date')
+                    ->seconds(false)
+                    ->columnSpan(1),
+                TextInput::make('points_possible')
+                    ->label('Points possible')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(999999)
+                    ->placeholder('e.g. 100')
+                    ->helperText('Optional. Students see what the work is worth, and grades display as earned / possible.')
+                    ->columnSpan(1),
+                TextInput::make('group_size')
+                    ->label('Group size')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(20)
+                    ->default(1)
+                    ->required()
+                    ->helperText('Number of students per group. 1 = individual; groups form up to this size (max 20).')
+                    ->formatStateUsing(fn ($record) => $record?->max_group_size ?? 1)
+                    ->columnSpan(1),
+                Select::make('course_id')
+                    ->relationship('course', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->label('Course')
+                    ->placeholder('Select a course (optional)')
+                    ->helperText('Optional label only — visibility is controlled by the sections above.')
+                    ->columnSpan(1),
+            ]);
+    }
+}

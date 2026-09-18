@@ -1,0 +1,160 @@
+name: luav6
+
+# ── R2 (Cloudflare) object storage env ──────────────────────────────────
+# PUBLIC_DISK=s3 points the public disk (avatars, badges, covers, logo) at R2.
+# Wired through ${VAR} interpolation so env vars set in the deploy platform
+# (e.g. Dokploy UI -> .env) reach the container.
+x-r2-env: &r2-env
+  FILESYSTEM_DISK: "${FILESYSTEM_DISK:-local}"
+  PUBLIC_DISK: "${PUBLIC_DISK:-local}"
+  AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+  AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+  AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-auto}"
+  AWS_BUCKET: "${AWS_BUCKET:-}"
+  AWS_ENDPOINT: "${AWS_ENDPOINT:-}"
+  AWS_URL: "${AWS_URL:-}"
+  AWS_USE_PATH_STYLE_ENDPOINT: "${AWS_USE_PATH_STYLE_ENDPOINT:-false}"
+
+# ── Shared container runtime settings for every app role ─────────────────
+# All build from the same image; only CONTAINER_ROLE differs.
+x-app: &app
+  build:
+    context: .
+    args:
+      # Horizon is added to the image only for Redis-backed queues.
+      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
+  restart: unless-stopped
+  init: true
+  env_file:
+    - .env
+  environment:
+    CONTAINER_ROLE: "${CONTAINER_ROLE:-octane}"
+    PORT: "${PORT:-8000}"
+    PHP_MEMORY_LIMIT: "${PHP_MEMORY_LIMIT:-256M}"
+    OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
+    OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+    # The Docker stack runs the queue on Redis, supervised by Laravel Horizon.
+    QUEUE_CONNECTION: "${QUEUE_CONNECTION:-redis}"
+    REDIS_CLIENT: "${REDIS_CLIENT:-phpredis}"
+    REDIS_HOST: "${REDIS_HOST:-redis}"
+    REDIS_PORT: "${REDIS_PORT:-6379}"
+    QUEUE_NAME: "${QUEUE_NAME:-ai}"
+    QUEUE_WORKER_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    QUEUE_TRIES: "${QUEUE_TRIES:-3}"
+    QUEUE_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    # Horizon supervisor tunables (fall back to the QUEUE_* values above).
+    HORIZON_QUEUES: "${QUEUE_NAME:-ai},default"
+    HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    HORIZON_TRIES: "${QUEUE_TRIES:-3}"
+    HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    <<: *r2-env
+
+services:
+  # Web server + queue worker: Laravel Octane on FrankenPHP. The `octane`
+  # role also starts the queue consumer in this same container (Laravel
+  # Horizon when QUEUE_CONNECTION=redis, otherwise a queue:work worker) under
+  # Supervisor. Check queue status with:
+  #   docker compose exec app php artisan horizon:status / supervisorctl status
+  app:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: octane
+      <<: *r2-env
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Queue runner: Laravel Horizon manages Redis-backed queues; for every other
+  # queue connection this role automatically falls back to Supervisor-managed
+  # queue:work processes. With Redis, check Horizon status using:
+  #   docker compose exec horizon php artisan horizon:status
+  horizon:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: horizon
+      <<: *r2-env
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f --silent http://127.0.0.1:8000/up >/dev/null && if [ -d vendor/laravel/horizon ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-octane.conf status | grep -q RUNNING; fi",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # Laravel scheduler: runs scheduled commands.
+  scheduler:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: scheduler
+      <<: *r2-env
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      app:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-laravel}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+      POSTGRES_DB: "${DB_DATABASE:-laravel}"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-laravel} -d ${DB_DATABASE:-laravel}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Queue backend for Laravel Horizon. AOF persistence so queued jobs survive
+  # container restarts. Internal only — no host port is published.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Local email testing UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  app_storage:
+  dbdata:
+  redisdata:

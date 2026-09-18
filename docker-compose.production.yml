@@ -1,0 +1,208 @@
+name: luav6
+
+# ── Production overlay ───────────────────────────────────────────────────
+# Apply on top of the base compose file:
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# Hardens the app containers (read-only root fs, dropped capabilities,
+# resource limits) and exposes the web port only on loopback — a reverse
+# proxy / load balancer on the host terminates TLS and forwards to :8000.
+
+# ── R2 (Cloudflare) object storage env ──────────────────────────────────
+# PUBLIC_DISK=s3 points the public disk (avatars, badges, covers, logo) at R2.
+# Wired through ${VAR} interpolation so the Dokploy UI env vars reach the
+# container — the compose's env_file only reads .env.production from disk, and
+# environment entries override env_file, so these must be set in the Dokploy
+# UI (interpolation source), not just in .env.production.
+x-r2-env: &r2-env
+  FILESYSTEM_DISK: "${FILESYSTEM_DISK:-local}"
+  PUBLIC_DISK: "${PUBLIC_DISK:-local}"
+  AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+  AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+  AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-auto}"
+  AWS_BUCKET: "${AWS_BUCKET:-}"
+  AWS_ENDPOINT: "${AWS_ENDPOINT:-}"
+  AWS_URL: "${AWS_URL:-}"
+  AWS_USE_PATH_STYLE_ENDPOINT: "${AWS_USE_PATH_STYLE_ENDPOINT:-false}"
+
+x-app-prod: &app-prod
+  build:
+    context: .
+    args:
+      # Horizon is added to the image only for Redis-backed queues.
+      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
+  restart: unless-stopped
+  init: true
+  env_file:
+    - .env.production
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add:
+    - NET_BIND_SERVICE
+  stop_grace_period: 30s
+  environment:
+    CONTAINER_ROLE: "${CONTAINER_ROLE:-octane}"
+    PORT: "${PORT:-8000}"
+    PHP_MEMORY_LIMIT: "${PHP_MEMORY_LIMIT:-256M}"
+    OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
+    OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+    # The Docker stack runs the queue on Redis, supervised by Laravel Horizon.
+    QUEUE_CONNECTION: "${QUEUE_CONNECTION:-redis}"
+    REDIS_CLIENT: "${REDIS_CLIENT:-phpredis}"
+    REDIS_HOST: "${REDIS_HOST:-redis}"
+    REDIS_PORT: "${REDIS_PORT:-6379}"
+    QUEUE_NAME: "${QUEUE_NAME:-ai}"
+    QUEUE_WORKER_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    QUEUE_TRIES: "${QUEUE_TRIES:-3}"
+    QUEUE_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    # Horizon supervisor tunables (fall back to the QUEUE_* values above).
+    HORIZON_QUEUES: "${QUEUE_NAME:-ai},default"
+    HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    HORIZON_TRIES: "${QUEUE_TRIES:-3}"
+    HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    <<: *r2-env
+
+services:
+  # Web server + queue worker: Laravel Octane on FrankenPHP. The `octane`
+  # role also starts the queue consumer in this same container (Laravel
+  # Horizon when QUEUE_CONNECTION=redis, otherwise a queue:work worker) under
+  # Supervisor.
+  app:
+    <<: *app-prod
+    environment:
+      CONTAINER_ROLE: octane
+      PORT: "${PORT:-8000}"
+      PHP_MEMORY_LIMIT: "${PHP_MEMORY_LIMIT:-256M}"
+    OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
+      OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+      <<: *r2-env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - app_storage:/app/storage
+      - bootstrap_cache:/app/bootstrap/cache
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 512M
+
+  # Queue runner: Laravel Horizon manages Redis-backed queues; for every other
+  # queue connection this role automatically falls back to Supervisor-managed
+  # queue:work processes.
+  horizon:
+    <<: *app-prod
+    environment:
+      CONTAINER_ROLE: horizon
+      HORIZON_QUEUES: "${QUEUE_NAME:-ai},default"
+      HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+      HORIZON_TRIES: "${QUEUE_TRIES:-3}"
+      HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+      <<: *r2-env
+    volumes:
+      - app_storage:/app/storage
+      - bootstrap_cache:/app/bootstrap/cache
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f --silent http://127.0.0.1:8000/up >/dev/null && if [ -d vendor/laravel/horizon ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-octane.conf status | grep -q RUNNING; fi",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 512M
+
+  scheduler:
+    <<: *app-prod
+    environment:
+      CONTAINER_ROLE: scheduler
+      <<: *r2-env
+    volumes:
+      - app_storage:/app/storage
+      - bootstrap_cache:/app/bootstrap/cache
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    # The app reads DB_* from .env.production (env_file). Postgres reads these
+    # POSTGRES_* values from the same file so they always match DB_HOST/DB_*.
+    # Run compose with `--env-file .env.production` so the ${DB_*} placeholders
+    # below resolve from that file (compose otherwise only reads the project
+    # .env / shell environment).
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-laravel}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-change-me}"
+      POSTGRES_DB: "${DB_DATABASE:-laravel}"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-laravel} -d ${DB_DATABASE:-laravel}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Queue backend for Laravel Horizon. AOF persistence so queued jobs survive
+  # container restarts. Internal only — no host port is published in
+  # production.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+volumes:
+  app_storage:
+  bootstrap_cache:
+  dbdata:
+  redisdata:

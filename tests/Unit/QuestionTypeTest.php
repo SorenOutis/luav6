@@ -1,0 +1,122 @@
+<?php
+
+use App\Enums\QuestionType;
+use App\Models\ExamPart;
+use App\Support\ExamPartSerializer;
+
+test('question types expose the admin selector options in product order', function () {
+    expect(QuestionType::options())->toBe([
+        'multiple_choice' => 'Multiple Choice',
+        'identification' => 'Identification',
+        'enumeration' => 'Enumeration',
+        'matching' => 'Matching Type',
+        'true_false' => 'True/False',
+        'essay' => 'Essay',
+    ]);
+});
+
+test('question types classify choice and text answers', function () {
+    expect(QuestionType::MultipleChoice->usesChoiceAnswer())->toBeTrue()
+        ->and(QuestionType::TrueFalse->usesChoiceAnswer())->toBeTrue()
+        ->and(QuestionType::Enumeration->usesEnumerationAnswer())->toBeTrue()
+        ->and(QuestionType::Matching->usesMatchingAnswer())->toBeTrue()
+        ->and(QuestionType::Matching->usesTextAnswer())->toBeFalse()
+        ->and(QuestionType::Identification->usesTextAnswer())->toBeTrue()
+        ->and(QuestionType::Essay->usesTextAnswer())->toBeTrue();
+});
+
+test('unknown stored values fall back to the safe multiple choice label', function () {
+    expect(QuestionType::tryFromStored(' not-a-type '))->toBeNull()
+        ->and(QuestionType::labelFor('not-a-type'))->toBe('Multiple Choice');
+});
+
+it('serializes the readable question type for students without exposing the answer key', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'Which planet is known as the Red Planet?',
+            'type' => 'multiple_choice',
+            'points' => 1,
+            'options' => [
+                ['text' => 'Earth', 'is_correct' => false],
+                ['text' => 'Mars', 'is_correct' => true],
+            ],
+        ]],
+    ]);
+
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
+
+    expect($question['type'])->toBe('multiple_choice')
+        ->and($question['type_label'])->toBe('Multiple Choice')
+        ->and($question['options'])->toBe([
+            ['text' => 'Earth'],
+            ['text' => 'Mars'],
+        ]);
+});
+
+it('serializes Enumeration slots with points but not expected answers', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'List the three pillars of SEO.',
+            'type' => 'enumeration',
+            'points' => 999,
+            'enumeration_items' => [
+                ['answer' => 'Technical SEO', 'points' => 2],
+                ['answer' => 'On-page SEO', 'points' => 3],
+                ['answer' => 'Off-page SEO', 'points' => 5],
+            ],
+        ]],
+    ]);
+
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
+
+    expect($question['type_label'])->toBe('Enumeration')
+        ->and($question['points'])->toBe(10.0)
+        ->and($question['enumeration_items'])->toBe([
+            ['points' => 2.0],
+            ['points' => 3.0],
+            ['points' => 5.0],
+        ])
+        ->and($question)->not->toHaveKey('correct_answer');
+});
+
+it('reveals accepted Identification answers only during review', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'What general term describes disruptive or unauthorized-access software?',
+            'type' => 'identification',
+            'points' => 3,
+            'correct_answer' => 'Virus',
+            'accepted_answers' => [['answer' => 'Malware']],
+        ]],
+    ]);
+
+    $activeQuestion = ExamPartSerializer::one($part, false)['questions'][0];
+    $reviewQuestion = ExamPartSerializer::one($part, true)['questions'][0];
+
+    expect($activeQuestion)->not->toHaveKey('accepted_answers')
+        ->and($reviewQuestion['accepted_answers'])->toBe(['Virus', 'Malware']);
+});
+
+it('serializes Matching Type prompts and choices without exposing the correct mapping', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'Match each SEO pillar with its description.',
+            'type' => 'matching',
+            'matching_items' => [
+                ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+                ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+            ],
+        ]],
+    ]);
+
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
+
+    expect($question['points'])->toBe(5.0)
+        ->and($question['matching_items'])->toMatchArray([
+            ['index' => 0, 'prompt' => 'Technical SEO', 'points' => 2.0],
+            ['index' => 1, 'prompt' => 'On-page SEO', 'points' => 3.0],
+        ])
+        ->and($question['matching_items'][0])->not->toHaveKey('answer')
+        ->and($question['matching_options'])->toHaveCount(2)
+        ->and($question['matching_options'])->toContain(['value' => 'Crawlability', 'text' => 'Crawlability']);
+});
