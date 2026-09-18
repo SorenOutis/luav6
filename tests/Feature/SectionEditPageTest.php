@@ -3,6 +3,7 @@
 use App\Filament\Resources\Sections\Pages\EditSection;
 use App\Filament\Resources\Sections\RelationManagers\UsersRelationManager;
 use App\Models\Section;
+use App\Models\Season;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -39,4 +40,27 @@ test('users relation manager table renders section students', function () {
     ])
         ->assertSuccessful()
         ->assertCanSeeTableRecords([$student]);
+});
+
+test('admin can attach a student to a section with the season pivot', function () {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    $season = Season::factory()->active()->create();
+    $section = Section::factory()->forSeason($season)->create();
+    $student = User::factory()->create(['is_admin' => false]);
+
+    Livewire::test(UsersRelationManager::class, [
+        'ownerRecord' => $section,
+        'pageClass' => EditSection::class,
+    ])
+        ->assertSuccessful()
+        ->callTableAction('attach', data: [
+            'recordId' => $student->id,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $pivot = $section->users()->find($student->id)?->pivot;
+
+    expect($pivot)->not->toBeNull()
+        ->and((int) $pivot->season_id)->toBe((int) $season->id);
 });
