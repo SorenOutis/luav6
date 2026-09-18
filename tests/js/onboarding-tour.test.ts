@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
+import ProgressCard from '@/components/dashboard/ProgressCard.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import {
     getTourStatus,
@@ -25,6 +27,12 @@ vi.mock('@inertiajs/vue3', () => ({
         post: (...args: unknown[]) => routerPost(...args),
         delete: (...args: unknown[]) => routerDelete(...args),
     },
+}));
+
+/** Lenis singleton stand-in: null = no smooth-scroll engine (native path). */
+const mockGetLenis = vi.hoisted(() => vi.fn());
+vi.mock('@/composables/useLenis', () => ({
+    getLenis: () => mockGetLenis(),
 }));
 
 const flushTimers = async (ms: number) => {
@@ -374,6 +382,750 @@ describe('OnboardingTour', () => {
         });
         vi.useRealTimers();
     });
+
+    it('emits the step id whenever the visible step changes', async () => {
+        const wrapper = mountTour();
+        await flushTimers(50);
+
+        // Tour starts on step 'a' ('b' has a missing target and is dropped).
+        expect(wrapper.emitted('step')?.map((call) => call[0])).toEqual(['a']);
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        expect(wrapper.emitted('step')?.map((call) => call[0])).toEqual([
+            'a',
+            'c',
+        ]);
+
+        wrapper.unmount();
+        vi.useRealTimers();
+    });
+
+    it('pins mobile targets to the viewport top so the docked card cannot cover them', async () => {
+        const originalWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 390,
+        });
+
+        const target = document.createElement('div');
+        target.dataset.tour = 'mobile-pinned-target';
+        target.getBoundingClientRect = () => ({
+            x: 12,
+            y: 300,
+            top: 300,
+            right: 378,
+            bottom: 700,
+            left: 12,
+            width: 366,
+            height: 400,
+            toJSON: () => ({}),
+        });
+        target.scrollIntoView = vi.fn();
+        document.body.appendChild(target);
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Mobile feature',
+                    body: 'Pinned to the top.',
+                    target: 'mobile-pinned-target',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        expect(target.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'start' }),
+        );
+
+        wrapper.unmount();
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: originalWidth,
+        });
+        vi.useRealTimers();
+    });
+
+    it('keeps centering targets on desktop', async () => {
+        const originalWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 1280,
+        });
+
+        const target = document.createElement('div');
+        target.dataset.tour = 'desktop-centered-target';
+        target.getBoundingClientRect = () => ({
+            x: 100,
+            y: 200,
+            top: 200,
+            right: 500,
+            bottom: 400,
+            left: 100,
+            width: 400,
+            height: 200,
+            toJSON: () => ({}),
+        });
+        target.scrollIntoView = vi.fn();
+        document.body.appendChild(target);
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Desktop feature',
+                    body: 'Centered.',
+                    target: 'desktop-centered-target',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        expect(target.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'center' }),
+        );
+
+        wrapper.unmount();
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: originalWidth,
+        });
+        vi.useRealTimers();
+    });
+});
+
+describe('mobile target overrides', () => {
+    beforeEach(() => {
+        window.localStorage.clear();
+        serverTours.tours = {};
+        routerPost.mockClear();
+        routerDelete.mockClear();
+        document.body.innerHTML = '';
+        vi.useFakeTimers();
+    });
+
+    const mockRect = (top: number, height: number) => ({
+        x: 12,
+        y: top,
+        top,
+        right: 378,
+        bottom: top + height,
+        left: 12,
+        width: 366,
+        height,
+        toJSON: () => ({}),
+    });
+
+    const addTarget = (name: string, top: number, height: number) => {
+        const el = document.createElement('div');
+        el.dataset.tour = name;
+        el.getBoundingClientRect = () => mockRect(top, height);
+        el.scrollIntoView = vi.fn();
+        document.body.appendChild(el);
+        return el as unknown as HTMLElement & {
+            scrollIntoView: ReturnType<typeof vi.fn>;
+        };
+    };
+
+    const withWidth = (value: number, original: number) => {
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value,
+        });
+        return () =>
+            Object.defineProperty(window, 'innerWidth', {
+                configurable: true,
+                value: original,
+            });
+    };
+
+    const goNext = async () => {
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+    };
+
+    it('prefers the mobile anchor on small screens so tall cards stay visible', async () => {
+        const originalWidth = window.innerWidth;
+        const restoreWidth = withWidth(390, originalWidth);
+
+        const desktopEl = addTarget('desktop-card', 300, 400);
+        const mobileEl = addTarget('desktop-card-tabs', 300, 56);
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Feature tabs',
+                    body: 'The tabs stay visible.',
+                    target: 'desktop-card',
+                    mobileTarget: 'desktop-card-tabs',
+                },
+            ],
+        });
+        await flushTimers(50);
+        // Welcome step still shows the fox.
+        expect(
+            document.querySelector('[data-testid="onboarding-fox"]'),
+        ).not.toBeNull();
+
+        await goNext();
+
+        // The compact mobile anchor is scrolled to the top and spotlit —
+        // not the tall desktop card behind the docked tour card.
+        expect(mobileEl.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'start' }),
+        );
+        expect(desktopEl.scrollIntoView).not.toHaveBeenCalled();
+        const spot = document.querySelector<HTMLElement>('.ot-spotlight');
+        expect(spot?.style.top).toBe(`${300 - 8}px`);
+        expect(spot?.style.height).toBe(`${56 + 16}px`);
+        // The fox row hides on mobile targeted steps to free up room.
+        expect(
+            document.querySelector('[data-testid="onboarding-fox"]'),
+        ).toBeNull();
+        // The card docks narrow on the left so the target stays visible
+        // beside it instead of behind a full-width sheet.
+        const dockedCard = document.querySelector<HTMLElement>('.ot-card');
+        expect(dockedCard?.classList.contains('left-3')).toBe(true);
+        // Narrow sheet (jsdom serializes the calc arguments in its own
+        // order, so match loosely).
+        expect(dockedCard?.style.width).toContain('20rem');
+        expect(dockedCard?.style.bottom).toContain('4.75rem');
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('falls back to the desktop target when the mobile anchor is missing', async () => {
+        const originalWidth = window.innerWidth;
+        const restoreWidth = withWidth(390, originalWidth);
+
+        const desktopEl = addTarget('desktop-card', 300, 400);
+
+        const wrapper = mountTour({
+            steps: [
+                {
+                    id: 'feature',
+                    title: 'Feature',
+                    body: 'Fallback.',
+                    target: 'desktop-card',
+                    mobileTarget: 'does-not-exist',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        expect(desktopEl.scrollIntoView).toHaveBeenCalled();
+        expect(document.body.textContent).toContain('1 of 1');
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('keeps the desktop target on wide screens even with a mobile anchor', async () => {
+        const originalWidth = window.innerWidth;
+        const restoreWidth = withWidth(1280, originalWidth);
+
+        const desktopEl = addTarget('desktop-card', 200, 400);
+        const mobileEl = addTarget('desktop-card-tabs', 200, 56);
+
+        const wrapper = mountTour({
+            steps: [
+                {
+                    id: 'feature',
+                    title: 'Feature',
+                    body: 'Desktop uses the full card.',
+                    target: 'desktop-card',
+                    mobileTarget: 'desktop-card-tabs',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        expect(desktopEl.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'center' }),
+        );
+        expect(mobileEl.scrollIntoView).not.toHaveBeenCalled();
+        // Fox stays visible on desktop targeted steps.
+        expect(
+            document.querySelector('[data-testid="onboarding-fox"]'),
+        ).not.toBeNull();
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+});
+
+describe('lenis-aware scrolling', () => {
+    beforeEach(() => {
+        window.localStorage.clear();
+        serverTours.tours = {};
+        routerPost.mockClear();
+        routerDelete.mockClear();
+        document.body.innerHTML = '';
+        mockGetLenis.mockReturnValue(null);
+        vi.useFakeTimers();
+    });
+
+    const withWidth = (value: number) => {
+        const original = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value,
+        });
+        return () =>
+            Object.defineProperty(window, 'innerWidth', {
+                configurable: true,
+                value: original,
+            });
+    };
+
+    const addTarget = (name: string, top: number, height: number) => {
+        const el = document.createElement('div');
+        el.dataset.tour = name;
+        el.getBoundingClientRect = () => ({
+            x: 12,
+            y: top,
+            top,
+            right: 378,
+            bottom: top + height,
+            left: 12,
+            width: 366,
+            height,
+            toJSON: () => ({}),
+        });
+        el.scrollIntoView = vi.fn();
+        document.body.appendChild(el);
+        return el;
+    };
+
+    const goNext = async () => {
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+    };
+
+    const mountSteppedTour = () =>
+        mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Feature',
+                    body: 'Scrolled into view.',
+                    target: 'lenis-target',
+                },
+            ],
+        });
+
+    it('scrolls through Lenis on mobile instead of fighting it', async () => {
+        const restoreWidth = withWidth(390);
+        const scrollToMock = vi.fn();
+        mockGetLenis.mockReturnValue({
+            scrollTo: scrollToMock,
+            isStopped: false,
+        });
+
+        const target = addTarget('lenis-target', 300, 56);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+        await goNext();
+
+        expect(scrollToMock).toHaveBeenCalledWith(
+            target,
+            expect.objectContaining({ offset: -12 }),
+        );
+        expect(target.scrollIntoView).not.toHaveBeenCalled();
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('centers through Lenis on desktop', async () => {
+        const restoreWidth = withWidth(1280);
+        const scrollToMock = vi.fn();
+        mockGetLenis.mockReturnValue({
+            scrollTo: scrollToMock,
+            isStopped: false,
+        });
+
+        // jsdom viewport height is 768: center offset = -(384 - 100).
+        const target = addTarget('lenis-target', 200, 200);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+        await goNext();
+
+        expect(scrollToMock).toHaveBeenCalledWith(
+            target,
+            expect.objectContaining({ offset: -284 }),
+        );
+        expect(target.scrollIntoView).not.toHaveBeenCalled();
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('falls back to native scrolling when Lenis is stopped', async () => {
+        const restoreWidth = withWidth(390);
+        const scrollToMock = vi.fn();
+        mockGetLenis.mockReturnValue({
+            scrollTo: scrollToMock,
+            isStopped: true,
+        });
+
+        const target = addTarget('lenis-target', 300, 56);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+        await goNext();
+
+        expect(target.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'start' }),
+        );
+        expect(scrollToMock).not.toHaveBeenCalled();
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('nudges the page after settling so the spot clears the docked card', async () => {
+        const restoreWidth = withWidth(390);
+        mockGetLenis.mockReturnValue(null);
+        const scrollToMock = vi.fn();
+        Object.defineProperty(window, 'scrollTo', {
+            configurable: true,
+            writable: true,
+            value: scrollToMock,
+        });
+
+        addTarget('lenis-target', 500, 56);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+
+        // Tall docked card overlapping the spot (500–556 vs card 400–650).
+        const card = document.querySelector<HTMLElement>('.ot-card');
+        expect(card).not.toBeNull();
+        card!.getBoundingClientRect = () => ({
+            x: 12,
+            y: 400,
+            top: 400,
+            right: 332,
+            bottom: 650,
+            left: 12,
+            width: 320,
+            height: 250,
+            toJSON: () => ({}),
+        });
+
+        await goNext();
+        await flushTimers(700);
+
+        // Overlap delta 556 - 400 + 8 = 164, applied as an instant jump.
+        expect(scrollToMock).toHaveBeenCalledWith(
+            expect.objectContaining({ top: 164 }),
+        );
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('pulls an overshot spot back into the free band', async () => {
+        const restoreWidth = withWidth(390);
+        mockGetLenis.mockReturnValue(null);
+        const scrollToMock = vi.fn();
+        Object.defineProperty(window, 'scrollTo', {
+            configurable: true,
+            writable: true,
+            value: scrollToMock,
+        });
+
+        // Spot scrolled too far (top above the viewport).
+        addTarget('lenis-target', -30, 56);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+
+        const card = document.querySelector<HTMLElement>('.ot-card');
+        expect(card).not.toBeNull();
+        card!.getBoundingClientRect = () => ({
+            x: 12,
+            y: 400,
+            top: 400,
+            right: 332,
+            bottom: 650,
+            left: 12,
+            width: 320,
+            height: 250,
+            toJSON: () => ({}),
+        });
+
+        await goNext();
+        await flushTimers(700);
+
+        // Delta -30 - 12 = -42, clamped to the top of the page.
+        expect(scrollToMock).toHaveBeenCalledWith(
+            expect.objectContaining({ top: 0 }),
+        );
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('leaves a tall spot pinned to the top instead of pushing it off-screen', async () => {
+        const restoreWidth = withWidth(390);
+        mockGetLenis.mockReturnValue(null);
+        const scrollToMock = vi.fn();
+        Object.defineProperty(window, 'scrollTo', {
+            configurable: true,
+            writable: true,
+            value: scrollToMock,
+        });
+
+        // Taller than the free band but already top-pinned: nothing to do.
+        addTarget('lenis-target', 12, 500);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+
+        const card = document.querySelector<HTMLElement>('.ot-card');
+        expect(card).not.toBeNull();
+        card!.getBoundingClientRect = () => ({
+            x: 12,
+            y: 400,
+            top: 400,
+            right: 332,
+            bottom: 650,
+            left: 12,
+            width: 320,
+            height: 250,
+            toJSON: () => ({}),
+        });
+
+        await goNext();
+        await flushTimers(700);
+
+        expect(scrollToMock).not.toHaveBeenCalled();
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+
+    it('runs the settle check from the Lenis onComplete hook', async () => {
+        const restoreWidth = withWidth(390);
+        const scrollToMock = vi.fn();
+        mockGetLenis.mockReturnValue({
+            scrollTo: scrollToMock,
+            isStopped: false,
+        });
+
+        addTarget('lenis-target', 500, 56);
+        const wrapper = mountSteppedTour();
+        await flushTimers(50);
+
+        const card = document.querySelector<HTMLElement>('.ot-card');
+        expect(card).not.toBeNull();
+        card!.getBoundingClientRect = () => ({
+            x: 12,
+            y: 400,
+            top: 400,
+            right: 332,
+            bottom: 650,
+            left: 12,
+            width: 320,
+            height: 250,
+            toJSON: () => ({}),
+        });
+
+        await goNext();
+
+        const onComplete = scrollToMock.mock.calls[0][1]?.onComplete;
+        expect(typeof onComplete).toBe('function');
+        scrollToMock.mockClear();
+        onComplete();
+
+        // Same 164px instant nudge, driven by animation completion.
+        expect(scrollToMock).toHaveBeenCalledWith(
+            164,
+            expect.objectContaining({ immediate: true }),
+        );
+
+        wrapper.unmount();
+        restoreWidth();
+        vi.useRealTimers();
+    });
+});
+
+describe('narrow viewports dock without touch', () => {
+    beforeEach(() => {
+        window.localStorage.clear();
+        serverTours.tours = {};
+        routerPost.mockClear();
+        routerDelete.mockClear();
+        document.body.innerHTML = '';
+        mockGetLenis.mockReturnValue(null);
+        vi.useFakeTimers();
+    });
+
+    it('docks below 1024px even without touch (small desktop windows)', async () => {
+        const originalWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 800,
+        });
+
+        const target = document.createElement('div');
+        target.dataset.tour = 'narrow-window-target';
+        target.getBoundingClientRect = () => ({
+            x: 24,
+            y: 200,
+            top: 200,
+            right: 776,
+            bottom: 320,
+            left: 24,
+            width: 752,
+            height: 120,
+            toJSON: () => ({}),
+        });
+        target.scrollIntoView = vi.fn();
+        document.body.appendChild(target);
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Narrow feature',
+                    body: 'Docked, not floating.',
+                    target: 'narrow-window-target',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        // Pinned to the top and docked bottom-left, like mobile.
+        expect(target.scrollIntoView).toHaveBeenCalledWith(
+            expect.objectContaining({ block: 'start' }),
+        );
+        const dockedCard = document.querySelector<HTMLElement>('.ot-card');
+        expect(dockedCard?.classList.contains('left-3')).toBe(true);
+        expect(dockedCard?.style.bottom).toContain('4.75rem');
+        expect(
+            document.querySelector('[data-testid="onboarding-fox"]'),
+        ).toBeNull();
+
+        wrapper.unmount();
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: originalWidth,
+        });
+        vi.useRealTimers();
+    });
+});
+
+describe('progress card tab control', () => {
+    const mountProgressCard = () =>
+        mount(ProgressCard, {
+            attachTo: document.body,
+            props: {
+                userStats: {
+                    totalXP: 100,
+                    level: 2,
+                    currentXP: 40,
+                    maxXPForLevel: 100,
+                    rank: 'Rookie',
+                    rankNumber: 3,
+                    totalPlayers: 10,
+                    achievements: 1,
+                    points: 5,
+                    streak: 4,
+                    longestStreak: 9,
+                    joinedAt: '2026-01-01',
+                },
+            },
+            global: {
+                stubs: {
+                    LevelProgressCard: {
+                        template: '<div class="stub-level" />',
+                    },
+                    StreakCard: { template: '<div class="stub-streak" />' },
+                    SeasonProgressBand: {
+                        template: '<div class="stub-season" />',
+                    },
+                },
+            },
+        });
+
+    it('starts on XP and flips panes via the exposed setter', async () => {
+        const wrapper = mountProgressCard();
+        const selected = () =>
+            wrapper
+                .findAll('[role="tab"]')
+                .findIndex((tab) => tab.attributes('aria-selected') === 'true');
+
+        expect(selected()).toBe(0);
+
+        (
+            wrapper.vm as unknown as {
+                setActivePane: (pane: 'xp' | 'streak' | 'season') => void;
+            }
+        ).setActivePane('streak');
+        await nextTick();
+        expect(selected()).toBe(1);
+
+        (
+            wrapper.vm as unknown as {
+                setActivePane: (pane: 'xp' | 'streak' | 'season') => void;
+            }
+        ).setActivePane('season');
+        await nextTick();
+        expect(selected()).toBe(2);
+
+        wrapper.unmount();
+    });
 });
 
 describe('page wiring', () => {
@@ -406,5 +1158,28 @@ describe('page wiring', () => {
         );
         expect(mobile).toContain('data-tour="dashboard-streak-card"');
         expect(mobile).toContain('data-tour="dashboard-level-card"');
+    });
+
+    it('flips the progress card tab as the dashboard tour reaches each pane', () => {
+        const src = read('resources/js/pages/Dashboard.vue');
+        expect(src).toContain('@step="onDashboardTourStep"');
+        expect(src).toContain('ref="progressCardRef"');
+        expect(src).toContain("streak: 'streak'");
+        expect(src).toContain("season: 'season'");
+        // The tall card keeps its desktop anchor, but mobile spotlights the
+        // compact tab strip so the docked card cannot cover it.
+        expect(src).toContain("mobileTarget: 'dashboard-progress-tabs'");
+        expect(src).toContain("mobileTarget: 'dashboard-activity-header'");
+        const card = read('resources/js/components/dashboard/ProgressCard.vue');
+        expect(card).toContain('setActivePane');
+        expect(card).toContain('data-tour="dashboard-progress-tabs"');
+        expect(src).toContain('data-tour="dashboard-activity-header"');
+    });
+
+    it('offers a replay escape hatch to re-verify the dashboard tour', () => {
+        const src = read('resources/js/pages/Dashboard.vue');
+        expect(src).toContain('tour=replay');
+        expect(src).toContain('resetTourStatus');
+        expect(src).toContain('ref="tourRef"');
     });
 });

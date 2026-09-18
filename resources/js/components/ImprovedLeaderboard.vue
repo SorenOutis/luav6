@@ -598,7 +598,10 @@ const changeSeason = async (seasonId: number) => {
 </script>
 
 <template>
-    <div class="lb-root max-w-full min-w-0 space-y-6">
+    <div
+        class="lb-root max-w-full min-w-0"
+        :class="podiumOnly ? 'lb-root--band space-y-3' : 'space-y-6'"
+    >
         <!-- Band mode label: shown only when the podium stands alone -->
         <div
             v-if="podiumOnly"
@@ -914,7 +917,11 @@ const changeSeason = async (seasonId: number) => {
 
             <template v-else>
                 <!-- ═══════ PODIUM ═══════ -->
-                <div v-if="!hidePodium" class="lb-podium min-w-0">
+                <div
+                    v-if="!hidePodium"
+                    class="lb-podium min-w-0"
+                    :class="podiumOnly && 'lb-podium--band'"
+                >
                     <SpotlightCard
                         v-for="{ group, origIdx } in podiumOrder"
                         :key="group.rank"
@@ -994,9 +1001,13 @@ const changeSeason = async (seasonId: number) => {
                                     :href="`/u/${profileIdentifier(group.users[0])}`"
                                     :class="[
                                         'lb-avatar',
-                                        origIdx === 0
-                                            ? 'h-20 w-20 sm:h-24 sm:w-24'
-                                            : 'h-16 w-16 sm:h-20 sm:w-20',
+                                        podiumOnly
+                                            ? origIdx === 0
+                                                ? 'h-14 w-14 sm:h-16 sm:w-16'
+                                                : 'h-12 w-12 sm:h-14 sm:w-14'
+                                            : origIdx === 0
+                                              ? 'h-20 w-20 sm:h-24 sm:w-24'
+                                              : 'h-16 w-16 sm:h-20 sm:w-20',
                                         'ring-2',
                                         rankMeta[origIdx].ring,
                                     ]"
@@ -1022,9 +1033,13 @@ const changeSeason = async (seasonId: number) => {
                                     :class="[
                                         'lb-avatar',
                                         'lb-blurred',
-                                        origIdx === 0
-                                            ? 'h-20 w-20 sm:h-24 sm:w-24'
-                                            : 'h-16 w-16 sm:h-20 sm:w-20',
+                                        podiumOnly
+                                            ? origIdx === 0
+                                                ? 'h-14 w-14 sm:h-16 sm:w-16'
+                                                : 'h-12 w-12 sm:h-14 sm:w-14'
+                                            : origIdx === 0
+                                              ? 'h-20 w-20 sm:h-24 sm:w-24'
+                                              : 'h-16 w-16 sm:h-20 sm:w-20',
                                         'ring-2',
                                         rankMeta[origIdx].ring,
                                     ]"
@@ -1210,12 +1225,19 @@ const changeSeason = async (seasonId: number) => {
                             </div>
 
                             <!-- XP -->
-                            <div class="mt-3 flex items-baseline gap-1">
+                            <div
+                                class="flex items-baseline gap-1"
+                                :class="podiumOnly ? 'mt-2' : 'mt-3'"
+                            >
                                 <span
                                     :class="[
-                                        origIdx === 0
-                                            ? 'text-3xl sm:text-4xl'
-                                            : 'text-2xl sm:text-3xl',
+                                        podiumOnly
+                                            ? origIdx === 0
+                                                ? 'text-2xl sm:text-3xl'
+                                                : 'text-xl sm:text-2xl'
+                                            : origIdx === 0
+                                              ? 'text-3xl sm:text-4xl'
+                                              : 'text-2xl sm:text-3xl',
                                     ]"
                                     class="font-semibold tracking-tight tabular-nums"
                                 >
@@ -1997,6 +2019,45 @@ const changeSeason = async (seasonId: number) => {
     .lb-podium-card--champ {
         padding-top: 1.25rem;
         padding-bottom: 1.25rem;
+    }
+}
+/* ── Band mode (Top 3 podium-only): compact cards with breathing room ──
+   The band lives inside a padded surface-card. Without these overrides the
+   champ's large padding + min-heights make the card stretch flush to the
+   parent's bottom edge. */
+.lb-podium--band {
+    gap: 0.625rem;
+    padding-bottom: 0.125rem;
+}
+.lb-podium--band .lb-podium-card {
+    padding: 0.875rem;
+    /* Nested inside another surface-card, the SpotlightCard drop shadow
+       just reads as a dirty clipped line along the bottom edge. */
+    box-shadow: none;
+}
+/* Hide the spotlight outer-glow bleed in the band for the same reason. */
+.lb-podium--band .lb-podium-card > [data-glow] {
+    display: none;
+}
+.lb-podium--band .lb-podium-card::before,
+.lb-podium--band .lb-podium-card::after {
+    display: none;
+}
+.lb-podium--band .lb-podium-card--champ {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+@media (min-width: 640px) {
+    .lb-podium--band .lb-podium-card {
+        padding: 1rem;
+    }
+    .lb-podium--band .lb-podium-card--champ {
+        padding-top: 1.25rem;
+        padding-bottom: 1.25rem;
+        min-height: 0;
+    }
+    .lb-podium--band .lb-podium-card:not(.lb-podium-card--champ) {
+        min-height: 0;
     }
 }
 .lb-rank-badge {
