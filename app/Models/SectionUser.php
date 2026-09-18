@@ -14,6 +14,18 @@ class SectionUser extends Pivot
 
     protected static function booted(): void
     {
+        static::creating(function (SectionUser $membership): void {
+            if (! $membership->season_id && $membership->section_id) {
+                $seasonId = Section::withoutGlobalScope('workspace')
+                    ->whereKey($membership->section_id)
+                    ->value('season_id');
+
+                if ($seasonId) {
+                    $membership->season_id = $seasonId;
+                }
+            }
+        });
+
         static::created(function (SectionUser $membership): void {
             $workspaceId = Section::withoutGlobalScope('workspace')
                 ->whereKey($membership->section_id)
