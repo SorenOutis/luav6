@@ -598,7 +598,7 @@ onBeforeUnmount(() => {
                     ></div>
                 </div>
 
-                <div>
+                <div class="min-w-0">
                     <p class="text-[13px] font-medium text-[#D97757]">
                         Daily reward
                     </p>
@@ -647,7 +647,7 @@ onBeforeUnmount(() => {
             >
                 <Check class="h-4 w-4 text-[#4D9375]" />
             </div>
-            <div class="flex-1">
+            <div class="min-w-0 flex-1">
                 <p class="text-[13px] font-medium text-[#4D9375]">Claimed</p>
                 <p class="text-[17px] font-semibold text-foreground">
                     +{{ claimedAmount || amount }} XP

@@ -2689,7 +2689,7 @@ html[data-low-end] .welcome-defer {
         position: relative;
         display: grid;
         min-height: 7rem;
-        grid-template-columns: clamp(6.5rem, 29vw, 7.25rem) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) clamp(6.5rem, 29vw, 7.25rem);
         align-items: center;
         gap: 0.5rem;
         overflow: visible;
@@ -2699,12 +2699,12 @@ html[data-low-end] .welcome-defer {
         z-index: 2;
         display: flex;
         min-width: 0;
-        grid-column: 2;
+        grid-column: 1;
         grid-row: 1;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: center;
-        gap: 0.35rem;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.625rem;
         margin: 0;
         padding: 0.25rem 0.5rem 0.25rem 0;
         text-align: left;
@@ -2719,7 +2719,7 @@ html[data-low-end] .welcome-defer {
         z-index: 1;
         display: flex;
         width: clamp(6.5rem, 29vw, 7.25rem);
-        grid-column: 1;
+        grid-column: 2;
         grid-row: 1;
         align-items: flex-end;
         justify-content: center;
@@ -2763,15 +2763,15 @@ html[data-low-end] .welcome-defer {
 
     .mobile-dashboard-status {
         display: flex;
-        align-items: flex-start;
-        justify-content: center;
+        align-items: center;
+        justify-content: flex-start;
         gap: 0.35rem;
         margin-top: 0.35rem;
         overflow: visible;
         color: var(--color-muted-foreground);
         font-size: 0.75rem;
         line-height: 1.3;
-        text-align: center;
+        text-align: left;
         white-space: normal;
     }
 
@@ -4511,6 +4511,13 @@ html[data-low-end] .welcome-defer {
 @media (max-width: 767px) {
     .mobile-dashboard-reward {
         flex-wrap: wrap;
+    }
+
+    .mobile-dashboard-reward-grid > .mobile-dashboard-reward {
+        /* The unscoped auto/1fr grid below was written for icon+content
+           markup; with the single-child ClaimXpButton tile it sizes the
+           tile by content and blows it out over the streak cell. */
+        display: block;
     }
 
     .mobile-dashboard-reward__action {
