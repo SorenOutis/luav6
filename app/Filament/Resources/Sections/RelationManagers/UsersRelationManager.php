@@ -78,7 +78,7 @@ class UsersRelationManager extends RelationManager
                         ->where('is_admin', false)
                         ->orderBy('name')
                     )
-                    ->mutateFormDataUsing(function (array $data, \Filament\Resources\RelationManagers\RelationManager $livewire): array {
+                    ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
                         $owner = $livewire->getOwnerRecord();
                         if ($owner instanceof Section && $owner->season_id) {
                             $data['season_id'] = $owner->season_id;
