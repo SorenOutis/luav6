@@ -218,4 +218,35 @@ describe('dashboard student shell', () => {
         expect(text).not.toContain('XP');
         expect(text).not.toContain('pace');
     });
+
+    it('left-aligns the mobile welcome header (avatar row, never centered)', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const ruleBody = (selector: string): string => {
+            const match = css.match(
+                new RegExp(`${selector}\\s*{([^}]*)}`, 's'),
+            );
+            expect(match, `${selector} rule exists`).not.toBeNull();
+            return match?.[1] ?? '';
+        };
+
+        // Identity is a left-aligned row (avatar beside the text), so the
+        // header can never render as a centered stack.
+        const identity = ruleBody(
+            String.raw`\.mobile-dashboard-greeting__identity`,
+        );
+        expect(identity).toContain('flex-direction: row');
+        expect(identity).toContain('justify-content: flex-start');
+        expect(identity).toContain('text-align: left');
+        expect(identity).not.toContain('justify-content: center');
+        expect(identity).not.toContain('flex-direction: column');
+
+        const status = ruleBody(String.raw`\.mobile-dashboard-status`);
+        expect(status).toContain('justify-content: flex-start');
+        expect(status).toContain('text-align: left');
+        expect(status).not.toContain('justify-content: center');
+        expect(status).not.toContain('text-align: center');
+    });
 });
