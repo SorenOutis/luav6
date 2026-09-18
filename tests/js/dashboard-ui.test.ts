@@ -218,4 +218,22 @@ describe('dashboard student shell', () => {
         expect(text).not.toContain('XP');
         expect(text).not.toContain('pace');
     });
+
+    it('drops the Almost-there status line from the mobile greeting', () => {
+        const mobile = readFileSync(
+            join(
+                process.cwd(),
+                'resources/js/components/dashboard/MobileDashboard.vue',
+            ),
+            'utf8',
+        );
+        expect(mobile).not.toContain('mobile-dashboard-status');
+        expect(mobile).not.toContain('smarterStatus');
+
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        expect(css).not.toContain('.mobile-dashboard-status');
+    });
 });
