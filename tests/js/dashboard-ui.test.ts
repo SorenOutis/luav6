@@ -249,4 +249,30 @@ describe('dashboard student shell', () => {
         expect(status).not.toContain('justify-content: center');
         expect(status).not.toContain('text-align: center');
     });
+
+    it('puts the profile left and the fox right in the mobile header', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const ruleBody = (selector: string): string => {
+            const match = css.match(
+                new RegExp(`${selector}\\s*{([^}]*)}`, 's'),
+            );
+            expect(match, `${selector} rule exists`).not.toBeNull();
+            return match?.[1] ?? '';
+        };
+
+        // Profile column first, fox column second.
+        const body = ruleBody(String.raw`\.mobile-dashboard-greeting__body`);
+        expect(body).toMatch(
+            /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+clamp/,
+        );
+        const identity = ruleBody(
+            String.raw`\.mobile-dashboard-greeting__identity`,
+        );
+        expect(identity).toContain('grid-column: 1');
+        const fox = ruleBody(String.raw`\.mobile-dashboard-greeting__fox`);
+        expect(fox).toContain('grid-column: 2');
+    });
 });
