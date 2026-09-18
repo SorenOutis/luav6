@@ -779,7 +779,45 @@ const todaySummary = computed(() => {
     return { dueTodayCount, overdueCount, upcoming24hCount };
 });
 
-const primaryLeaderboard = computed(() => sectionLeaderboards.value[0] ?? null);
+// Shared section selection for the dashboard's two leaderboard instances
+// (Top-3 band + full rankings card). Kept here so picking a section in the
+// rankings immediately updates the band's Top 3 as well — on desktop and (via
+// MobileDashboard) on mobile. Initialized from the same localStorage key the
+// standalone /leaderboard page uses, so the choice persists across visits.
+const LEADERBOARD_SECTION_STORAGE_KEY = 'leaderboard_active_section_id';
+
+const readStoredLeaderboardSectionId = (): number | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = window.localStorage.getItem(
+            LEADERBOARD_SECTION_STORAGE_KEY,
+        );
+        if (!raw) return null;
+        const id = Number.parseInt(raw, 10);
+        return Number.isFinite(id) ? id : null;
+    } catch {
+        return null;
+    }
+};
+
+const storedLeaderboardSectionId = readStoredLeaderboardSectionId();
+
+const leaderboardSectionId = ref<number | null>(
+    sectionLeaderboards.value.some(
+        (s) => s.sectionId === storedLeaderboardSectionId,
+    )
+        ? storedLeaderboardSectionId
+        : null,
+);
+
+const primaryLeaderboard = computed(
+    () =>
+        sectionLeaderboards.value.find(
+            (s) => s.sectionId === leaderboardSectionId.value,
+        ) ??
+        sectionLeaderboards.value[0] ??
+        null,
+);
 
 // Serializable task list for the TodayPanel (both compositions).
 const todayTasks = computed<TodayTask[]>(() =>
@@ -961,6 +999,8 @@ const handleLogout = () => {
                 :available-seasons="props.availableSeasons ?? []"
                 :primary-leaderboard="primaryLeaderboard"
                 :leaderboard-expanded="isLeaderboardExpanded"
+                :leaderboard-section-id="leaderboardSectionId"
+                @update:leaderboard-section-id="leaderboardSectionId = $event"
                 @close-announcement="dismissAnnouncement"
                 @refresh="manualRefresh"
                 @open-section-modal="showSectionModal = true"
@@ -1014,6 +1054,10 @@ const handleLogout = () => {
                         :section-leaderboards="sectionLeaderboards"
                         :active-season-name="activeSeason?.name"
                         :available-seasons="props.availableSeasons ?? []"
+                        :active-section-id="leaderboardSectionId"
+                        @update:active-section-id="
+                            leaderboardSectionId = $event
+                        "
                     >
                         <template #band-action>
                             <button
@@ -1070,6 +1114,10 @@ const handleLogout = () => {
                             :section-leaderboards="sectionLeaderboards"
                             :active-season-name="activeSeason?.name"
                             :available-seasons="props.availableSeasons ?? []"
+                            :active-section-id="leaderboardSectionId"
+                            @update:active-section-id="
+                                leaderboardSectionId = $event
+                            "
                             show-view-button
                             show-join-button
                             @open-section-modal="showSectionModal = true"

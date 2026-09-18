@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 
@@ -634,5 +634,150 @@ describe('ImprovedLeaderboard podium band (podiumOnly)', () => {
         expect(classOf(cards[0])).toContain('order-1 sm:order-2');
         expect(classOf(cards[1])).toContain('order-2 sm:order-1');
         expect(classOf(cards[2])).toContain('order-3 sm:order-3');
+    });
+});
+
+describe('ImprovedLeaderboard controlled section (dashboard band sync)', () => {
+    const makeUsers = (prefix: string, boost: number) =>
+        [3000, 2000, 1000].map((xp, i) => ({
+            id: boost + i,
+            name: `${prefix} Student ${i + 1}`,
+            xp: xp + boost,
+            xpProgress: 50,
+            streak: 3,
+            joinedAt: 'Jan 2026',
+            weeklyXp: 100,
+            trend: 'stable' as const,
+            isCurrentUser: false,
+        }));
+
+    const sections = () => [
+        {
+            sectionId: 1,
+            sectionName: 'Section Alpha',
+            users: makeUsers('Alpha', 0),
+            userRank: 1,
+            totalPlayers: 3,
+        },
+        {
+            sectionId: 2,
+            sectionName: 'Section Beta',
+            users: makeUsers('Beta', 5000),
+            userRank: 2,
+            totalPlayers: 3,
+        },
+    ];
+
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it('renders the podium for the controlled activeSectionId instead of the first tab', () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                podiumOnly: true,
+                sectionLeaderboards: sections(),
+                activeSectionId: 2,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Section Beta');
+        expect(wrapper.text()).toContain('Beta Student 1');
+        expect(wrapper.text()).not.toContain('Alpha Student 1');
+    });
+
+    it('emits update:activeSectionId on tab click and switches once the parent applies it', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: sections(),
+                activeSectionId: 1,
+            },
+        });
+
+        const tabs = wrapper.findAll('.lb-tab');
+        expect(tabs).toHaveLength(2);
+
+        await tabs[1].trigger('click');
+
+        expect(wrapper.emitted('update:activeSectionId')).toEqual([[2]]);
+        // Still showing section 1 until the parent applies the update.
+        expect(wrapper.text()).toContain('Section Alpha');
+
+        await wrapper.setProps({ activeSectionId: 2 });
+        expect(wrapper.text()).toContain('Section Beta');
+        expect(wrapper.text()).toContain('Beta Student 1');
+    });
+
+    it('keeps self-managed tab state when activeSectionId is omitted (standalone page)', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: sections(),
+            },
+        });
+
+        const tabs = wrapper.findAll('.lb-tab');
+        await tabs[1].trigger('click');
+
+        expect(wrapper.emitted('update:activeSectionId')).toBeUndefined();
+        expect(wrapper.text()).toContain('Section Beta');
+    });
+
+    it('falls back to the first section when the controlled id is unknown', () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                podiumOnly: true,
+                sectionLeaderboards: sections(),
+                activeSectionId: 999,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Section Alpha');
+        expect(wrapper.text()).toContain('Alpha Student 1');
+    });
+
+    it('syncs the Top-3 band when a section tab is picked in the sibling rankings card', async () => {
+        // Mirrors the dashboard wiring: one shared ref drives both instances.
+        const DashboardHarness = defineComponent({
+            setup() {
+                const sectionId = ref<number | null>(1);
+                const list = sections();
+                return () =>
+                    h('div', [
+                        h(ImprovedLeaderboard, {
+                            podiumOnly: true,
+                            sectionLeaderboards: list,
+                            activeSectionId: sectionId.value,
+                            'onUpdate:activeSectionId': (id: number) => {
+                                sectionId.value = id;
+                            },
+                        }),
+                        h(ImprovedLeaderboard, {
+                            hidePodium: true,
+                            sectionLeaderboards: list,
+                            activeSectionId: sectionId.value,
+                            'onUpdate:activeSectionId': (id: number) => {
+                                sectionId.value = id;
+                            },
+                        }),
+                    ]);
+            },
+        });
+
+        const wrapper = mount(DashboardHarness);
+        const instances = wrapper.findAllComponents(ImprovedLeaderboard);
+        expect(instances).toHaveLength(2);
+
+        const [band, card] = [instances[0], instances[1]];
+        expect(band.text()).toContain('Alpha Student 1');
+
+        const tabs = card.findAll('.lb-tab');
+        expect(tabs).toHaveLength(2);
+        await tabs[1].trigger('click');
+        await wrapper.vm.$nextTick();
+
+        // The band's Top 3 follows the rankings card's new section.
+        expect(band.text()).toContain('Section Beta');
+        expect(band.text()).toContain('Beta Student 1');
+        expect(band.text()).not.toContain('Alpha Student 1');
     });
 });
