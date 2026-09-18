@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Users\Schemas;
 
 use App\Models\SectionProgress;
 use App\Models\User;
+use App\Support\AvatarGallery;
+use App\Support\PublicFileUrl;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -19,7 +21,11 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use MatondoJK\FilamentAvatarPicker\Components\AvatarPicker;
+use Throwable;
 
 class UserForm
 {
@@ -90,12 +96,23 @@ class UserForm
                                             ->schema([
                                                 AvatarPicker::make('avatar')
                                                     ->label('Profile Picture')
-                                                    ->maxSize(10240),
+                                                    ->maxSize(10240)
+                                                    // The field is a file upload bound to the public disk, but
+                                                    // the `avatar` accessor resolves full URLs: Filament cannot
+                                                    // find the value on the disk, drops it, and dehydrates the
+                                                    // empty result — an empty preview now and a cleared column
+                                                    // on the next save.
+                                                    ->afterStateHydrated(function (AvatarPicker $component, mixed $state): void {
+                                                        $component->rawState(self::normaliseAvatarState($state));
+                                                    })
+                                                    // Previews are fetched over HTTP, so they have to be
+                                                    // resolved the same way the rest of the application does.
+                                                    ->getUploadedFileUsing(fn (string $file): ?array => self::avatarPreview($file)),
                                             ]),
                                         Section::make('Cover Photo')
                                             ->schema([
                                                 Flex::make([
-                                                    Image::make(fn ($record) => $record?->cover_photo ?? '', 'Cover Photo')
+                                                    Image::make(fn (?User $record) => PublicFileUrl::resolve($record?->cover_photo) ?? '', 'Cover Photo')
                                                         ->imageHeight(120)
                                                         ->visible(fn ($record) => $record?->cover_photo),
                                                     FileUpload::make('cover_photo')
@@ -227,5 +244,90 @@ class UserForm
                     ])
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * Put the avatar field's hydrated state back into the shape the picker
+     * expects: a path on the public disk.
+     *
+     * The `avatar` accessor returns a full URL, which a file upload field
+     * cannot resolve, so the state is reduced back to the stored path (this
+     * also heals rows that already hold a URL). Curated avatars ship with the
+     * application and are never uploaded to the bucket, so they cannot be
+     * existence-checked when the public disk is S3/R2; uploaded avatars can,
+     * and a file that is gone should not render as a broken preview.
+     *
+     * @return array<array-key, string>
+     */
+    private static function normaliseAvatarState(mixed $state): array
+    {
+        $files = [];
+
+        foreach (Arr::wrap($state) as $fileKey => $file) {
+            if (! is_string($file) || blank($file)) {
+                continue;
+            }
+
+            $path = PublicFileUrl::storedPath($file);
+
+            if (blank($path)) {
+                continue;
+            }
+
+            // Values that are still full URLs (a provider avatar, a bucket from
+            // another environment) cannot be checked against the disk and the
+            // browser fetches them directly, so they stay as they are.
+            $isUnverifiable = self::isRemoteUrl($path) || AvatarGallery::isCurated($path);
+
+            if (! $isUnverifiable && ! self::existsOnPublicDisk($path)) {
+                continue;
+            }
+
+            $files[$fileKey] = $path;
+        }
+
+        return $files;
+    }
+
+    private static function existsOnPublicDisk(string $path): bool
+    {
+        try {
+            return Storage::disk('public')->exists($path);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private static function isRemoteUrl(string $value): bool
+    {
+        return Str::startsWith($value, ['http://', 'https://', '//']);
+    }
+
+    /**
+     * Preview payload for the avatar field.
+     *
+     * The browser fetches this URL (FilePond loads stored files over HTTP), so
+     * it has to go through the same helper the rest of the application uses —
+     * the disk's own URL cannot see the curated avatars that only exist in
+     * `public/avatars`, and it double-prefixes values that are already URLs.
+     *
+     * @return array{name: string, size: int, type: null, url: string}|null
+     */
+    private static function avatarPreview(string $file): ?array
+    {
+        $url = PublicFileUrl::resolve($file);
+
+        if (blank($url)) {
+            return null;
+        }
+
+        return [
+            'name' => basename($file),
+            // FilePond reads the size and mime type from the file it fetches;
+            // the curated SVGs are not stat()-able when the disk is S3/R2.
+            'size' => 0,
+            'type' => null,
+            'url' => $url,
+        ];
     }
 }
