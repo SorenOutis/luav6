@@ -474,7 +474,7 @@ onBeforeUnmount(() => {
                         aria-hidden="true"
                         class="rs-connector h-px flex-1 transition-colors duration-500"
                         :class="
-                            index <= currentStep ? 'bg-primary' : 'bg-border'
+                            index <= currentStep ? 'bg-[#D97757]' : 'bg-border'
                         "
                     />
                     <button
@@ -491,9 +491,9 @@ onBeforeUnmount(() => {
                             class="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-all duration-500"
                             :class="[
                                 index < currentStep &&
-                                    'border-primary bg-primary text-primary-foreground',
+                                    'border-[#D97757] bg-[#D97757] text-white',
                                 index === currentStep &&
-                                    'border-primary bg-primary/10 text-primary',
+                                    'border-[#D97757] bg-[#D97757]/10 text-[#D97757]',
                                 index > currentStep &&
                                     'border-border text-muted-foreground/50',
                             ]"
@@ -888,7 +888,8 @@ onBeforeUnmount(() => {
                 <Button
                     v-if="currentStep < steps.length - 1"
                     type="button"
-                    class="px-6"
+                    variant="brand"
+                    class="px-6 shadow-sm"
                     @click="goNext"
                 >
                     Continue
@@ -897,8 +898,9 @@ onBeforeUnmount(() => {
                 <Button
                     v-else
                     type="submit"
+                    variant="brand"
                     :disabled="processing || submitting"
-                    class="px-6"
+                    class="px-6 shadow-sm"
                     data-test="register-user-button"
                 >
                     <Spinner v-if="processing || submitting" class="mr-2" />

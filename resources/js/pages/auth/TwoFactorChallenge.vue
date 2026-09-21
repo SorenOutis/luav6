@@ -96,7 +96,8 @@ defineOptions({ layout: AuthCard });
                 </div>
                 <Button
                     type="submit"
-                    class="w-full"
+                    variant="brand"
+                    class="w-full shadow-sm"
                     :disabled="processing"
                     :tabindex="1"
                 >

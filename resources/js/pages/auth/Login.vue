@@ -158,7 +158,8 @@ const onSubmit = (event: Event) => {
             <Button
                 v-if="!loginEnabled"
                 type="button"
-                class="mt-4 w-full"
+                variant="brand"
+                class="mt-4 w-full cursor-not-allowed opacity-60"
                 :tabindex="4"
                 @click="showDisabledModal = true"
                 data-test="login-button-disabled"
@@ -169,7 +170,8 @@ const onSubmit = (event: Event) => {
             <Button
                 v-else
                 type="submit"
-                class="mt-4 w-full"
+                variant="brand"
+                class="mt-4 w-full shadow-sm"
                 :tabindex="4"
                 :disabled="processing || submitting"
                 data-test="login-button"

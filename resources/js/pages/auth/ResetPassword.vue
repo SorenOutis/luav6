@@ -83,7 +83,8 @@ defineOptions({ layout: AuthCard });
 
             <Button
                 type="submit"
-                class="mt-4 w-full"
+                variant="brand"
+                class="mt-4 w-full shadow-sm"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="reset-password-button"

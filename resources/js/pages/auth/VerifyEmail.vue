@@ -48,7 +48,8 @@ defineOptions({ layout: AuthCard });
         <Button
             type="submit"
             :disabled="processing"
-            variant="secondary"
+            variant="brand"
+            class="shadow-sm"
             :tabindex="1"
         >
             <Spinner v-if="processing" class="mr-2" />

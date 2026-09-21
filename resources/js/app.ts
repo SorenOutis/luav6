@@ -205,6 +205,19 @@ router.on('error', () => {
     hide();
 });
 
+router.on('invalid', (event) => {
+    cancelPendingShow();
+    hide();
+
+    const response = (
+        event.detail as unknown as { response?: { status?: number } }
+    )?.response;
+    if (response?.status === 419) {
+        event.preventDefault();
+        window.location.reload();
+    }
+});
+
 /**
  * Ensure all route objects have a form() method.
  *

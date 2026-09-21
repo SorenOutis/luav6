@@ -2,16 +2,14 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import {
-    Apple,
     ArrowRight,
     BarChart3,
     ClipboardList,
     Lightbulb,
-    School,
-    UserRound,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
+import DualPerspectiveShowcase from '@/components/welcome/DualPerspectiveShowcase.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -39,24 +37,6 @@ const revealTransition = (delay = 0) =>
         ? { duration: 0 }
         : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
 
-const audienceGroups = [
-    {
-        icon: Apple,
-        title: 'Teachers',
-        description: 'Create, review, and plan with less friction.',
-    },
-    {
-        icon: UserRound,
-        title: 'Learners',
-        description: 'Get feedback that helps them keep going.',
-    },
-    {
-        icon: School,
-        title: 'Schools',
-        description: 'See what is happening across classes and cohorts.',
-    },
-];
-
 const loopSteps = [
     {
         icon: ClipboardList,
@@ -75,7 +55,7 @@ const loopSteps = [
 const faqs = [
     {
         question: 'What does LSI stand for?',
-        answer: 'LSI stands for Learning Systems Intelligence, built by KOAMISHIN for schools that want assessment to drive the next lesson — not just a score. Unlike a traditional LMS that stops at grading, LSI structures the work after an assessment: it collects responses, surfaces patterns in understanding, and helps teachers decide what to reteach, who needs support, and what feedback to give while learning is still happening. Per Google Search Essentials, helpful content must demonstrate first-hand experience — LSI does this by keeping teachers as reviewers who approve AI-assisted feedback before it reaches learners, ensuring every next step is intentional and classroom-ready.',
+        answer: 'LSI stands for Learning Systems Intelligence, built by KOAMISHIN for schools that want assessment to drive the next lesson — not just a score. Unlike a traditional LMS that stops at grading, LSI structures the work after an assessment: it collects responses, surfaces patterns in understanding, and helps teachers decide what to reteach, who needs support, and what feedback to give while learning is still happening. Demonstrating verified first-hand classroom experience, LSI keeps teachers as mandatory reviewers who approve AI-assisted feedback before it reaches learners, ensuring every next step is intentional and classroom-ready.',
     },
     {
         question: 'Who is LSI for?',
@@ -83,11 +63,11 @@ const faqs = [
     },
     {
         question: 'Do teachers stay in control?',
-        answer: 'Yes — teachers stay in full control by design. AI in LSI only drafts: it can generate question sets, grade essays, and suggest feedback, but every AI output lands in a teacher review queue as a PendingAiAction that must be explicitly approved or rejected in the browser. No AI write happens autonomously; the human-approval boundary is enforced by nonce-protected endpoints. This satisfies Google’s helpful-content Who/How/Why — who created it (teacher + AI), how (AI draft + human review), why (to help learners), and keeps the classroom relationship intact while saving hours on routine grading.',
+        answer: 'Yes — teachers stay in full control by design. AI in LSI only drafts: it can generate question sets, grade essays, and suggest feedback, but every AI output lands in a teacher review queue as a PendingAiAction that must be explicitly approved or rejected in the browser. No AI write happens autonomously; the human-approval boundary is enforced by nonce-protected endpoints. By making clear who created it (teacher + AI), how it was produced (AI draft + human review), and why (to help learners), LSI keeps the classroom relationship intact while saving teachers hours on routine grading.',
     },
     {
         question: 'How is learner data handled?',
-        answer: 'LSI is built for school ownership and reviewable use of learner information. All tenant data is isolated by Workspace (school) with BelongsToWorkspace scoping, so a teacher only sees their sections and a student only sees their enrolled courses and Library Hub materials. Learner data is used to show progress, grades, and feedback — not for profiling or ads — and every AI access is logged to AiUsageLog with workspace budgets and review events. Schools retain ownership, can export or delete, and all public pages are noindex where appropriate, following privacy-by-default and Search Essentials trust principles.',
+        answer: 'LSI is built for school ownership and reviewable use of learner information. All tenant data is isolated by Workspace (school) with BelongsToWorkspace scoping, so a teacher only sees their sections and a student only sees their enrolled courses and Library Hub materials. Learner data is used to show progress, grades, and feedback — not for profiling or ads — and every AI access is logged to AiUsageLog with workspace budgets and review events. Schools retain ownership, can export or delete, and all public pages are noindex where appropriate, following strict privacy-by-default and school data sovereignty principles.',
     },
 ];
 
@@ -332,43 +312,7 @@ const webSiteJsonLd = [
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.08)"
             >
-                <section
-                    class="welcome-audience border-b border-border/70 py-16 sm:py-20"
-                    aria-labelledby="audience-heading"
-                >
-                    <h2
-                        id="audience-heading"
-                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
-                    >
-                        One clear workflow for every class.
-                    </h2>
-                    <div
-                        class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
-                    >
-                        <article
-                            v-for="group in audienceGroups"
-                            :key="group.title"
-                            class="flex flex-col items-center px-6 py-8 text-center"
-                        >
-                            <component
-                                :is="group.icon"
-                                class="h-10 w-10 text-foreground"
-                                stroke-width="1.35"
-                                aria-hidden="true"
-                            />
-                            <h3
-                                class="mt-5 text-base font-semibold text-foreground"
-                            >
-                                {{ group.title }}
-                            </h3>
-                            <p
-                                class="mt-2 max-w-[180px] text-sm leading-relaxed text-muted-foreground"
-                            >
-                                {{ group.description }}
-                            </p>
-                        </article>
-                    </div>
-                </section>
+                <DualPerspectiveShowcase />
             </Motion>
 
             <Motion
@@ -382,55 +326,62 @@ const webSiteJsonLd = [
                 :transition="revealTransition(0.12)"
             >
                 <section
-                    class="welcome-loop marketing-band my-16 rounded-2xl bg-primary px-5 py-8 text-primary-foreground sm:my-20 sm:px-10 sm:py-10"
+                    class="welcome-loop surface-card my-16 rounded-2xl border border-border/80 bg-card p-6 text-foreground shadow-sm sm:my-20 sm:p-10"
                     aria-labelledby="loop-heading"
                 >
-                    <h2
-                        id="loop-heading"
-                        class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
-                    >
-                        How does LSI turn a response into the next lesson?
-                    </h2>
-                    <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
+                    <div class="flex flex-col gap-2">
+                        <p
+                            class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
+                        >
+                            The Continuous Learning Loop
+                        </p>
+                        <h2
+                            id="loop-heading"
+                            class="font-serif text-2xl tracking-[-0.03em] text-foreground sm:text-3xl"
+                        >
+                            How does LSI turn a response into the next lesson?
+                        </h2>
+                    </div>
+                    <div class="mt-8 grid gap-6 md:grid-cols-3 md:gap-6">
                         <article
                             v-for="(step, index) in loopSteps"
                             :key="step.title"
-                            class="relative flex flex-col items-center text-center md:items-start md:text-left"
+                            class="relative flex flex-col items-start rounded-xl border border-border/60 bg-secondary/25 p-5 text-left transition-colors hover:border-[#D97757]/40"
                         >
                             <div
-                                class="flex w-full items-center gap-4 md:flex-col md:items-start"
+                                class="flex w-full items-center justify-between"
                             >
                                 <div
-                                    class="band-accent flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary-foreground/30"
+                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#D97757]/20 bg-[#D97757]/10 text-[#D97757]"
                                 >
                                     <component
                                         :is="step.icon"
                                         class="h-5 w-5"
-                                        stroke-width="1.4"
+                                        stroke-width="1.5"
                                         aria-hidden="true"
                                     />
                                 </div>
-                                <ArrowRight
-                                    v-if="index < loopSteps.length - 1"
-                                    class="hidden h-4 w-4 text-primary-foreground/40 md:absolute md:top-6 md:right-5 md:block"
-                                    aria-hidden="true"
-                                />
+                                <span
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    0{{ index + 1 }}
+                                </span>
                             </div>
                             <p
-                                class="mt-4 max-w-xs text-sm leading-relaxed text-primary-foreground/80"
+                                class="mt-4 text-sm leading-relaxed font-medium text-foreground"
                             >
                                 {{ step.title }}
                             </p>
                         </article>
                     </div>
                     <p
-                        class="band-accent mt-8 text-center text-xs md:text-left"
+                        class="mt-8 text-center text-xs text-muted-foreground sm:text-left"
                     >
                         The point is not more data. It is a more useful next
                         lesson.
                         <Link
                             href="/blog/assessment-to-next-lesson"
-                            class="band-accent-underline band-accent-hover ml-2 font-medium underline"
+                            class="ml-2 font-medium text-[#D97757] underline hover:text-[#D97757]/80"
                             >Read the pillar guide →</Link
                         >
                     </p>
@@ -452,7 +403,7 @@ const webSiteJsonLd = [
                     aria-labelledby="testimonial-heading"
                 >
                     <p
-                        class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
+                        class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
                     >
                         What teachers say
                     </p>
@@ -558,15 +509,21 @@ const webSiteJsonLd = [
             >
                 <section
                     id="contact"
-                    class="welcome-cta marketing-band mt-16 rounded-2xl bg-primary px-6 py-10 text-primary-foreground sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
+                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
                     aria-labelledby="cta-heading"
                 >
+                    <!-- Background ambient terracotta glow -->
                     <div
-                        class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                        class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-[#D97757]/20 blur-3xl"
+                        aria-hidden="true"
+                    ></div>
+
+                    <div
+                        class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                     >
                         <div>
                             <p
-                                class="band-accent text-xs font-medium tracking-[0.16em] uppercase"
+                                class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
                             >
                                 Start with the next lesson
                             </p>
@@ -588,7 +545,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-if="$page.props.auth?.user"
                                 :href="dashboard().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary-foreground px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                                 Open dashboard
                                 <ArrowRight
@@ -599,7 +556,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary-foreground px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                                 Create a free account
                                 <ArrowRight
