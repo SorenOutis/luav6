@@ -227,6 +227,24 @@ describe('activities hub — Activity Record drawer', () => {
             expect(untaken).toContain('Open');
             expect(untaken).toContain('50.0 max pts');
 
+            const filters = sheet!.querySelector(
+                '[data-test="activity-status-filters"]',
+            )!;
+            expect(filters.classList.contains('overflow-x-auto')).toBe(true);
+            expect(filters.className).toContain('[&>button]:whitespace-nowrap');
+            expect(filters.className).toContain('[&>button]:shrink-0');
+            const statusButtons = filters.querySelectorAll('button');
+            expect(statusButtons).toHaveLength(4);
+            expect(statusButtons[0].getAttribute('aria-pressed')).toBe('true');
+            statusButtons[1].click();
+            await flushPromises();
+            expect(statusButtons[1].getAttribute('aria-pressed')).toBe('true');
+            expect(statusButtons[0].getAttribute('aria-pressed')).toBe('false');
+            expect(sheet!.querySelectorAll('li')).toHaveLength(1);
+            expect(sheet!.querySelector('li')!.textContent).toContain(
+                'Scored activity',
+            );
+
             // Lenis is stopped while the drawer is open.
             expect(lenisStop).toHaveBeenCalled();
 

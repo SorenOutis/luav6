@@ -344,10 +344,13 @@ const handlePrint = () => {
 
                     <!-- Status Filter Tabs -->
                     <div
-                        class="flex items-center gap-1.5 border-t border-border/40 pt-2 text-xs"
+                        role="group"
+                        aria-label="Filter activities by status"
+                        data-test="activity-status-filters"
+                        class="flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain border-t border-border/40 pt-2 pb-1 text-xs [&>button]:min-h-9 [&>button]:shrink-0 [&>button]:rounded-full [&>button]:px-2.5 [&>button]:whitespace-nowrap [&>button]:focus-visible:outline-2 [&>button]:focus-visible:outline-offset-2 [&>button]:focus-visible:outline-ring"
                     >
                         <span
-                            class="text-[11px] font-semibold text-muted-foreground"
+                            class="hidden shrink-0 text-[11px] font-semibold text-muted-foreground sm:inline"
                             >Status:</span
                         >
                         <button
@@ -358,6 +361,7 @@ const handlePrint = () => {
                                     ? 'border border-border bg-card text-foreground shadow-xs'
                                     : 'text-muted-foreground hover:text-foreground'
                             "
+                            :aria-pressed="selectedStatus === 'all'"
                             @click="selectedStatus = 'all'"
                         >
                             All ({{ allActivities.length }})
@@ -370,6 +374,7 @@ const handlePrint = () => {
                                     ? 'bg-[#4D9375]/15 font-semibold text-[#4D9375]'
                                     : 'text-muted-foreground hover:text-foreground'
                             "
+                            :aria-pressed="selectedStatus === 'completed'"
                             @click="selectedStatus = 'completed'"
                         >
                             Completed ({{ completedCount }})
@@ -382,6 +387,7 @@ const handlePrint = () => {
                                     ? 'bg-[#CB7676]/15 font-semibold text-[#CB7676]'
                                     : 'text-muted-foreground hover:text-foreground'
                             "
+                            :aria-pressed="selectedStatus === 'missed'"
                             @click="selectedStatus = 'missed'"
                         >
                             Missed ({{ missedCount }})
@@ -394,6 +400,7 @@ const handlePrint = () => {
                                     ? 'bg-[#E0AF68]/15 font-semibold text-[#E0AF68]'
                                     : 'text-muted-foreground hover:text-foreground'
                             "
+                            :aria-pressed="selectedStatus === 'pending'"
                             @click="selectedStatus = 'pending'"
                         >
                             In Progress ({{ inProgressCount }})
