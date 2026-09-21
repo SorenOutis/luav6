@@ -102,8 +102,8 @@ const tiers = [
                     </div>
                     <span
                         v-if="tier.featured"
-                        class="text-xs font-medium text-primary"
-                        >For schools</span
+                        class="rounded-full bg-[#D97757]/15 px-2.5 py-0.5 text-xs font-semibold text-[#D97757]"
+                        >Most popular for schools</span
                     >
                 </div>
                 <h3
@@ -131,7 +131,7 @@ const tiers = [
                         class="flex items-start gap-2"
                     >
                         <span
-                            class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                            class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97757]"
                         ></span>
                         <span>{{ feature }}</span>
                     </li>
@@ -159,7 +159,7 @@ const tiers = [
                         class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         :class="
                             tier.featured
-                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                ? 'bg-[#D97757] text-white shadow-sm hover:bg-[#D97757]/90'
                                 : 'border border-border text-foreground hover:border-primary hover:bg-primary/5'
                         "
                     >

@@ -49,6 +49,14 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function ($response, $e, $request) {
+            if ($response->getStatusCode() === 419) {
+                if ($request->header('X-Inertia')) {
+                    return back()->with([
+                        'status' => 'Your session expired. Please try again.',
+                    ]);
+                }
+            }
+
             if ($response->getStatusCode() === 429) {
                 if ($request->header('X-Inertia')) {
                     return back()->withErrors([

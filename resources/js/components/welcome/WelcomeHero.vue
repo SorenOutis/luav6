@@ -48,31 +48,31 @@ withDefaults(
             class="relative z-10 max-w-2xl py-4 sm:py-8"
         >
             <p
-                class="mb-7 text-xs font-medium tracking-[0.16em] text-primary uppercase"
+                class="mb-6 text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
             >
                 A school-ready learning platform
             </p>
             <h1
                 id="welcome-heading"
-                class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.6rem]"
+                class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.4rem]"
             >
                 Make every assessment count.
             </h1>
             <p
-                class="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+                class="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
                 Create assessments, review responses, and plan what to teach
                 next, with less work for teachers.
             </p>
-            <p class="mt-5 text-sm font-medium text-foreground/80">
-                Teacher-controlled. Built for schools.
+            <p class="mt-4 text-sm font-medium text-foreground/80">
+                Teacher-controlled · Built for schools · Human-in-the-loop AI
             </p>
 
-            <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                     v-if="auth.user"
                     :href="dashboard()"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Open dashboard
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
@@ -80,14 +80,14 @@ withDefaults(
                 <Link
                     v-else-if="canRegister"
                     :href="register()"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Create a free account
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link
                     :href="login()"
-                    class="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/80 px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Log in
                 </Link>

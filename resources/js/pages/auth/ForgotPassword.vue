@@ -58,7 +58,8 @@ defineOptions({ layout: AuthCard });
             <div class="mt-6 flex items-center justify-start">
                 <Button
                     type="submit"
-                    class="w-full"
+                    variant="brand"
+                    class="w-full shadow-sm"
                     :tabindex="2"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"

@@ -275,13 +275,13 @@
                 @endif
 
                 <div class="actions">
-                    <a class="btn btn-primary" href="{{ url('/') }}">
+                    <a class="btn btn-primary" href="{{ url('/') }}" target="_top">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
                         Back to home
                     </a>
 
                     @if (in_array($status, [401, 419], true))
-                        <a class="btn btn-secondary" href="{{ url('/login') }}">
+                        <a class="btn btn-secondary" href="{{ url('/login') }}" target="_top">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
                             Sign in
                         </a>
@@ -301,24 +301,70 @@
                 </div>
 
                 <div class="footer">
-                    <a href="{{ url('/') }}">{{ $appName }}</a> · If this keeps happening, contact your teacher or administrator.
+                    <a href="{{ url('/') }}" target="_top">{{ $appName }}</a> · If this keeps happening, contact your teacher or administrator.
                 </div>
             </section>
         </main>
 
         <script nonce="{{ Vite::cspNonce() }}">
-            document.querySelectorAll('[data-action]').forEach(function (el) {
-                el.addEventListener('click', function () {
-                    var action = el.getAttribute('data-action');
-                    if (action === 'reload') {
-                        window.location.reload();
-                    } else if (action === 'back' && window.history.length > 1) {
+            (function () {
+                function navigateTop(url) {
+                    try {
+                        if (window.top && window.top !== window) {
+                            window.top.location.href = url;
+                            return;
+                        }
+                    } catch (e) {}
+                    window.location.href = url;
+                }
+
+                function reloadTop() {
+                    try {
+                        if (window.top && window.top !== window) {
+                            window.top.location.reload();
+                            return;
+                        }
+                    } catch (e) {}
+                    window.location.reload();
+                }
+
+                function goBackTop() {
+                    try {
+                        if (window.top && window.top !== window) {
+                            window.top.history.back();
+                            return;
+                        }
+                    } catch (e) {}
+                    if (window.history.length > 1) {
                         window.history.back();
                     } else {
-                        window.location.href = @json(url('/'));
+                        navigateTop(@json(url('/')));
                     }
+                }
+
+                document.querySelectorAll('[data-action]').forEach(function (el) {
+                    el.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var action = el.getAttribute('data-action');
+                        if (action === 'reload') {
+                            reloadTop();
+                        } else if (action === 'back') {
+                            goBackTop();
+                        } else {
+                            navigateTop(@json(url('/')));
+                        }
+                    });
                 });
-            });
+
+                document.querySelectorAll('a').forEach(function (link) {
+                    link.addEventListener('click', function (e) {
+                        if (link.href && window.top && window.top !== window) {
+                            e.preventDefault();
+                            navigateTop(link.href);
+                        }
+                    });
+                });
+            })();
         </script>
     </body>
 </html>

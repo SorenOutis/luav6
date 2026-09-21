@@ -31,10 +31,16 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
 <template>
     <SeoHead noindex />
     <div
-        class="theme-neutral-page flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10"
+        class="theme-neutral-page relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background p-6 md:p-10"
     >
+        <!-- Ambient radial glow behind the card -->
         <div
-            class="flex w-full flex-col gap-6"
+            class="pointer-events-none absolute -top-24 left-1/2 -z-0 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[#D97757]/[0.06] blur-[110px]"
+            aria-hidden="true"
+        ></div>
+
+        <div
+            class="relative z-10 flex w-full flex-col gap-6"
             :class="wide ? 'max-w-3xl' : 'max-w-md'"
         >
             <Link
@@ -42,7 +48,7 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
                 class="group flex flex-col items-center gap-2.5 self-center"
             >
                 <div
-                    class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border bg-background p-1.5 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-primary/30"
+                    class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-border/80 bg-card p-1.5 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-[#D97757]/50 group-hover:shadow-md"
                 >
                     <img
                         v-if="branding.logoUrl"
@@ -64,7 +70,9 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
             </Link>
 
             <div class="flex flex-col gap-6">
-                <Card class="rounded-xl py-0">
+                <Card
+                    class="surface-card relative rounded-2xl border border-border/80 bg-card/95 py-0 shadow-xl backdrop-blur-sm"
+                >
                     <CardHeader
                         v-if="title || description"
                         class="px-6 pt-8 pb-0 text-center sm:px-10"

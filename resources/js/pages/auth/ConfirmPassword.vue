@@ -52,7 +52,8 @@ defineOptions({ layout: AuthCard });
             <div class="flex items-center">
                 <Button
                     type="submit"
-                    class="w-full"
+                    variant="brand"
+                    class="w-full shadow-sm"
                     :tabindex="2"
                     :disabled="processing"
                     data-test="confirm-password-button"

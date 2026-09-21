@@ -64,7 +64,7 @@ const scrollTop = () => {
                         v-for="link in platformLinks"
                         :key="link.label"
                         :href="link.href"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         {{ link.label }}
                     </a>
@@ -78,15 +78,15 @@ const scrollTop = () => {
                     </p>
                     <Link
                         href="/about"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         About LSI
                     </Link>
                     <a
-                        href="mailto:hello@koamishin.dev"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        href="mailto:poweredbyrazer022@dccp.edu.ph"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                        hello@koamishin.dev
+                        poweredbyrazer022@dccp.edu.ph
                     </a>
                 </div>
 
@@ -100,13 +100,13 @@ const scrollTop = () => {
                         v-for="link in legalLinks"
                         :key="link.label"
                         :href="link.href"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         {{ link.label }}
                     </Link>
                     <button
                         type="button"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         @click="openCookieSettings"
                     >
                         Cookie settings
@@ -121,10 +121,13 @@ const scrollTop = () => {
                 <button
                     type="button"
                     @click="scrollTop"
-                    class="inline-flex w-fit items-center gap-2 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="group inline-flex w-fit items-center gap-2 transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Back to top
-                    <ArrowUp class="h-3.5 w-3.5" aria-hidden="true" />
+                    <ArrowUp
+                        class="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5"
+                        aria-hidden="true"
+                    />
                 </button>
             </div>
         </div>

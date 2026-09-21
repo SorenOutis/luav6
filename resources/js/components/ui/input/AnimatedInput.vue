@@ -48,12 +48,13 @@ const chars = computed(() => props.label.split(''))
         :key="index"
         class="inline-block text-sm"
         :class="{
-          '-translate-y-[120%] text-muted-foreground': showLabel,
+          '-translate-y-[120%] text-[#D97757] font-semibold': isFocused,
+          '-translate-y-[120%] text-muted-foreground': !isFocused && showLabel,
           'translate-y-0 text-inherit': !showLabel
         }"
         :style="{
           transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2)',
-          transitionDelay: showLabel ? `${index * 30}ms` : '0ms',
+          transitionDelay: showLabel ? `${index * 25}ms` : '0ms',
           willChange: 'transform'
         }"
       >
@@ -68,7 +69,8 @@ const chars = computed(() => props.label.split(''))
       @blur="isFocused = false"
       @input="onInput"
       v-bind="$attrs"
-      class="outline-none border-b-2 border-foreground py-2 w-full text-base font-medium text-foreground bg-transparent placeholder-transparent"
+      class="outline-none border-b-2 py-2 w-full text-base font-medium text-foreground bg-transparent placeholder-transparent transition-colors duration-200"
+      :class="isFocused ? 'border-[#D97757]' : 'border-border/80'"
     />
   </div>
 </template>

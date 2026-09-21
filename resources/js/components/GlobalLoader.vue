@@ -101,19 +101,19 @@ const startEntrance = () => {
     gsap.set(loaderContainer.value, { display: 'flex', autoAlpha: 1 });
     setInertOnSiblings(true);
 
-    // Entrance: fade + slight slide up
+    // Entrance: gentle scale & fade
     if (contentWrap.value) {
-        gsap.set(contentWrap.value, { y: 16, opacity: 0 });
+        gsap.set(contentWrap.value, { y: 12, opacity: 0 });
         gsap.to(contentWrap.value, {
             y: 0,
             opacity: 1,
-            duration: prefersReducedMotion ? 0.3 : 0.6,
+            duration: prefersReducedMotion ? 0.3 : 0.55,
             ease: 'power2.out',
         });
     }
 
     // Realistic progress: fast to 70, slow to 95, jump to 100 on pendingHide
-    const duration = prefersReducedMotion ? 0.6 : 2.0;
+    const duration = prefersReducedMotion ? 0.6 : 1.8;
     gsap.to(progressProxy, {
         val: pendingHide.value ? 100 : 95,
         duration,
@@ -156,8 +156,8 @@ const startEntrance = () => {
 const startExit = (fast = false) => {
     gsap.to(loaderContainer.value, {
         autoAlpha: 0,
-        y: -8,
-        duration: prefersReducedMotion ? 0.15 : fast ? 0.3 : 0.5,
+        y: -6,
+        duration: prefersReducedMotion ? 0.15 : fast ? 0.25 : 0.45,
         ease: 'power2.in',
         onComplete: () => {
             gsap.set(loaderContainer.value, { display: 'none', y: 0 });
@@ -179,44 +179,55 @@ watch(pendingHide, (isPending) => {
         aria-live="polite"
         aria-busy="true"
         :aria-label="`${message}, ${progress}%`"
-        class="global-loader fixed inset-0 z-[9999] bg-[#f8f7f2] font-sans text-[#17201f] dark:bg-background dark:text-foreground"
+        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground selection:bg-primary/20"
         style="display: none"
     >
+        <!-- Background subtle ambient lighting -->
+        <div
+            class="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center"
+            aria-hidden="true"
+        >
+            <div
+                class="h-[380px] w-[380px] rounded-full bg-[#D97757]/[0.06] blur-[90px] sm:h-[480px] sm:w-[480px]"
+            ></div>
+        </div>
+
         <div
             ref="contentWrap"
             data-test="global-loader-editorial"
-            class="relative mx-auto flex min-h-full w-full max-w-[1440px] flex-col px-6 pt-28 pb-10 sm:px-10 sm:pt-32 sm:pb-14 lg:px-16"
+            class="relative flex w-full max-w-lg flex-col items-center px-5 py-8 sm:px-8"
         >
-            <!-- Upper-left brand treatment -->
-            <div
-                class="absolute top-8 left-6 flex flex-col items-start gap-2 sm:top-10 sm:left-10 lg:left-16"
-            >
+            <!-- Upper-left brand treatment (Responsive & clean) -->
+            <div class="absolute top-8 left-6 flex flex-col items-start gap-1">
                 <PublicBrandMark :logo-url="brandLogoUrl" size="loader" />
                 <span
                     v-if="branding.tagline"
-                    class="ml-12 max-w-[14rem] truncate text-[10px] font-medium tracking-[0.18em] text-[#17201f]/45 uppercase dark:text-muted-foreground/50"
+                    class="ml-10 max-w-[13rem] truncate text-[10px] font-medium tracking-[0.16em] text-muted-foreground/60 uppercase"
                 >
                     {{ branding.tagline }}
                 </span>
             </div>
 
-            <main class="flex flex-1 items-center justify-center">
+            <!-- Elevated Central Loading Hub -->
+            <main class="w-full pt-16 sm:pt-14">
                 <section
-                    class="flex w-full max-w-md flex-col items-center text-center"
+                    class="surface-card relative flex w-full flex-col items-center rounded-2xl border border-border/80 bg-card/90 p-6 text-center shadow-xl backdrop-blur-md sm:p-8 md:p-10"
                 >
+                    <!-- Kicker -->
                     <p
-                        class="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase"
+                        class="text-[11px] font-semibold tracking-[0.2em] text-[#D97757] uppercase"
                     >
                         LSI / GETTING READY
                     </p>
 
+                    <!-- Mascot with glow -->
                     <div
                         data-test="global-loader-fox"
-                        class="global-loader__fox relative z-10 mt-8"
+                        class="global-loader__fox relative z-10 mt-5 transition-transform duration-300 hover:scale-105"
                     >
                         <FoxCompanion
                             mascot="welcome"
-                            :size="190"
+                            :size="150"
                             :show-message="false"
                             :label="
                                 isTerminating
@@ -226,8 +237,9 @@ watch(pendingHide, (isPending) => {
                         />
                     </div>
 
+                    <!-- Headline & Subtitle -->
                     <h1
-                        class="mt-5 font-serif text-4xl leading-[1.02] tracking-[-0.045em] text-[#17201f] sm:text-5xl dark:text-foreground"
+                        class="mt-4 font-serif text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl"
                     >
                         {{
                             isTerminating
@@ -236,7 +248,7 @@ watch(pendingHide, (isPending) => {
                         }}
                     </h1>
                     <p
-                        class="mt-4 max-w-sm text-sm leading-7 text-[#17201f]/60 sm:text-base dark:text-muted-foreground"
+                        class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
                     >
                         {{
                             isTerminating
@@ -245,54 +257,59 @@ watch(pendingHide, (isPending) => {
                         }}
                     </p>
 
+                    <!-- Progress Status Area -->
                     <div
                         data-test="global-loader-status"
-                        class="mt-10 w-full max-w-sm border-t border-[#17201f]/20 pt-4 text-left dark:border-border/40"
+                        class="mt-7 w-full border-t border-border/60 pt-4 text-left"
                     >
                         <div
                             class="flex items-center justify-between gap-4 text-xs font-medium"
                         >
-                            <span
-                                class="truncate text-[#17201f]/65 dark:text-muted-foreground/70"
-                            >
+                            <span class="truncate text-foreground/80">
                                 {{ message }}
                             </span>
                             <span
-                                class="shrink-0 font-mono text-[11px] text-[#17201f]/55 tabular-nums dark:text-muted-foreground/60"
+                                class="shrink-0 font-mono text-[11px] font-semibold text-[#D97757] tabular-nums"
                             >
                                 {{ progress }}%
                             </span>
                         </div>
 
-                        <!-- Editorial progress rule -->
+                        <!-- Tactile Progress Bar (Terracotta matching dashboard) -->
                         <div
-                            class="mt-5 h-px w-full bg-[#17201f]/15 dark:bg-border/50"
+                            class="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary/80"
                             role="progressbar"
                             :aria-valuenow="progress"
                             aria-valuemin="0"
                             aria-valuemax="100"
                         >
                             <div
-                                class="h-full bg-primary transition-[width] duration-200"
+                                class="h-full rounded-full bg-[#D97757] transition-[width] duration-200 ease-out"
                                 :style="{ width: `${progress}%` }"
                             ></div>
                         </div>
 
+                        <!-- Pulse status indicator -->
                         <div
-                            class="mt-4 flex items-center gap-2 text-[10px] font-medium tracking-[0.18em] text-[#17201f]/40 uppercase dark:text-muted-foreground/45"
+                            class="mt-3 flex items-center justify-between text-[10px] font-medium tracking-wider text-muted-foreground uppercase"
                         >
-                            <span
-                                class="h-1.5 w-1.5 rounded-full bg-primary/70"
-                                :class="{
-                                    'animate-pulse': !prefersReducedMotion,
-                                }"
-                            ></span>
-                            <span>
-                                {{
-                                    isTerminating
-                                        ? 'Cleaning up...'
-                                        : 'Loading...'
-                                }}
+                            <div class="flex items-center gap-1.5">
+                                <span
+                                    class="h-1.5 w-1.5 rounded-full bg-[#D97757]"
+                                    :class="{
+                                        'animate-pulse': !prefersReducedMotion,
+                                    }"
+                                ></span>
+                                <span>
+                                    {{
+                                        isTerminating
+                                            ? 'Cleaning up...'
+                                            : 'Loading...'
+                                    }}
+                                </span>
+                            </div>
+                            <span class="text-muted-foreground/60">
+                                LSI Learning Systems
                             </span>
                         </div>
                     </div>
@@ -308,18 +325,16 @@ watch(pendingHide, (isPending) => {
    The * selector ensures child elements with font-sans are also overridden. */
 html[data-font-preset] .global-loader.font-sans,
 html[data-font-preset] .global-loader.font-sans * {
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
-}
-
-.global-loader__fox {
-    filter: drop-shadow(0 14px 18px rgb(23 32 31 / 0.1));
-}
-</style>
-
-<style scoped>
-@media (prefers-reduced-motion: reduce) {
-    .animate-pulse {
-        animation: none !important;
-    }
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        'Helvetica Neue',
+        Arial,
+        sans-serif !important;
 }
 </style>
