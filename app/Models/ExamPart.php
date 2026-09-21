@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\QuestionType;
+use App\Support\MatchingAnswerMatcher;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -88,5 +90,46 @@ class ExamPart extends Model
     public function submissions()
     {
         return $this->hasMany(ExamSubmission::class);
+    }
+
+    /**
+     * Calculate the total possible points for this part from its questions.
+     */
+    public function totalPoints(): float
+    {
+        $questions = is_array($this->questions) ? $this->questions : [];
+        if (empty($questions)) {
+            return (float) ($this->points ?? 0);
+        }
+
+        $defaultPoints = (int) ($this->points ?? 1);
+        $total = 0.0;
+
+        foreach ($questions as $question) {
+            if (! is_array($question)) {
+                continue;
+            }
+
+            $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+
+            if ($type === QuestionType::Enumeration) {
+                $enumerationItems = collect($question['enumeration_items'] ?? [])
+                    ->filter(fn ($item): bool => is_array($item))
+                    ->map(fn (array $item): float => (float) ($item['points'] ?? 0));
+                $total += $enumerationItems->sum();
+
+                continue;
+            }
+
+            if ($type === QuestionType::Matching) {
+                $total += MatchingAnswerMatcher::maxPoints($question);
+
+                continue;
+            }
+
+            $total += (float) ($question['points'] ?? $defaultPoints);
+        }
+
+        return round($total, 2);
     }
 }

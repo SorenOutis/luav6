@@ -119,10 +119,7 @@ describe('Exams/Show.vue failed submission', () => {
         // start the part
         await wrapper.find('.exam-part-card').trigger('click');
         await flushPromises();
-        const startBtn = wrapper
-            .findAll('button')
-            .find((b: any) => b.text().includes('Start'));
-        if (startBtn) await startBtn.trigger('click');
+        await wrapper.get('[data-test="exam-confirm-start"]').trigger('click');
         await flushPromises();
         await new Promise((r) => setTimeout(r, 50));
 

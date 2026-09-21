@@ -1,7 +1,6 @@
 /**
- * The "My Scores" button and its right-side drawer must work in BOTH
- * viewports — the button is not gated behind a desktop-only class and the
- * Sheet renders full-width on mobile (`w-full sm:max-w-md`).
+ * Mobile "Record" and desktop "Activity Record" buttons open the same drawer.
+ * The real Sheet renders full-width on mobile and wider on desktop.
  */
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
@@ -105,6 +104,7 @@ const mountHub = () =>
             examPagination: { hasMore: false, nextCursor: null },
             sectionTabs: [{ key: 'all', label: 'All sections', count: 2 }],
             hubStats: { exams: { total: 2, pending: 1, completed: 1 } },
+            activityRecordEnabled: true,
             activityScores: [
                 {
                     seasonName: 'Season 1',
@@ -113,7 +113,10 @@ const mountHub = () =>
                             id: 1,
                             title: 'Scored activity',
                             section_name: 'BSIT 1-A',
+                            term: 'Prelims',
                             score: 88.5,
+                            total_points: 100,
+                            percentage: 88.5,
                             submitted: true,
                             state: 'completed',
                         },
@@ -121,7 +124,10 @@ const mountHub = () =>
                             id: 2,
                             title: 'Untaken activity',
                             section_name: 'BSIT 1-A',
+                            term: 'Prelims',
                             score: null,
+                            total_points: 50,
+                            percentage: null,
                             submitted: false,
                             state: 'open',
                         },
@@ -148,77 +154,98 @@ afterEach(() => {
     document.body.style.overflow = '';
 });
 
-describe('activities hub — My Scores drawer', () => {
-    it('shows the My Scores button in mobile view (no viewport gating)', () => {
+describe('activities hub — Activity Record drawer', () => {
+    it('keeps the Record button in the mobile overview', () => {
         wrapper = mountHub();
-        const buttons = wrapper
-            .findAll('button')
-            .map((b) => b.text())
-            .filter((t) => t.includes('My Scores'));
-        expect(buttons.length).toBe(1);
-
-        // The button must not carry any utility that hides it on mobile —
-        // otherwise the drawer would be unreachable below the `sm` breakpoint.
-        const button = wrapper
-            .findAll('button')
-            .find((b) => b.text().includes('My Scores'));
-        expect(button?.classes()).not.toContain('hidden');
-        expect(button?.classes()).not.toContain('sm:hidden');
-        expect(button?.classes()).not.toContain('md:hidden');
-    });
-
-    it('opens the right-side drawer with every activity score when clicked', async () => {
-        wrapper = mountHub();
-        const button = wrapper
-            .findAll('button')
-            .find((b) => b.text().includes('My Scores'));
-        expect(button).toBeTruthy();
-
-        await button!.trigger('click');
-        await flushPromises();
-        await nextTick();
-        await flushPromises();
-
-        // The Sheet is teleported to <body> by the reka DialogPortal.
-        const sheet = document.querySelector('[data-slot="sheet-content"]');
-        expect(sheet).not.toBeNull();
-
-        // Mobile-first width: full-bleed below `sm`, capped on desktop.
-        expect(sheet!.className).toContain('w-full');
-        expect(sheet!.className).toContain('sm:max-w-md');
-        // Right-side placement from the Sheet default.
-        expect(sheet!.className).toContain('inset-y-0');
-        expect(sheet!.className).toContain('right-0');
-
-        // Header + summary.
-        const bodyText = document.body.textContent ?? '';
-        expect(bodyText).toContain('My Scores');
-        expect(bodyText).toContain('1 of 2 activities graded');
-
-        // Every activity from the prop, with its score or a placeholder.
-        expect(bodyText).toContain('Scored activity');
-        expect(bodyText).toContain('88.5');
-        expect(bodyText).toContain('Untaken activity');
-        expect(bodyText).toContain('—');
-
-        // Lenis is stopped while the drawer is open.
-        expect(lenisStop).toHaveBeenCalled();
-
-        // Closing via the built-in X (sr-only "Close") removes the sheet and
-        // restores Lenis.
-        const close = Array.from(document.querySelectorAll('button')).find(
-            (b) => b.textContent?.trim() === 'Close',
+        const overview = wrapper.get(
+            'section[aria-label="Activities overview"]',
         );
-        expect(close).toBeTruthy();
-        close!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        await flushPromises();
-        await nextTick();
-        await flushPromises();
-        await nextTick();
+        const buttons = overview
+            .findAll('button')
+            .filter((button) => button.text() === 'Record');
+        expect(buttons).toHaveLength(1);
+        expect(overview.classes()).toContain('md:hidden');
 
-        expect(
-            document.querySelector('[data-slot="sheet-content"]'),
-        ).toBeNull();
-        expect(lenisStart).toHaveBeenCalled();
+        // jsdom cannot evaluate responsive CSS; check the mobile entry point
+        // and its ancestors for utilities that would hide it below md.
+        let element: Element | null = buttons[0].element;
+        while (element) {
+            expect(element.classList.contains('hidden')).toBe(false);
+            element = element.parentElement;
+        }
     });
+
+    it.each(['Record', 'Activity Record'])(
+        'opens the right-side drawer with every activity score from %s',
+        async (label) => {
+            wrapper = mountHub();
+            const button = wrapper
+                .findAll('button')
+                .find((b) => b.text() === label);
+            expect(button).toBeTruthy();
+
+            await button!.trigger('click');
+            await flushPromises();
+            await nextTick();
+            await flushPromises();
+
+            // The Sheet is teleported to <body> by the reka DialogPortal.
+            const sheet = document.querySelector('[data-slot="sheet-content"]');
+            expect(sheet).not.toBeNull();
+
+            // Mobile-first width: full-bleed below `sm`, capped on desktop.
+            expect(sheet!.className).toContain('w-full');
+            expect(sheet!.className).toContain('sm:max-w-xl');
+            expect(sheet!.className).toContain('md:max-w-2xl');
+            // Right-side placement from the Sheet default.
+            expect(sheet!.className).toContain('inset-y-0');
+            expect(sheet!.className).toContain('right-0');
+
+            const sheetText = (sheet!.textContent ?? '').replace(/\s+/g, ' ');
+            expect(sheetText).toContain('Activity Record');
+            expect(sheetText).toContain(
+                'Complete breakdown of activities, scores, and missed tasks',
+            );
+            expect(sheetText).toContain('Completed (1)');
+            expect(sheetText).toContain('Missed (0)');
+            expect(sheetText).toContain('In Progress (1)');
+            expect(sheetText).not.toMatch(/activities graded/i);
+            expect(sheetText).not.toContain('Unsubmitted deadlines');
+            expect(sheetText).not.toContain('Open or pending');
+
+            // Assert each score inside its row, not the hidden printable totals.
+            const rows = Array.from(sheet!.querySelectorAll('li')).map((row) =>
+                (row.textContent ?? '').replace(/\s+/g, ' '),
+            );
+            expect(rows).toHaveLength(2);
+            const scored = rows.find((row) => row.includes('Scored activity'));
+            expect(scored).toContain('88.5 / 100.0 pts');
+            expect(scored).toContain('(88.5%)');
+            const untaken = rows.find((row) =>
+                row.includes('Untaken activity'),
+            );
+            expect(untaken).toContain('Open');
+            expect(untaken).toContain('50.0 max pts');
+
+            // Lenis is stopped while the drawer is open.
+            expect(lenisStop).toHaveBeenCalled();
+
+            // Closing via the built-in X (sr-only "Close") removes the sheet and
+            // restores Lenis.
+            const close = Array.from(document.querySelectorAll('button')).find(
+                (b) => b.textContent?.trim() === 'Close',
+            );
+            expect(close).toBeTruthy();
+            close!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            await flushPromises();
+            await nextTick();
+            await flushPromises();
+            await nextTick();
+
+            expect(
+                document.querySelector('[data-slot="sheet-content"]'),
+            ).toBeNull();
+            expect(lenisStart).toHaveBeenCalled();
+        },
+    );
 });

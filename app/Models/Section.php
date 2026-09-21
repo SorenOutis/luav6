@@ -19,6 +19,7 @@ class Section extends Model
         'workspace_id',
         'admin_id',
         'leaderboard_enabled',
+        'activity_record_enabled',
     ];
 
     public const SCHOOL_LEVEL_COLLEGE = 'college';
@@ -34,6 +35,7 @@ class Section extends Model
         return [
             'password' => 'hashed',
             'leaderboard_enabled' => 'boolean',
+            'activity_record_enabled' => 'boolean',
         ];
     }
 
@@ -188,6 +190,36 @@ class Section extends Model
                     ],
                 ],
             ],
+        ];
+    }
+
+    public static function examTermOptions(?string $schoolLevel = null): array
+    {
+        $shsOptions = [
+            'First Semester - 1st Quarter' => 'First Semester - 1st Quarter',
+            'First Semester - 2nd Quarter' => 'First Semester - 2nd Quarter',
+            'Second Semester - 1st Quarter' => 'Second Semester - 1st Quarter',
+            'Second Semester - 2nd Quarter' => 'Second Semester - 2nd Quarter',
+        ];
+
+        $collegeOptions = [
+            'Prelim' => 'Prelim',
+            'Midterm' => 'Midterm',
+            'Semi-Final' => 'Semi-Final',
+            'Final' => 'Final',
+        ];
+
+        if ($schoolLevel === self::SCHOOL_LEVEL_SENIOR_HIGH) {
+            return $shsOptions;
+        }
+
+        if ($schoolLevel === self::SCHOOL_LEVEL_COLLEGE) {
+            return $collegeOptions;
+        }
+
+        return [
+            'Senior High School (Quarters)' => $shsOptions,
+            'College (Periods)' => $collegeOptions,
         ];
     }
 }

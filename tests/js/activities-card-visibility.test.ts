@@ -503,8 +503,8 @@ describe('activities hub — exam card visibility', () => {
         // tab counts go stale the moment an exam is published or closed.
         // `activityScores` feeds the My Scores drawer, which must stay fresh
         // when a teacher grades a submission while the hub is open.
-        expect(page).toContain(
-            "only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores']",
+        expect(page).toMatch(
+            /only:\s*\[\s*'examsBySeason',\s*'hubStats',\s*'sectionTabs',\s*'activityScores',\s*'activityRecordEnabled',?\s*\]/,
         );
     });
 

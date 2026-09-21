@@ -17,7 +17,7 @@ import {
     Zap,
     X,
     Layers,
-    Award,
+    FileSpreadsheet,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -33,13 +33,6 @@ import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import { getLenis } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -47,6 +40,7 @@ import type { TourStep } from '@/lib/onboarding';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
+import ActivityRecordSheet from './Partials/ActivityRecordSheet.vue';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface ExamSubmission {
@@ -118,19 +112,32 @@ const props = defineProps<{
         exams: { total: number; pending: number; completed: number };
     };
     activityScores?: ScoreGroup[];
+    activityRecordEnabled?: boolean;
 }>();
 
 // ─── Polling + Visibility (reuse exam pattern) ──────────────────────────────
 const { stop: stopPoll, start: startPoll } = usePoll(
     10000,
     {
-        only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores'],
+        only: [
+            'examsBySeason',
+            'hubStats',
+            'sectionTabs',
+            'activityScores',
+            'activityRecordEnabled',
+        ],
     },
     { autoStart: false },
 );
 const refreshHub = () =>
     router.reload({
-        only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores'],
+        only: [
+            'examsBySeason',
+            'hubStats',
+            'sectionTabs',
+            'activityScores',
+            'activityRecordEnabled',
+        ],
     });
 const handleVisibilityChange = () => {
     if (!document.hidden) refreshHub();
@@ -362,28 +369,8 @@ const completionRate = computed(() => {
     );
 });
 
-// ─── My Scores drawer ───────────────────────────────────────────────────────
+// ─── Activity Record drawer ────────────────────────────────────────────────
 const showScoresDrawer = ref(false);
-const scoreGroups = computed(() => props.activityScores ?? []);
-const scoreAll = computed(() => scoreGroups.value.flatMap((g) => g.exams));
-const gradedCount = computed(
-    () => scoreAll.value.filter((a) => a.score !== null).length,
-);
-const SCORE_STATE_META: Record<
-    ActivityScore['state'],
-    { label: string; class: string }
-> = {
-    completed: { label: 'Completed', class: 'bg-[#4D9375]/10 text-[#4D9375]' },
-    in_progress: {
-        label: 'In progress',
-        class: 'bg-[#E0AF68]/10 text-[#E0AF68]',
-    },
-    open: { label: 'Open', class: 'bg-[#D97757]/10 text-[#D97757]' },
-    closed: { label: 'Closed', class: 'bg-[#CB7676]/10 text-[#CB7676]' },
-    draft: { label: 'Draft', class: 'bg-muted text-muted-foreground' },
-};
-const scoreStateMeta = (state: ActivityScore['state']) =>
-    SCORE_STATE_META[state] ?? SCORE_STATE_META.draft;
 // Match the review modal: stop Lenis while the sheet is open so the page
 // behind it cannot scroll.
 watch(showScoresDrawer, (open) => {
@@ -699,6 +686,26 @@ const openExam = (exam: Exam) => {
     }
     router.visit(examsShow(exam.id).url);
 };
+const handleReviewFromRecord = (examId: number) => {
+    const all = props.examsBySeason.flatMap((g) => g.exams);
+    const found = all.find((e) => e.id === examId);
+    if (found) {
+        showScoresDrawer.value = false;
+        openReview(found);
+    } else {
+        openReview({ id: examId, parts: [] } as any);
+    }
+};
+const handleOpenExamFromRecord = (examId: number) => {
+    const all = props.examsBySeason.flatMap((g) => g.exams);
+    const found = all.find((e) => e.id === examId);
+    showScoresDrawer.value = false;
+    if (found) {
+        openExam(found);
+    } else {
+        router.visit(examsShow(examId).url);
+    }
+};
 const getSubmissionForPart = (exam: Exam, partId: number) =>
     exam.submissions?.find((s) => s.exam_part_id === partId);
 const getAnswerObjectForQuestion = (answers: any, questionNumber: number) => {
@@ -811,13 +818,14 @@ const activitiesTourSteps: TourStep[] = [
                         <h1 class="mobile-dashboard-title">Activities Hub</h1>
                     </div>
                     <Button
+                        v-if="activityRecordEnabled !== false"
                         type="button"
                         variant="outline"
                         class="h-11 shrink-0 items-center gap-2 rounded-full border-border/50 bg-card px-3 text-xs font-semibold text-foreground hover:bg-muted"
                         @click="showScoresDrawer = true"
                     >
-                        <Award class="h-4 w-4 text-[#D97757]" />
-                        Scores
+                        <FileSpreadsheet class="h-4 w-4 text-[#D97757]" />
+                        Record
                     </Button>
                 </div>
                 <p class="text-sm leading-relaxed text-muted-foreground">
@@ -869,13 +877,14 @@ const activitiesTourSteps: TourStep[] = [
                         </p>
                     </div>
                     <Button
+                        v-if="activityRecordEnabled !== false"
                         type="button"
                         variant="outline"
                         class="h-11 shrink-0 items-center gap-2 rounded-full border-border/50 bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted sm:h-10 sm:px-5"
                         @click="showScoresDrawer = true"
                     >
-                        <Award class="h-4 w-4 text-[#D97757]" />
-                        My Scores
+                        <FileSpreadsheet class="h-4 w-4 text-[#D97757]" />
+                        Activity Record
                     </Button>
                 </div>
             </Motion>
@@ -1919,115 +1928,14 @@ const activitiesTourSteps: TourStep[] = [
         </template>
     </ResponsiveModal>
 
-    <!-- My Scores drawer — every visible activity with its total score -->
-    <Sheet :open="showScoresDrawer" @update:open="showScoresDrawer = $event">
-        <SheetContent class="w-full gap-0 sm:max-w-md">
-            <SheetHeader class="pb-3">
-                <div class="flex items-center gap-2">
-                    <Award class="h-5 w-5 text-[#D97757]" />
-                    <SheetTitle class="text-lg font-bold text-foreground"
-                        >My Scores</SheetTitle
-                    >
-                </div>
-                <SheetDescription class="text-xs text-muted-foreground"
-                    >{{ gradedCount }} of {{ scoreAll.length }} activities
-                    graded</SheetDescription
-                >
-            </SheetHeader>
-            <div
-                class="custom-scrollbar flex-1 overflow-y-auto px-3 pb-4"
-                data-lenis-prevent
-            >
-                <div
-                    v-if="scoreAll.length === 0"
-                    class="flex flex-col items-center justify-center gap-2 py-16 text-center"
-                >
-                    <Calendar class="h-10 w-10 text-muted-foreground/40" />
-                    <p class="text-sm font-medium text-foreground">
-                        No activities yet
-                    </p>
-                    <p class="text-xs text-muted-foreground">
-                        Your scores will appear here once exams are published.
-                    </p>
-                </div>
-                <div v-else class="space-y-5">
-                    <div
-                        v-for="(group, gIdx) in scoreGroups"
-                        :key="gIdx"
-                        class="space-y-1.5"
-                    >
-                        <div class="flex items-center gap-2 px-1">
-                            <Calendar class="h-3.5 w-3.5 text-primary" />
-                            <h3
-                                class="text-[13px] font-semibold text-foreground"
-                            >
-                                {{ group.seasonName }}
-                            </h3>
-                            <span
-                                class="text-[11px] font-medium text-muted-foreground tabular-nums"
-                                >{{ group.exams.length }}
-                                {{
-                                    group.exams.length === 1
-                                        ? 'activity'
-                                        : 'activities'
-                                }}</span
-                            >
-                        </div>
-                        <ul
-                            class="overflow-hidden rounded-xl border border-border/60 bg-card"
-                        >
-                            <li
-                                v-for="(activity, aIdx) in group.exams"
-                                :key="activity.id"
-                                class="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4"
-                                :class="
-                                    aIdx > 0 ? 'border-t border-border/50' : ''
-                                "
-                            >
-                                <div class="min-w-0">
-                                    <p
-                                        class="truncate text-[13px] font-medium text-foreground sm:text-sm"
-                                    >
-                                        {{ activity.title }}
-                                    </p>
-                                    <p
-                                        class="mt-0.5 truncate text-[11px] text-muted-foreground"
-                                    >
-                                        {{
-                                            activity.section_name ??
-                                            'No section'
-                                        }}
-                                    </p>
-                                </div>
-                                <div class="flex shrink-0 items-center gap-2.5">
-                                    <span
-                                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                        :class="
-                                            scoreStateMeta(activity.state).class
-                                        "
-                                        >{{
-                                            scoreStateMeta(activity.state).label
-                                        }}</span
-                                    >
-                                    <span
-                                        v-if="activity.score !== null"
-                                        class="w-12 text-right text-sm font-bold text-foreground tabular-nums"
-                                        >{{ activity.score.toFixed(1) }}</span
-                                    >
-                                    <span
-                                        v-else
-                                        class="w-12 text-right text-sm text-muted-foreground/50"
-                                        aria-label="No score yet"
-                                        >—</span
-                                    >
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </SheetContent>
-    </Sheet>
+    <!-- Activity Record drawer — complete breakdown of activities, terms, scores, and missed tasks -->
+    <ActivityRecordSheet
+        :open="showScoresDrawer"
+        :groups="(activityScores as any) ?? []"
+        @update:open="showScoresDrawer = $event"
+        @review="handleReviewFromRecord"
+        @open-exam="handleOpenExamFromRecord"
+    />
 </template>
 
 <style scoped>

@@ -7,6 +7,7 @@ use App\Models\Section;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class SectionForm
@@ -28,6 +29,10 @@ class SectionForm
                     ->options(Section::schoolLevelOptions())
                     ->default(Section::SCHOOL_LEVEL_COLLEGE)
                     ->required(),
+                Toggle::make('activity_record_enabled')
+                    ->label('Enable Activity Record for Students')
+                    ->helperText('Allow students in this section to view the Activity Record button and inspect their activity scores and completion history.')
+                    ->default(true),
                 Placeholder::make('join_code')
                     ->label('Section join code')
                     ->content(fn ($record) => $record && $record->join_code
