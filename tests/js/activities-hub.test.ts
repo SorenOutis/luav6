@@ -24,7 +24,7 @@ describe('activities hub', () => {
         expect(record).toContain('Missed ({{ missedCount }})');
         expect(record).toContain('In Progress ({{ inProgressCount }})');
         expect(record).toContain('printable-record');
-        expect(record).toContain('totalEarnedPoints.toFixed(1)');
+        expect(record).toContain('totalEarnedPoints.toFixed(0)');
     });
 
     it('renders the activity cards and keeps their actions wired', () => {

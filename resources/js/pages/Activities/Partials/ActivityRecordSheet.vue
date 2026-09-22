@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import {
+    ArrowUpRight,
     Award,
     Calendar,
     CheckCircle2,
@@ -12,7 +13,7 @@ import {
     XCircle,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import { Badge } from '@/components/ui/badge';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -225,16 +226,30 @@ const groupedByTerm = computed<TermGroup[]>(() => {
     });
 });
 
-const formatScheduleDate = (iso?: string | null) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+const activityScoreDisplay = (activity: ActivityScoreItem): string => {
+    const total = activity.total_points.toFixed(0);
+
+    if (
+        activity.is_missed ||
+        (activity.state === 'closed' && !activity.submitted)
+    ) {
+        return `0 / ${total}`;
+    }
+
+    if (activity.is_pending_review) {
+        return 'Pending';
+    }
+
+    if (
+        activity.score !== null &&
+        (activity.state === 'completed' ||
+            activity.submitted ||
+            activity.is_incomplete)
+    ) {
+        return `${activity.score.toFixed(0)} / ${total}`;
+    }
+
+    return '—';
 };
 
 const handlePrint = () => {
@@ -437,9 +452,9 @@ const handlePrint = () => {
                         </p>
                         <p>
                             <strong>Total Points:</strong>
-                            {{ totalEarnedPoints.toFixed(1) }} /
-                            {{ totalMaxPoints.toFixed(1) }} ({{
-                                overallPercentage ?? 0
+                            {{ totalEarnedPoints.toFixed(0) }} /
+                            {{ totalMaxPoints.toFixed(0) }} ({{
+                                (overallPercentage ?? 0).toFixed(0)
                             }}%)
                         </p>
                     </div>
@@ -470,9 +485,11 @@ const handlePrint = () => {
                     >
                         <!-- Group Header with Subtotal -->
                         <div
-                            class="flex items-center justify-between border-b border-border/40 px-1 pb-1.5"
+                            class="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-1 pb-1.5"
                         >
-                            <div class="flex items-center gap-2">
+                            <div
+                                class="flex min-w-0 flex-wrap items-center gap-2"
+                            >
                                 <Award class="h-4 w-4 text-primary" />
                                 <h3
                                     class="text-sm font-bold tracking-tight text-foreground"
@@ -494,323 +511,219 @@ const handlePrint = () => {
                             <!-- Term Subtotal -->
                             <div
                                 v-if="group.subtotalMax > 0"
-                                class="flex items-center gap-2 text-xs"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2.5 py-0.5 text-xs shadow-2xs"
                             >
-                                <span class="text-muted-foreground"
+                                <span
+                                    class="text-[11px] font-medium text-muted-foreground"
                                     >Subtotal:</span
                                 >
                                 <span
                                     class="font-bold text-foreground tabular-nums"
                                 >
-                                    {{ group.subtotalScore.toFixed(1) }} /
-                                    {{ group.subtotalMax.toFixed(1) }}
+                                    {{ group.subtotalScore.toFixed(0) }} /
+                                    {{ group.subtotalMax.toFixed(0) }}
                                 </span>
                                 <span
                                     v-if="group.subtotalPercentage !== null"
                                     class="font-semibold text-primary tabular-nums"
                                 >
-                                    ({{ group.subtotalPercentage.toFixed(1) }}%)
+                                    ({{ group.subtotalPercentage.toFixed(0) }}%)
                                 </span>
                             </div>
                         </div>
 
-                        <!-- Activity List Cards -->
-                        <ul
-                            class="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xs"
+                        <!-- Activity Record Table -->
+                        <div
+                            class="custom-scrollbar max-w-full overflow-x-auto rounded-lg border border-border/50 bg-muted/15 p-0.5 focus-visible:outline-2 focus-visible:outline-ring"
+                            tabindex="0"
+                            role="region"
+                            :aria-label="`${group.term} activity records`"
+                            data-lenis-prevent
                         >
-                            <li
-                                v-for="activity in group.activities"
-                                :key="activity.id"
-                                class="flex flex-col gap-2 p-3 transition-colors hover:bg-muted/40 sm:p-4"
+                            <table
+                                data-test="activity-record-table"
+                                class="min-w-full table-fixed border-collapse text-left text-sm"
+                                :style="{
+                                    width: `${group.activities.length * 140}px`,
+                                }"
                             >
-                                <div
-                                    class="flex items-start justify-between gap-3"
-                                >
-                                    <div class="min-w-0 flex-1">
-                                        <div
-                                            class="flex flex-wrap items-center gap-1.5"
+                                <thead>
+                                    <tr>
+                                        <th
+                                            v-for="(
+                                                activity, idx
+                                            ) in group.activities"
+                                            :key="activity.id"
+                                            scope="col"
+                                            class="w-[140px] min-w-[140px] border border-border/50 bg-muted/40 px-3 py-2.5 align-top transition-colors"
                                         >
-                                            <p
-                                                class="text-sm font-semibold text-foreground"
-                                            >
-                                                {{ activity.title }}
-                                            </p>
-                                            <Badge
-                                                v-if="activity.is_late"
-                                                variant="outline"
-                                                class="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
-                                            >
-                                                Late
-                                            </Badge>
-                                        </div>
-
-                                        <div
-                                            class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"
-                                        >
-                                            <span
-                                                v-if="activity.section_name"
-                                                class="font-medium text-foreground/80"
-                                            >
-                                                {{ activity.section_name }}
-                                            </span>
-                                            <span v-if="activity.section_name"
-                                                >·</span
-                                            >
-                                            <span>{{ activity.term }}</span>
-                                            <template
-                                                v-if="activity.ends_at_iso"
-                                            >
-                                                <span>·</span>
-                                                <span
-                                                    class="inline-flex items-center gap-1"
+                                            <div class="flex flex-col gap-1">
+                                                <div
+                                                    class="flex items-center justify-between gap-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
                                                 >
-                                                    <Clock class="h-3 w-3" />
-                                                    {{
-                                                        activity.is_missed
-                                                            ? 'Ended'
-                                                            : 'Deadline:'
-                                                    }}
-                                                    {{
-                                                        formatScheduleDate(
-                                                            activity.ends_at_iso,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </template>
-                                        </div>
-                                    </div>
-
-                                    <!-- Score & Badge -->
-                                    <div
-                                        class="flex shrink-0 flex-col items-end gap-1"
-                                    >
-                                        <!-- Missed -->
-                                        <template
-                                            v-if="
-                                                activity.is_missed ||
-                                                (activity.state === 'closed' &&
-                                                    !activity.submitted)
-                                            "
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-[#CB7676]/15 px-2.5 py-0.5 text-xs font-bold text-[#CB7676]"
-                                            >
-                                                <XCircle class="h-3 w-3" />
-                                                Missed
-                                            </span>
-                                            <span
-                                                class="text-xs font-bold text-[#CB7676] tabular-nums"
-                                            >
-                                                0.0 /
-                                                {{
-                                                    activity.total_points.toFixed(
-                                                        1,
-                                                    )
-                                                }}
-                                                pts
-                                            </span>
-                                        </template>
-
-                                        <!-- Completed / Graded -->
-                                        <template
-                                            v-else-if="
-                                                activity.state ===
-                                                    'completed' &&
-                                                activity.score !== null
-                                            "
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-[#4D9375]/15 px-2.5 py-0.5 text-xs font-semibold text-[#4D9375]"
-                                            >
-                                                <CheckCircle2 class="h-3 w-3" />
-                                                Completed
-                                            </span>
-                                            <div
-                                                class="flex items-baseline gap-1 text-right"
-                                            >
-                                                <span
-                                                    class="text-sm font-bold text-foreground tabular-nums"
+                                                    <span
+                                                        class="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground/90"
+                                                    >
+                                                        <span
+                                                            class="h-1.5 w-1.5 rounded-full bg-primary/70"
+                                                        />
+                                                        Act {{ idx + 1 }}
+                                                    </span>
+                                                    <span
+                                                        v-if="activity.is_late"
+                                                        class="rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400"
+                                                    >
+                                                        Late
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    class="line-clamp-2 text-xs leading-snug font-semibold break-words text-foreground"
+                                                    :title="activity.title"
                                                 >
-                                                    {{
-                                                        activity.score.toFixed(
-                                                            1,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-xs text-muted-foreground tabular-nums"
-                                                >
-                                                    /
-                                                    {{
-                                                        activity.total_points.toFixed(
-                                                            1,
-                                                        )
-                                                    }}
-                                                    pts
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        activity.percentage !==
-                                                        null
+                                                    {{ activity.title }}
+                                                </div>
+                                                <div
+                                                    v-if="activity.section_name"
+                                                    class="truncate text-[10px] text-muted-foreground"
+                                                    :title="
+                                                        activity.section_name
                                                     "
-                                                    class="ml-1 text-[11px] font-semibold text-[#4D9375] tabular-nums"
                                                 >
-                                                    ({{
-                                                        activity.percentage.toFixed(
-                                                            1,
+                                                    {{ activity.section_name }}
+                                                </div>
+                                            </div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td
+                                            v-for="activity in group.activities"
+                                            :key="activity.id"
+                                            data-test="activity-record-cell"
+                                            :aria-label="activity.title"
+                                            class="border border-border/50 bg-background/40 p-2 align-middle tabular-nums transition-colors hover:bg-muted/20"
+                                        >
+                                            <!-- Completed / Submitted -->
+                                            <button
+                                                v-if="
+                                                    activity.submitted ||
+                                                    activity.state ===
+                                                        'completed'
+                                                "
+                                                type="button"
+                                                :aria-label="
+                                                    'Review answers for ' +
+                                                    activity.title
+                                                "
+                                                class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs transition-all duration-150 hover:border-[#4D9375]/60 hover:bg-[#4D9375]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
+                                                @click="
+                                                    emit('review', activity.id)
+                                                "
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    {{
+                                                        activityScoreDisplay(
+                                                            activity,
                                                         )
-                                                    }}%)
+                                                    }}
+                                                </span>
+                                                <CheckCircle2
+                                                    class="h-3.5 w-3.5 shrink-0 opacity-75 transition-transform group-hover/cell:scale-110 group-hover/cell:opacity-100"
+                                                />
+                                            </button>
+
+                                            <!-- Missed -->
+                                            <div
+                                                v-else-if="
+                                                    activity.is_missed ||
+                                                    (activity.state ===
+                                                        'closed' &&
+                                                        !activity.submitted)
+                                                "
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#CB7676]/30 bg-[#CB7676]/10 px-2.5 py-2 text-xs font-semibold text-[#CB7676] shadow-2xs"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    {{
+                                                        activityScoreDisplay(
+                                                            activity,
+                                                        )
+                                                    }}
+                                                </span>
+                                                <XCircle
+                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                />
+                                            </div>
+
+                                            <!-- Pending Review -->
+                                            <div
+                                                v-else-if="
+                                                    activity.is_pending_review
+                                                "
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#E0AF68]/30 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    Pending
+                                                </span>
+                                                <Clock
+                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                />
+                                            </div>
+
+                                            <!-- Open or In Progress -->
+                                            <button
+                                                v-else-if="
+                                                    activity.state === 'open' ||
+                                                    activity.state ===
+                                                        'in_progress'
+                                                "
+                                                type="button"
+                                                :aria-label="
+                                                    'Open ' + activity.title
+                                                "
+                                                class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-dashed border-[#E0AF68]/40 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs transition-all duration-150 hover:border-[#E0AF68]/70 hover:bg-[#E0AF68]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
+                                                @click="
+                                                    emit(
+                                                        'openExam',
+                                                        activity.id,
+                                                    )
+                                                "
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                    >—</span
+                                                >
+                                                <ArrowUpRight
+                                                    class="h-3.5 w-3.5 shrink-0 opacity-70 transition-all group-hover/cell:translate-x-0.5 group-hover/cell:-translate-y-0.5 group-hover/cell:opacity-100"
+                                                />
+                                            </button>
+
+                                            <!-- Fallback / Other -->
+                                            <div
+                                                v-else
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-xs font-medium text-muted-foreground"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    {{
+                                                        activityScoreDisplay(
+                                                            activity,
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
-                                        </template>
-
-                                        <!-- Pending Review -->
-                                        <template
-                                            v-else-if="
-                                                activity.is_pending_review
-                                            "
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-600 dark:text-purple-400"
-                                            >
-                                                <Clock class="h-3 w-3" />
-                                                Grading Pending
-                                            </span>
-                                            <span
-                                                class="text-xs text-muted-foreground tabular-nums"
-                                            >
-                                                Awaiting teacher/AI review
-                                            </span>
-                                        </template>
-
-                                        <!-- Incomplete -->
-                                        <template
-                                            v-else-if="activity.is_incomplete"
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400"
-                                            >
-                                                Incomplete
-                                            </span>
-                                            <span
-                                                class="text-xs font-semibold text-foreground tabular-nums"
-                                            >
-                                                {{
-                                                    (
-                                                        activity.score ?? 0
-                                                    ).toFixed(1)
-                                                }}
-                                                /
-                                                {{
-                                                    activity.total_points.toFixed(
-                                                        1,
-                                                    )
-                                                }}
-                                                pts
-                                            </span>
-                                        </template>
-
-                                        <!-- In Progress -->
-                                        <template
-                                            v-else-if="
-                                                activity.state === 'in_progress'
-                                            "
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1 rounded-full bg-[#E0AF68]/15 px-2.5 py-0.5 text-xs font-semibold text-[#E0AF68]"
-                                            >
-                                                In progress
-                                            </span>
-                                            <span
-                                                class="text-xs text-muted-foreground"
-                                            >
-                                                {{
-                                                    activity.submitted_parts ??
-                                                    0
-                                                }}/{{
-                                                    activity.total_parts ?? 0
-                                                }}
-                                                parts
-                                            </span>
-                                        </template>
-
-                                        <!-- Open / Not Started -->
-                                        <template v-else>
-                                            <span
-                                                class="inline-flex items-center rounded-full bg-[#D97757]/15 px-2.5 py-0.5 text-xs font-semibold text-[#D97757]"
-                                            >
-                                                Open
-                                            </span>
-                                            <span
-                                                class="text-xs text-muted-foreground tabular-nums"
-                                            >
-                                                {{
-                                                    activity.total_points.toFixed(
-                                                        1,
-                                                    )
-                                                }}
-                                                max pts
-                                            </span>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <!-- Action bar & Progress meter -->
-                                <div
-                                    class="flex items-center justify-between border-t border-border/40 pt-2 text-xs"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            v-if="
-                                                activity.total_parts &&
-                                                activity.total_parts > 1
-                                            "
-                                            class="text-[11px] text-muted-foreground"
-                                        >
-                                            Parts:
-                                            {{ activity.submitted_parts ?? 0 }}
-                                            of {{ activity.total_parts }} done
-                                        </span>
-                                    </div>
-
-                                    <!-- Quick click-through button -->
-                                    <div>
-                                        <Button
-                                            v-if="
-                                                activity.submitted ||
-                                                activity.state === 'completed'
-                                            "
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            class="h-7 px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
-                                            @click="emit('review', activity.id)"
-                                        >
-                                            Review Answers
-                                        </Button>
-                                        <Button
-                                            v-else-if="
-                                                activity.state === 'open' ||
-                                                activity.state === 'in_progress'
-                                            "
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            class="h-7 px-2.5 text-xs font-medium text-[#D97757] hover:bg-[#D97757]/10"
-                                            @click="
-                                                emit('openExam', activity.id)
-                                            "
-                                        >
-                                            {{
-                                                activity.state === 'in_progress'
-                                                    ? 'Continue Exam'
-                                                    : 'Take Exam'
-                                            }}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -840,10 +753,14 @@ const handlePrint = () => {
 }
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
     border-radius: 12px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 @media print {

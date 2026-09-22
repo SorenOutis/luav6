@@ -150,7 +150,7 @@ class ActivityHubController extends Controller
     {
         $exams = $this->visibleExams($user)
             ->select(['exams.id', 'exams.title', 'exams.status', 'exams.section_id', 'exams.term', 'exams.created_at', 'exams.ends_at', 'exams.starts_at'])
-            ->with(['section:id,name,school_level', 'section.season:id,name,start_date'])
+            ->with(['section:id,name,school_level,activity_record_enabled,activity_record_terms', 'section.season:id,name,start_date'])
             ->get();
 
         if ($exams->isEmpty()) {
@@ -170,62 +170,70 @@ class ActivityHubController extends Controller
 
         $summaries = $this->examSets->summariesFor($user, $exams->pluck('id')->all());
 
-        $rows = $exams->map(function (Exam $exam) use ($allSubmissions, $allParts, $summaries) {
-            $submissions = $allSubmissions->get($exam->id, collect());
-            $submittedPartsCount = $submissions->unique('exam_part_id')->count();
-            $totalParts = (int) ($summaries[$exam->id]['total_parts'] ?? 0);
-            $allDone = $totalParts > 0 && $submittedPartsCount >= $totalParts;
+        $rows = $exams
+            ->filter(function (Exam $exam) {
+                if (! $exam->section) {
+                    return true;
+                }
 
-            $closedNow = $exam->isEffectivelyClosed();
-            $hasSubmissions = $submissions->isNotEmpty();
-            $hasLate = $submissions->contains(fn ($s) => (bool) $s->is_late);
-            $isPendingReview = $submissions->contains(fn ($s) => in_array($s->status, ['pending_review', 'pending_ai'], true));
+                return $exam->section->isTermAllowedForActivityRecord($exam->term);
+            })
+            ->map(function (Exam $exam) use ($allSubmissions, $allParts, $summaries) {
+                $submissions = $allSubmissions->get($exam->id, collect());
+                $submittedPartsCount = $submissions->unique('exam_part_id')->count();
+                $totalParts = (int) ($summaries[$exam->id]['total_parts'] ?? 0);
+                $allDone = $totalParts > 0 && $submittedPartsCount >= $totalParts;
 
-            $set = $summaries[$exam->id]['set'] ?? null;
-            $parts = $this->examSets->filterParts($exam, $allParts->get($exam->id, collect()), $set);
-            $totalPoints = round((float) $parts->sum(fn (ExamPart $part) => $part->totalPoints()), 2);
+                $closedNow = $exam->isEffectivelyClosed();
+                $hasSubmissions = $submissions->isNotEmpty();
+                $hasLate = $submissions->contains(fn ($s) => (bool) $s->is_late);
+                $isPendingReview = $submissions->contains(fn ($s) => in_array($s->status, ['pending_review', 'pending_ai'], true));
 
-            $rawTotalScore = $hasSubmissions ? $submissions->sum('score') : null;
-            $score = $hasSubmissions && $rawTotalScore !== null ? round((float) $rawTotalScore, 2) : null;
+                $set = $summaries[$exam->id]['set'] ?? null;
+                $parts = $this->examSets->filterParts($exam, $allParts->get($exam->id, collect()), $set);
+                $totalPoints = round((float) $parts->sum(fn (ExamPart $part) => $part->totalPoints()), 2);
 
-            if ($allDone) {
-                $state = 'completed';
-            } elseif ($closedNow) {
-                $state = 'closed';
-            } elseif ($hasSubmissions) {
-                $state = 'in_progress';
-            } else {
-                $state = $exam->status === 'published' ? 'open' : 'draft';
-            }
+                $rawTotalScore = $hasSubmissions ? $submissions->sum('score') : null;
+                $score = $hasSubmissions && $rawTotalScore !== null ? round((float) $rawTotalScore, 2) : null;
 
-            $percentage = null;
-            if ($totalPoints > 0 && $score !== null) {
-                $percentage = round(($score / $totalPoints) * 100, 1);
-            }
+                if ($allDone) {
+                    $state = 'completed';
+                } elseif ($closedNow) {
+                    $state = 'closed';
+                } elseif ($hasSubmissions) {
+                    $state = 'in_progress';
+                } else {
+                    $state = $exam->status === 'published' ? 'open' : 'draft';
+                }
 
-            return [
-                'id' => $exam->id,
-                'title' => $exam->title,
-                'term' => $exam->term ?: 'General',
-                'section_name' => $exam->section?->name,
-                'school_level' => $exam->section?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE,
-                'season_name' => $exam->section?->season?->name ?? 'Other',
-                'season_start' => $exam->section?->season?->start_date?->getTimestamp() ?? 0,
-                'created_at' => $exam->created_at?->getTimestamp() ?? 0,
-                'ends_at_iso' => $exam->ends_at?->toIso8601String(),
-                'score' => $score,
-                'total_points' => $totalPoints,
-                'percentage' => $percentage,
-                'submitted' => $hasSubmissions,
-                'is_missed' => $closedNow && ! $hasSubmissions,
-                'is_incomplete' => $closedNow && $hasSubmissions && ! $allDone,
-                'is_pending_review' => $hasSubmissions && $isPendingReview,
-                'submitted_parts' => $submittedPartsCount,
-                'total_parts' => $totalParts,
-                'is_late' => $hasLate,
-                'state' => $state,
-            ];
-        });
+                $percentage = null;
+                if ($totalPoints > 0 && $score !== null) {
+                    $percentage = round(($score / $totalPoints) * 100, 1);
+                }
+
+                return [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'term' => $exam->term ?: 'General',
+                    'section_name' => $exam->section?->name,
+                    'school_level' => $exam->section?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE,
+                    'season_name' => $exam->section?->season?->name ?? 'Other',
+                    'season_start' => $exam->section?->season?->start_date?->getTimestamp() ?? 0,
+                    'created_at' => $exam->created_at?->getTimestamp() ?? 0,
+                    'ends_at_iso' => $exam->ends_at?->toIso8601String(),
+                    'score' => $score,
+                    'total_points' => $totalPoints,
+                    'percentage' => $percentage,
+                    'submitted' => $hasSubmissions,
+                    'is_missed' => $closedNow && ! $hasSubmissions,
+                    'is_incomplete' => $closedNow && $hasSubmissions && ! $allDone,
+                    'is_pending_review' => $hasSubmissions && $isPendingReview,
+                    'submitted_parts' => $submittedPartsCount,
+                    'total_parts' => $totalParts,
+                    'is_late' => $hasLate,
+                    'state' => $state,
+                ];
+            });
 
         $seasonStarts = $rows
             ->groupBy('season_name')

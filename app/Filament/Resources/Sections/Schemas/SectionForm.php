@@ -4,10 +4,13 @@ namespace App\Filament\Resources\Sections\Schemas;
 
 use App\Models\Season;
 use App\Models\Section;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class SectionForm
@@ -28,11 +31,20 @@ class SectionForm
                     ->label('School level')
                     ->options(Section::schoolLevelOptions())
                     ->default(Section::SCHOOL_LEVEL_COLLEGE)
-                    ->required(),
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('activity_record_terms', null)),
                 Toggle::make('activity_record_enabled')
                     ->label('Enable Activity Record for Students')
-                    ->helperText('Allow students in this section to view the Activity Record button and inspect their activity scores and completion history.')
-                    ->default(true),
+                    ->helperText('Master switch to allow students in this section to view the Activity Record drawer and inspect their activity scores.')
+                    ->default(true)
+                    ->live(),
+                CheckboxList::make('activity_record_terms')
+                    ->label('Allowed Activity Record Terms / Quarters')
+                    ->helperText('Choose which terms students in this section can see in their Activity Record. If all are unchecked, all terms are enabled by default.')
+                    ->options(fn (Get $get, ?Section $record): array => Section::examTermOptions($get('school_level') ?? $record?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE))
+                    ->visible(fn (Get $get): bool => (bool) ($get('activity_record_enabled') ?? true))
+                    ->columns(2),
                 Placeholder::make('join_code')
                     ->label('Section join code')
                     ->content(fn ($record) => $record && $record->join_code

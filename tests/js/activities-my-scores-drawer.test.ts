@@ -213,19 +213,38 @@ describe('activities hub — Activity Record drawer', () => {
             expect(sheetText).not.toContain('Unsubmitted deadlines');
             expect(sheetText).not.toContain('Open or pending');
 
-            // Assert each score inside its row, not the hidden printable totals.
-            const rows = Array.from(sheet!.querySelectorAll('li')).map((row) =>
-                (row.textContent ?? '').replace(/\s+/g, ' '),
+            const table = sheet!.querySelector(
+                '[data-test="activity-record-table"]',
+            )!;
+            const headings = Array.from(
+                table.querySelectorAll('th[scope="col"]'),
             );
-            expect(rows).toHaveLength(2);
-            const scored = rows.find((row) => row.includes('Scored activity'));
-            expect(scored).toContain('88.5 / 100.0 pts');
-            expect(scored).toContain('(88.5%)');
-            const untaken = rows.find((row) =>
-                row.includes('Untaken activity'),
+            expect(headings).toHaveLength(2);
+            expect(headings[0].textContent).toContain('Scored activity');
+            expect(headings[1].textContent).toContain('Untaken activity');
+            expect((table as HTMLElement).style.width).toBe('280px');
+            expect(table.classList.contains('w-full')).toBe(false);
+            expect(table.parentElement!.className).not.toContain('rounded-xl');
+            expect(table.parentElement!.className).not.toContain('bg-card');
+            expect(headings[0].classList.contains('border')).toBe(true);
+            expect(table.parentElement!.className).toContain('overflow-x-auto');
+            expect(table.parentElement!.getAttribute('tabindex')).toBe('0');
+            const cells = table.querySelectorAll(
+                '[data-test="activity-record-cell"]',
             );
-            expect(untaken).toContain('Open');
-            expect(untaken).toContain('50.0 max pts');
+            expect(cells).toHaveLength(2);
+            const scored = (cells[0].textContent ?? '').replace(/\s+/g, ' ');
+            expect(scored.trim()).toBe('89 / 100');
+            expect(table.textContent).not.toContain('Review Answers');
+            expect(table.textContent).not.toContain('Deadline');
+            expect(
+                cells[0].querySelector('button')!.getAttribute('aria-label'),
+            ).toBe('Review answers for Scored activity');
+            const untaken = (cells[1].textContent ?? '').replace(/\s+/g, ' ');
+            expect(untaken.trim()).toBe('—');
+            expect(
+                cells[1].querySelector('button')!.getAttribute('aria-label'),
+            ).toBe('Open Untaken activity');
 
             const filters = sheet!.querySelector(
                 '[data-test="activity-status-filters"]',
@@ -239,11 +258,20 @@ describe('activities hub — Activity Record drawer', () => {
             statusButtons[1].click();
             await flushPromises();
             expect(statusButtons[1].getAttribute('aria-pressed')).toBe('true');
+            expect(
+                (
+                    sheet!.querySelector(
+                        '[data-test="activity-record-table"]',
+                    ) as HTMLElement
+                ).style.width,
+            ).toBe('140px');
             expect(statusButtons[0].getAttribute('aria-pressed')).toBe('false');
-            expect(sheet!.querySelectorAll('li')).toHaveLength(1);
-            expect(sheet!.querySelector('li')!.textContent).toContain(
-                'Scored activity',
-            );
+            expect(
+                sheet!.querySelectorAll('[data-test="activity-record-cell"]'),
+            ).toHaveLength(1);
+            expect(
+                sheet!.querySelector('th[scope="col"]')!.textContent,
+            ).toContain('Scored activity');
 
             // Lenis is stopped while the drawer is open.
             expect(lenisStop).toHaveBeenCalled();

@@ -124,7 +124,7 @@ class ExamForm
                         }
 
                         if ($section?->school_level === SectionModel::SCHOOL_LEVEL_COLLEGE) {
-                            return 'College grading periods (Prelim, Midterm, Semi-Final, Final).';
+                            return 'College grading periods (Prelim, Midterm, Final).';
                         }
 
                         return 'Pick a section to scope options to Senior High quarters or College periods.';
