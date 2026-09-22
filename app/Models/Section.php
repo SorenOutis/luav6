@@ -19,6 +19,8 @@ class Section extends Model
         'workspace_id',
         'admin_id',
         'leaderboard_enabled',
+        'activity_record_enabled',
+        'activity_record_terms',
     ];
 
     public const SCHOOL_LEVEL_COLLEGE = 'college';
@@ -34,6 +36,8 @@ class Section extends Model
         return [
             'password' => 'hashed',
             'leaderboard_enabled' => 'boolean',
+            'activity_record_enabled' => 'boolean',
+            'activity_record_terms' => 'array',
         ];
     }
 
@@ -189,5 +193,61 @@ class Section extends Model
                 ],
             ],
         ];
+    }
+
+    public static function examTermOptions(?string $schoolLevel = null): array
+    {
+        $shsOptions = [
+            'First Semester - 1st Quarter' => 'First Semester - 1st Quarter',
+            'First Semester - 2nd Quarter' => 'First Semester - 2nd Quarter',
+            'Second Semester - 1st Quarter' => 'Second Semester - 1st Quarter',
+            'Second Semester - 2nd Quarter' => 'Second Semester - 2nd Quarter',
+        ];
+
+        $collegeOptions = [
+            'Prelim' => 'Prelim',
+            'Midterm' => 'Midterm',
+            'Final' => 'Final',
+        ];
+
+        if ($schoolLevel === self::SCHOOL_LEVEL_SENIOR_HIGH) {
+            return $shsOptions;
+        }
+
+        if ($schoolLevel === self::SCHOOL_LEVEL_COLLEGE) {
+            return $collegeOptions;
+        }
+
+        return [
+            'Senior High School (Quarters)' => $shsOptions,
+            'College (Periods)' => $collegeOptions,
+        ];
+    }
+
+    public function isTermAllowedForActivityRecord(?string $term): bool
+    {
+        if (! $this->activity_record_enabled) {
+            return false;
+        }
+
+        if (empty($this->activity_record_terms)) {
+            return true;
+        }
+
+        if (empty($term)) {
+            return true;
+        }
+
+        if (in_array($term, $this->activity_record_terms, true)) {
+            return true;
+        }
+
+        foreach ($this->activity_record_terms as $allowed) {
+            if (str_contains(strtolower($allowed), strtolower($term)) || str_contains(strtolower($term), strtolower($allowed))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -8,6 +8,25 @@ describe('activities hub', () => {
         'utf8',
     );
 
+    it('omits the activity record summary card while keeping filters and print totals', () => {
+        const record = readFileSync(
+            join(
+                process.cwd(),
+                'resources/js/pages/Activities/Partials/ActivityRecordSheet.vue',
+            ),
+            'utf8',
+        );
+        expect(record).not.toContain('KPI Summary Card');
+        expect(record).not.toContain('Activities graded');
+        expect(record).not.toContain('Unsubmitted deadlines');
+        expect(record).not.toContain('Open or pending');
+        expect(record).toContain('Completed ({{ completedCount }})');
+        expect(record).toContain('Missed ({{ missedCount }})');
+        expect(record).toContain('In Progress ({{ inProgressCount }})');
+        expect(record).toContain('printable-record');
+        expect(record).toContain('totalEarnedPoints.toFixed(0)');
+    });
+
     it('renders the activity cards and keeps their actions wired', () => {
         expect(page).toContain('exam-theme-page');
         expect(page).toContain('exam-card');
@@ -43,16 +62,17 @@ describe('activities hub', () => {
         expect(page).toContain('props.hubStats.exams.total');
     });
 
-    it('offers a My Scores button that opens the right-side scores drawer', () => {
-        expect(page).toContain('My Scores');
+    it('offers an Activity Record button wired to the record drawer', () => {
+        expect(page).toContain('Activity Record');
         expect(page).toContain('@click="showScoresDrawer = true"');
-        expect(page).toContain("from '@/components/ui/sheet'");
+        expect(page).toContain('<ActivityRecordSheet');
         expect(page).toContain(':open="showScoresDrawer"');
-        expect(page).toContain('activityScores');
+        expect(page).toContain(':groups="(activityScores as any) ?? []"');
+        expect(page).toContain('@update:open="showScoresDrawer = $event"');
     });
 
     it('hides the overview stat cards on mobile', () => {
-        // Mobile keeps only the My Scores button in the header; the four-tile
+        // Mobile keeps the Record button in the header; the four-tile
         // overview strip is desktop-only now.
         expect(page).toContain('activities-mobile-stats hidden');
         expect(page).toContain('sm:grid sm:grid-cols-4');

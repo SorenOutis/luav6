@@ -29,15 +29,14 @@ import {
 import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
-import { useAccessibility } from '@/composables/useAccessibility';
+
 import { useMdBreakpoint } from '@/composables/useBreakpoint';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const { isVisible: isLoaderVisible } = useLoader();
-const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =
-    useAccessibility();
+
 // Drives which question layout mounts below (see the MOBILE / DESKTOP
 // question blocks). Mirrors Tailwind's `md:` breakpoint exactly (the same
 // boundary the old `block md:hidden` / `hidden md:grid` CSS toggle used),
@@ -87,6 +86,8 @@ interface Exam {
     // The set of the exam this student was handed. Exams can ship as several
     // interchangeable sets; students only ever see the one they were given.
     set?: { id: number; title: string } | null;
+    term?: string | null;
+    section_name?: string | null;
 }
 
 interface ExamSubmissionSummary {
@@ -1064,6 +1065,22 @@ const getQuestionMaxPoints = (question: Question, fallback = 1): number =>
 const getQuestionTypes = (part: ExamPart) => [
     ...new Set(part.questions?.map(getQuestionTypeLabel) ?? []),
 ];
+
+const partMaxPoints = (part: ExamPart): number => {
+    return (
+        part.questions?.reduce(
+            (sum, q) => sum + getQuestionMaxPoints(q, part.points ?? 1),
+            0,
+        ) ?? 0
+    );
+};
+
+const partTitleDisplay = (part: ExamPart, index: number): string => {
+    if (!part.title || part.title.trim() === '') {
+        return `Part ${index + 1}`;
+    }
+    return part.title;
+};
 
 const formatDateTime = (dateStr: string) => {
     if (!dateStr) return '';
@@ -2049,9 +2066,6 @@ onMounted(() => {
         triggerSuccessModal(remainingPartsCount.value, props.submittedPartId);
     }
 
-    // Default to Dyslexia-Friendly mode for exams as requested
-    updateDyslexiaMode(true);
-
     monitorHeartbeatInterval.value = setInterval(() => {
         if (isExamInProgress.value) {
             void sendMonitorProgress('in_progress');
@@ -2145,7 +2159,7 @@ const feedbackContent = computed(() => {
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
             <div
-                class="student-ui mobile-ui-page exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
+                class="student-ui mobile-ui-page exam-theme-page exam-system-font relative flex min-h-full flex-col gap-0 overflow-hidden bg-background md:p-8"
             >
                 <PageSkeleton
                     :hero="true"
@@ -2162,11 +2176,11 @@ const feedbackContent = computed(() => {
                         class="h-6 w-28 animate-pulse rounded bg-primary/10"
                     ></div>
                 </div>
-                <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div class="grid grid-cols-1 gap-3">
                     <div
                         v-for="i in 3"
                         :key="i"
-                        class="h-64 animate-pulse rounded-lg border border-border/10 bg-card/30"
+                        class="h-36 animate-pulse rounded-lg border border-border/10 bg-card/30"
                     ></div>
                 </div>
             </div>
@@ -2176,10 +2190,10 @@ const feedbackContent = computed(() => {
         <template v-if="isBooted">
             <div
                 ref="container"
-                class="student-ui mobile-ui-page exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
+                class="student-ui mobile-ui-page exam-theme-page exam-system-font relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
             >
                 <div
-                    class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8"
+                    class="relative z-10 flex flex-1 flex-col gap-4 md:gap-5 md:p-8"
                 >
                     <!-- Integrity Alert Overlay -->
                     <transition name="modal-fade">
@@ -2226,7 +2240,7 @@ const feedbackContent = computed(() => {
                             <Link
                                 v-if="!selectedPart"
                                 href="/exams"
-                                class="dash-btn inline-flex items-center gap-2 border border-border/50 bg-card px-4 text-[15px] text-foreground hover:bg-muted"
+                                class="group inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                                 <ChevronLeft
                                     class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1"
@@ -2287,525 +2301,397 @@ const feedbackContent = computed(() => {
                                     >{{ formattedTime }}</span
                                 >
                             </div>
-
-                            <!-- Accessibility Toggle -->
-                            <button
-                                @click="toggleDyslexiaMode"
-                                class="flex items-center gap-2 rounded-xl border px-3 py-1.5 backdrop-blur-md transition-all duration-300"
-                                :class="
-                                    isDyslexiaFriendly
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-white/10 bg-white/5 text-white/40 hover:border-white/30 hover:text-white/60'
-                                "
-                                title="Toggle Dyslexia-Friendly Font"
-                            >
-                                <span class="text-xs font-medium"
-                                    >Font_Accessibility</span
-                                >
-                                <div class="relative">
-                                    <span class="text-sm font-medium">Aa</span>
-                                    <div
-                                        v-if="isDyslexiaFriendly"
-                                        class="absolute -bottom-0.5 left-0 h-0.5 w-full bg-current"
-                                    ></div>
-                                </div>
-                            </button>
                         </div>
                     </Motion>
 
                     <!-- ─── HERO BANNER ─────────────────────────────────────── -->
-                    <Motion
+                    <section
                         v-if="!selectedPart"
-                        :initial="{ opacity: 0, y: 30 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{
-                            duration: 1,
-                            easing: [0.16, 1, 0.3, 1],
-                            delay: 0.1,
-                        }"
-                        class="exam-hero relative rounded-[1.25rem] border border-border/50 bg-card p-5 shadow-sm sm:p-6 md:p-8"
+                        aria-labelledby="exam-title"
+                        class="exam-hero space-y-5 rounded-2xl border border-border/60 p-4 md:space-y-6 md:p-6"
                     >
-                        <div
-                            class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
-                        >
-                            <div class="max-w-3xl space-y-4">
-                                <FoxCompanion
-                                    class="min-w-0"
-                                    mascot="activities"
-                                    :size="92"
-                                    message="Take it one part at a time — you’ve got this."
-                                    label="Show exam fox message"
-                                    compact
-                                    :initially-open="false"
-                                >
-                                    <div
-                                        class="flex flex-wrap items-center gap-4"
-                                    >
-                                        <div class="space-y-0.5">
-                                            <span class="dash-label">Exam</span>
-                                            <h1
-                                                class="dash-title text-[26px] text-foreground sm:text-[32px] md:text-[36px]"
-                                            >
-                                                {{ exam.title }}
-                                            </h1>
-                                        </div>
-
-                                        <!-- Which set of the exam this student is
-                                             taking, so they can tell the teacher
-                                             exactly which version they got. -->
-                                        <span
-                                            v-if="exam.set?.title"
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-3 py-1 text-[13px] font-semibold text-[#D97757]"
-                                        >
-                                            <Layers class="h-3.5 w-3.5" />
-                                            {{ exam.set.title }}
-                                        </span>
-                                    </div>
-                                </FoxCompanion>
-
-                                <div
-                                    v-if="!selectedPart"
-                                    class="rounded-lg border border-border/40 bg-muted/20 p-4"
-                                >
-                                    <p
-                                        class="text-sm leading-relaxed text-muted-foreground"
-                                    >
-                                        {{
-                                            exam.description ||
-                                            'Quickly assess and master the material with our streamlined exam interface.'
-                                        }}
-                                    </p>
-                                    <div
-                                        class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground/60"
-                                    >
-                                        <span class="flex items-center gap-2">
-                                            <Calendar class="h-3.5 w-3.5" />
-                                            {{
-                                                examUpcoming &&
-                                                exam.starts_at_iso
-                                                    ? `Starts ${formatScheduleTime(exam.starts_at_iso)}`
-                                                    : formatDateTime(
-                                                          exam.exam_date,
-                                                      )
-                                            }}
-                                        </span>
-                                        <span
-                                            v-if="
-                                                exam.starts_at_iso &&
-                                                exam.ends_at_iso
-                                            "
-                                            class="flex items-center gap-2"
-                                        >
-                                            <Clock class="h-3.5 w-3.5" />
-                                            {{
-                                                examHasEnded
-                                                    ? `Ended ${formatScheduleTime(exam.ends_at_iso)}`
-                                                    : `Ends ${formatScheduleTime(exam.ends_at_iso)}`
-                                            }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Clear take-lock state until the window opens -->
-                                    <div
-                                        v-if="
-                                            examUpcoming && exam.starts_at_iso
-                                        "
-                                        class="mt-3 rounded-lg border border-[#E0AF68]/20 bg-[#E0AF68]/10 px-3 py-2 text-[13px] font-medium text-[#E0AF68]"
-                                    >
-                                        This exam hasn't started yet. It will
-                                        open on
-                                        {{
-                                            formatScheduleTime(
-                                                exam.starts_at_iso,
-                                            )
-                                        }}.
-                                    </div>
-                                    <div
-                                        v-else-if="
-                                            examHasEnded && exam.ends_at_iso
-                                        "
-                                        class="mt-3 rounded-lg border border-[#CB7676]/20 bg-[#CB7676]/10 px-3 py-2 text-[13px] font-medium text-[#CB7676]"
-                                    >
-                                        This exam has closed. It ended on
-                                        {{
-                                            formatScheduleTime(
-                                                exam.ends_at_iso,
-                                            )
-                                        }}.
-                                    </div>
-                                </div>
-
-                                <div
-                                    v-if="selectedPart && lastSavedAt"
-                                    class="sync-heartbeat flex w-fit items-center gap-2 border border-[#4D9375]/20 bg-[#4D9375]/10 px-4 py-2"
-                                >
-                                    <CheckCircle2
-                                        class="h-4 w-4 text-[#4D9375]"
-                                    />
-                                    <span class="text-xs text-[#4D9375]"
-                                        >Auto-saved at
-                                        {{
-                                            lastSavedAt.replace(/:/g, '_')
-                                        }}</span
-                                    >
-                                </div>
-                            </div>
-
-                            <!-- Stats Architecture -->
+                        <div class="min-w-0 space-y-3">
                             <div
-                                class="grid grid-cols-2 gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 md:gap-6 lg:grid-cols-5"
+                                class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium"
                             >
-                                <div
-                                    v-if="allPartsSubmitted"
-                                    class="flex flex-col gap-1"
+                                <span
+                                    class="rounded-full bg-[#D97757]/10 px-3 py-1 text-[#D97757]"
+                                    >Exam</span
                                 >
-                                    <span class="text-xs text-muted-foreground"
-                                        >Score</span
-                                    >
-                                    <div
-                                        class="text-lg font-semibold text-foreground tabular-nums"
-                                    >
-                                        {{ totalScore }}/{{
-                                            totalPossiblePoints
-                                        }}
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-xs text-muted-foreground"
-                                        >Time Limit</span
-                                    >
-                                    <div class="flex items-baseline gap-1">
-                                        <span
-                                            class="text-lg font-semibold text-foreground tabular-nums"
-                                            >{{ exam.duration_minutes }}</span
-                                        >
-                                        <span
-                                            class="text-xs text-muted-foreground/60"
-                                            >min</span
-                                        >
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-xs text-muted-foreground"
-                                        >Sections</span
-                                    >
-                                    <div
-                                        class="text-lg font-semibold text-foreground tabular-nums"
-                                    >
-                                        {{ exam.parts.length }}
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-xs text-muted-foreground"
-                                        >Questions</span
-                                    >
-                                    <div
-                                        class="text-lg font-semibold text-foreground tabular-nums"
-                                    >
-                                        {{ totalQuestions }}
-                                    </div>
-                                </div>
-
-                                <!-- Accessibility Toggle -->
-                                <button
-                                    @click="toggleDyslexiaMode"
-                                    class="group/acc -m-3 flex flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 active:scale-95"
-                                    :class="
-                                        isDyslexiaFriendly
-                                            ? 'border-primary/20 bg-primary/5'
-                                            : ''
-                                    "
+                                <span
+                                    v-if="exam.term"
+                                    class="rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-muted-foreground"
+                                    >{{ exam.term }}</span
                                 >
-                                    <span
-                                        class="text-[13px] font-medium transition-colors"
-                                        :class="
-                                            isDyslexiaFriendly
-                                                ? 'text-[#D97757]'
-                                                : 'text-muted-foreground'
-                                        "
-                                        >Accessibility</span
-                                    >
-                                    <div class="flex items-center gap-2">
-                                        <div
-                                            class="text-lg font-semibold tabular-nums transition-colors"
-                                            :class="
-                                                isDyslexiaFriendly
-                                                    ? 'text-primary'
-                                                    : 'text-foreground'
-                                            "
-                                        >
-                                            Aa
-                                        </div>
-                                        <div
-                                            class="h-2 w-2 rounded-full transition-all"
-                                            :class="
-                                                isDyslexiaFriendly
-                                                    ? 'scale-110 bg-primary shadow-lg shadow-primary/50'
-                                                    : 'bg-muted-foreground/30'
-                                            "
-                                        ></div>
-                                    </div>
-                                </button>
+                                <span
+                                    v-if="exam.section_name"
+                                    class="rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-muted-foreground"
+                                    >{{ exam.section_name }}</span
+                                >
+                                <span
+                                    v-if="exam.set?.title"
+                                    class="rounded-full bg-[#D97757]/10 px-3 py-1 text-[#D97757]"
+                                    >{{ exam.set.title }}</span
+                                >
                             </div>
+                            <FoxCompanion
+                                class="min-w-0"
+                                mascot="activities"
+                                :size="isMdUp ? 64 : 48"
+                                message="Take it one part at a time — you’ve got this."
+                                label="Show exam fox message"
+                                compact
+                                :initially-open="false"
+                            >
+                                <h1
+                                    id="exam-title"
+                                    class="text-2xl leading-tight font-semibold tracking-tight break-words text-foreground md:text-[32px]"
+                                >
+                                    {{ exam.title }}
+                                </h1>
+                            </FoxCompanion>
+                            <p
+                                v-if="exam.description"
+                                class="max-w-3xl text-sm leading-snug text-muted-foreground"
+                            >
+                                {{ exam.description }}
+                            </p>
+                            <div
+                                class="flex flex-col gap-x-5 gap-y-1 text-xs text-muted-foreground sm:flex-row sm:flex-wrap"
+                            >
+                                <span
+                                    v-if="exam.starts_at_iso || exam.exam_date"
+                                    class="flex items-center gap-2"
+                                    ><Calendar class="h-4 w-4" />{{
+                                        exam.starts_at_iso
+                                            ? 'Starts ' +
+                                              formatScheduleTime(
+                                                  exam.starts_at_iso,
+                                              )
+                                            : formatDateTime(exam.exam_date)
+                                    }}</span
+                                >
+                                <span
+                                    v-if="exam.ends_at_iso"
+                                    class="flex items-center gap-2"
+                                    ><Clock class="h-4 w-4" />{{
+                                        (examHasEnded ? 'Ended ' : 'Ends ') +
+                                        formatScheduleTime(exam.ends_at_iso)
+                                    }}</span
+                                >
+                            </div>
+                            <p
+                                v-if="examHasEnded"
+                                class="text-xs leading-snug text-[#CB7676]"
+                            >
+                                This exam has closed.<template
+                                    v-if="exam.ends_at_iso"
+                                >
+                                    It ended on
+                                    {{
+                                        formatScheduleTime(exam.ends_at_iso)
+                                    }}.</template
+                                >
+                            </p>
+                            <p
+                                v-else-if="examUpcoming"
+                                class="text-xs leading-snug text-[#E0AF68]"
+                            >
+                                This exam has not started yet.<template
+                                    v-if="exam.starts_at_iso"
+                                >
+                                    It will open on
+                                    {{
+                                        formatScheduleTime(exam.starts_at_iso)
+                                    }}.</template
+                                >
+                            </p>
                         </div>
-                    </Motion>
+                        <dl
+                            data-test="exam-overview-stats"
+                            class="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-border/60 pt-4 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-border/60"
+                        >
+                            <div class="min-w-0 sm:pr-3 md:pr-5">
+                                <dt class="text-xs text-muted-foreground">
+                                    Time Limit
+                                </dt>
+                                <dd
+                                    class="mt-1 text-lg font-semibold text-foreground tabular-nums md:text-xl"
+                                >
+                                    {{ exam.duration_minutes }}
+                                    <span
+                                        class="text-xs font-normal text-muted-foreground"
+                                        >min</span
+                                    >
+                                </dd>
+                            </div>
+                            <div class="min-w-0 sm:px-3 md:px-5">
+                                <dt class="text-xs text-muted-foreground">
+                                    Parts
+                                </dt>
+                                <dd
+                                    class="mt-1 text-lg font-semibold text-foreground tabular-nums md:text-xl"
+                                >
+                                    {{ exam.parts.length }}
+                                </dd>
+                            </div>
+                            <div class="min-w-0 sm:px-3 md:px-5">
+                                <dt class="text-xs text-muted-foreground">
+                                    Questions
+                                </dt>
+                                <dd
+                                    class="mt-1 text-lg font-semibold text-foreground tabular-nums md:text-xl"
+                                >
+                                    {{ totalQuestions }}
+                                </dd>
+                            </div>
+                            <div class="min-w-0 sm:pl-3 md:pl-5">
+                                <dt class="text-xs text-muted-foreground">
+                                    {{
+                                        allPartsSubmitted
+                                            ? 'Score'
+                                            : 'Max Points'
+                                    }}
+                                </dt>
+                                <dd
+                                    class="mt-1 flex flex-wrap items-baseline gap-x-1 text-lg font-semibold break-words text-foreground tabular-nums md:text-xl"
+                                >
+                                    <template v-if="allPartsSubmitted"
+                                        ><span>{{ totalScore }}</span
+                                        ><span>/</span></template
+                                    >
+                                    <span>{{ totalPossiblePoints }}</span>
+                                    <span
+                                        class="text-xs font-normal text-muted-foreground"
+                                        >pts</span
+                                    >
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
 
-                    <!-- Global Progress Bar -->
-                    <Motion
+                    <div
                         v-if="
                             !allPartsSubmitted && examStarted && !selectedPart
                         "
-                        :initial="{ opacity: 0 }"
-                        :animate="isBooted ? { opacity: 1 } : {}"
-                        :transition="{ duration: 1, delay: 0.3 }"
-                        class="mt-2 w-full space-y-4"
+                        class="space-y-2"
                     >
-                        <!-- Overall Evaluation Progress -->
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between px-1">
-                                <span class="text-xs text-muted-foreground/60"
-                                    >Progress</span
-                                >
-                                <span
-                                    class="text-[13px] font-medium text-[#D97757]"
-                                    >{{ Math.round(overallProgress) }}%
-                                    complete</span
-                                >
-                            </div>
-                            <div
-                                class="relative h-1 w-full overflow-hidden border border-primary/10 bg-muted/30"
-                            >
-                                <div
-                                    class="h-full rounded-full bg-primary transition-all duration-1000 ease-out"
-                                    :style="{ width: `${overallProgress}%` }"
-                                ></div>
-                            </div>
-                        </div>
-                    </Motion>
-
-                    <!-- ═══════════════════════════════════════════════════════ -->
-                    <!--  PARTS LIST STATE                                       -->
-                    <!-- ═══════════════════════════════════════════════════════ -->
-                    <template v-if="!selectedPart">
-                        <Motion
-                            :initial="{ opacity: 0, y: 20 }"
-                            :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :transition="{
-                                duration: 0.8,
-                                easing: [0.16, 1, 0.3, 1],
-                                delay: 0.2,
-                            }"
-                            class="flex items-center justify-between"
+                        <div
+                            class="flex items-center justify-between gap-3 text-xs"
                         >
-                            <h2
-                                class="flex items-center gap-2 text-lg font-semibold"
+                            <span class="text-muted-foreground">Progress</span
+                            ><span class="font-medium text-[#D97757]"
+                                >{{ Math.round(overallProgress) }}%
+                                complete</span
                             >
-                                <Layers class="h-5 w-5 text-primary" />
-                                Parts
-                            </h2>
-                            <span
-                                class="rounded-lg border border-border/40 bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
-                            >
-                                {{ exam.parts.length }} sections
-                            </span>
-                        </Motion>
+                        </div>
+                        <div
+                            role="progressbar"
+                            aria-label="Exam progress"
+                            :aria-valuenow="Math.round(overallProgress)"
+                            :aria-valuemin="0"
+                            :aria-valuemax="100"
+                            class="h-2 overflow-hidden rounded-full bg-muted"
+                        >
+                            <div
+                                class="h-full rounded-full bg-[#D97757]"
+                                :style="{ width: overallProgress + '%' }"
+                            ></div>
+                        </div>
+                    </div>
 
-                        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                            <Motion
+                    <!-- PARTS LIST STATE -->
+                    <template v-if="!selectedPart">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-3"
+                        >
+                            <div class="flex flex-wrap items-center gap-3">
+                                <h2
+                                    class="text-lg font-semibold tracking-tight text-foreground"
+                                >
+                                    Exam Parts
+                                </h2>
+                                <span
+                                    class="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground"
+                                    >{{ exam.parts.length }}
+                                    {{
+                                        exam.parts.length === 1
+                                            ? 'part'
+                                            : 'parts'
+                                    }}</span
+                                >
+                            </div>
+                            <p
+                                v-if="submittedPartsCount > 0"
+                                class="rounded-full bg-[#4D9375]/10 px-3 py-1 text-xs font-medium text-[#4D9375]"
+                            >
+                                {{ submittedPartsCount }} of
+                                {{ exam.parts.length }} completed
+                            </p>
+                        </div>
+                        <div
+                            data-test="exam-parts-list"
+                            class="grid grid-cols-1 gap-3"
+                        >
+                            <article
                                 v-for="(part, index) in exam.parts"
                                 :key="part.id"
                                 @click="selectPart(part, index)"
-                                :initial="{ opacity: 0, y: 30 }"
-                                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                                :in-view-options="{
-                                    once: true,
-                                    margin: '-50px',
-                                }"
-                                :transition="{
-                                    duration: 0.8,
-                                    easing: [0.16, 1, 0.3, 1],
-                                    delay: index * 0.05,
-                                }"
-                                class="exam-part-card group/part flex flex-col justify-between rounded-lg border border-border bg-card p-5 transition-all duration-500"
-                                :class="[
+                                class="exam-part-card grid min-w-0 gap-3 rounded-xl border bg-card p-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-6 md:p-5"
+                                :class="
                                     isPartSubmitted(part.id)
-                                        ? 'opacity-80'
+                                        ? 'border-[#4D9375]/25'
                                         : isPartLocked(index)
-                                          ? 'cursor-not-allowed opacity-60 grayscale'
-                                          : 'cursor-pointer hover:-translate-y-1 hover:shadow-xl',
-                                    nextPartId === part.id
-                                        ? 'border-primary/50 shadow-xl ring-2 shadow-primary/20 ring-primary'
-                                        : '',
-                                ]"
+                                          ? 'border-border/50'
+                                          : [
+                                                'exam-part-card-available cursor-pointer',
+                                                nextPartId === part.id
+                                                    ? 'border-[#D97757]/40'
+                                                    : 'border-border/60',
+                                            ]
+                                "
                             >
-                                <!-- Onboarding -->
-                                <div
-                                    v-if="nextPartId === part.id"
-                                    class="pointer-events-none absolute inset-0 z-0"
-                                >
+                                <div class="min-w-0">
                                     <div
-                                        class="absolute inset-0 animate-pulse bg-primary/5"
-                                    ></div>
-                                    <div
-                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-full bg-[#D97757] px-3 py-1 text-[12px] font-medium text-white shadow-sm"
+                                        class="flex flex-wrap items-center gap-2"
                                     >
-                                        Recommended
-                                    </div>
-                                </div>
-
-                                <!-- Top: Status & Metadata -->
-                                <div class="relative z-10 flex flex-col gap-3">
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <div
-                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-xs font-medium text-muted-foreground"
+                                        <span
+                                            class="text-xs font-medium tracking-wide text-muted-foreground"
+                                            >Part
+                                            {{
+                                                String(index + 1).padStart(
+                                                    2,
+                                                    '0',
+                                                )
+                                            }}</span
                                         >
-                                            {{ index + 1 }}
-                                        </div>
-                                        <div
-                                            v-if="isPartLocked(index)"
-                                            class="rounded-lg border border-white/5 bg-zinc-950/50 p-1.5"
-                                        >
-                                            <Lock
-                                                class="h-3.5 w-3.5 text-muted-foreground/40"
-                                            />
-                                        </div>
-                                        <div
-                                            v-else-if="isPartSubmitted(part.id)"
-                                            class="rounded-md bg-[#4D9375] px-2.5 py-1 text-xs font-medium text-white"
-                                        >
+                                        <span
+                                            v-if="isPartSubmitted(part.id)"
+                                            class="inline-flex items-center gap-1.5 rounded-full bg-[#4D9375]/10 px-2.5 py-1 text-xs font-medium text-[#4D9375]"
+                                            ><CheckCircle2
+                                                class="h-3.5 w-3.5"
+                                                aria-hidden="true"
+                                            />Completed ·
                                             {{
                                                 localSubmissions[part.id]
                                                     ?.score ?? 0
                                             }}
                                             /
-                                            {{
-                                                part.questions?.reduce(
-                                                    (sum, q) =>
-                                                        sum +
-                                                        getQuestionMaxPoints(
-                                                            q,
-                                                            part.points ?? 1,
-                                                        ),
-                                                    0,
-                                                ) ?? 0
-                                            }}
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-1">
+                                            {{ partMaxPoints(part) }} pts</span
+                                        >
                                         <span
-                                            class="text-xs font-medium text-primary"
-                                            >Part {{ index + 1 }}</span
+                                            v-else-if="isPartLocked(index)"
+                                            class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                                            ><Lock
+                                                class="h-3.5 w-3.5"
+                                                aria-hidden="true"
+                                            />Locked</span
                                         >
-                                        <h3
-                                            class="text-lg font-semibold text-foreground transition-colors group-hover/part:text-primary"
+                                        <span
+                                            v-else-if="nextPartId === part.id"
+                                            class="rounded-full bg-[#D97757]/10 px-2.5 py-1 text-xs font-medium text-[#D97757]"
+                                            >Next up</span
                                         >
-                                            {{ part.title }}
-                                        </h3>
                                     </div>
-
-                                    <!-- Middle: Question Types Stagger -->
+                                    <h3
+                                        class="mt-2 text-lg leading-snug font-semibold tracking-tight break-words text-foreground"
+                                    >
+                                        {{ partTitleDisplay(part, index) }}
+                                    </h3>
+                                    <p
+                                        v-if="part.instructions"
+                                        class="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground"
+                                    >
+                                        {{ part.instructions }}
+                                    </p>
                                     <div
-                                        class="space-y-2 border border-border/50 bg-muted/30 p-4 dark:bg-zinc-950/40"
+                                        v-if="getQuestionTypes(part).length"
+                                        class="mt-3 flex flex-wrap gap-1.5"
                                     >
                                         <span
                                             v-for="type in getQuestionTypes(
                                                 part,
                                             )"
                                             :key="type"
-                                            class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+                                            class="rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground"
+                                            >{{ type }}</span
                                         >
-                                            {{ type }}
-                                        </span>
                                     </div>
                                 </div>
-
-                                <!-- Bottom: Footer Info & Action -->
-                                <div
-                                    class="relative z-10 mt-6 flex items-center justify-between border-t border-border/10 pt-4"
-                                >
-                                    <div class="flex items-center gap-6">
-                                        <div class="flex items-center gap-2">
+                                <div class="md:min-w-44 md:self-center">
+                                    <div
+                                        class="flex flex-col items-start gap-3 border-t border-border/50 pt-3 md:items-end md:border-0 md:pt-0"
+                                    >
+                                        <div
+                                            class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+                                        >
                                             <span
-                                                class="text-sm font-semibold text-foreground"
                                                 >{{
                                                     part.questions?.length ?? 0
+                                                }}
+                                                {{
+                                                    part.questions?.length === 1
+                                                        ? 'question'
+                                                        : 'questions'
+                                                }}</span
+                                            ><span aria-hidden="true">·</span
+                                            ><span
+                                                >{{ partMaxPoints(part) }}
+                                                {{
+                                                    partMaxPoints(part) === 1
+                                                        ? 'pt'
+                                                        : 'pts'
                                                 }}</span
                                             >
-                                            <span
-                                                class="text-xs text-muted-foreground/60"
-                                                >questions</span
-                                            >
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <span
-                                                class="text-[13px] font-semibold text-[#E0AF68]"
-                                                >{{
-                                                    part.questions?.reduce(
-                                                        (sum, q) =>
-                                                            sum +
-                                                            getQuestionMaxPoints(
-                                                                q,
-                                                                part.points ??
-                                                                    1,
-                                                            ),
-                                                        0,
-                                                    ) ?? 0
-                                                }}</span
-                                            >
-                                            <span
-                                                class="text-xs text-muted-foreground/60"
-                                                >points</span
-                                            >
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        v-if="!isPartSubmitted(part.id)"
-                                        class="dash-btn flex min-h-10 items-center gap-1.5 bg-[#D97757] px-4 text-[14px] text-white"
-                                        :class="
-                                            isPartLocked(index)
-                                                ? 'opacity-20 grayscale'
-                                                : ''
-                                        "
-                                    >
-                                        <span>{{
-                                            isPartLocked(index)
-                                                ? 'Locked'
-                                                : 'Start'
-                                        }}</span>
-                                        <ArrowRight
-                                            v-if="!isPartLocked(index)"
-                                            class="h-3.5 w-3.5"
-                                        />
+                                        <span
+                                            v-if="isPartSubmitted(part.id)"
+                                            class="text-xs font-medium text-[#4D9375]"
+                                            >Completed</span
+                                        >
+                                        <span
+                                            v-else-if="isPartLocked(index)"
+                                            class="text-xs font-medium text-muted-foreground"
+                                            >Locked</span
+                                        >
+                                        <button
+                                            v-else
+                                            type="button"
+                                            @click.stop="
+                                                selectPart(part, index)
+                                            "
+                                            :aria-label="
+                                                'Start Part ' +
+                                                (index + 1) +
+                                                ': ' +
+                                                partTitleDisplay(part, index)
+                                            "
+                                            class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#D97757] px-4 py-2 text-sm font-medium text-white hover:bg-[#D97757]/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:w-auto"
+                                        >
+                                            Start Part<ArrowRight
+                                                class="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
                                     </div>
                                 </div>
-                            </Motion>
+                            </article>
                         </div>
-
-                        <!-- Instructions footer -->
-                        <Motion
-                            :initial="{ opacity: 0, y: 10 }"
-                            :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :transition="{ duration: 0.8, delay: 0.5 }"
-                            class="mt-2 flex items-start gap-2 rounded-lg border border-border/20 bg-muted/10 p-3"
+                        <div
+                            class="flex items-start gap-2.5 rounded-xl border border-border/30 bg-muted/10 px-4 py-3"
                         >
                             <ListChecks
-                                class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50"
+                                class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                                aria-hidden="true"
                             />
                             <p
-                                class="text-xs leading-relaxed text-muted-foreground/70"
+                                class="text-xs leading-relaxed text-muted-foreground"
                             >
                                 Parts unlock sequentially. Answers are
                                 auto-saved to the server, with a local backup
                                 for outages.
                             </p>
-                        </Motion>
+                        </div>
                     </template>
 
                     <!-- ═══════════════════════════════════════════════════════ -->
@@ -4252,6 +4138,7 @@ const feedbackContent = computed(() => {
 
                                 <div class="flex w-full flex-col gap-3">
                                     <button
+                                        data-test="exam-confirm-start"
                                         @click="confirmStart"
                                         class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
                                     >
@@ -4843,6 +4730,34 @@ const feedbackContent = computed(() => {
 <style scoped>
 @reference "../../../css/app.css";
 
+/* Keep saved global font preferences intact outside this page. */
+.exam-system-font,
+.exam-system-font :deep(*),
+.student-ui.exam-theme-page.exam-system-font :deep(*) {
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        sans-serif !important;
+}
+
+.student-ui.exam-theme-page.exam-system-font .exam-hero {
+    border-radius: 1rem;
+    box-shadow: none;
+    padding: 1rem;
+}
+
+.student-ui.exam-theme-page.exam-system-font .exam-part-card {
+    min-height: 0;
+}
+
+@media (min-width: 768px) {
+    .student-ui.exam-theme-page.exam-system-font .exam-hero {
+        padding: 1.5rem;
+    }
+}
+
 .pl-13 {
     padding-left: 3.25rem;
 }
@@ -4851,8 +4766,14 @@ const feedbackContent = computed(() => {
     will-change: transform, opacity;
 }
 
-.exam-part-card {
-    opacity: 0;
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+    .exam-part-card-available {
+        transition: translate 150ms ease;
+    }
+
+    .exam-part-card-available:hover {
+        translate: 0 -2px;
+    }
 }
 
 @keyframes scan-horizontal {

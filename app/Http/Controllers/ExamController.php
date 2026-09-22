@@ -312,6 +312,7 @@ class ExamController extends Controller
                 'is_open_now' => $exam->acceptsSubmissions(),
                 'is_upcoming' => $exam->scheduleState() === 'upcoming',
                 'has_ended' => $exam->scheduleState() === 'ended',
+                'section_name' => $exam->section?->name,
             ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,

@@ -10,6 +10,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -47,6 +48,10 @@ class SectionsTable
                     ->label('Students')
                     ->badge()
                     ->color('primary'),
+                IconColumn::make('activity_record_enabled')
+                    ->label('Activity Record')
+                    ->boolean()
+                    ->sortable(),
             ])
             ->filters([
                 WorkspaceTable::filter(),

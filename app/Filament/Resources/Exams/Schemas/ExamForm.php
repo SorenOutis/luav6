@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Exams\Schemas;
 use App\Enums\EssayGradingMethod;
 use App\Enums\QuestionType;
 use App\Models\Exam;
+use App\Models\Section as SectionModel;
 use App\Services\ExamBlockService;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DateTimePicker;
@@ -101,7 +102,34 @@ class ExamForm
                     ->label('Section')
                     ->placeholder('Select a section (Optional)')
                     ->helperText('If selected, only students in this section can see and take this exam.')
-                    ->columnSpanFull(),
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('term', null))
+                    ->columnSpan(1),
+                Select::make('term')
+                    ->label('Grading Period / Term')
+                    ->placeholder('Select grading period (Optional)')
+                    ->options(function (Get $get, ?Exam $record) {
+                        $sectionId = $get('section_id') ?? $record?->section_id;
+                        $section = $sectionId ? SectionModel::find($sectionId) : null;
+
+                        return SectionModel::examTermOptions($section?->school_level);
+                    })
+                    ->searchable()
+                    ->helperText(function (Get $get, ?Exam $record) {
+                        $sectionId = $get('section_id') ?? $record?->section_id;
+                        $section = $sectionId ? SectionModel::find($sectionId) : null;
+
+                        if ($section?->school_level === SectionModel::SCHOOL_LEVEL_SENIOR_HIGH) {
+                            return 'Senior High School grading quarters (1st / 2nd Quarter).';
+                        }
+
+                        if ($section?->school_level === SectionModel::SCHOOL_LEVEL_COLLEGE) {
+                            return 'College grading periods (Prelim, Midterm, Final).';
+                        }
+
+                        return 'Pick a section to scope options to Senior High quarters or College periods.';
+                    })
+                    ->columnSpan(1),
                 Textarea::make('description')
                     ->maxLength(65535)
                     ->columnSpanFull(),

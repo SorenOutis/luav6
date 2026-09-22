@@ -3,6 +3,7 @@
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\Section;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -203,4 +204,110 @@ it('passes an empty My Scores list when the student has no visible exams', funct
         ->assertInertia(fn ($page) => $page
             ->component('Activities/Index')
             ->where('activityScores', []));
+});
+
+it('hides activity record when the student sections have activity_record_enabled turned off', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'activity_record_enabled' => false,
+    ]);
+    $section->users()->attach($user->id);
+
+    actingAs($user)
+        ->get(route('activities.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Activities/Index')
+            ->where('activityRecordEnabled', false));
+});
+
+it('passes exam term, total points, and missed status to activityScores', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $missedExam = Exam::factory()->published()->create([
+        'title' => 'Quarter 1 Quiz',
+        'term' => '1st Quarter',
+        'section_id' => $section->id,
+        'starts_at' => now()->subDays(3),
+        'ends_at' => now()->subDay(),
+    ]);
+    ExamPart::factory()->forExam($missedExam)->multipleChoice(2, 1, 5)->create();
+
+    $res = actingAs($user)
+        ->get(route('activities.index'));
+
+    $res->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Activities/Index')
+            ->where('activityRecordEnabled', true));
+
+    $examScore = $res->viewData('page')['props']['activityScores'][0]['exams'][0];
+    expect($examScore['title'])->toBe('Quarter 1 Quiz')
+        ->and($examScore['term'])->toBe('1st Quarter')
+        ->and($examScore['is_missed'])->toBeTrue()
+        ->and((float) $examScore['total_points'])->toBe(10.0);
+});
+
+it('scopes exam term options strictly by school level', function () {
+    $college = Section::examTermOptions(Section::SCHOOL_LEVEL_COLLEGE);
+    expect(array_keys($college))->toBe(['Prelim', 'Midterm', 'Final']);
+
+    $shs = Section::examTermOptions(Section::SCHOOL_LEVEL_SENIOR_HIGH);
+    expect(array_keys($shs))->toBe([
+        'First Semester - 1st Quarter',
+        'First Semester - 2nd Quarter',
+        'Second Semester - 1st Quarter',
+        'Second Semester - 2nd Quarter',
+    ]);
+});
+
+it('filters activityScores by allowed section activity_record_terms', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+        'activity_record_terms' => ['Prelim'],
+    ]);
+    $section->users()->attach($user->id);
+
+    $prelimExam = Exam::factory()->published()->create([
+        'title' => 'Prelim Exam',
+        'term' => 'Prelim',
+        'section_id' => $section->id,
+        'starts_at' => now()->subDays(3),
+        'ends_at' => now()->subDay(),
+    ]);
+    ExamPart::factory()->forExam($prelimExam)->multipleChoice(2, 1, 5)->create();
+
+    $midtermExam = Exam::factory()->published()->create([
+        'title' => 'Midterm Exam',
+        'term' => 'Midterm',
+        'section_id' => $section->id,
+        'starts_at' => now()->subDays(3),
+        'ends_at' => now()->subDay(),
+    ]);
+    ExamPart::factory()->forExam($midtermExam)->multipleChoice(2, 1, 5)->create();
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExamTitles = collect($scores)->flatMap(fn ($group) => collect($group['exams'])->pluck('title'))->all();
+
+    expect($allExamTitles)->toContain('Prelim Exam');
+    expect($allExamTitles)->not()->toContain('Midterm Exam');
+
+    // When activity_record_terms is empty, all terms are allowed
+    $section->update(['activity_record_terms' => null]);
+    $resAll = actingAs($user)->get(route('activities.index'))->assertOk();
+    $allExamTitlesNow = collect($resAll->viewData('page')['props']['activityScores'])
+        ->flatMap(fn ($group) => collect($group['exams'])->pluck('title'))
+        ->all();
+
+    expect($allExamTitlesNow)->toContain('Prelim Exam');
+    expect($allExamTitlesNow)->toContain('Midterm Exam');
 });

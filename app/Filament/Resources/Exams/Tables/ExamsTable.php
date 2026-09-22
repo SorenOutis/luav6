@@ -33,6 +33,13 @@ class ExamsTable
                     ->label('Section')
                     ->placeholder('All Sections')
                     ->sortable(),
+                TextColumn::make('term')
+                    ->label('Term / Period')
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('info')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('starts_at')
                     ->label('Starts')
                     ->dateTime()
@@ -71,6 +78,9 @@ class ExamsTable
                 WorkspaceTable::filter(),
                 SelectFilter::make('section')
                     ->relationship('section', 'name'),
+                SelectFilter::make('term')
+                    ->label('Term / Period')
+                    ->options(fn () => Exam::query()->whereNotNull('term')->distinct()->pluck('term', 'term')->all()),
             ])
             ->recordActions([
                 ActionGroup::make([
