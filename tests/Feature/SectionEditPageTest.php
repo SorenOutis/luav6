@@ -73,6 +73,20 @@ test('users onboarding tours uses jsonb on postgres', function () {
     expect($type)->toBe('jsonb');
 });
 
+test('sections activity record terms uses jsonb on postgres', function () {
+    if (DB::connection()->getDriverName() !== 'pgsql') {
+        $this->markTestSkipped('Postgres-only assertion.');
+    }
+
+    $type = DB::selectOne(
+        "SELECT data_type FROM information_schema.columns WHERE table_name = 'sections' AND column_name = 'activity_record_terms'"
+    )->data_type;
+
+    // Plain `json` has no equality operator, so Filament SelectFilter's
+    // SELECT DISTINCT sections.* 500s. jsonb supports equality.
+    expect($type)->toBe('jsonb');
+});
+
 test('admin can attach a student to a section with the season pivot', function () {
     $this->actingAs(User::factory()->superAdmin()->create());
 

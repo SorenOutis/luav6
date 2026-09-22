@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sections', function (Blueprint $table) {
-            $table->json('activity_record_terms')->nullable()->after('activity_record_enabled');
+            $table->jsonb('activity_record_terms')->nullable()->after('activity_record_enabled');
         });
     }
 
