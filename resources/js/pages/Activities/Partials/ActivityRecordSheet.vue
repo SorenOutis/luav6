@@ -602,6 +602,17 @@ const handlePrint = () => {
                                                     >
                                                         Late
                                                     </span>
+                                                    <span
+                                                        v-else-if="
+                                                            activity.is_missed ||
+                                                            (activity.state ===
+                                                                'closed' &&
+                                                                !activity.submitted)
+                                                        "
+                                                        class="rounded bg-[#CB7676]/15 px-1 py-0.5 text-[9px] font-semibold text-[#CB7676]"
+                                                    >
+                                                        Missed
+                                                    </span>
                                                 </div>
                                                 <div
                                                     class="line-clamp-2 text-xs leading-snug font-semibold break-words text-foreground"
