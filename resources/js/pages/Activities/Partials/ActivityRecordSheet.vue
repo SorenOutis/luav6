@@ -252,6 +252,80 @@ const activityScoreDisplay = (activity: ActivityScoreItem): string => {
     return '—';
 };
 
+const activityScoreFraction = (activity: ActivityScoreItem): string => {
+    const total = activity.total_points.toFixed(0);
+
+    if (
+        activity.is_missed ||
+        (activity.state === 'closed' && !activity.submitted)
+    ) {
+        return `0 / ${total}`;
+    }
+
+    if (activity.is_pending_review) {
+        return `— / ${total}`;
+    }
+
+    if (
+        activity.score !== null &&
+        (activity.state === 'completed' ||
+            activity.submitted ||
+            activity.is_incomplete)
+    ) {
+        return `${activity.score.toFixed(0)} / ${total}`;
+    }
+
+    return `— / ${total}`;
+};
+
+const activityPercentageDisplay = (activity: ActivityScoreItem): string => {
+    if (
+        activity.is_missed ||
+        (activity.state === 'closed' && !activity.submitted)
+    ) {
+        return '0.0%';
+    }
+
+    if (activity.is_pending_review || activity.score === null) {
+        return '—';
+    }
+
+    if (activity.total_points > 0) {
+        const pct =
+            (Number(activity.score) / Number(activity.total_points)) * 100;
+        return `${pct.toFixed(1)}%`;
+    }
+
+    return '—';
+};
+
+const activityStatusLabel = (activity: ActivityScoreItem): string => {
+    if (
+        activity.is_missed ||
+        (activity.state === 'closed' && !activity.submitted)
+    ) {
+        return 'Missed';
+    }
+
+    if (activity.is_pending_review) {
+        return 'Pending Review';
+    }
+
+    if (activity.state === 'completed' || activity.submitted) {
+        return activity.is_late ? 'Completed (Late)' : 'Completed';
+    }
+
+    if (activity.state === 'in_progress') {
+        return 'In Progress';
+    }
+
+    if (activity.state === 'open') {
+        return 'Open / Untaken';
+    }
+
+    return 'Pending';
+};
+
 const handlePrint = () => {
     window.print();
 };
@@ -264,7 +338,7 @@ const handlePrint = () => {
             data-lenis-prevent
         >
             <!-- Header -->
-            <SheetHeader class="border-b border-border/50 pb-4">
+            <SheetHeader class="screen-only border-b border-border/50 pb-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <div
@@ -451,45 +525,272 @@ const handlePrint = () => {
                 </div>
             </SheetHeader>
 
-            <!-- Printable Transcript Section (Visible only when printing) -->
-            <div class="printable-record hidden p-4">
+            <!-- Printable Transcript Section (Report Card in rows when printing) -->
+            <div class="printable-report-card printable-record hidden p-4">
                 <div class="border-b-2 border-black pb-3 text-center">
                     <h2 class="text-xl font-bold tracking-wide uppercase">
                         Student Activity Record
                     </h2>
-                    <p class="text-sm text-gray-600">
-                        Official Activity Performance & Evaluation Slip
+                    <p
+                        class="text-xs tracking-wider text-neutral-600 uppercase"
+                    >
+                        Official Academic Performance & Evaluation Slip
                     </p>
                 </div>
-                <div class="mt-3 flex justify-between text-xs">
-                    <div>
-                        <p>
-                            <strong>Student:</strong>
-                            {{ currentUser?.name ?? 'Student' }}
-                        </p>
-                        <p>
-                            <strong>Email:</strong>
-                            {{ currentUser?.email ?? '—' }}
-                        </p>
+
+                <!-- Student & Evaluation Info Grid -->
+                <div
+                    class="my-4 border border-black p-3 text-xs leading-relaxed"
+                >
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+                        <div>
+                            <p>
+                                <strong>Student:</strong>
+                                {{ currentUser?.name ?? 'Student' }}
+                            </p>
+                            <p>
+                                <strong>Email:</strong>
+                                {{ currentUser?.email ?? '—' }}
+                            </p>
+                            <p v-if="allActivities[0]?.section_name">
+                                <strong>Section:</strong>
+                                {{ allActivities[0].section_name }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p>
+                                <strong>Date Generated:</strong>
+                                {{ new Date().toLocaleDateString() }}
+                            </p>
+                            <p>
+                                <strong>Total Points:</strong>
+                                {{ totalEarnedPoints.toFixed(0) }} /
+                                {{ totalMaxPoints.toFixed(0) }} ({{
+                                    (overallPercentage ?? 0).toFixed(0)
+                                }}%)
+                            </p>
+                            <p>
+                                <strong>Tasks Completed:</strong>
+                                {{ completedCount }} of
+                                {{ allActivities.length }}
+                            </p>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <p>
-                            <strong>Date Generated:</strong>
-                            {{ new Date().toLocaleDateString() }}
-                        </p>
-                        <p>
-                            <strong>Total Points:</strong>
-                            {{ totalEarnedPoints.toFixed(0) }} /
-                            {{ totalMaxPoints.toFixed(0) }} ({{
-                                (overallPercentage ?? 0).toFixed(0)
-                            }}%)
-                        </p>
+                </div>
+
+                <!-- Report Card Tables (Grouped by Term, each activity rendered as a row) -->
+                <div class="space-y-6">
+                    <div
+                        v-for="group in groupedByTerm"
+                        :key="group.term"
+                        class="break-inside-avoid"
+                    >
+                        <div
+                            class="mb-1 flex items-center justify-between border-b border-black pb-1"
+                        >
+                            <h3
+                                class="text-xs font-bold tracking-wider text-black uppercase"
+                            >
+                                Period: {{ group.term }}
+                            </h3>
+                            <span
+                                v-if="group.subtotalMax > 0"
+                                class="text-xs font-bold text-black"
+                            >
+                                Term Subtotal:
+                                {{ group.subtotalScore.toFixed(0) }} /
+                                {{ group.subtotalMax.toFixed(0) }}
+                                <span v-if="group.subtotalPercentage !== null">
+                                    ({{ group.subtotalPercentage.toFixed(0) }}%)
+                                </span>
+                            </span>
+                        </div>
+
+                        <table
+                            class="report-card-table w-full border-collapse border border-black text-left text-xs"
+                        >
+                            <thead>
+                                <tr
+                                    class="border-b border-black bg-neutral-100"
+                                >
+                                    <th
+                                        class="w-8 border border-black p-1.5 text-center font-bold"
+                                    >
+                                        #
+                                    </th>
+                                    <th
+                                        class="border border-black p-1.5 font-bold"
+                                    >
+                                        Activity Title
+                                    </th>
+                                    <th
+                                        class="w-32 border border-black p-1.5 font-bold"
+                                    >
+                                        Section
+                                    </th>
+                                    <th
+                                        class="w-24 border border-black p-1.5 text-center font-bold"
+                                    >
+                                        Score
+                                    </th>
+                                    <th
+                                        class="w-20 border border-black p-1.5 text-center font-bold"
+                                    >
+                                        Rating
+                                    </th>
+                                    <th
+                                        class="w-28 border border-black p-1.5 text-center font-bold"
+                                    >
+                                        Status
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(activity, aIdx) in group.activities"
+                                    :key="activity.id"
+                                    class="border-b border-neutral-300"
+                                >
+                                    <td
+                                        class="border border-black p-1.5 text-center font-mono"
+                                    >
+                                        {{ aIdx + 1 }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 font-medium text-black"
+                                    >
+                                        {{ activity.title }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-neutral-700"
+                                    >
+                                        {{ activity.section_name || '—' }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center font-mono font-bold text-black"
+                                    >
+                                        {{ activityScoreFraction(activity) }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center font-mono"
+                                    >
+                                        {{
+                                            activityPercentageDisplay(activity)
+                                        }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center font-medium"
+                                    >
+                                        {{ activityStatusLabel(activity) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot v-if="group.subtotalMax > 0">
+                                <tr
+                                    class="border-t-2 border-black bg-neutral-50 font-bold"
+                                >
+                                    <td
+                                        colspan="3"
+                                        class="border border-black p-1.5 text-right uppercase"
+                                    >
+                                        {{ group.term }} Subtotal:
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center font-mono"
+                                    >
+                                        {{ group.subtotalScore.toFixed(0) }} /
+                                        {{ group.subtotalMax.toFixed(0) }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center font-mono"
+                                    >
+                                        {{
+                                            group.subtotalPercentage !== null
+                                                ? group.subtotalPercentage.toFixed(
+                                                      0,
+                                                  ) + '%'
+                                                : '—'
+                                        }}
+                                    </td>
+                                    <td
+                                        class="border border-black p-1.5 text-center text-[10px]"
+                                    >
+                                        {{ group.activities.length }}
+                                        {{
+                                            group.activities.length === 1
+                                                ? 'activity'
+                                                : 'activities'
+                                        }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Cumulative Summary Box -->
+                <div
+                    class="mt-4 break-inside-avoid border-2 border-black p-2.5 text-xs"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span
+                                class="font-bold tracking-wider text-black uppercase"
+                            >
+                                Cumulative Performance Total
+                            </span>
+                            <p class="text-[10px] text-neutral-600">
+                                Total score across all recorded activities
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-black">
+                                {{ totalEarnedPoints.toFixed(0) }} /
+                                {{ totalMaxPoints.toFixed(0) }} pts
+                            </span>
+                            <span
+                                v-if="overallPercentage !== null"
+                                class="ml-1.5 font-bold text-black"
+                            >
+                                ({{ overallPercentage.toFixed(0) }}%)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signatures Section -->
+                <div class="mt-12 break-inside-avoid pt-4">
+                    <div class="flex justify-between text-xs">
+                        <div
+                            class="w-56 border-t border-black pt-1 text-center"
+                        >
+                            <p class="font-bold text-black">
+                                {{ currentUser?.name ?? 'Student' }}
+                            </p>
+                            <p
+                                class="text-[10px] tracking-wider text-neutral-600 uppercase"
+                            >
+                                Student Signature
+                            </p>
+                        </div>
+                        <div
+                            class="w-56 border-t border-black pt-1 text-center"
+                        >
+                            <p class="font-bold text-black">
+                                Teacher / Adviser
+                            </p>
+                            <p
+                                class="text-[10px] tracking-wider text-neutral-600 uppercase"
+                            >
+                                Faculty Signature & Date
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Activities Content Body -->
-            <div class="flex-1 space-y-6 px-1 py-4">
+            <div class="screen-only flex-1 space-y-6 px-1 py-4">
                 <div
                     v-if="filteredActivities.length === 0"
                     class="flex flex-col items-center justify-center gap-2 py-16 text-center"
@@ -856,18 +1157,6 @@ const handlePrint = () => {
                     </section>
                 </div>
             </div>
-
-            <!-- Print Footer (Visible only in print mode) -->
-            <div class="printable-footer hidden pt-8">
-                <div class="flex justify-between text-xs">
-                    <div class="border-t border-black pt-1">
-                        <p>Student Signature</p>
-                    </div>
-                    <div class="border-t border-black pt-1">
-                        <p>Teacher / Adviser Signature</p>
-                    </div>
-                </div>
-            </div>
         </SheetContent>
     </Sheet>
 </template>
@@ -893,18 +1182,51 @@ const handlePrint = () => {
 }
 
 @media print {
+    @page {
+        size: auto;
+        margin: 12mm 15mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
     body * {
         visibility: hidden;
     }
-    .printable-record,
-    .printable-record *,
-    .printable-footer,
-    .printable-footer * {
+
+    /* Hide screen UI completely from print */
+    .screen-only,
+    .screen-only *,
+    button,
+    input,
+    [data-slot='sheet-content'] > button {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Reveal only the printable report card */
+    .printable-report-card,
+    .printable-report-card * {
         visibility: visible !important;
     }
-    .printable-record,
-    .printable-footer {
+
+    .printable-report-card {
         display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family:
+            -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+            Arial, sans-serif !important;
+        z-index: 999999 !important;
     }
 }
 </style>
