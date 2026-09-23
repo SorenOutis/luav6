@@ -1085,46 +1085,91 @@ const handlePrint = () => {
         margin: 12mm 15mm;
     }
 
-    body {
+    :global(html),
+    :global(body) {
         background: #ffffff !important;
         color: #000000 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
-    body * {
-        visibility: hidden;
+    /* Hide screen UI and backdrop overlay completely */
+    :global(body:has([data-slot='sheet-content']) > *:not([data-slot='sheet-content'])),
+    :global(#app),
+    :global(#impersonate-banner),
+    :global([data-slot='sheet-overlay']) {
+        display: none !important;
     }
 
-    /* Hide screen UI completely from print */
+    /* Reset the Sheet drawer container so it expands to the full paper instead of staying fixed to the right half */
+    :global([data-slot='sheet-content']) {
+        position: static !important;
+        display: block !important;
+        inset: auto !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        background: transparent !important;
+        transform: none !important;
+    }
+
+    /* Hide drawer header, search/filters, and close button */
     .screen-only,
     .screen-only *,
-    button,
-    input,
-    [data-slot='sheet-content'] > button {
+    :global([data-slot='sheet-content'] > button) {
         display: none !important;
-        visibility: hidden !important;
     }
 
-    /* Reveal only the printable report card */
-    .printable-report-card,
-    .printable-report-card * {
-        visibility: visible !important;
-    }
-
+    /* Reveal only the printable report card and let it flow across pages naturally */
     .printable-report-card {
         display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
+        overflow: visible !important;
         font-family:
             -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
             Arial, sans-serif !important;
-        z-index: 999999 !important;
+    }
+
+    .report-card-table {
+        width: 100% !important;
+        page-break-inside: auto;
+    }
+
+    .report-card-table thead {
+        display: table-header-group;
+    }
+
+    .report-card-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .report-card-table tfoot {
+        display: table-footer-group;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 }
 </style>
