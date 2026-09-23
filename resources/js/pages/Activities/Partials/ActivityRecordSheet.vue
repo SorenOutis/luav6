@@ -1100,7 +1100,10 @@ const handlePrint = () => {
     }
 
     /* Hide screen UI and backdrop overlay completely */
-    :global(body:has([data-slot='sheet-content']) > *:not([data-slot='sheet-content'])),
+    :global(
+        body:has([data-slot='sheet-content'])
+            > *:not([data-slot='sheet-content'])
+    ),
     :global(#app),
     :global(#impersonate-banner),
     :global([data-slot='sheet-overlay']) {
