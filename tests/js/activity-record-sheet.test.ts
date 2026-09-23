@@ -1,7 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
-import type { ActivityScoreItem } from '@/pages/Activities/Partials/ActivityRecordSheet.vue';
+import type {
+    ActivityScoreItem,
+    ScoreGroup,
+} from '@/pages/Activities/Partials/ActivityRecordSheet.vue';
 import ActivityRecordSheet from '@/pages/Activities/Partials/ActivityRecordSheet.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -49,9 +52,12 @@ const task = (overrides: Partial<ActivityScoreItem> = {}) =>
         ...overrides,
     });
 
-const mountRecord = (exams: ActivityScoreItem[]) =>
+const mountRecord = (
+    exams: ActivityScoreItem[],
+    groups: ScoreGroup[] = [{ seasonName: 'Season 1', exams }],
+) =>
     mount(ActivityRecordSheet, {
-        props: { open: true, groups: [{ seasonName: 'Season 1', exams }] },
+        props: { open: true, groups },
         global: {
             // Portal and focus behavior are covered by activities-my-scores-drawer.test.ts.
             stubs: {
@@ -80,8 +86,12 @@ function expectComponent(
     label: string,
     score: string,
     percentage: string,
+    scope = '',
+    term = '',
+    cumulative = { score, percentage },
 ) {
-    const screen = wrapper.get(selector('table', key));
+    const period = term ? `[data-term="${term}"]` : '';
+    const screen = wrapper.get(selector('table', key) + scope + period);
     expect(
         screen
             .get('[data-test="activity-record-total-cell"]')
@@ -98,21 +108,25 @@ function expectComponent(
     ).toBe(label);
     expect(
         wrapper
-            .get(selector('component-summary', key))
+            .get(selector('component-summary', key) + scope)
             .findAll('span')
             .map((span) => text(span.text())),
-    ).toEqual([`${label}:`, score, `(${percentage})`]);
+    ).toEqual([`${label}:`, cumulative.score, `(${cumulative.percentage})`]);
 
-    const print = wrapper.get(selector('print-component-table', key));
+    const print = wrapper.get(
+        selector('print-component-table', key) + scope + period,
+    );
     const footer = print.findAll('tfoot td').map((cell) => text(cell.text()));
     expect(footer.slice(0, 3)).toEqual([`${label} Total:`, score, percentage]);
     expect(text(print.element.parentElement?.textContent ?? '')).toContain(
         `${label} Subtotal: ${score} (${percentage})`,
     );
-    const summary = wrapper.get(selector('print-component-summary', key));
+    const summary = wrapper.get(
+        selector('print-component-summary', key) + scope,
+    );
     expect(summary.get('span').text()).toBe(`${label} Total:`);
     expect(text(summary.get('span:nth-child(2)').text())).toBe(
-        `${score} pts (${percentage})`,
+        `${cumulative.score} pts (${cumulative.percentage})`,
     );
 }
 
@@ -151,6 +165,459 @@ function expectTitles(titles: string[]) {
             .map((row) => row.get('td:nth-child(2) > div').text()),
     ).toEqual(titles);
 }
+
+const sectionScope = (
+    name: string,
+    id: number | 'unassigned',
+    season = 'Season 1',
+) =>
+    `[data-section="${name}"][data-section-id="${id}"][data-season="${season}"]`;
+
+function expectSections(
+    expected: {
+        name: string;
+        id: number | 'unassigned';
+        season?: string;
+        term: string;
+        titles: string[];
+    }[],
+) {
+    for (const surface of ['section', 'print-section']) {
+        const sections = wrapper.findAll(
+            `[data-test="activity-record-${surface}"]`,
+        );
+        expect(sections).toHaveLength(expected.length);
+        sections.forEach((section, index) => {
+            const {
+                name,
+                id,
+                season = 'Season 1',
+                term,
+                titles,
+            } = expected[index];
+            expect(section.attributes('data-section')).toBe(name);
+            expect(section.attributes('data-section-id')).toBe(String(id));
+            expect(section.attributes('data-season')).toBe(season);
+            expect(text(section.get('h4').text())).toBe(
+                `Section: ${name} · ${season}`,
+            );
+            expect(
+                text(
+                    section.element.parentElement?.querySelector('h3')
+                        ?.textContent ?? '',
+                ),
+            ).toBe(surface === 'section' ? term : `Period: ${term}`);
+            const tables = section.findAll('table');
+            expect(tables.length).toBeGreaterThan(0);
+            for (const table of tables) {
+                expect(table.attributes('data-term')).toBe(term);
+                expect(table.attributes('data-section-id')).toBe(String(id));
+                expect(table.attributes('data-season')).toBe(season);
+            }
+            expect(
+                surface === 'section'
+                    ? section
+                          .findAll('[data-test="activity-record-cell"]')
+                          .map((cell) => cell.attributes('aria-label'))
+                    : section
+                          .findAll('tbody tr')
+                          .map((row) =>
+                              row.get('td:nth-child(2) > div').text(),
+                          ),
+            ).toEqual(titles);
+        });
+    }
+}
+
+describe('ActivityRecordSheet section grouping', () => {
+    it('keeps two sections separate within Prelims and First Quarter across every component and summary', () => {
+        const sections = [
+            {
+                id: 11,
+                name: 'BSIT 1-A',
+                scores: [40, 90, 30],
+                maxima: [50, 100, 40],
+                percentages: ['80%', '90%', '75%'],
+            },
+            {
+                id: 22,
+                name: 'BSIT 1-B',
+                scores: [12, 30, 10],
+                maxima: [20, 50, 40],
+                percentages: ['60%', '60%', '25%'],
+            },
+        ];
+        const components = [
+            { key: 'written', label: 'Written Activities', make: activity },
+            {
+                key: 'performance:Performance Task',
+                label: 'Performance Tasks',
+                make: task,
+            },
+            {
+                key: 'performance:Laboratory',
+                label: 'Laboratory',
+                make: (overrides: Partial<ActivityScoreItem>) =>
+                    task({ ...overrides, activity_type: 'Laboratory' }),
+            },
+        ];
+        const periods = ['Prelims', 'First Quarter'];
+        const exams = periods.flatMap((term, periodIndex) =>
+            sections.flatMap((section) =>
+                components.map((component, index) =>
+                    component.make({
+                        id: `${term}-${section.id}-${index}`,
+                        title: `${term} ${section.name} ${component.label}`,
+                        section_id: section.id,
+                        section_name: section.name,
+                        term,
+                        score: section.scores[index] * (periodIndex + 1),
+                        total_points: section.maxima[index] * (periodIndex + 1),
+                        percentage: Number.parseInt(section.percentages[index]),
+                    }),
+                ),
+            ),
+        );
+        wrapper = mountRecord(exams);
+        expectSections(
+            periods.flatMap((term) =>
+                sections.map((section) => ({
+                    ...section,
+                    term,
+                    titles: components.map(
+                        (component) =>
+                            `${term} ${section.name} ${component.label}`,
+                    ),
+                })),
+            ),
+        );
+        for (const surface of ['table', 'print-component-table']) {
+            expect(
+                wrapper.findAll(`[data-test="activity-record-${surface}"]`),
+            ).toHaveLength(12);
+        }
+        for (const surface of [
+            'component-summary',
+            'print-component-summary',
+        ]) {
+            expect(
+                wrapper.findAll(`[data-test="activity-record-${surface}"]`),
+            ).toHaveLength(6);
+        }
+        periods.forEach((term, periodIndex) => {
+            for (const section of sections) {
+                components.forEach((component, index) => {
+                    expectComponent(
+                        component.key,
+                        component.label,
+                        `${section.scores[index] * (periodIndex + 1)} / ${section.maxima[index] * (periodIndex + 1)}`,
+                        section.percentages[index],
+                        sectionScope(section.name, section.id),
+                        term,
+                        {
+                            score: `${section.scores[index] * 3} / ${section.maxima[index] * 3}`,
+                            percentage: section.percentages[index],
+                        },
+                    );
+                });
+            }
+        });
+    });
+
+    it('keeps identical section names with different IDs separate', () => {
+        wrapper = mountRecord([
+            activity({ section_id: 11, title: 'First section quiz' }),
+            activity({
+                id: 2,
+                section_id: 22,
+                title: 'Second section quiz',
+                score: 15,
+                total_points: 20,
+                percentage: 75,
+            }),
+        ]);
+        expectComponentCount(2);
+        expectSections([
+            {
+                id: 11,
+                name: 'BSIT 1-A',
+                term: 'Prelims',
+                titles: ['First section quiz'],
+            },
+            {
+                id: 22,
+                name: 'BSIT 1-A',
+                term: 'Prelims',
+                titles: ['Second section quiz'],
+            },
+        ]);
+        expectComponent(
+            'written',
+            'Written Activities',
+            '40 / 50',
+            '80%',
+            sectionScope('BSIT 1-A', 11),
+        );
+        expectComponent(
+            'written',
+            'Written Activities',
+            '15 / 20',
+            '75%',
+            sectionScope('BSIT 1-A', 22),
+        );
+    });
+
+    it('keeps identical section IDs and names separate across seasons', () => {
+        wrapper = mountRecord(
+            [],
+            [
+                {
+                    seasonName: 'Season 1',
+                    exams: [
+                        activity({
+                            section_id: 11,
+                            title: 'First season quiz',
+                        }),
+                    ],
+                },
+                {
+                    seasonName: 'Season 2',
+                    exams: [
+                        activity({
+                            id: 2,
+                            section_id: 11,
+                            title: 'Second season quiz',
+                            score: 15,
+                            total_points: 20,
+                            percentage: 75,
+                        }),
+                    ],
+                },
+            ],
+        );
+        expectComponentCount(2);
+        expectSections([
+            {
+                id: 11,
+                name: 'BSIT 1-A',
+                season: 'Season 1',
+                term: 'Prelims',
+                titles: ['First season quiz'],
+            },
+            {
+                id: 11,
+                name: 'BSIT 1-A',
+                season: 'Season 2',
+                term: 'Prelims',
+                titles: ['Second season quiz'],
+            },
+        ]);
+        expectComponent(
+            'written',
+            'Written Activities',
+            '40 / 50',
+            '80%',
+            sectionScope('BSIT 1-A', 11, 'Season 1'),
+        );
+        expectComponent(
+            'written',
+            'Written Activities',
+            '15 / 20',
+            '75%',
+            sectionScope('BSIT 1-A', 11, 'Season 2'),
+        );
+    });
+
+    it('falls back to names for missing IDs and labels null sections as unassigned', () => {
+        wrapper = mountRecord([
+            activity({ title: 'Legacy quiz' }),
+            activity({
+                id: 2,
+                title: 'Legacy follow-up',
+                section_name: ' BSIT 1-A ',
+            }),
+            activity({
+                id: 3,
+                title: 'Other legacy quiz',
+                section_name: 'BSIT 1-B',
+                score: 15,
+                total_points: 20,
+                percentage: 75,
+            }),
+            activity({
+                id: 4,
+                title: 'Unnamed legacy quiz',
+                section_name: null,
+                score: 10,
+                total_points: 20,
+                percentage: 50,
+            }),
+            task({
+                section_id: null,
+                section_name: 'Stale section name',
+                title: 'Unassigned task',
+            }),
+        ]);
+        expectSections([
+            {
+                id: 'unassigned',
+                name: 'BSIT 1-A',
+                term: 'Prelims',
+                titles: ['Legacy quiz', 'Legacy follow-up'],
+            },
+            {
+                id: 'unassigned',
+                name: 'BSIT 1-B',
+                term: 'Prelims',
+                titles: ['Other legacy quiz'],
+            },
+            {
+                id: 'unassigned',
+                name: 'General / Unassigned',
+                term: 'Prelims',
+                titles: ['Unnamed legacy quiz'],
+            },
+            {
+                id: 'unassigned',
+                name: 'General / Unassigned',
+                term: 'Prelims',
+                titles: ['Unassigned task'],
+            },
+        ]);
+        expectComponentCount(4);
+        expectComponent(
+            'written',
+            'Written Activities',
+            '80 / 100',
+            '80%',
+            sectionScope('BSIT 1-A', 'unassigned'),
+        );
+        expectComponent(
+            'written',
+            'Written Activities',
+            '15 / 20',
+            '75%',
+            sectionScope('BSIT 1-B', 'unassigned'),
+        );
+        expectComponent(
+            'written',
+            'Written Activities',
+            '10 / 20',
+            '50%',
+            sectionScope('General / Unassigned', 'unassigned'),
+        );
+        expectComponent(
+            'performance:Performance Task',
+            'Performance Tasks',
+            '90 / 100',
+            '90%',
+            sectionScope('General / Unassigned', 'unassigned'),
+        );
+        expect(
+            wrapper.find('[data-section="Stale section name"]').exists(),
+        ).toBe(false);
+    });
+
+    it('preserves section groups under combined filters without empty sections or changing cumulative summaries', async () => {
+        wrapper = mountRecord([
+            activity({ section_id: 11, title: 'Shared quiz A' }),
+            activity({
+                id: 2,
+                section_id: 22,
+                section_name: 'BSIT 1-B',
+                title: 'Shared quiz B',
+                score: 15,
+                total_points: 20,
+                percentage: 75,
+            }),
+            task({
+                section_id: 11,
+                title: 'Quarter task',
+                term: 'First Quarter',
+            }),
+            task({
+                id: 'task-2',
+                section_id: 22,
+                section_name: 'BSIT 1-B',
+                title: 'Missed task',
+                is_missed: true,
+            }),
+        ]);
+        const summaries = () =>
+            ['component-summary', 'print-component-summary'].map((surface) =>
+                wrapper
+                    .findAll(`[data-test="activity-record-${surface}"]`)
+                    .map((summary) => ({
+                        section: summary.attributes('data-section-id'),
+                        component: summary.attributes('data-component'),
+                        text: text(summary.text()),
+                    })),
+            );
+        const originalSummaries = summaries();
+        const first = {
+            id: 11,
+            name: 'BSIT 1-A',
+            term: 'Prelims',
+            titles: ['Shared quiz A'],
+        };
+        const second = {
+            id: 22,
+            name: 'BSIT 1-B',
+            term: 'Prelims',
+            titles: ['Shared quiz B'],
+        };
+        const search = wrapper.get(
+            'input[placeholder="Search activity by title or section..."]',
+        );
+        await search.setValue('Shared');
+        expectSections([first, second]);
+        expectComponent(
+            'written',
+            'Written Activities',
+            '40 / 50',
+            '80%',
+            sectionScope('BSIT 1-A', 11),
+        );
+        expectComponent(
+            'written',
+            'Written Activities',
+            '15 / 20',
+            '75%',
+            sectionScope('BSIT 1-B', 22),
+        );
+        await clickButton('Prelims');
+        await clickButton('Completed (3)');
+        expectSections([first, second]);
+        await search.setValue('BSIT 1-B');
+        expectSections([second]);
+        await clickButton('Missed (1)');
+        expectSections([{ ...second, titles: ['Missed task'] }]);
+        expectComponent(
+            'performance:Performance Task',
+            'Performance Tasks',
+            '0 / 100',
+            '0%',
+            sectionScope('BSIT 1-B', 22),
+        );
+        await clickButton('First Quarter');
+        expectSections([]);
+        expectTitles([]);
+        expect(wrapper.text()).toContain('No activities match the filter');
+        expect(summaries()).toEqual(originalSummaries);
+        await search.setValue('');
+        await clickButton('All (4)');
+        expectSections([
+            { ...first, term: 'First Quarter', titles: ['Quarter task'] },
+        ]);
+        await clickButton('All Periods');
+        expectSections([
+            first,
+            { ...second, titles: ['Shared quiz B', 'Missed task'] },
+            { ...first, term: 'First Quarter', titles: ['Quarter task'] },
+        ]);
+        expect(summaries()).toEqual(originalSummaries);
+    });
+});
 
 describe('ActivityRecordSheet component totals', () => {
     it('keeps written 40/50 and performance 90/100 separate on screen and print', async () => {

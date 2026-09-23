@@ -251,6 +251,8 @@ it('passes exam term, total points, and missed status to activityScores', functi
     $examScore = $res->viewData('page')['props']['activityScores'][0]['exams'][0];
     expect($examScore['title'])->toBe('Quarter 1 Quiz')
         ->and($examScore['category'])->toBe('written')
+        ->and($examScore['section_id'])->toBe($missedExam->section_id)
+        ->and($examScore['section_name'])->toBe($section->name)
         ->and($examScore['term'])->toBe('1st Quarter')
         ->and($examScore['is_missed'])->toBeTrue()
         ->and((float) $examScore['total_points'])->toBe(10.0);
@@ -347,6 +349,8 @@ it('includes senior high performance task scores in activityScores', function ()
     expect($pt)->not->toBeNull();
     expect($pt['activity_type'])->toBe('Performance Task');
     expect($pt['category'])->toBe('performance');
+    expect($pt['section_id'])->toBe($task->section_id);
+    expect($pt['section_name'])->toBe($section->name);
     expect((float) $pt['score'])->toBe(45.0);
     expect((float) $pt['total_points'])->toBe(50.0);
     expect((float) $pt['percentage'])->toBe(90.0);
@@ -385,6 +389,8 @@ it('includes college custom activity task scores in activityScores', function ()
     expect($lab)->not->toBeNull();
     expect($lab['activity_type'])->toBe('Laboratory');
     expect($lab['category'])->toBe('performance');
+    expect($lab['section_id'])->toBe($task->section_id);
+    expect($lab['section_name'])->toBe($section->name);
     expect((float) $lab['score'])->toBe(95.0);
     expect((float) $lab['total_points'])->toBe(100.0);
     expect((float) $lab['percentage'])->toBe(95.0);
