@@ -265,7 +265,7 @@ const handlePrint = () => {
         >
             <!-- Header -->
             <SheetHeader class="border-b border-border/50 pb-4">
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <div
                             class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D97757]/15 text-[#D97757]"
@@ -286,16 +286,43 @@ const handlePrint = () => {
                             </SheetDescription>
                         </div>
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        class="hidden h-8 items-center gap-1.5 rounded-lg border-border/60 text-xs font-medium sm:inline-flex"
-                        @click="handlePrint"
-                    >
-                        <Printer class="h-3.5 w-3.5 text-muted-foreground" />
-                        Print Record
-                    </Button>
+                    <div class="flex items-center gap-2">
+                        <!-- Overall Total Score -->
+                        <div
+                            v-if="totalMaxPoints > 0"
+                            data-test="overall-total-score"
+                            class="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs shadow-2xs"
+                        >
+                            <span
+                                class="text-[11px] font-medium text-muted-foreground"
+                                >Total Score:</span
+                            >
+                            <span
+                                class="font-bold text-foreground tabular-nums"
+                            >
+                                {{ totalEarnedPoints.toFixed(0) }} /
+                                {{ totalMaxPoints.toFixed(0) }}
+                            </span>
+                            <span
+                                v-if="overallPercentage !== null"
+                                class="font-semibold text-primary tabular-nums"
+                            >
+                                ({{ overallPercentage.toFixed(0) }}%)
+                            </span>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            class="hidden h-8 items-center gap-1.5 rounded-lg border-border/60 text-xs font-medium sm:inline-flex"
+                            @click="handlePrint"
+                        >
+                            <Printer
+                                class="h-3.5 w-3.5 text-muted-foreground"
+                            />
+                            Print Record
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Search & Filters -->
@@ -508,14 +535,14 @@ const handlePrint = () => {
                                 </span>
                             </div>
 
-                            <!-- Term Subtotal -->
+                            <!-- Term Total Score -->
                             <div
                                 v-if="group.subtotalMax > 0"
                                 class="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2.5 py-0.5 text-xs shadow-2xs"
                             >
                                 <span
                                     class="text-[11px] font-medium text-muted-foreground"
-                                    >Subtotal:</span
+                                    >Total Score:</span
                                 >
                                 <span
                                     class="font-bold text-foreground tabular-nums"
@@ -544,7 +571,7 @@ const handlePrint = () => {
                                 data-test="activity-record-table"
                                 class="min-w-full table-fixed border-collapse text-left text-sm lg:!w-full"
                                 :style="{
-                                    width: `${group.activities.length * 140}px`,
+                                    width: `${(group.activities.length + (group.subtotalMax > 0 ? 1 : 0)) * 140}px`,
                                 }"
                             >
                                 <thead>
@@ -590,6 +617,58 @@ const handlePrint = () => {
                                                     "
                                                 >
                                                     {{ activity.section_name }}
+                                                </div>
+                                            </div>
+                                        </th>
+                                        <!-- Total Score Column Header -->
+                                        <th
+                                            v-if="group.subtotalMax > 0"
+                                            class="w-[140px] min-w-[140px] border border-primary/30 bg-primary/10 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[110px]"
+                                            data-test="activity-record-total-th"
+                                        >
+                                            <div class="flex flex-col gap-1">
+                                                <div
+                                                    class="flex items-center justify-between gap-1 text-[10px] font-bold tracking-wider text-primary uppercase"
+                                                >
+                                                    <span
+                                                        class="inline-flex items-center gap-1 font-mono text-[10px]"
+                                                    >
+                                                        <Award
+                                                            class="h-3 w-3 text-primary"
+                                                        />
+                                                        Total
+                                                    </span>
+                                                    <span
+                                                        v-if="
+                                                            group.subtotalPercentage !==
+                                                            null
+                                                        "
+                                                        class="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-bold text-primary"
+                                                    >
+                                                        {{
+                                                            group.subtotalPercentage.toFixed(
+                                                                0,
+                                                            )
+                                                        }}%
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    class="text-xs leading-snug font-bold text-foreground"
+                                                >
+                                                    Total Score
+                                                </div>
+                                                <div
+                                                    class="truncate text-[10px] text-muted-foreground"
+                                                >
+                                                    {{
+                                                        group.activities.length
+                                                    }}
+                                                    {{
+                                                        group.activities
+                                                            .length === 1
+                                                            ? 'activity'
+                                                            : 'activities'
+                                                    }}
                                                 </div>
                                             </div>
                                         </th>
@@ -717,6 +796,45 @@ const handlePrint = () => {
                                                             activity,
                                                         )
                                                     }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <!-- Total Score Cell -->
+                                        <td
+                                            v-if="group.subtotalMax > 0"
+                                            data-test="activity-record-total-cell"
+                                            class="border border-primary/30 bg-primary/5 p-2 align-middle tabular-nums"
+                                        >
+                                            <div
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-primary/30 bg-primary/15 px-2.5 py-2 text-xs font-bold text-primary shadow-2xs"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    {{
+                                                        group.subtotalScore.toFixed(
+                                                            0,
+                                                        )
+                                                    }}
+                                                    /
+                                                    {{
+                                                        group.subtotalMax.toFixed(
+                                                            0,
+                                                        )
+                                                    }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        group.subtotalPercentage !==
+                                                        null
+                                                    "
+                                                    class="text-[11px] font-bold opacity-90"
+                                                >
+                                                    {{
+                                                        group.subtotalPercentage.toFixed(
+                                                            0,
+                                                        )
+                                                    }}%
                                                 </span>
                                             </div>
                                         </td>

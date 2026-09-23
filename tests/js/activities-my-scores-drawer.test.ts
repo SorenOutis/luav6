@@ -224,13 +224,19 @@ describe('activities hub — Activity Record drawer', () => {
             expect(headings).toHaveLength(2);
             expect(headings[0].textContent).toContain('Scored activity');
             expect(headings[1].textContent).toContain('Untaken activity');
-            expect((table as HTMLElement).style.width).toBe('280px');
+            expect((table as HTMLElement).style.width).toBe('420px');
             expect(table.classList.contains('w-full')).toBe(false);
             expect(table.parentElement!.className).not.toContain('rounded-xl');
             expect(table.parentElement!.className).not.toContain('bg-card');
             expect(headings[0].classList.contains('border')).toBe(true);
             expect(table.parentElement!.className).toContain('overflow-x-auto');
             expect(table.parentElement!.getAttribute('tabindex')).toBe('0');
+            const totalCell = table.querySelector(
+                '[data-test="activity-record-total-cell"]',
+            );
+            expect(totalCell).not.toBeNull();
+            expect(totalCell!.textContent).toContain('89 / 100');
+            expect(sheetText).toContain('Total Score:');
             const cells = table.querySelectorAll(
                 '[data-test="activity-record-cell"]',
             );
@@ -266,7 +272,7 @@ describe('activities hub — Activity Record drawer', () => {
                         '[data-test="activity-record-table"]',
                     ) as HTMLElement
                 ).style.width,
-            ).toBe('140px');
+            ).toBe('280px');
             expect(statusButtons[0].getAttribute('aria-pressed')).toBe('false');
             expect(
                 sheet!.querySelectorAll('[data-test="activity-record-cell"]'),
