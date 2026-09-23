@@ -33,7 +33,10 @@ class SectionForm
                     ->default(Section::SCHOOL_LEVEL_COLLEGE)
                     ->required()
                     ->live()
-                    ->afterStateUpdated(fn (Set $set) => $set('activity_record_terms', null)),
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
+                        'activity_record_terms',
+                        array_keys(Section::examTermOptions($state ?? Section::SCHOOL_LEVEL_COLLEGE)),
+                    )),
                 Toggle::make('activity_record_enabled')
                     ->label('Enable Activity Record for Students')
                     ->helperText('Master switch to allow students in this section to view the Activity Record drawer and inspect their activity scores.')
@@ -41,8 +44,10 @@ class SectionForm
                     ->live(),
                 CheckboxList::make('activity_record_terms')
                     ->label('Allowed Activity Record Terms / Quarters')
-                    ->helperText('Choose which terms students in this section can see in their Activity Record. If all are unchecked, all terms are enabled by default.')
+                    ->helperText('Choose which terms students in this section can see in their Activity Record. If all are unchecked, no terms will be shown.')
                     ->options(fn (Get $get, ?Section $record): array => Section::examTermOptions($get('school_level') ?? $record?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE))
+                    ->default(fn (Get $get, ?Section $record): array => array_keys(Section::examTermOptions($get('school_level') ?? $record?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE)))
+                    ->formatStateUsing(fn ($state, ?Section $record) => $state ?? array_keys(Section::examTermOptions($record?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE)))
                     ->visible(fn (Get $get): bool => (bool) ($get('activity_record_enabled') ?? true))
                     ->columns(2),
                 Placeholder::make('join_code')

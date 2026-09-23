@@ -316,6 +316,12 @@ it('filters activityScores by allowed section activity_record_terms', function (
 
     expect($allExamTitlesNow)->toContain('Prelim Exam');
     expect($allExamTitlesNow)->toContain('Midterm Exam');
+
+    // When activity_record_terms is explicitly set to empty array (all unchecked), no terms are allowed
+    $section->update(['activity_record_terms' => []]);
+    $resNone = actingAs($user)->get(route('activities.index'))->assertOk();
+    $noneScores = $resNone->viewData('page')['props']['activityScores'];
+    expect($noneScores)->toBeEmpty();
 });
 
 it('includes senior high performance task scores in activityScores', function () {
