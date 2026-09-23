@@ -659,7 +659,7 @@ describe('ActivityRecordSheet component totals', () => {
                 .findAll('tbody tr');
             expect(rows).toHaveLength(1);
             expect(rows[0].text()).toContain(title);
-            expect(text(rows[0].get('td:nth-child(4)').text())).toBe(fraction);
+            expect(text(rows[0].get('td:nth-child(3)').text())).toBe(fraction);
         }
         expect(wrapper.text()).not.toContain('130 / 150');
         const print = vi.spyOn(window, 'print').mockImplementation(() => {});
@@ -802,9 +802,10 @@ describe('ActivityRecordSheet component totals', () => {
             expect(
                 row
                     .findAll('td')
-                    .slice(3)
+                    .slice(2)
                     .map((cell) => text(cell.text())),
-            ).toEqual(['0 / 50', '0.0%', 'Missed']);
+            ).toEqual(['0 / 50', '0.0%']);
+            expect(row.get('td:nth-child(2) p').text()).toBe('Missed');
             expect(
                 wrapper.find('[data-test="activity-status-filters"]').exists(),
             ).toBe(false);
@@ -844,9 +845,12 @@ describe('ActivityRecordSheet component totals', () => {
         expect(
             print
                 .findAll('tbody td')
-                .slice(3)
+                .slice(2)
                 .map((cell) => text(cell.text())),
-        ).toEqual(['— / 100', '—', 'Pending Review']);
+        ).toEqual(['— / 100', '—']);
+        expect(print.get('tbody td:nth-child(2) p').text()).toBe(
+            'Pending Review',
+        );
         expect(
             wrapper.find('[data-test="activity-status-filters"]').exists(),
         ).toBe(false);
@@ -890,9 +894,9 @@ describe('ActivityRecordSheet component totals', () => {
         expect(
             openPrint
                 .findAll('td')
-                .slice(3)
+                .slice(2)
                 .map((cell) => text(cell.text())),
-        ).toEqual(['— / 200', '—', 'Open / Untaken']);
+        ).toEqual(['— / 200', '—']);
         expect(
             wrapper.find('[data-test="activity-status-filters"]').exists(),
         ).toBe(false);

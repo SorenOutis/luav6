@@ -358,33 +358,6 @@ const activityPercentageDisplay = (activity: ActivityScoreItem): string => {
     return '—';
 };
 
-const activityStatusLabel = (activity: ActivityScoreItem): string => {
-    if (
-        activity.is_missed ||
-        (activity.state === 'closed' && !activity.submitted)
-    ) {
-        return 'Missed';
-    }
-
-    if (activity.is_pending_review) {
-        return 'Pending Review';
-    }
-
-    if (activity.state === 'completed' || activity.submitted) {
-        return activity.is_late ? 'Completed (Late)' : 'Completed';
-    }
-
-    if (activity.state === 'in_progress') {
-        return 'In Progress';
-    }
-
-    if (activity.state === 'open') {
-        return 'Open / Untaken';
-    }
-
-    return 'Pending';
-};
-
 const handlePrint = () => {
     window.print();
 };
@@ -510,9 +483,9 @@ const handlePrint = () => {
 
                 <!-- Student & Evaluation Info Grid -->
                 <div
-                    class="my-4 border border-black p-3 text-xs leading-relaxed"
+                    class="my-3 rounded border border-neutral-300 bg-neutral-50/60 p-2.5 text-xs leading-relaxed"
                 >
-                    <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-1.5">
                         <div>
                             <p>
                                 <strong>Student:</strong>
@@ -599,7 +572,7 @@ const handlePrint = () => {
                                             class="border-b border-black bg-neutral-100"
                                         >
                                             <th
-                                                class="w-8 border border-black p-1.5 text-center font-bold"
+                                                class="w-10 border border-black p-1.5 text-center font-bold"
                                             >
                                                 #
                                             </th>
@@ -609,24 +582,14 @@ const handlePrint = () => {
                                                 Activity Title
                                             </th>
                                             <th
-                                                class="w-32 border border-black p-1.5 font-bold"
-                                            >
-                                                Section
-                                            </th>
-                                            <th
-                                                class="w-24 border border-black p-1.5 text-center font-bold"
+                                                class="w-28 border border-black p-1.5 text-center font-bold"
                                             >
                                                 Score
                                             </th>
                                             <th
-                                                class="w-20 border border-black p-1.5 text-center font-bold"
+                                                class="w-24 border border-black p-1.5 text-center font-bold"
                                             >
                                                 Rating
-                                            </th>
-                                            <th
-                                                class="w-28 border border-black p-1.5 text-center font-bold"
-                                            >
-                                                Status
                                             </th>
                                         </tr>
                                     </thead>
@@ -647,19 +610,25 @@ const handlePrint = () => {
                                                 class="border border-black p-1.5 font-medium text-black"
                                             >
                                                 <div>{{ activity.title }}</div>
-                                                <div
-                                                    class="text-[9px] font-bold tracking-wider text-neutral-500 uppercase"
+                                                <p
+                                                    v-if="
+                                                        activity.is_pending_review
+                                                    "
+                                                    class="text-[10px] font-normal text-neutral-500"
                                                 >
-                                                    {{
-                                                        activity.activity_type ||
-                                                        'Written Work'
-                                                    }}
-                                                </div>
-                                            </td>
-                                            <td
-                                                class="border border-black p-1.5 text-neutral-700"
-                                            >
-                                                {{ section.name }}
+                                                    Pending Review
+                                                </p>
+                                                <p
+                                                    v-else-if="
+                                                        activity.is_missed ||
+                                                        (activity.state ===
+                                                            'closed' &&
+                                                            !activity.submitted)
+                                                    "
+                                                    class="text-[10px] font-normal text-red-600"
+                                                >
+                                                    Missed
+                                                </p>
                                             </td>
                                             <td
                                                 class="border border-black p-1.5 text-center font-mono font-bold text-black"
@@ -679,15 +648,6 @@ const handlePrint = () => {
                                                     )
                                                 }}
                                             </td>
-                                            <td
-                                                class="border border-black p-1.5 text-center font-medium"
-                                            >
-                                                {{
-                                                    activityStatusLabel(
-                                                        activity,
-                                                    )
-                                                }}
-                                            </td>
                                         </tr>
                                     </tbody>
                                     <tfoot>
@@ -695,7 +655,7 @@ const handlePrint = () => {
                                             class="border-t-2 border-black bg-neutral-50 font-bold"
                                         >
                                             <td
-                                                colspan="3"
+                                                colspan="2"
                                                 class="border border-black p-1.5 text-right uppercase"
                                             >
                                                 {{ component.label }} Total:
@@ -727,19 +687,6 @@ const handlePrint = () => {
                                                         : '—'
                                                 }}
                                             </td>
-                                            <td
-                                                class="border border-black p-1.5 text-center text-[10px]"
-                                            >
-                                                {{
-                                                    component.activities.length
-                                                }}
-                                                {{
-                                                    component.activities
-                                                        .length === 1
-                                                        ? 'task'
-                                                        : 'tasks'
-                                                }}
-                                            </td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -750,12 +697,10 @@ const handlePrint = () => {
 
                 <!-- Cumulative Section / Component Summaries -->
                 <div
-                    class="mt-4 break-inside-avoid border-2 border-black p-3 text-xs"
+                    class="mt-4 break-inside-avoid border-t-2 border-black pt-3 text-xs"
                 >
-                    <h3
-                        class="border-b border-black pb-2 font-bold tracking-wider text-black uppercase"
-                    >
-                        Cumulative Component Totals
+                    <h3 class="font-bold tracking-wider text-black uppercase">
+                        Cumulative Summary
                     </h3>
                     <section
                         v-for="section in allSections"
@@ -763,7 +708,7 @@ const handlePrint = () => {
                         :data-section="section.name"
                         :data-section-id="section.id ?? 'unassigned'"
                         :data-season="section.seasonName"
-                        class="space-y-2 pt-2"
+                        class="space-y-1.5 pt-1.5"
                     >
                         <h4 class="font-bold text-black">
                             Section: {{ section.name
@@ -771,7 +716,7 @@ const handlePrint = () => {
                                 · {{ section.seasonName }}</span
                             >
                         </h4>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-wrap gap-2">
                             <div
                                 v-for="component in section.components"
                                 :key="component.key"
@@ -781,13 +726,12 @@ const handlePrint = () => {
                                 :data-season="section.seasonName"
                                 :data-component="component.key"
                                 :data-category="component.category"
-                                class="rounded border border-neutral-400 p-2"
+                                class="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-50 px-2.5 py-1 text-xs"
                             >
-                                <span
-                                    class="block text-[10px] font-bold text-neutral-600 uppercase"
+                                <span class="font-semibold text-neutral-700"
                                     >{{ component.label }} Total:</span
                                 >
-                                <span class="font-bold text-black">
+                                <span class="font-mono font-bold text-black">
                                     {{ component.subtotalScore.toFixed(0) }} /
                                     {{ component.subtotalMax.toFixed(0) }} pts
                                     <span
