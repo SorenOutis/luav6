@@ -28,6 +28,7 @@ export interface ActivityScoreItem {
     id: number | string;
     title: string;
     activity_type?: string;
+    category?: 'written' | 'performance';
     term: string;
     section_name: string | null;
     school_level?: string;
@@ -49,6 +50,22 @@ export interface ActivityScoreItem {
 export interface ScoreGroup {
     seasonName: string;
     exams: ActivityScoreItem[];
+}
+
+export interface ComponentGroup {
+    key: string;
+    category: 'written' | 'performance';
+    label: string;
+    activities: ActivityScoreItem[];
+    subtotalScore: number;
+    subtotalMax: number;
+    subtotalPercentage: number | null;
+}
+
+export interface TermGroup {
+    term: string;
+    activities: ActivityScoreItem[];
+    components: ComponentGroup[];
 }
 
 const props = defineProps<{
@@ -108,18 +125,21 @@ const inProgressCount = computed(
         ).length,
 );
 
-const totalEarnedPoints = computed(() => {
-    return allActivities.value.reduce((acc, a) => {
-        if (a.score !== null && (a.state === 'completed' || a.submitted)) {
+const calcEarned = (items: ActivityScoreItem[]) =>
+    items.reduce((acc, a) => {
+        if (
+            !a.is_missed &&
+            !(a.state === 'closed' && !a.submitted) &&
+            a.score !== null &&
+            (a.state === 'completed' || a.submitted)
+        ) {
             return acc + Number(a.score);
         }
         return acc;
     }, 0);
-});
 
-const totalMaxPoints = computed(() => {
-    return allActivities.value.reduce((acc, a) => {
-        // Count total points for activities that have been graded or missed
+const calcMax = (items: ActivityScoreItem[]) =>
+    items.reduce((acc, a) => {
         if (
             a.submitted ||
             a.is_missed ||
@@ -130,14 +150,62 @@ const totalMaxPoints = computed(() => {
         }
         return acc;
     }, 0);
-});
 
-const overallPercentage = computed(() => {
-    if (totalMaxPoints.value <= 0) return null;
-    return (
-        Math.round((totalEarnedPoints.value / totalMaxPoints.value) * 1000) / 10
-    );
-});
+const calcPct = (earned: number, max: number) =>
+    max > 0 ? Math.round((earned / max) * 1000) / 10 : null;
+
+const groupComponents = (items: ActivityScoreItem[]): ComponentGroup[] => {
+    const groups = new Map<string, ComponentGroup>();
+
+    for (const activity of items) {
+        const category =
+            activity.category ??
+            (typeof activity.id === 'string' ? 'performance' : 'written');
+        const activityType =
+            activity.activity_type?.trim() || 'Performance Task';
+        const key =
+            category === 'written' ? 'written' : `performance:${activityType}`;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                category,
+                label:
+                    category === 'written'
+                        ? 'Written Activities'
+                        : activityType === 'Performance Task'
+                          ? 'Performance Tasks'
+                          : activityType,
+                activities: [],
+                subtotalScore: 0,
+                subtotalMax: 0,
+                subtotalPercentage: null,
+            });
+        }
+
+        groups.get(key)!.activities.push(activity);
+    }
+
+    return Array.from(groups.values())
+        .sort(
+            (a, b) =>
+                Number(a.category === 'performance') -
+                Number(b.category === 'performance'),
+        )
+        .map((group) => {
+            const earned = calcEarned(group.activities);
+            const max = calcMax(group.activities);
+
+            return {
+                ...group,
+                subtotalScore: Math.round(earned * 100) / 100,
+                subtotalMax: Math.round(max * 100) / 100,
+                subtotalPercentage: calcPct(earned, max),
+            };
+        });
+};
+
+const allComponents = computed(() => groupComponents(allActivities.value));
 
 // Filtered list
 const filteredActivities = computed(() => {
@@ -175,15 +243,6 @@ const filteredActivities = computed(() => {
     return list;
 });
 
-// Group filtered activities by Term (or by Season if no term)
-interface TermGroup {
-    term: string;
-    activities: ActivityScoreItem[];
-    subtotalScore: number;
-    subtotalMax: number;
-    subtotalPercentage: number | null;
-}
-
 const groupedByTerm = computed<TermGroup[]>(() => {
     const map = new Map<string, ActivityScoreItem[]>();
 
@@ -195,36 +254,11 @@ const groupedByTerm = computed<TermGroup[]>(() => {
         map.get(key)!.push(act);
     }
 
-    return Array.from(map.entries()).map(([term, items]) => {
-        const earned = items.reduce((acc, a) => {
-            if (a.score !== null && (a.state === 'completed' || a.submitted)) {
-                return acc + Number(a.score);
-            }
-            return acc;
-        }, 0);
-
-        const max = items.reduce((acc, a) => {
-            if (
-                a.submitted ||
-                a.is_missed ||
-                a.state === 'closed' ||
-                a.state === 'completed'
-            ) {
-                return acc + Number(a.total_points || 0);
-            }
-            return acc;
-        }, 0);
-
-        const pct = max > 0 ? Math.round((earned / max) * 1000) / 10 : null;
-
-        return {
-            term,
-            activities: items,
-            subtotalScore: Math.round(earned * 100) / 100,
-            subtotalMax: Math.round(max * 100) / 100,
-            subtotalPercentage: pct,
-        };
-    });
+    return Array.from(map.entries()).map(([term, items]) => ({
+        term,
+        activities: items,
+        components: groupComponents(items),
+    }));
 });
 
 const activityScoreDisplay = (activity: ActivityScoreItem): string => {
@@ -361,28 +395,30 @@ const handlePrint = () => {
                             </SheetDescription>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <!-- Overall Total Score -->
+                    <div class="flex flex-wrap items-center gap-2">
                         <div
-                            v-if="totalMaxPoints > 0"
-                            data-test="overall-total-score"
+                            v-for="component in allComponents"
+                            :key="component.key"
+                            data-test="activity-record-component-summary"
+                            :data-component="component.key"
+                            :data-category="component.category"
                             class="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs shadow-2xs"
                         >
                             <span
                                 class="text-[11px] font-medium text-muted-foreground"
-                                >Total Score:</span
+                                >{{ component.label }}:</span
                             >
                             <span
                                 class="font-bold text-foreground tabular-nums"
                             >
-                                {{ totalEarnedPoints.toFixed(0) }} /
-                                {{ totalMaxPoints.toFixed(0) }}
+                                {{ component.subtotalScore.toFixed(0) }} /
+                                {{ component.subtotalMax.toFixed(0) }}
                             </span>
                             <span
-                                v-if="overallPercentage !== null"
+                                v-if="component.subtotalPercentage !== null"
                                 class="font-semibold text-primary tabular-nums"
                             >
-                                ({{ overallPercentage.toFixed(0) }}%)
+                                ({{ component.subtotalPercentage.toFixed(0) }}%)
                             </span>
                         </div>
                         <Button
@@ -564,13 +600,6 @@ const handlePrint = () => {
                                 {{ new Date().toLocaleDateString() }}
                             </p>
                             <p>
-                                <strong>Total Points:</strong>
-                                {{ totalEarnedPoints.toFixed(0) }} /
-                                {{ totalMaxPoints.toFixed(0) }} ({{
-                                    (overallPercentage ?? 0).toFixed(0)
-                                }}%)
-                            </p>
-                            <p>
                                 <strong>Tasks Completed:</strong>
                                 {{ completedCount }} of
                                 {{ allActivities.length }}
@@ -584,184 +613,230 @@ const handlePrint = () => {
                     <div
                         v-for="group in groupedByTerm"
                         :key="group.term"
-                        class="break-inside-avoid"
+                        class="break-inside-avoid space-y-3"
                     >
                         <div
-                            class="mb-1 flex items-center justify-between border-b border-black pb-1"
+                            class="flex flex-wrap items-center justify-between border-b-2 border-black pb-1"
                         >
                             <h3
                                 class="text-xs font-bold tracking-wider text-black uppercase"
                             >
                                 Period: {{ group.term }}
                             </h3>
-                            <span
-                                v-if="group.subtotalMax > 0"
-                                class="text-xs font-bold text-black"
-                            >
-                                Term Subtotal:
-                                {{ group.subtotalScore.toFixed(0) }} /
-                                {{ group.subtotalMax.toFixed(0) }}
-                                <span v-if="group.subtotalPercentage !== null">
-                                    ({{ group.subtotalPercentage.toFixed(0) }}%)
-                                </span>
-                            </span>
                         </div>
 
-                        <table
-                            class="report-card-table w-full border-collapse border border-black text-left text-xs"
+                        <!-- Component Tables for this Term -->
+                        <div
+                            v-for="component in group.components"
+                            :key="component.key"
+                            class="space-y-1"
                         >
-                            <thead>
-                                <tr
-                                    class="border-b border-black bg-neutral-100"
-                                >
-                                    <th
-                                        class="w-8 border border-black p-1.5 text-center font-bold"
+                            <div
+                                class="flex items-center justify-between text-xs font-bold text-black"
+                            >
+                                <span class="tracking-wider uppercase">{{
+                                    component.label
+                                }}</span>
+                                <span
+                                    >{{ component.label }} Subtotal:
+                                    {{ component.subtotalScore.toFixed(0) }} /
+                                    {{ component.subtotalMax.toFixed(0) }}
+                                    <span
+                                        v-if="
+                                            component.subtotalPercentage !==
+                                            null
+                                        "
                                     >
-                                        #
-                                    </th>
-                                    <th
-                                        class="border border-black p-1.5 font-bold"
+                                        ({{
+                                            component.subtotalPercentage.toFixed(
+                                                0,
+                                            )
+                                        }}%)
+                                    </span>
+                                </span>
+                            </div>
+
+                            <table
+                                data-test="activity-record-print-component-table"
+                                :data-term="group.term"
+                                :data-component="component.key"
+                                :data-category="component.category"
+                                class="report-card-table w-full border-collapse border border-black text-left text-xs"
+                            >
+                                <thead>
+                                    <tr
+                                        class="border-b border-black bg-neutral-100"
                                     >
-                                        Activity Title
-                                    </th>
-                                    <th
-                                        class="w-32 border border-black p-1.5 font-bold"
+                                        <th
+                                            class="w-8 border border-black p-1.5 text-center font-bold"
+                                        >
+                                            #
+                                        </th>
+                                        <th
+                                            class="border border-black p-1.5 font-bold"
+                                        >
+                                            Activity Title
+                                        </th>
+                                        <th
+                                            class="w-32 border border-black p-1.5 font-bold"
+                                        >
+                                            Section
+                                        </th>
+                                        <th
+                                            class="w-24 border border-black p-1.5 text-center font-bold"
+                                        >
+                                            Score
+                                        </th>
+                                        <th
+                                            class="w-20 border border-black p-1.5 text-center font-bold"
+                                        >
+                                            Rating
+                                        </th>
+                                        <th
+                                            class="w-28 border border-black p-1.5 text-center font-bold"
+                                        >
+                                            Status
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="(
+                                            activity, aIdx
+                                        ) in component.activities"
+                                        :key="activity.id"
+                                        class="border-b border-neutral-300"
                                     >
-                                        Section
-                                    </th>
-                                    <th
-                                        class="w-24 border border-black p-1.5 text-center font-bold"
-                                    >
-                                        Score
-                                    </th>
-                                    <th
-                                        class="w-20 border border-black p-1.5 text-center font-bold"
-                                    >
-                                        Rating
-                                    </th>
-                                    <th
-                                        class="w-28 border border-black p-1.5 text-center font-bold"
-                                    >
-                                        Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="(activity, aIdx) in group.activities"
-                                    :key="activity.id"
-                                    class="border-b border-neutral-300"
-                                >
-                                    <td
-                                        class="border border-black p-1.5 text-center font-mono"
-                                    >
-                                        {{ aIdx + 1 }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 font-medium text-black"
-                                    >
-                                        <div>{{ activity.title }}</div>
-                                        <div
-                                            class="text-[9px] font-bold tracking-wider text-neutral-500 uppercase"
+                                        <td
+                                            class="border border-black p-1.5 text-center font-mono"
+                                        >
+                                            {{ aIdx + 1 }}
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 font-medium text-black"
+                                        >
+                                            <div>{{ activity.title }}</div>
+                                            <div
+                                                class="text-[9px] font-bold tracking-wider text-neutral-500 uppercase"
+                                            >
+                                                {{
+                                                    activity.activity_type ||
+                                                    'Written Work'
+                                                }}
+                                            </div>
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-neutral-700"
+                                        >
+                                            {{ activity.section_name || '—' }}
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center font-mono font-bold text-black"
                                         >
                                             {{
-                                                activity.activity_type ||
-                                                'Written Work'
+                                                activityScoreFraction(activity)
                                             }}
-                                        </div>
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-neutral-700"
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center font-mono"
+                                        >
+                                            {{
+                                                activityPercentageDisplay(
+                                                    activity,
+                                                )
+                                            }}
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center font-medium"
+                                        >
+                                            {{ activityStatusLabel(activity) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr
+                                        class="border-t-2 border-black bg-neutral-50 font-bold"
                                     >
-                                        {{ activity.section_name || '—' }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center font-mono font-bold text-black"
-                                    >
-                                        {{ activityScoreFraction(activity) }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center font-mono"
-                                    >
-                                        {{
-                                            activityPercentageDisplay(activity)
-                                        }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center font-medium"
-                                    >
-                                        {{ activityStatusLabel(activity) }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot v-if="group.subtotalMax > 0">
-                                <tr
-                                    class="border-t-2 border-black bg-neutral-50 font-bold"
-                                >
-                                    <td
-                                        colspan="3"
-                                        class="border border-black p-1.5 text-right uppercase"
-                                    >
-                                        {{ group.term }} Subtotal:
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center font-mono"
-                                    >
-                                        {{ group.subtotalScore.toFixed(0) }} /
-                                        {{ group.subtotalMax.toFixed(0) }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center font-mono"
-                                    >
-                                        {{
-                                            group.subtotalPercentage !== null
-                                                ? group.subtotalPercentage.toFixed(
-                                                      0,
-                                                  ) + '%'
-                                                : '—'
-                                        }}
-                                    </td>
-                                    <td
-                                        class="border border-black p-1.5 text-center text-[10px]"
-                                    >
-                                        {{ group.activities.length }}
-                                        {{
-                                            group.activities.length === 1
-                                                ? 'activity'
-                                                : 'activities'
-                                        }}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                        <td
+                                            colspan="3"
+                                            class="border border-black p-1.5 text-right uppercase"
+                                        >
+                                            {{ component.label }} Total:
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center font-mono"
+                                        >
+                                            {{
+                                                component.subtotalScore.toFixed(
+                                                    0,
+                                                )
+                                            }}
+                                            /
+                                            {{
+                                                component.subtotalMax.toFixed(0)
+                                            }}
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center font-mono"
+                                        >
+                                            {{
+                                                component.subtotalPercentage !==
+                                                null
+                                                    ? component.subtotalPercentage.toFixed(
+                                                          0,
+                                                      ) + '%'
+                                                    : '—'
+                                            }}
+                                        </td>
+                                        <td
+                                            class="border border-black p-1.5 text-center text-[10px]"
+                                        >
+                                            {{ component.activities.length }}
+                                            {{
+                                                component.activities.length ===
+                                                1
+                                                    ? 'task'
+                                                    : 'tasks'
+                                            }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Cumulative Summary Box -->
+                <!-- Cumulative Component Summaries -->
                 <div
-                    class="mt-4 break-inside-avoid border-2 border-black p-2.5 text-xs"
+                    class="mt-4 break-inside-avoid border-2 border-black p-3 text-xs"
                 >
-                    <div class="flex items-center justify-between">
-                        <div>
+                    <h3
+                        class="border-b border-black pb-2 font-bold tracking-wider text-black uppercase"
+                    >
+                        Cumulative Component Totals
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div
+                            v-for="component in allComponents"
+                            :key="component.key"
+                            data-test="activity-record-print-component-summary"
+                            :data-component="component.key"
+                            :data-category="component.category"
+                            class="rounded border border-neutral-400 p-2"
+                        >
                             <span
-                                class="font-bold tracking-wider text-black uppercase"
+                                class="block text-[10px] font-bold text-neutral-600 uppercase"
+                                >{{ component.label }} Total:</span
                             >
-                                Cumulative Performance Total
-                            </span>
-                            <p class="text-[10px] text-neutral-600">
-                                Total score across all recorded activities
-                            </p>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-sm font-bold text-black">
-                                {{ totalEarnedPoints.toFixed(0) }} /
-                                {{ totalMaxPoints.toFixed(0) }} pts
-                            </span>
-                            <span
-                                v-if="overallPercentage !== null"
-                                class="ml-1.5 font-bold text-black"
-                            >
-                                ({{ overallPercentage.toFixed(0) }}%)
+                            <span class="font-bold text-black">
+                                {{ component.subtotalScore.toFixed(0) }} /
+                                {{ component.subtotalMax.toFixed(0) }} pts
+                                <span
+                                    v-if="component.subtotalPercentage !== null"
+                                    >({{
+                                        component.subtotalPercentage.toFixed(0)
+                                    }}%)</span
+                                >
                             </span>
                         </div>
                     </div>
@@ -844,401 +919,402 @@ const handlePrint = () => {
                                     }}
                                 </span>
                             </div>
-
-                            <!-- Term Total Score -->
-                            <div
-                                v-if="group.subtotalMax > 0"
-                                class="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2.5 py-0.5 text-xs shadow-2xs"
-                            >
-                                <span
-                                    class="text-[11px] font-medium text-muted-foreground"
-                                    >Total Score:</span
-                                >
-                                <span
-                                    class="font-bold text-foreground tabular-nums"
-                                >
-                                    {{ group.subtotalScore.toFixed(0) }} /
-                                    {{ group.subtotalMax.toFixed(0) }}
-                                </span>
-                                <span
-                                    v-if="group.subtotalPercentage !== null"
-                                    class="font-semibold text-primary tabular-nums"
-                                >
-                                    ({{ group.subtotalPercentage.toFixed(0) }}%)
-                                </span>
-                            </div>
                         </div>
 
-                        <!-- Activity Record Table -->
                         <div
-                            class="custom-scrollbar max-w-full overflow-x-auto rounded-lg border border-border/50 bg-muted/15 p-0.5 focus-visible:outline-2 focus-visible:outline-ring"
-                            tabindex="0"
-                            role="region"
-                            :aria-label="`${group.term} activity records`"
-                            data-lenis-prevent
+                            v-for="component in group.components"
+                            :key="component.key"
+                            class="space-y-2"
                         >
-                            <table
-                                data-test="activity-record-table"
-                                class="min-w-full table-fixed border-collapse text-left text-sm lg:!w-full"
-                                :style="{
-                                    width: `${(group.activities.length + (group.subtotalMax > 0 ? 1 : 0)) * 140}px`,
-                                }"
+                            <h4
+                                class="px-1 text-xs font-semibold text-foreground"
                             >
-                                <thead>
-                                    <tr>
-                                        <th
-                                            v-for="(
-                                                activity, idx
-                                            ) in group.activities"
-                                            :key="activity.id"
-                                            scope="col"
-                                            class="w-[140px] min-w-[140px] border border-border/50 bg-muted/40 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[100px]"
-                                        >
-                                            <div class="flex flex-col gap-1">
+                                {{ component.label }}
+                            </h4>
+                            <!-- Activity Record Table -->
+                            <div
+                                class="custom-scrollbar max-w-full overflow-x-auto rounded-lg border border-border/50 bg-muted/15 p-0.5 focus-visible:outline-2 focus-visible:outline-ring"
+                                tabindex="0"
+                                role="region"
+                                :aria-label="`${group.term} ${component.label} activity records`"
+                                data-lenis-prevent
+                            >
+                                <table
+                                    data-test="activity-record-table"
+                                    :data-term="group.term"
+                                    :data-component="component.key"
+                                    :data-category="component.category"
+                                    class="min-w-full table-fixed border-collapse text-left text-sm lg:!w-full"
+                                    :style="{
+                                        width: `${(component.activities.length + 1) * 140}px`,
+                                    }"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                v-for="(
+                                                    activity, idx
+                                                ) in component.activities"
+                                                :key="activity.id"
+                                                scope="col"
+                                                class="w-[140px] min-w-[140px] border border-border/50 bg-muted/40 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[100px]"
+                                            >
                                                 <div
-                                                    class="flex items-center justify-between gap-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                                    class="flex flex-col gap-1"
                                                 >
-                                                    <span
-                                                        class="inline-flex items-center gap-1 font-mono text-[10px]"
-                                                        :class="
-                                                            activity.activity_type ===
-                                                            'Performance Task'
-                                                                ? 'font-bold text-indigo-400'
-                                                                : activity.activity_type &&
-                                                                    activity.activity_type !==
-                                                                        'Written Work'
-                                                                  ? 'font-bold text-amber-500'
-                                                                  : 'text-muted-foreground/90'
-                                                        "
+                                                    <div
+                                                        class="flex items-center justify-between gap-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
                                                     >
                                                         <span
-                                                            class="h-1.5 w-1.5 rounded-full"
+                                                            class="inline-flex items-center gap-1 font-mono text-[10px]"
                                                             :class="
                                                                 activity.activity_type ===
                                                                 'Performance Task'
-                                                                    ? 'bg-indigo-500'
+                                                                    ? 'font-bold text-indigo-400'
                                                                     : activity.activity_type &&
                                                                         activity.activity_type !==
                                                                             'Written Work'
-                                                                      ? 'bg-amber-500'
-                                                                      : 'bg-primary/70'
+                                                                      ? 'font-bold text-amber-500'
+                                                                      : 'text-muted-foreground/90'
                                                             "
-                                                        />
+                                                        >
+                                                            <span
+                                                                class="h-1.5 w-1.5 rounded-full"
+                                                                :class="
+                                                                    activity.activity_type ===
+                                                                    'Performance Task'
+                                                                        ? 'bg-indigo-500'
+                                                                        : activity.activity_type &&
+                                                                            activity.activity_type !==
+                                                                                'Written Work'
+                                                                          ? 'bg-amber-500'
+                                                                          : 'bg-primary/70'
+                                                                "
+                                                            />
+                                                            {{
+                                                                activity.activity_type ===
+                                                                'Performance Task'
+                                                                    ? `PT ${idx + 1}`
+                                                                    : activity.activity_type &&
+                                                                        activity.activity_type !==
+                                                                            'Written Work'
+                                                                      ? activity.activity_type
+                                                                      : `Act ${idx + 1}`
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                activity.is_late
+                                                            "
+                                                            class="rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400"
+                                                        >
+                                                            Late
+                                                        </span>
+                                                        <span
+                                                            v-else-if="
+                                                                activity.is_missed ||
+                                                                (activity.state ===
+                                                                    'closed' &&
+                                                                    !activity.submitted)
+                                                            "
+                                                            class="rounded bg-[#CB7676]/15 px-1 py-0.5 text-[9px] font-semibold text-[#CB7676]"
+                                                        >
+                                                            Missed
+                                                        </span>
+                                                    </div>
+                                                    <div
+                                                        class="line-clamp-2 text-xs leading-snug font-semibold break-words text-foreground"
+                                                        :title="activity.title"
+                                                    >
+                                                        {{ activity.title }}
+                                                    </div>
+                                                    <div
+                                                        v-if="
+                                                            activity.section_name
+                                                        "
+                                                        class="truncate text-[10px] text-muted-foreground"
+                                                        :title="
+                                                            activity.section_name
+                                                        "
+                                                    >
                                                         {{
-                                                            activity.activity_type ===
-                                                            'Performance Task'
-                                                                ? `PT ${idx + 1}`
-                                                                : activity.activity_type &&
-                                                                    activity.activity_type !==
-                                                                        'Written Work'
-                                                                  ? activity.activity_type
-                                                                  : `Act ${idx + 1}`
+                                                            activity.section_name
+                                                        }}
+                                                    </div>
+                                                </div>
+                                            </th>
+                                            <!-- Total Score Column Header -->
+                                            <th
+                                                class="w-[140px] min-w-[140px] border border-primary/30 bg-primary/10 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[110px]"
+                                                data-test="activity-record-total-th"
+                                            >
+                                                <div
+                                                    class="flex flex-col gap-1"
+                                                >
+                                                    <div
+                                                        class="flex items-center justify-between gap-1 text-[10px] font-bold tracking-wider text-primary uppercase"
+                                                    >
+                                                        <span
+                                                            class="inline-flex items-center gap-1 font-mono text-[10px]"
+                                                        >
+                                                            <Award
+                                                                class="h-3 w-3 text-primary"
+                                                            />
+                                                            Total
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                component.subtotalPercentage !==
+                                                                null
+                                                            "
+                                                            class="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-bold text-primary"
+                                                        >
+                                                            {{
+                                                                component.subtotalPercentage.toFixed(
+                                                                    0,
+                                                                )
+                                                            }}%
+                                                        </span>
+                                                    </div>
+                                                    <div
+                                                        class="text-xs leading-snug font-bold text-foreground"
+                                                    >
+                                                        Total Score
+                                                    </div>
+                                                    <div
+                                                        class="truncate text-[10px] text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            component.activities
+                                                                .length
+                                                        }}
+                                                        {{
+                                                            component.activities
+                                                                .length === 1
+                                                                ? 'activity'
+                                                                : 'activities'
+                                                        }}
+                                                    </div>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td
+                                                v-for="activity in component.activities"
+                                                :key="activity.id"
+                                                data-test="activity-record-cell"
+                                                :aria-label="activity.title"
+                                                class="border border-border/50 bg-background/40 p-2 align-middle tabular-nums transition-colors hover:bg-muted/20"
+                                            >
+                                                <!-- Completed / Submitted -->
+                                                <button
+                                                    v-if="
+                                                        (activity.submitted ||
+                                                            activity.state ===
+                                                                'completed') &&
+                                                        typeof activity.id ===
+                                                            'number'
+                                                    "
+                                                    type="button"
+                                                    :aria-label="
+                                                        'Review answers for ' +
+                                                        activity.title
+                                                    "
+                                                    class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs transition-all duration-150 hover:border-[#4D9375]/60 hover:bg-[#4D9375]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
+                                                    @click="
+                                                        emit(
+                                                            'review',
+                                                            activity.id as number,
+                                                        )
+                                                    "
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        {{
+                                                            activityScoreDisplay(
+                                                                activity,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <CheckCircle2
+                                                        class="h-3.5 w-3.5 shrink-0 opacity-75 transition-transform group-hover/cell:scale-110 group-hover/cell:opacity-100"
+                                                    />
+                                                </button>
+
+                                                <!-- Completed Manual Task (No exam submission to review) -->
+                                                <div
+                                                    v-else-if="
+                                                        (activity.submitted ||
+                                                            activity.state ===
+                                                                'completed') &&
+                                                        typeof activity.id ===
+                                                            'string'
+                                                    "
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        {{
+                                                            activityScoreDisplay(
+                                                                activity,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <CheckCircle2
+                                                        class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                    />
+                                                </div>
+
+                                                <!-- Missed -->
+                                                <div
+                                                    v-else-if="
+                                                        activity.is_missed ||
+                                                        (activity.state ===
+                                                            'closed' &&
+                                                            !activity.submitted)
+                                                    "
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#CB7676]/30 bg-[#CB7676]/10 px-2.5 py-2 text-xs font-semibold text-[#CB7676] shadow-2xs"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        {{
+                                                            activityScoreDisplay(
+                                                                activity,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <XCircle
+                                                        class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                    />
+                                                </div>
+
+                                                <!-- Pending Review -->
+                                                <div
+                                                    v-else-if="
+                                                        activity.is_pending_review
+                                                    "
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#E0AF68]/30 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        Pending
+                                                    </span>
+                                                    <Clock
+                                                        class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                    />
+                                                </div>
+
+                                                <!-- Open or In Progress (Exam) -->
+                                                <button
+                                                    v-else-if="
+                                                        (activity.state ===
+                                                            'open' ||
+                                                            activity.state ===
+                                                                'in_progress') &&
+                                                        typeof activity.id ===
+                                                            'number'
+                                                    "
+                                                    type="button"
+                                                    :aria-label="
+                                                        'Open ' + activity.title
+                                                    "
+                                                    class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-dashed border-[#E0AF68]/40 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs transition-all duration-150 hover:border-[#E0AF68]/70 hover:bg-[#E0AF68]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
+                                                    @click="
+                                                        emit(
+                                                            'openExam',
+                                                            activity.id as number,
+                                                        )
+                                                    "
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                        >—</span
+                                                    >
+                                                    <ArrowUpRight
+                                                        class="h-3.5 w-3.5 shrink-0 opacity-70 transition-all group-hover/cell:translate-x-0.5 group-hover/cell:-translate-y-0.5 group-hover/cell:opacity-100"
+                                                    />
+                                                </button>
+
+                                                <!-- Open or In Progress (Manual Task) -->
+                                                <div
+                                                    v-else-if="
+                                                        activity.state ===
+                                                            'open' ||
+                                                        activity.state ===
+                                                            'in_progress'
+                                                    "
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-dashed border-border/60 bg-muted/20 px-2.5 py-2 text-xs font-semibold text-muted-foreground shadow-2xs"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                        >—</span
+                                                    >
+                                                </div>
+
+                                                <!-- Fallback / Other -->
+                                                <div
+                                                    v-else
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-xs font-medium text-muted-foreground"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        {{
+                                                            activityScoreDisplay(
+                                                                activity,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <!-- Total Score Cell -->
+                                            <td
+                                                data-test="activity-record-total-cell"
+                                                class="border border-primary/30 bg-primary/5 p-2 align-middle tabular-nums"
+                                            >
+                                                <div
+                                                    class="flex w-full items-center justify-between gap-1.5 rounded-md border border-primary/30 bg-primary/15 px-2.5 py-2 text-xs font-bold text-primary shadow-2xs"
+                                                >
+                                                    <span
+                                                        class="font-bold tracking-tight tabular-nums"
+                                                    >
+                                                        {{
+                                                            component.subtotalScore.toFixed(
+                                                                0,
+                                                            )
+                                                        }}
+                                                        /
+                                                        {{
+                                                            component.subtotalMax.toFixed(
+                                                                0,
+                                                            )
                                                         }}
                                                     </span>
                                                     <span
-                                                        v-if="activity.is_late"
-                                                        class="rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400"
-                                                    >
-                                                        Late
-                                                    </span>
-                                                    <span
-                                                        v-else-if="
-                                                            activity.is_missed ||
-                                                            (activity.state ===
-                                                                'closed' &&
-                                                                !activity.submitted)
-                                                        "
-                                                        class="rounded bg-[#CB7676]/15 px-1 py-0.5 text-[9px] font-semibold text-[#CB7676]"
-                                                    >
-                                                        Missed
-                                                    </span>
-                                                </div>
-                                                <div
-                                                    class="line-clamp-2 text-xs leading-snug font-semibold break-words text-foreground"
-                                                    :title="activity.title"
-                                                >
-                                                    {{ activity.title }}
-                                                </div>
-                                                <div
-                                                    v-if="activity.section_name"
-                                                    class="truncate text-[10px] text-muted-foreground"
-                                                    :title="
-                                                        activity.section_name
-                                                    "
-                                                >
-                                                    {{ activity.section_name }}
-                                                </div>
-                                            </div>
-                                        </th>
-                                        <!-- Total Score Column Header -->
-                                        <th
-                                            v-if="group.subtotalMax > 0"
-                                            class="w-[140px] min-w-[140px] border border-primary/30 bg-primary/10 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[110px]"
-                                            data-test="activity-record-total-th"
-                                        >
-                                            <div class="flex flex-col gap-1">
-                                                <div
-                                                    class="flex items-center justify-between gap-1 text-[10px] font-bold tracking-wider text-primary uppercase"
-                                                >
-                                                    <span
-                                                        class="inline-flex items-center gap-1 font-mono text-[10px]"
-                                                    >
-                                                        <Award
-                                                            class="h-3 w-3 text-primary"
-                                                        />
-                                                        Total
-                                                    </span>
-                                                    <span
                                                         v-if="
-                                                            group.subtotalPercentage !==
+                                                            component.subtotalPercentage !==
                                                             null
                                                         "
-                                                        class="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-bold text-primary"
+                                                        class="text-[11px] font-bold opacity-90"
                                                     >
                                                         {{
-                                                            group.subtotalPercentage.toFixed(
+                                                            component.subtotalPercentage.toFixed(
                                                                 0,
                                                             )
                                                         }}%
                                                     </span>
                                                 </div>
-                                                <div
-                                                    class="text-xs leading-snug font-bold text-foreground"
-                                                >
-                                                    Total Score
-                                                </div>
-                                                <div
-                                                    class="truncate text-[10px] text-muted-foreground"
-                                                >
-                                                    {{
-                                                        group.activities.length
-                                                    }}
-                                                    {{
-                                                        group.activities
-                                                            .length === 1
-                                                            ? 'activity'
-                                                            : 'activities'
-                                                    }}
-                                                </div>
-                                            </div>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td
-                                            v-for="activity in group.activities"
-                                            :key="activity.id"
-                                            data-test="activity-record-cell"
-                                            :aria-label="activity.title"
-                                            class="border border-border/50 bg-background/40 p-2 align-middle tabular-nums transition-colors hover:bg-muted/20"
-                                        >
-                                            <!-- Completed / Submitted -->
-                                            <button
-                                                v-if="
-                                                    (activity.submitted ||
-                                                        activity.state ===
-                                                            'completed') &&
-                                                    typeof activity.id ===
-                                                        'number'
-                                                "
-                                                type="button"
-                                                :aria-label="
-                                                    'Review answers for ' +
-                                                    activity.title
-                                                "
-                                                class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs transition-all duration-150 hover:border-[#4D9375]/60 hover:bg-[#4D9375]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
-                                                @click="
-                                                    emit(
-                                                        'review',
-                                                        activity.id as number,
-                                                    )
-                                                "
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    {{
-                                                        activityScoreDisplay(
-                                                            activity,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <CheckCircle2
-                                                    class="h-3.5 w-3.5 shrink-0 opacity-75 transition-transform group-hover/cell:scale-110 group-hover/cell:opacity-100"
-                                                />
-                                            </button>
-
-                                            <!-- Completed Manual Task (No exam submission to review) -->
-                                            <div
-                                                v-else-if="
-                                                    (activity.submitted ||
-                                                        activity.state ===
-                                                            'completed') &&
-                                                    typeof activity.id ===
-                                                        'string'
-                                                "
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    {{
-                                                        activityScoreDisplay(
-                                                            activity,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <CheckCircle2
-                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
-                                                />
-                                            </div>
-
-                                            <!-- Missed -->
-                                            <div
-                                                v-else-if="
-                                                    activity.is_missed ||
-                                                    (activity.state ===
-                                                        'closed' &&
-                                                        !activity.submitted)
-                                                "
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#CB7676]/30 bg-[#CB7676]/10 px-2.5 py-2 text-xs font-semibold text-[#CB7676] shadow-2xs"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    {{
-                                                        activityScoreDisplay(
-                                                            activity,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <XCircle
-                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
-                                                />
-                                            </div>
-
-                                            <!-- Pending Review -->
-                                            <div
-                                                v-else-if="
-                                                    activity.is_pending_review
-                                                "
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#E0AF68]/30 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    Pending
-                                                </span>
-                                                <Clock
-                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
-                                                />
-                                            </div>
-
-                                            <!-- Open or In Progress (Exam) -->
-                                            <button
-                                                v-else-if="
-                                                    (activity.state ===
-                                                        'open' ||
-                                                        activity.state ===
-                                                            'in_progress') &&
-                                                    typeof activity.id ===
-                                                        'number'
-                                                "
-                                                type="button"
-                                                :aria-label="
-                                                    'Open ' + activity.title
-                                                "
-                                                class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-dashed border-[#E0AF68]/40 bg-[#E0AF68]/10 px-2.5 py-2 text-xs font-semibold text-[#E0AF68] shadow-2xs transition-all duration-150 hover:border-[#E0AF68]/70 hover:bg-[#E0AF68]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
-                                                @click="
-                                                    emit(
-                                                        'openExam',
-                                                        activity.id as number,
-                                                    )
-                                                "
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                    >—</span
-                                                >
-                                                <ArrowUpRight
-                                                    class="h-3.5 w-3.5 shrink-0 opacity-70 transition-all group-hover/cell:translate-x-0.5 group-hover/cell:-translate-y-0.5 group-hover/cell:opacity-100"
-                                                />
-                                            </button>
-
-                                            <!-- Open or In Progress (Manual Task) -->
-                                            <div
-                                                v-else-if="
-                                                    activity.state === 'open' ||
-                                                    activity.state ===
-                                                        'in_progress'
-                                                "
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-dashed border-border/60 bg-muted/20 px-2.5 py-2 text-xs font-semibold text-muted-foreground shadow-2xs"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                    >—</span
-                                                >
-                                            </div>
-
-                                            <!-- Fallback / Other -->
-                                            <div
-                                                v-else
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-xs font-medium text-muted-foreground"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    {{
-                                                        activityScoreDisplay(
-                                                            activity,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <!-- Total Score Cell -->
-                                        <td
-                                            v-if="group.subtotalMax > 0"
-                                            data-test="activity-record-total-cell"
-                                            class="border border-primary/30 bg-primary/5 p-2 align-middle tabular-nums"
-                                        >
-                                            <div
-                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-primary/30 bg-primary/15 px-2.5 py-2 text-xs font-bold text-primary shadow-2xs"
-                                            >
-                                                <span
-                                                    class="font-bold tracking-tight tabular-nums"
-                                                >
-                                                    {{
-                                                        group.subtotalScore.toFixed(
-                                                            0,
-                                                        )
-                                                    }}
-                                                    /
-                                                    {{
-                                                        group.subtotalMax.toFixed(
-                                                            0,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        group.subtotalPercentage !==
-                                                        null
-                                                    "
-                                                    class="text-[11px] font-bold opacity-90"
-                                                >
-                                                    {{
-                                                        group.subtotalPercentage.toFixed(
-                                                            0,
-                                                        )
-                                                    }}%
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </section>
                 </div>

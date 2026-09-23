@@ -236,7 +236,11 @@ describe('activities hub — Activity Record drawer', () => {
             );
             expect(totalCell).not.toBeNull();
             expect(totalCell!.textContent).toContain('89 / 100');
-            expect(sheetText).toContain('Total Score:');
+            const summary = sheet!.querySelector(
+                '[data-test="activity-record-component-summary"][data-category="written"]',
+            );
+            expect(summary?.textContent).toContain('Written Activities:');
+            expect(summary?.textContent).toContain('89 / 100');
             const cells = table.querySelectorAll(
                 '[data-test="activity-record-cell"]',
             );
