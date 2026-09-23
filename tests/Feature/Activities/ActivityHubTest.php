@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\ActivityTask;
+use App\Models\ActivityTaskScore;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
@@ -310,4 +312,77 @@ it('filters activityScores by allowed section activity_record_terms', function (
 
     expect($allExamTitlesNow)->toContain('Prelim Exam');
     expect($allExamTitlesNow)->toContain('Midterm Exam');
+});
+
+it('includes senior high performance task scores in activityScores', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'PT 1: Creative Presentation',
+        'term' => 'First Semester - 1st Quarter',
+        'task_type' => 'Performance Task',
+        'max_points' => 50,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $user->id,
+        'score' => 45,
+        'is_missed' => false,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $pt = collect($allExams)->firstWhere('title', 'PT 1: Creative Presentation');
+    expect($pt)->not->toBeNull();
+    expect($pt['activity_type'])->toBe('Performance Task');
+    expect((float) $pt['score'])->toBe(45.0);
+    expect((float) $pt['total_points'])->toBe(50.0);
+    expect((float) $pt['percentage'])->toBe(90.0);
+    expect($pt['submitted'])->toBeTrue();
+});
+
+it('includes college custom activity task scores in activityScores', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'Laboratory 1: Packet Analysis',
+        'term' => 'Prelim',
+        'task_type' => 'Laboratory',
+        'max_points' => 100,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $user->id,
+        'score' => 95,
+        'is_missed' => false,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $lab = collect($allExams)->firstWhere('title', 'Laboratory 1: Packet Analysis');
+    expect($lab)->not->toBeNull();
+    expect($lab['activity_type'])->toBe('Laboratory');
+    expect((float) $lab['score'])->toBe(95.0);
+    expect((float) $lab['total_points'])->toBe(100.0);
+    expect((float) $lab['percentage'])->toBe(95.0);
 });

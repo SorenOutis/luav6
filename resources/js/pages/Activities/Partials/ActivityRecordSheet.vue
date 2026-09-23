@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/sheet';
 
 export interface ActivityScoreItem {
-    id: number;
+    id: number | string;
     title: string;
+    activity_type?: string;
     term: string;
     section_name: string | null;
     school_level?: string;
@@ -659,7 +660,15 @@ const handlePrint = () => {
                                     <td
                                         class="border border-black p-1.5 font-medium text-black"
                                     >
-                                        {{ activity.title }}
+                                        <div>{{ activity.title }}</div>
+                                        <div
+                                            class="text-[9px] font-bold tracking-wider text-neutral-500 uppercase"
+                                        >
+                                            {{
+                                                activity.activity_type ||
+                                                'Written Work'
+                                            }}
+                                        </div>
                                     </td>
                                     <td
                                         class="border border-black p-1.5 text-neutral-700"
@@ -890,12 +899,41 @@ const handlePrint = () => {
                                                     class="flex items-center justify-between gap-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
                                                 >
                                                     <span
-                                                        class="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground/90"
+                                                        class="inline-flex items-center gap-1 font-mono text-[10px]"
+                                                        :class="
+                                                            activity.activity_type ===
+                                                            'Performance Task'
+                                                                ? 'font-bold text-indigo-400'
+                                                                : activity.activity_type &&
+                                                                    activity.activity_type !==
+                                                                        'Written Work'
+                                                                  ? 'font-bold text-amber-500'
+                                                                  : 'text-muted-foreground/90'
+                                                        "
                                                     >
                                                         <span
-                                                            class="h-1.5 w-1.5 rounded-full bg-primary/70"
+                                                            class="h-1.5 w-1.5 rounded-full"
+                                                            :class="
+                                                                activity.activity_type ===
+                                                                'Performance Task'
+                                                                    ? 'bg-indigo-500'
+                                                                    : activity.activity_type &&
+                                                                        activity.activity_type !==
+                                                                            'Written Work'
+                                                                      ? 'bg-amber-500'
+                                                                      : 'bg-primary/70'
+                                                            "
                                                         />
-                                                        Act {{ idx + 1 }}
+                                                        {{
+                                                            activity.activity_type ===
+                                                            'Performance Task'
+                                                                ? `PT ${idx + 1}`
+                                                                : activity.activity_type &&
+                                                                    activity.activity_type !==
+                                                                        'Written Work'
+                                                                  ? activity.activity_type
+                                                                  : `Act ${idx + 1}`
+                                                        }}
                                                     </span>
                                                     <span
                                                         v-if="activity.is_late"
@@ -998,9 +1036,11 @@ const handlePrint = () => {
                                             <!-- Completed / Submitted -->
                                             <button
                                                 v-if="
-                                                    activity.submitted ||
-                                                    activity.state ===
-                                                        'completed'
+                                                    (activity.submitted ||
+                                                        activity.state ===
+                                                            'completed') &&
+                                                    typeof activity.id ===
+                                                        'number'
                                                 "
                                                 type="button"
                                                 :aria-label="
@@ -1009,7 +1049,10 @@ const handlePrint = () => {
                                                 "
                                                 class="group/cell flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs transition-all duration-150 hover:border-[#4D9375]/60 hover:bg-[#4D9375]/20 hover:shadow-xs focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
                                                 @click="
-                                                    emit('review', activity.id)
+                                                    emit(
+                                                        'review',
+                                                        activity.id as number,
+                                                    )
                                                 "
                                             >
                                                 <span
@@ -1025,6 +1068,31 @@ const handlePrint = () => {
                                                     class="h-3.5 w-3.5 shrink-0 opacity-75 transition-transform group-hover/cell:scale-110 group-hover/cell:opacity-100"
                                                 />
                                             </button>
+
+                                            <!-- Completed Manual Task (No exam submission to review) -->
+                                            <div
+                                                v-else-if="
+                                                    (activity.submitted ||
+                                                        activity.state ===
+                                                            'completed') &&
+                                                    typeof activity.id ===
+                                                        'string'
+                                                "
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-[#4D9375]/30 bg-[#4D9375]/10 px-2.5 py-2 text-xs font-semibold text-[#4D9375] shadow-2xs"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                >
+                                                    {{
+                                                        activityScoreDisplay(
+                                                            activity,
+                                                        )
+                                                    }}
+                                                </span>
+                                                <CheckCircle2
+                                                    class="h-3.5 w-3.5 shrink-0 opacity-75"
+                                                />
+                                            </div>
 
                                             <!-- Missed -->
                                             <div
@@ -1067,12 +1135,15 @@ const handlePrint = () => {
                                                 />
                                             </div>
 
-                                            <!-- Open or In Progress -->
+                                            <!-- Open or In Progress (Exam) -->
                                             <button
                                                 v-else-if="
-                                                    activity.state === 'open' ||
-                                                    activity.state ===
-                                                        'in_progress'
+                                                    (activity.state ===
+                                                        'open' ||
+                                                        activity.state ===
+                                                            'in_progress') &&
+                                                    typeof activity.id ===
+                                                        'number'
                                                 "
                                                 type="button"
                                                 :aria-label="
@@ -1082,7 +1153,7 @@ const handlePrint = () => {
                                                 @click="
                                                     emit(
                                                         'openExam',
-                                                        activity.id,
+                                                        activity.id as number,
                                                     )
                                                 "
                                             >
@@ -1094,6 +1165,21 @@ const handlePrint = () => {
                                                     class="h-3.5 w-3.5 shrink-0 opacity-70 transition-all group-hover/cell:translate-x-0.5 group-hover/cell:-translate-y-0.5 group-hover/cell:opacity-100"
                                                 />
                                             </button>
+
+                                            <!-- Open or In Progress (Manual Task) -->
+                                            <div
+                                                v-else-if="
+                                                    activity.state === 'open' ||
+                                                    activity.state ===
+                                                        'in_progress'
+                                                "
+                                                class="flex w-full items-center justify-between gap-1.5 rounded-md border border-dashed border-border/60 bg-muted/20 px-2.5 py-2 text-xs font-semibold text-muted-foreground shadow-2xs"
+                                            >
+                                                <span
+                                                    class="font-bold tracking-tight tabular-nums"
+                                                    >—</span
+                                                >
+                                            </div>
 
                                             <!-- Fallback / Other -->
                                             <div
