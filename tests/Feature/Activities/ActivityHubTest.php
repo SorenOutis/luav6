@@ -5,6 +5,7 @@ use App\Models\ActivityTaskScore;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 
@@ -394,4 +395,53 @@ it('includes college custom activity task scores in activityScores', function ()
     expect((float) $lab['score'])->toBe(95.0);
     expect((float) $lab['total_points'])->toBe(100.0);
     expect((float) $lab['percentage'])->toBe(95.0);
+});
+
+it('eager loads section season for both exams and tasks so they share the same season name', function () {
+    $user = User::factory()->create();
+    $season = Season::factory()->create(['name' => 'Season 1']);
+    $section = Section::factory()->create([
+        'name' => 'Section A',
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $exam = Exam::factory()->published()->create([
+        'title' => 'Written Quiz #1',
+        'term' => 'First Semester - 1st Quarter',
+        'section_id' => $section->id,
+        'starts_at' => now()->subDays(2),
+        'ends_at' => now()->addDays(2),
+    ]);
+    ExamPart::factory()->forExam($exam)->multipleChoice(2, 1, 5)->create();
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'PT #1',
+        'term' => 'First Semester - 1st Quarter',
+        'task_type' => 'Performance Task',
+        'max_points' => 100,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    expect($scores)->toHaveCount(1);
+    expect($scores[0]['seasonName'])->toBe('Season 1');
+
+    $allExams = $scores[0]['exams'];
+    $writtenExam = collect($allExams)->firstWhere('title', 'Written Quiz #1');
+    $performanceTask = collect($allExams)->firstWhere('title', 'PT #1');
+
+    expect($writtenExam)->not->toBeNull()
+        ->and($writtenExam['season_name'])->toBe('Season 1')
+        ->and($writtenExam['section_id'])->toBe($section->id)
+        ->and($writtenExam['category'])->toBe('written');
+
+    expect($performanceTask)->not->toBeNull()
+        ->and($performanceTask['season_name'])->toBe('Season 1')
+        ->and($performanceTask['section_id'])->toBe($section->id)
+        ->and($performanceTask['category'])->toBe('performance');
 });

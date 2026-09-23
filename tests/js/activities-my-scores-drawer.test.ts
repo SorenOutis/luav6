@@ -206,11 +206,11 @@ describe('activities hub — Activity Record drawer', () => {
             const sheetText = (sheet!.textContent ?? '').replace(/\s+/g, ' ');
             expect(sheetText).toContain('Activity Record');
             expect(sheetText).toContain(
-                'Complete breakdown of activities, scores, and missed tasks',
+                'Your activities and scores, grouped by period.',
             );
-            expect(sheetText).toContain('Completed (1)');
-            expect(sheetText).toContain('Missed (0)');
-            expect(sheetText).toContain('In Progress (1)');
+            expect(
+                sheet!.querySelector('[data-test="activity-status-filters"]'),
+            ).toBeNull();
             expect(sheetText).not.toMatch(/activities graded/i);
             expect(sheetText).not.toContain('Unsubmitted deadlines');
             expect(sheetText).not.toContain('Open or pending');
@@ -222,13 +222,14 @@ describe('activities hub — Activity Record drawer', () => {
                 table.querySelectorAll('th[scope="col"]'),
             );
             expect(headings).toHaveLength(2);
-            expect(headings[0].textContent).toContain('Scored activity');
-            expect(headings[1].textContent).toContain('Untaken activity');
-            expect((table as HTMLElement).style.width).toBe('420px');
-            expect(table.classList.contains('w-full')).toBe(false);
+            expect(
+                headings.map((heading) => heading.textContent?.trim()),
+            ).toEqual(['Activity', 'Score']);
+            expect((table as HTMLElement).style.width).toBe('');
+            expect(table.classList.contains('w-full')).toBe(true);
             expect(table.parentElement!.className).not.toContain('rounded-xl');
             expect(table.parentElement!.className).not.toContain('bg-card');
-            expect(headings[0].classList.contains('border')).toBe(true);
+            expect(table.classList.contains('table-fixed')).toBe(true);
             expect(table.parentElement!.className).toContain('overflow-x-auto');
             expect(table.parentElement!.getAttribute('tabindex')).toBe('0');
             const totalCell = table.querySelector(
@@ -239,8 +240,31 @@ describe('activities hub — Activity Record drawer', () => {
             const summary = sheet!.querySelector(
                 '[data-test="activity-record-component-summary"][data-category="written"]',
             );
-            expect(summary?.textContent).toContain('Written Activities:');
-            expect(summary?.textContent).toContain('89 / 100');
+            expect(summary).toBeNull();
+            expect(table.querySelectorAll('tfoot tr')).toHaveLength(1);
+            expect(
+                table.querySelectorAll(
+                    '[data-test="activity-record-total-cell"]',
+                ),
+            ).toHaveLength(1);
+            expect(table.querySelector('tfoot th')?.textContent?.trim()).toBe(
+                'Total',
+            );
+            expect(table.textContent).not.toContain('%');
+            const rows = table.querySelectorAll('tbody tr');
+            expect(rows).toHaveLength(2);
+            expect(
+                rows[0]
+                    .querySelector('th[scope="row"] button')
+                    ?.textContent?.trim(),
+            ).toBe('Scored activity');
+            expect(rows[0].querySelector('th p')).toBeNull();
+            expect(
+                rows[1]
+                    .querySelector('th[scope="row"] button')
+                    ?.textContent?.trim(),
+            ).toBe('Untaken activity');
+            expect(rows[1].querySelector('th p')).toBeNull();
             const cells = table.querySelectorAll(
                 '[data-test="activity-record-cell"]',
             );
@@ -250,39 +274,37 @@ describe('activities hub — Activity Record drawer', () => {
             expect(table.textContent).not.toContain('Review Answers');
             expect(table.textContent).not.toContain('Deadline');
             expect(
-                cells[0].querySelector('button')!.getAttribute('aria-label'),
+                rows[0].querySelector('th button')!.getAttribute('aria-label'),
             ).toBe('Review answers for Scored activity');
             const untaken = (cells[1].textContent ?? '').replace(/\s+/g, ' ');
-            expect(untaken.trim()).toBe('—');
+            expect(untaken.trim()).toBe('— / 50');
+            expect(table.querySelectorAll('td button')).toHaveLength(0);
             expect(
-                cells[1].querySelector('button')!.getAttribute('aria-label'),
+                rows[1].querySelector('th button')!.getAttribute('aria-label'),
             ).toBe('Open Untaken activity');
 
-            const filters = sheet!.querySelector(
-                '[data-test="activity-status-filters"]',
-            )!;
-            expect(filters.classList.contains('overflow-x-auto')).toBe(true);
-            expect(filters.className).toContain('[&>button]:whitespace-nowrap');
-            expect(filters.className).toContain('[&>button]:shrink-0');
-            const statusButtons = filters.querySelectorAll('button');
-            expect(statusButtons).toHaveLength(4);
-            expect(statusButtons[0].getAttribute('aria-pressed')).toBe('true');
-            statusButtons[1].click();
-            await flushPromises();
-            expect(statusButtons[1].getAttribute('aria-pressed')).toBe('true');
+            expect(
+                sheet!.querySelector('[data-test="activity-status-filters"]'),
+            ).toBeNull();
+            expect(
+                sheet!.querySelector(
+                    'input[placeholder="Search activity by title or section..."]',
+                ),
+            ).not.toBeNull();
             expect(
                 (
                     sheet!.querySelector(
                         '[data-test="activity-record-table"]',
                     ) as HTMLElement
                 ).style.width,
-            ).toBe('280px');
-            expect(statusButtons[0].getAttribute('aria-pressed')).toBe('false');
+            ).toBe('');
             expect(
                 sheet!.querySelectorAll('[data-test="activity-record-cell"]'),
-            ).toHaveLength(1);
+            ).toHaveLength(2);
             expect(
-                sheet!.querySelector('th[scope="col"]')!.textContent,
+                sheet!.querySelector(
+                    '[data-test="activity-record-table"] tbody th[scope="row"]',
+                )!.textContent,
             ).toContain('Scored activity');
 
             // Lenis is stopped while the drawer is open.

@@ -20,11 +20,14 @@ describe('activities hub', () => {
         expect(record).not.toContain('Activities graded');
         expect(record).not.toContain('Unsubmitted deadlines');
         expect(record).not.toContain('Open or pending');
-        expect(record).toContain('Completed ({{ completedCount }})');
-        expect(record).toContain('Missed ({{ missedCount }})');
-        expect(record).toContain('In Progress ({{ inProgressCount }})');
+        expect(record).not.toContain('activity-status-filters');
+        expect(record).not.toContain('selectedStatus');
         expect(record).toContain('printable-record');
-        expect(record).toContain('activity-record-component-summary');
+        expect(record).not.toContain('activity-record-component-summary');
+        expect(record).not.toContain('Subtotal:');
+        expect(record).toContain('activity-record-total-cell');
+        expect(record).toMatch(/scope="col"[^>]*>\s*Activity\s*<\/th>/);
+        expect(record).toMatch(/scope="col"[^>]*>\s*Score\s*<\/th>/);
         expect(record).toContain('activity-record-print-component-summary');
         expect(record).toContain('component.subtotalScore.toFixed(0)');
         expect(record).toContain('component.subtotalMax.toFixed(0)');

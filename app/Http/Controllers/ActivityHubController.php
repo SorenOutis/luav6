@@ -152,7 +152,10 @@ class ActivityHubController extends Controller
     {
         $exams = $this->visibleExams($user)
             ->select(['exams.id', 'exams.title', 'exams.status', 'exams.section_id', 'exams.term', 'exams.created_at', 'exams.ends_at', 'exams.starts_at'])
-            ->with(['section:id,name,school_level,activity_record_enabled,activity_record_terms', 'section.season:id,name,start_date'])
+            ->with([
+                'section' => fn ($q) => $q->withoutGlobalScope('workspace')->select(['id', 'name', 'season_id', 'school_level', 'activity_record_enabled', 'activity_record_terms']),
+                'section.season' => fn ($q) => $q->withoutGlobalScope('workspace')->select(['id', 'name', 'start_date']),
+            ])
             ->get();
 
         $userSectionIds = DB::table('section_user')

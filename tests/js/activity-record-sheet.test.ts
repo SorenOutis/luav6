@@ -93,33 +93,42 @@ function expectComponent(
     const period = term ? `[data-term="${term}"]` : '';
     const screen = wrapper.get(selector('table', key) + scope + period);
     expect(
-        screen
-            .get('[data-test="activity-record-total-cell"]')
-            .findAll('span')
-            .map((span) => text(span.text())),
-    ).toEqual([score, percentage]);
+        text(screen.get('[data-test="activity-record-total-cell"]').text()),
+    ).toBe(score);
+    expect(screen.get('[data-test="activity-record-total-th"]').text()).toBe(
+        'Total',
+    );
+    expect(screen.findAll('tfoot tr')).toHaveLength(1);
     expect(
-        screen.get('[data-test="activity-record-total-th"]').text(),
-    ).toContain(percentage);
+        screen.findAll('[data-test="activity-record-total-cell"]'),
+    ).toHaveLength(1);
+    expect(screen.findAll('thead th').map((heading) => heading.text())).toEqual(
+        ['Activity', 'Score'],
+    );
+    expect(screen.findAll('thead th[scope="col"]')).toHaveLength(2);
+    expect(screen.text()).not.toContain('%');
     expect(
         screen.element.parentElement?.parentElement
-            ?.querySelector('h4')
+            ?.querySelector('h5')
             ?.textContent?.trim(),
     ).toBe(label);
     expect(
         wrapper
-            .get(selector('component-summary', key) + scope)
-            .findAll('span')
-            .map((span) => text(span.text())),
-    ).toEqual([`${label}:`, cumulative.score, `(${cumulative.percentage})`]);
+            .find('[data-test="activity-record-component-summary"]')
+            .exists(),
+    ).toBe(false);
+    expect(
+        screen.element.parentElement?.parentElement?.querySelectorAll('tfoot'),
+    ).toHaveLength(1);
 
     const print = wrapper.get(
         selector('print-component-table', key) + scope + period,
     );
     const footer = print.findAll('tfoot td').map((cell) => text(cell.text()));
     expect(footer.slice(0, 3)).toEqual([`${label} Total:`, score, percentage]);
-    expect(text(print.element.parentElement?.textContent ?? '')).toContain(
-        `${label} Subtotal: ${score} (${percentage})`,
+    expect(print.findAll('tfoot tr')).toHaveLength(1);
+    expect(text(print.element.parentElement?.textContent ?? '')).not.toContain(
+        'Subtotal:',
     );
     const summary = wrapper.get(
         selector('print-component-summary', key) + scope,
@@ -133,7 +142,6 @@ function expectComponent(
 function expectComponentCount(count: number) {
     for (const surface of [
         'table',
-        'component-summary',
         'print-component-table',
         'print-component-summary',
     ]) {
@@ -296,10 +304,7 @@ describe('ActivityRecordSheet section grouping', () => {
                 wrapper.findAll(`[data-test="activity-record-${surface}"]`),
             ).toHaveLength(12);
         }
-        for (const surface of [
-            'component-summary',
-            'print-component-summary',
-        ]) {
+        for (const surface of ['print-component-summary']) {
             expect(
                 wrapper.findAll(`[data-test="activity-record-${surface}"]`),
             ).toHaveLength(6);
@@ -544,7 +549,7 @@ describe('ActivityRecordSheet section grouping', () => {
             }),
         ]);
         const summaries = () =>
-            ['component-summary', 'print-component-summary'].map((surface) =>
+            ['print-component-summary'].map((surface) =>
                 wrapper
                     .findAll(`[data-test="activity-record-${surface}"]`)
                     .map((summary) => ({
@@ -586,11 +591,12 @@ describe('ActivityRecordSheet section grouping', () => {
             sectionScope('BSIT 1-B', 22),
         );
         await clickButton('Prelims');
-        await clickButton('Completed (3)');
         expectSections([first, second]);
         await search.setValue('BSIT 1-B');
-        expectSections([second]);
-        await clickButton('Missed (1)');
+        expectSections([
+            { ...second, titles: ['Shared quiz B', 'Missed task'] },
+        ]);
+        await search.setValue('Missed');
         expectSections([{ ...second, titles: ['Missed task'] }]);
         expectComponent(
             'performance:Performance Task',
@@ -605,7 +611,6 @@ describe('ActivityRecordSheet section grouping', () => {
         expect(wrapper.text()).toContain('No activities match the filter');
         expect(summaries()).toEqual(originalSummaries);
         await search.setValue('');
-        await clickButton('All (4)');
         expectSections([
             { ...first, term: 'First Quarter', titles: ['Quarter task'] },
         ]);
@@ -635,8 +640,17 @@ describe('ActivityRecordSheet component totals', () => {
             ['performance:Performance Task', 'Practical task', '90 / 100'],
         ]) {
             const screen = wrapper.get(selector('table', key));
-            expect(screen.findAll('th[scope="col"]')).toHaveLength(1);
-            expect(screen.get('th[scope="col"]').text()).toContain(title);
+            expect(screen.findAll('tbody tr')).toHaveLength(1);
+            expect(screen.get('tbody th[scope="row"]').text()).toBe(title);
+            expect(screen.get('tbody th[scope="row"]').find('p').exists()).toBe(
+                false,
+            );
+            expect(
+                screen
+                    .get('[data-test="activity-record-cell"]')
+                    .find('button')
+                    .exists(),
+            ).toBe(false);
             expect(
                 text(screen.get('[data-test="activity-record-cell"]').text()),
             ).toBe(fraction);
@@ -772,6 +786,14 @@ describe('ActivityRecordSheet component totals', () => {
                         .text(),
                 ),
             ).toBe('0 / 50');
+            const missedCell = wrapper.get(
+                '[data-test="activity-record-cell"][aria-label="Missed positive score"]',
+            );
+            expect(
+                missedCell.element.parentElement
+                    ?.querySelector('th p')
+                    ?.textContent?.trim(),
+            ).toBe('Missed');
             const row = wrapper
                 .findAll(
                     '[data-test="activity-record-print-component-table"] tbody tr',
@@ -784,10 +806,51 @@ describe('ActivityRecordSheet component totals', () => {
                     .map((cell) => text(cell.text())),
             ).toEqual(['0 / 50', '0.0%', 'Missed']);
             expect(
-                wrapper.get('[data-test="activity-status-filters"]').text(),
-            ).toContain('Missed (1)');
+                wrapper.find('[data-test="activity-status-filters"]').exists(),
+            ).toBe(false);
         },
     );
+
+    it('shows pending review below its title without counting its score or offering an open action', async () => {
+        wrapper = mountRecord([
+            activity(),
+            task({
+                title: 'Pending practical',
+                is_pending_review: true,
+                submitted: true,
+                score: null,
+                percentage: null,
+                state: 'in_progress',
+            }),
+        ]);
+        expectComponent('written', 'Written Activities', '40 / 50', '80%');
+        expectComponent(
+            'performance:Performance Task',
+            'Performance Tasks',
+            '0 / 100',
+            '0%',
+        );
+        const table = wrapper.get(
+            selector('table', 'performance:Performance Task'),
+        );
+        const heading = table.get('tbody th[scope="row"]');
+        expect(heading.get('span').text()).toBe('Pending practical');
+        expect(heading.get('p').text()).toBe('Pending Review');
+        expect(heading.find('button').exists()).toBe(false);
+        expect(text(table.get('tbody td').text())).toBe('— / 100');
+        const print = wrapper.get(
+            selector('print-component-table', 'performance:Performance Task'),
+        );
+        expect(
+            print
+                .findAll('tbody td')
+                .slice(3)
+                .map((cell) => text(cell.text())),
+        ).toEqual(['— / 100', '—', 'Pending Review']);
+        expect(
+            wrapper.find('[data-test="activity-status-filters"]').exists(),
+        ).toBe(false);
+    });
 
     it('leaves blank open score unmissed and outside denominators; preserves filters and exam actions', async () => {
         wrapper = mountRecord([
@@ -820,7 +883,7 @@ describe('ActivityRecordSheet component totals', () => {
                     )
                     .text(),
             ),
-        ).toBe('—');
+        ).toBe('— / 200');
         const openPrint = wrapper.get(
             `${selector('print-component-table', 'written')}[data-term="Finals"] tbody tr`,
         );
@@ -831,16 +894,8 @@ describe('ActivityRecordSheet component totals', () => {
                 .map((cell) => text(cell.text())),
         ).toEqual(['— / 200', '—', 'Open / Untaken']);
         expect(
-            wrapper
-                .get('[data-test="activity-status-filters"]')
-                .findAll('button')
-                .map((button) => text(button.text())),
-        ).toEqual([
-            'All (3)',
-            'Completed (2)',
-            'Missed (0)',
-            'In Progress (1)',
-        ]);
+            wrapper.find('[data-test="activity-status-filters"]').exists(),
+        ).toBe(false);
 
         await wrapper
             .get('button[aria-label="Review answers for Written quiz"]')
@@ -853,27 +908,12 @@ describe('ActivityRecordSheet component totals', () => {
         expect(
             wrapper
                 .get(
-                    '[data-test="activity-record-cell"][aria-label="Practical task"]',
+                    `${selector('table', 'performance:Performance Task')} tbody th[scope="row"]`,
                 )
                 .find('button')
                 .exists(),
         ).toBe(false);
 
-        await clickButton('Completed (2)');
-        expectTitles(['Written quiz', 'Practical task']);
-        expect(
-            wrapper
-                .get(
-                    '[data-test="activity-status-filters"] button[aria-pressed="true"]',
-                )
-                .text(),
-        ).toBe('Completed (2)');
-        await clickButton('Missed (0)');
-        expectTitles([]);
-        expect(wrapper.text()).toContain('No activities match the filter');
-        await clickButton('In Progress (1)');
-        expectTitles(['Open quiz']);
-        await clickButton('All (3)');
         await clickButton('Finals');
         expectTitles(['Open quiz']);
         await clickButton('All Periods');
