@@ -260,7 +260,7 @@ const handlePrint = () => {
 <template>
     <Sheet :open="open" @update:open="emit('update:open', $event)">
         <SheetContent
-            class="custom-scrollbar flex w-full flex-col gap-0 overflow-y-auto sm:max-w-xl md:max-w-2xl"
+            class="custom-scrollbar flex w-full flex-col gap-0 overflow-y-auto sm:max-w-xl md:max-w-2xl lg:w-1/2 lg:max-w-none"
             data-lenis-prevent
         >
             <!-- Header -->
@@ -542,7 +542,7 @@ const handlePrint = () => {
                         >
                             <table
                                 data-test="activity-record-table"
-                                class="min-w-full table-fixed border-collapse text-left text-sm"
+                                class="min-w-full table-fixed border-collapse text-left text-sm lg:!w-full"
                                 :style="{
                                     width: `${group.activities.length * 140}px`,
                                 }"
@@ -555,7 +555,7 @@ const handlePrint = () => {
                                             ) in group.activities"
                                             :key="activity.id"
                                             scope="col"
-                                            class="w-[140px] min-w-[140px] border border-border/50 bg-muted/40 px-3 py-2.5 align-top transition-colors"
+                                            class="w-[140px] min-w-[140px] border border-border/50 bg-muted/40 px-2.5 py-2 align-top transition-colors sm:px-3 sm:py-2.5 lg:w-auto lg:min-w-[100px]"
                                         >
                                             <div class="flex flex-col gap-1">
                                                 <div

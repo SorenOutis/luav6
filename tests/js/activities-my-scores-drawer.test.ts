@@ -193,10 +193,12 @@ describe('activities hub — Activity Record drawer', () => {
             const sheet = document.querySelector('[data-slot="sheet-content"]');
             expect(sheet).not.toBeNull();
 
-            // Mobile-first width: full-bleed below `sm`, capped on desktop.
+            // Mobile-first width: full-bleed below `sm`, capped on tablet, half-screen on desktop.
             expect(sheet!.className).toContain('w-full');
             expect(sheet!.className).toContain('sm:max-w-xl');
             expect(sheet!.className).toContain('md:max-w-2xl');
+            expect(sheet!.className).toContain('lg:w-1/2');
+            expect(sheet!.className).toContain('lg:max-w-none');
             // Right-side placement from the Sheet default.
             expect(sheet!.className).toContain('inset-y-0');
             expect(sheet!.className).toContain('right-0');
