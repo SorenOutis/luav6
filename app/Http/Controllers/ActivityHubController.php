@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,7 +36,7 @@ class ActivityHubController extends Controller
         // a tab at all, so those exams were unreachable from the hub.
         $summary = $this->hubSummary($user);
         $activityScores = $this->activityScores($user);
-        $userSections = $user->sections()->get(['sections.id', 'sections.activity_record_enabled']);
+        $userSections = $user->sections()->withoutGlobalScope('workspace')->get(['sections.id', 'sections.activity_record_enabled']);
         $activityRecordEnabled = $user->is_admin
             || ($userSections->isEmpty() ? true : $userSections->contains(fn ($s) => (bool) $s->activity_record_enabled));
 
@@ -154,12 +155,19 @@ class ActivityHubController extends Controller
             ->with(['section:id,name,school_level,activity_record_enabled,activity_record_terms', 'section.season:id,name,start_date'])
             ->get();
 
-        $userSectionIds = $user->sections()->pluck('sections.id')->all();
+        $userSectionIds = DB::table('section_user')
+            ->where('user_id', $user->id)
+            ->pluck('section_id')
+            ->all();
+
         $tasks = ! empty($userSectionIds)
-            ? ActivityTask::query()
+            ? ActivityTask::withoutGlobalScope('workspace')
                 ->whereIn('section_id', $userSectionIds)
-                ->with(['section:id,name,school_level,activity_record_enabled,activity_record_terms', 'section.season:id,name,start_date'])
-                ->with(['scores' => fn ($q) => $q->where('user_id', $user->id)])
+                ->with([
+                    'section' => fn ($q) => $q->withoutGlobalScope('workspace'),
+                    'section.season' => fn ($q) => $q->withoutGlobalScope('workspace'),
+                    'scores' => fn ($q) => $q->where('user_id', $user->id),
+                ])
                 ->get()
             : collect();
 
@@ -303,8 +311,8 @@ class ActivityHubController extends Controller
 
         return $rows
             ->groupBy('season_name')
-            ->map(fn ($group) => [
-                'seasonName' => $group->keys()->first(),
+            ->map(fn ($group, $seasonName) => [
+                'seasonName' => (string) $seasonName,
                 'exams' => $group
                     ->sortByDesc('created_at')
                     ->values()
