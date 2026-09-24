@@ -1259,36 +1259,22 @@ onBeforeUnmount(() => {
                              so the welcome content can't be clipped at the top
                              on short viewports (unlike justify-center). -->
                         <div
-                            class="flex h-full flex-col items-center px-3 py-4 text-center sm:px-4 sm:py-8"
+                            class="relative flex h-full flex-col items-center justify-center px-4 py-6 text-center sm:py-10"
                         >
+                            <!-- Subtle ambient top gradient wash for depth -->
                             <div
-                                class="m-auto flex w-full max-w-2xl flex-col items-center"
+                                class="pointer-events-none absolute -top-24 left-1/2 h-72 w-full max-w-2xl -translate-x-1/2 rounded-full bg-gradient-to-b from-primary/10 via-primary/3 to-transparent blur-3xl"
+                                aria-hidden="true"
+                            />
+
+                            <div
+                                class="relative z-10 m-auto flex w-full max-w-2xl flex-col items-center"
                             >
-                                <!-- Animated AI Presence Orb & Status Badge -->
+                                <!-- Living AI Presence (Harmonic Ripple Orb) -->
                                 <div
-                                    class="welcome-logo mb-4 flex flex-col items-center sm:mb-5"
+                                    class="welcome-logo mb-6 flex flex-col items-center"
                                 >
                                     <ChatAiOrb size="md" />
-
-                                    <div
-                                        class="mt-3.5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-[11px] font-medium text-foreground shadow-xs backdrop-blur-md"
-                                    >
-                                        <span class="relative flex h-2 w-2">
-                                            <span
-                                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
-                                            />
-                                            <span
-                                                class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"
-                                            />
-                                        </span>
-                                        <span class="text-muted-foreground"
-                                            >Echo Assistant</span
-                                        >
-                                        <span class="h-3 w-px bg-border/80" />
-                                        <span class="font-semibold text-primary"
-                                            >Online</span
-                                        >
-                                    </div>
                                 </div>
 
                                 <!-- Greeting -->
@@ -1296,25 +1282,21 @@ onBeforeUnmount(() => {
                                     class="welcome-greeting space-y-1.5 text-center"
                                 >
                                     <p
-                                        class="text-xs font-semibold tracking-wider text-primary uppercase sm:text-sm"
+                                        class="text-xs font-medium text-muted-foreground"
                                     >
                                         {{ greetingLine }}
                                     </p>
                                     <h1
-                                        class="text-2xl font-black tracking-tight text-foreground sm:text-4xl"
+                                        class="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl"
                                     >
-                                        How can I help you
-                                        <span
-                                            class="bg-gradient-to-r from-primary via-purple-400 to-cyan-400 bg-clip-text text-transparent"
-                                            >today?</span
-                                        >
+                                        How can I help you today?
                                     </h1>
                                     <p
-                                        class="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground/80 sm:text-[13px]"
+                                        class="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
                                     >
-                                        Ask about assignments, review upcoming
-                                        exams, track your progress, or get
-                                        personalized study help.
+                                        Ask about upcoming assignments, exam
+                                        dates, lesson summaries, or check your
+                                        study progress.
                                     </p>
                                 </div>
 
@@ -1322,12 +1304,12 @@ onBeforeUnmount(() => {
                                 <form
                                     v-if="aiChatEnabled"
                                     data-tour="chats-composer"
-                                    class="welcome-input mt-5 w-full max-w-2xl sm:mt-7"
+                                    class="welcome-input mt-7 w-full max-w-2xl sm:mt-8"
                                     @submit.prevent="sendMessage"
                                 >
                                     <div
                                         v-if="attachmentError"
-                                        class="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive"
+                                        class="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2 text-left text-xs text-destructive"
                                     >
                                         {{ attachmentError }}
                                     </div>
@@ -1380,21 +1362,21 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                     <div
-                                        class="group relative rounded-2xl border border-border/60 bg-card/80 p-2 shadow-xl shadow-black/5 backdrop-blur-xl transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20"
+                                        class="group relative rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-xl transition-all duration-200 focus-within:border-foreground/30 focus-within:ring-1 focus-within:ring-foreground/20"
                                     >
                                         <Textarea
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
-                                            placeholder="Ask about assignments, exams, or your study progress..."
+                                            placeholder="Message Echo or ask a question about your courses..."
                                             :maxlength="MAX_MESSAGE_CHARACTERS"
-                                            class="min-h-[56px] w-full resize-none border-0 bg-transparent px-3 pt-2.5 pb-2 text-[14px] leading-relaxed shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0 sm:min-h-[72px] sm:text-[15px]"
+                                            class="min-h-[68px] w-full resize-none border-0 bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-relaxed shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:min-h-[80px] sm:text-[15px]"
                                             @keydown="handleComposerKeydown"
                                         />
                                         <div
-                                            class="flex items-center justify-between border-t border-border/30 px-1 pt-1.5"
+                                            class="flex items-center justify-between border-t border-border/40 px-3 py-2"
                                         >
                                             <div
-                                                class="flex items-center gap-1.5"
+                                                class="flex items-center gap-2"
                                             >
                                                 <Button
                                                     type="button"
@@ -1408,15 +1390,12 @@ onBeforeUnmount(() => {
                                                     <Paperclip
                                                         class="h-3.5 w-3.5"
                                                     />
-                                                    <span
-                                                        class="hidden sm:inline"
-                                                        >Attach</span
-                                                    >
+                                                    <span>Attach</span>
                                                 </Button>
                                                 <span
-                                                    class="hidden text-[11px] text-muted-foreground/60 sm:inline"
+                                                    class="hidden text-[11px] text-muted-foreground/50 sm:inline"
                                                 >
-                                                    Drop files or images (up to
+                                                    · Images or documents (up to
                                                     5 MB)
                                                 </span>
                                             </div>
@@ -1424,14 +1403,14 @@ onBeforeUnmount(() => {
                                                 class="flex items-center gap-2"
                                             >
                                                 <span
-                                                    class="hidden text-[11px] text-muted-foreground/50 sm:inline"
+                                                    class="hidden text-[11px] text-muted-foreground/45 sm:inline"
                                                 >
-                                                    Press ↵ to send
+                                                    ↵ to send
                                                 </span>
                                                 <Button
                                                     type="submit"
                                                     size="icon-sm"
-                                                    class="h-8 w-8 cursor-pointer rounded-lg shadow-sm transition-transform duration-200 active:scale-95 enabled:hover:scale-105"
+                                                    class="h-8 w-8 cursor-pointer rounded-lg shadow-xs transition-transform duration-150 active:scale-95 enabled:hover:scale-105 disabled:opacity-30"
                                                     :disabled="
                                                         !inputMessage.trim() ||
                                                         isLoading
@@ -1445,8 +1424,8 @@ onBeforeUnmount(() => {
                                     <p
                                         class="mt-2.5 text-center text-[11px] text-muted-foreground/60"
                                     >
-                                        Echo can make mistakes — verify
-                                        important exam and grade details.
+                                        Echo can make mistakes. Verify important
+                                        academic deadlines and exam details.
                                     </p>
                                 </form>
                                 <div
@@ -1458,26 +1437,12 @@ onBeforeUnmount(() => {
                                     {{ maintenanceMessage }}
                                 </div>
 
-                                <!-- Suggestions (Interactive Cards) -->
+                                <!-- Suggestions (Refined Claude-style Prompt Cards) -->
                                 <div
                                     v-if="aiChatEnabled"
                                     data-tour="chats-suggestions"
-                                    class="welcome-suggestions mt-6 w-full max-w-2xl sm:mt-8"
+                                    class="welcome-suggestions mt-8 w-full max-w-2xl"
                                 >
-                                    <div
-                                        class="mb-2.5 flex items-center justify-between px-1 text-left"
-                                    >
-                                        <span
-                                            class="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
-                                        >
-                                            Suggested prompts
-                                        </span>
-                                        <span
-                                            class="text-[11px] text-muted-foreground/60"
-                                        >
-                                            Click to start
-                                        </span>
-                                    </div>
                                     <div
                                         class="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
                                     >
@@ -1486,58 +1451,47 @@ onBeforeUnmount(() => {
                                             :key="i"
                                             type="button"
                                             @click="useSuggestion(chip.message)"
-                                            class="group relative flex cursor-pointer flex-col items-start gap-1 rounded-xl border border-border/50 bg-card/50 p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/90 hover:shadow-md active:scale-[0.98]"
+                                            class="group relative flex cursor-pointer items-center justify-between rounded-xl border border-border/70 bg-card/60 px-3.5 py-3 text-left transition-all duration-150 hover:border-border hover:bg-muted/40 active:scale-[0.99]"
                                         >
                                             <div
-                                                class="flex w-full items-center justify-between"
+                                                class="flex min-w-0 items-center gap-3 pr-2"
                                             >
                                                 <div
-                                                    class="flex items-center gap-2"
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-foreground/80 transition-colors group-hover:bg-primary/10 group-hover:text-primary"
                                                 >
-                                                    <div
-                                                        :class="[
-                                                            'flex h-7 w-7 items-center justify-center rounded-lg border',
+                                                    <component
+                                                        :is="
                                                             getSuggestionMeta(
                                                                 chip,
-                                                            ).iconBg,
-                                                        ]"
-                                                    >
-                                                        <component
-                                                            :is="
-                                                                getSuggestionMeta(
-                                                                    chip,
-                                                                ).icon
-                                                            "
-                                                            :class="[
-                                                                'h-3.5 w-3.5',
-                                                                getSuggestionMeta(
-                                                                    chip,
-                                                                ).iconColor,
-                                                            ]"
-                                                        />
-                                                    </div>
-                                                    <span
-                                                        class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
+                                                            ).icon
+                                                        "
+                                                        class="h-4 w-4"
+                                                    />
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <p
+                                                        class="truncate text-[13px] font-medium text-foreground"
                                                     >
                                                         {{
                                                             getSuggestionMeta(
                                                                 chip,
                                                             ).title
                                                         }}
-                                                    </span>
+                                                    </p>
+                                                    <p
+                                                        class="truncate text-xs text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            getSuggestionMeta(
+                                                                chip,
+                                                            ).description
+                                                        }}
+                                                    </p>
                                                 </div>
-                                                <ArrowUpRight
-                                                    class="h-3.5 w-3.5 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
-                                                />
                                             </div>
-                                            <p
-                                                class="line-clamp-1 pl-9 text-[11px] text-muted-foreground/80"
-                                            >
-                                                {{
-                                                    getSuggestionMeta(chip)
-                                                        .description
-                                                }}
-                                            </p>
+                                            <ArrowUpRight
+                                                class="h-4 w-4 shrink-0 text-muted-foreground/35 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
+                                            />
                                         </button>
                                     </div>
                                 </div>

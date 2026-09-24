@@ -3,21 +3,20 @@ import { describe, expect, it } from 'vitest';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 describe('ChatAiOrb', () => {
-    it('renders the core layers and default medium dimensions', () => {
+    it('renders the harmonic ripple waves and core sphere', () => {
         const wrapper = mount(ChatAiOrb);
 
-        expect(wrapper.find('.ai-orb-glow').exists()).toBe(true);
-        expect(wrapper.find('.ai-orb-core').exists()).toBe(true);
-        expect(wrapper.find('.ai-orb-ring-1').exists()).toBe(true);
-        expect(wrapper.find('.ai-orb-ring-2').exists()).toBe(true);
-        expect(wrapper.classes()).toContain('h-20');
+        expect(wrapper.find('.ambient-bloom').exists()).toBe(true);
+        expect(wrapper.find('.orb-sphere').exists()).toBe(true);
+        expect(wrapper.findAll('.harmonic-ripple')).toHaveLength(3);
+        expect(wrapper.classes()).toContain('h-24');
     });
 
     it('adapts container dimensions when small or large size is requested', () => {
         const small = mount(ChatAiOrb, { props: { size: 'sm' } });
-        expect(small.classes()).toContain('h-16');
+        expect(small.classes()).toContain('h-20');
 
         const large = mount(ChatAiOrb, { props: { size: 'lg' } });
-        expect(large.classes()).toContain('h-28');
+        expect(large.classes()).toContain('h-32');
     });
 });
