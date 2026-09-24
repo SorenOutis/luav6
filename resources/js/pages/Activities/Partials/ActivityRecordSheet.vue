@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import {
     ArrowUpRight,
     Calendar,
+    ChevronDown,
     FileSpreadsheet,
     Printer,
     Search,
@@ -102,6 +103,21 @@ const allActivities = computed(() =>
 // Filters
 const searchQuery = ref('');
 const selectedTerm = ref('all');
+const selectedSection = ref('all');
+const selectedType = ref('all');
+
+export interface SectionOption {
+    key: string;
+    id: number | null;
+    name: string;
+    seasonName: string;
+    label: string;
+}
+
+export interface TypeOption {
+    key: string;
+    label: string;
+}
 
 // Extract unique terms
 const availableTerms = computed(() => {
@@ -272,6 +288,67 @@ const groupSections = (items: ActivityScoreItem[]): SectionGroup[] => {
 
 const allSections = computed(() => groupSections(allActivities.value));
 
+const availableSections = computed<SectionOption[]>(() => {
+    return allSections.value.map((s) => ({
+        key: s.key,
+        id: s.id,
+        name: s.name,
+        seasonName: s.seasonName,
+        label: s.seasonName ? `${s.name} · ${s.seasonName}` : s.name,
+    }));
+});
+
+const availableTypes = computed<TypeOption[]>(() => {
+    const types: TypeOption[] = [{ key: 'all', label: 'All Categories' }];
+
+    let hasWritten = false;
+    let hasPerformance = false;
+    const customTypes = new Set<string>();
+
+    for (const activity of allActivities.value) {
+        const category =
+            activity.category ??
+            (typeof activity.id === 'string' ? 'performance' : 'written');
+        if (category === 'written') {
+            hasWritten = true;
+        } else {
+            hasPerformance = true;
+            const activityType = activity.activity_type?.trim();
+            if (activityType && activityType !== 'Performance Task') {
+                customTypes.add(activityType);
+            }
+        }
+    }
+
+    if (hasWritten) {
+        types.push({ key: 'written', label: 'Written Activities' });
+    }
+
+    if (hasPerformance) {
+        if (customTypes.size > 0) {
+            types.push({ key: 'performance', label: 'All Performance Tasks' });
+            types.push({
+                key: 'performance:standard',
+                label: 'Performance Tasks (Standard)',
+            });
+            for (const ct of Array.from(customTypes).sort()) {
+                types.push({ key: `custom:${ct}`, label: ct });
+            }
+        } else {
+            types.push({ key: 'performance', label: 'Performance Tasks' });
+        }
+    }
+
+    return types;
+});
+
+const resetFilters = () => {
+    searchQuery.value = '';
+    selectedTerm.value = 'all';
+    selectedSection.value = 'all';
+    selectedType.value = 'all';
+};
+
 // Filtered list
 const filteredActivities = computed(() => {
     let list = allActivities.value;
@@ -288,6 +365,69 @@ const filteredActivities = computed(() => {
 
     if (selectedTerm.value !== 'all') {
         list = list.filter((a) => a.term === selectedTerm.value);
+    }
+
+    if (selectedSection.value !== 'all') {
+        const targetSection = availableSections.value.find(
+            (s) => s.key === selectedSection.value,
+        );
+        if (targetSection) {
+            list = list.filter((a) => {
+                if (
+                    targetSection.id !== null &&
+                    a.section_id !== undefined &&
+                    a.section_id !== null
+                ) {
+                    return a.section_id === targetSection.id;
+                }
+                const name =
+                    a.section_id === null
+                        ? 'General / Unassigned'
+                        : a.section_name?.trim() || 'General / Unassigned';
+                return name === targetSection.name;
+            });
+        }
+    }
+
+    if (selectedType.value !== 'all') {
+        if (selectedType.value === 'written') {
+            list = list.filter((a) => {
+                const category =
+                    a.category ??
+                    (typeof a.id === 'string' ? 'performance' : 'written');
+                return category === 'written';
+            });
+        } else if (selectedType.value === 'performance') {
+            list = list.filter((a) => {
+                const category =
+                    a.category ??
+                    (typeof a.id === 'string' ? 'performance' : 'written');
+                return category === 'performance';
+            });
+        } else if (selectedType.value === 'performance:standard') {
+            list = list.filter((a) => {
+                const category =
+                    a.category ??
+                    (typeof a.id === 'string' ? 'performance' : 'written');
+                const activityType =
+                    a.activity_type?.trim() || 'Performance Task';
+                return (
+                    category === 'performance' &&
+                    activityType === 'Performance Task'
+                );
+            });
+        } else if (selectedType.value.startsWith('custom:')) {
+            const customType = selectedType.value.slice(7);
+            list = list.filter((a) => {
+                const category =
+                    a.category ??
+                    (typeof a.id === 'string' ? 'performance' : 'written');
+                return (
+                    category === 'performance' &&
+                    a.activity_type?.trim() === customType
+                );
+            });
+        }
     }
 
     return list;
@@ -366,8 +506,9 @@ const handlePrint = () => {
 <template>
     <Sheet :open="open" @update:open="emit('update:open', $event)">
         <SheetContent
-            class="custom-scrollbar flex w-full flex-col gap-0 overflow-y-auto sm:max-w-xl md:max-w-2xl lg:w-1/2 lg:max-w-none"
+            class="custom-scrollbar flex w-full touch-pan-y flex-col gap-0 overflow-y-auto overscroll-contain sm:max-w-xl md:max-w-2xl lg:w-1/2 lg:max-w-none"
             data-lenis-prevent
+            @wheel.stop
         >
             <!-- Header -->
             <SheetHeader class="screen-only border-b border-border/50 pb-4">
@@ -391,7 +532,7 @@ const handlePrint = () => {
                             </SheetDescription>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2 pr-8">
                         <Button
                             type="button"
                             variant="outline"
@@ -427,6 +568,56 @@ const handlePrint = () => {
                         >
                             <X class="h-3.5 w-3.5" />
                         </button>
+                    </div>
+
+                    <!-- Dropdowns: Section and Activity Type -->
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <!-- Section Filter Dropdown -->
+                        <div class="relative">
+                            <select
+                                v-model="selectedSection"
+                                data-test="activity-record-section-filter"
+                                aria-label="Filter by section"
+                                class="h-9 w-full cursor-pointer appearance-none rounded-lg border border-border/60 bg-background/80 px-3 pr-8 text-xs font-medium text-foreground transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-ring"
+                            >
+                                <option value="all">
+                                    All Sections ({{
+                                        availableSections.length
+                                    }})
+                                </option>
+                                <option
+                                    v-for="s in availableSections"
+                                    :key="s.key"
+                                    :value="s.key"
+                                >
+                                    {{ s.label }}
+                                </option>
+                            </select>
+                            <ChevronDown
+                                class="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                            />
+                        </div>
+
+                        <!-- Activity Type Filter Dropdown -->
+                        <div class="relative">
+                            <select
+                                v-model="selectedType"
+                                data-test="activity-record-type-filter"
+                                aria-label="Filter by activity type"
+                                class="h-9 w-full cursor-pointer appearance-none rounded-lg border border-border/60 bg-background/80 px-3 pr-8 text-xs font-medium text-foreground transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-ring"
+                            >
+                                <option
+                                    v-for="t in availableTypes"
+                                    :key="t.key"
+                                    :value="t.key"
+                                >
+                                    {{ t.label }}
+                                </option>
+                            </select>
+                            <ChevronDown
+                                class="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                            />
+                        </div>
                     </div>
 
                     <!-- Term Navigation Pills (Per Quarter / Per Semester / Prelims) -->
@@ -783,7 +974,11 @@ const handlePrint = () => {
             </div>
 
             <!-- Activities Content Body -->
-            <div class="screen-only flex-1 space-y-6 px-1 py-4">
+            <div
+                class="screen-only flex-1 touch-pan-y space-y-6 px-1 py-4"
+                data-lenis-prevent
+                @wheel.stop
+            >
                 <div
                     v-if="filteredActivities.length === 0"
                     class="flex flex-col items-center justify-center gap-2 py-16 text-center"
@@ -793,8 +988,18 @@ const handlePrint = () => {
                         No activities match the filter
                     </p>
                     <p class="text-xs text-muted-foreground">
-                        Try clearing search or switching term/status tabs.
+                        Try clearing search or switching term/section/type
+                        filters.
                     </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="mt-2 text-xs"
+                        @click="resetFilters"
+                    >
+                        Reset filters
+                    </Button>
                 </div>
 
                 <div v-else class="space-y-6">
@@ -853,6 +1058,7 @@ const handlePrint = () => {
                                     role="region"
                                     :aria-label="`${group.term} ${section.name} ${section.seasonName} ${component.label} activity records`"
                                     data-lenis-prevent
+                                    @wheel.stop
                                 >
                                     <table
                                         data-test="activity-record-table"

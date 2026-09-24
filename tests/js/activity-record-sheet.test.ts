@@ -940,4 +940,138 @@ describe('ActivityRecordSheet component totals', () => {
             '90%',
         );
     });
+
+    it('filters activities and tables per section and per category using dropdowns', async () => {
+        wrapper = mountRecord([
+            activity({
+                id: 10,
+                title: 'Section A Written Quiz',
+                section_id: 1,
+                section_name: 'BSIT 1-A',
+                category: 'written',
+                term: 'Prelims',
+            }),
+            task({
+                id: 'task-10',
+                title: 'Section A Performance Task',
+                section_id: 1,
+                section_name: 'BSIT 1-A',
+                category: 'performance',
+                activity_type: 'Performance Task',
+                term: 'Prelims',
+            }),
+            activity({
+                id: 20,
+                title: 'Section B Written Quiz',
+                section_id: 2,
+                section_name: 'BSIT 1-B',
+                category: 'written',
+                term: 'Prelims',
+            }),
+            task({
+                id: 'task-20',
+                title: 'Section B Lab Exam',
+                section_id: 2,
+                section_name: 'BSIT 1-B',
+                category: 'performance',
+                activity_type: 'Laboratory',
+                term: 'Prelims',
+            }),
+        ]);
+
+        const sectionSelect = wrapper.get<HTMLSelectElement>(
+            '[data-test="activity-record-section-filter"]',
+        );
+        const typeSelect = wrapper.get<HTMLSelectElement>(
+            '[data-test="activity-record-type-filter"]',
+        );
+
+        // Initially shows all 4 activities across both sections and types
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(4);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual([
+            'Section A Written Quiz',
+            'Section A Performance Task',
+            'Section B Written Quiz',
+            'Section B Lab Exam',
+        ]);
+
+        // Filter per section: BSIT 1-A
+        const sectionAOption = Array.from(sectionSelect.element.options).find(
+            (o) => o.text.includes('BSIT 1-A'),
+        );
+        expect(sectionAOption).toBeDefined();
+        await sectionSelect.setValue(sectionAOption!.value);
+
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(2);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Section A Written Quiz', 'Section A Performance Task']);
+
+        // Filter per type: Written Activities only
+        await typeSelect.setValue('written');
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(1);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Section A Written Quiz']);
+
+        // Switch to all sections but keep Written Activities
+        await sectionSelect.setValue('all');
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(2);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Section A Written Quiz', 'Section B Written Quiz']);
+
+        // Filter per type: Laboratory only (custom type)
+        await typeSelect.setValue('custom:Laboratory');
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(1);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Section B Lab Exam']);
+
+        // Reset both dropdowns to all
+        await typeSelect.setValue('all');
+        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(4);
+    });
+
+    it('displays an empty state with reset filters button when filters exclude all activities', async () => {
+        wrapper = mountRecord([
+            activity({
+                id: 1,
+                title: 'Solo Quiz',
+                section_id: 1,
+                section_name: 'BSIT 1-A',
+                category: 'written',
+                term: 'Prelims',
+            }),
+        ]);
+
+        const search = wrapper.get(
+            'input[placeholder="Search activity by title or section..."]',
+        );
+        await search.setValue('nonexistent activity');
+
+        expect(wrapper.text()).toContain('No activities match the filter');
+        const resetButton = wrapper.findAll('button').find((b) => b.text() === 'Reset filters');
+        expect(resetButton).toBeDefined();
+
+        await resetButton!.trigger('click');
+        expect(wrapper.text()).not.toContain('No activities match the filter');
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Solo Quiz']);
+    });
 });

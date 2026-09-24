@@ -211,6 +211,17 @@ describe('activities hub — Activity Record drawer', () => {
             expect(
                 sheet!.querySelector('[data-test="activity-status-filters"]'),
             ).toBeNull();
+            expect(
+                sheet!.querySelector(
+                    '[data-test="activity-record-section-filter"]',
+                ),
+            ).not.toBeNull();
+            expect(
+                sheet!.querySelector(
+                    '[data-test="activity-record-type-filter"]',
+                ),
+            ).not.toBeNull();
+            expect(sheet!.hasAttribute('data-lenis-prevent')).toBe(true);
             expect(sheetText).not.toMatch(/activities graded/i);
             expect(sheetText).not.toContain('Unsubmitted deadlines');
             expect(sheetText).not.toContain('Open or pending');
