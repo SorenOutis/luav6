@@ -10,6 +10,11 @@ use Stringable;
 
 class ExamsAdminTool implements Tool
 {
+    public function name(): string
+    {
+        return 'exams_admin';
+    }
+
     /**
      * Get the description of the tool's purpose.
      */

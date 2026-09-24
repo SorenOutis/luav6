@@ -10,6 +10,11 @@ use Stringable;
 
 class StudentsTool implements Tool
 {
+    public function name(): string
+    {
+        return 'students';
+    }
+
     /**
      * Get the description of the tool's purpose.
      */

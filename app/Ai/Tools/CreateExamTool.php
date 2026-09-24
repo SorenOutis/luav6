@@ -12,6 +12,11 @@ use Stringable;
 
 class CreateExamTool extends PendingWriteTool implements Tool
 {
+    public function name(): string
+    {
+        return 'create_exam';
+    }
+
     public function description(): Stringable|string
     {
         return 'Prepare a new DRAFT exam for human review. This tool never writes the exam; it creates a server-issued approval card showing the exact values. Call it once after gathering the required details. The administrator must approve in the UI.';

@@ -10,6 +10,11 @@ use Stringable;
 
 class SubmissionsToGradeTool implements Tool
 {
+    public function name(): string
+    {
+        return 'submissions_to_grade';
+    }
+
     /**
      * Get the description of the tool's purpose.
      */

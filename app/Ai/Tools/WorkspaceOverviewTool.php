@@ -14,6 +14,11 @@ use Stringable;
 
 class WorkspaceOverviewTool implements Tool
 {
+    public function name(): string
+    {
+        return 'workspace_overview';
+    }
+
     /**
      * Get the description of the tool's purpose.
      */

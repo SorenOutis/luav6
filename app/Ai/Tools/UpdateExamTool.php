@@ -11,6 +11,11 @@ use Stringable;
 
 class UpdateExamTool extends PendingWriteTool implements Tool
 {
+    public function name(): string
+    {
+        return 'update_exam';
+    }
+
     public function description(): Stringable|string
     {
         return 'Prepare an exam status, schedule, or duration change for human review. This tool never updates the exam. It creates a server-issued card with the exact before/after diff; only a UI approval can execute it.';

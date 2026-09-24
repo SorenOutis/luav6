@@ -19,6 +19,11 @@ class GenerateExamQuestionsTool extends PendingWriteTool implements Tool
         'essay' => 'Essay',
     ];
 
+    public function name(): string
+    {
+        return 'generate_exam_questions';
+    }
+
     public function description(): Stringable|string
     {
         return 'Prepare an AI question-generation job. This tool does not attach questions. The first UI approval starts generation into a private review draft; a teacher must then review the generated content and explicitly approve that saved revision before it can be attached to an exam.';
