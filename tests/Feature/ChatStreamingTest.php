@@ -10,7 +10,12 @@
 use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AiChatLogger;
+use App\Services\ChatService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
+use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Streaming\Events\TextDelta;
 
 beforeEach(function () {
     Setting::flushAllCaches();
@@ -209,4 +214,43 @@ it('persists attachments metadata on a Chats page message', function () {
     expect($userMessage->attachments)->toBe([
         ['name' => 'notes.txt', 'size' => 11, 'mime' => 'text/plain', 'kind' => 'document'],
     ]);
+});
+
+it('appends an interrupted notice when streaming fails after delivering initial text', function () {
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'About activities']);
+
+    $chatService = mock(ChatService::class, [app(AiChatLogger::class)])->makePartial();
+    $chatService->shouldReceive('stream')->andReturn(
+        new StreamableAgentResponse(
+            (string) Str::uuid7(),
+            function () {
+                yield new TextDelta(
+                    id: (string) Str::uuid7(),
+                    messageId: (string) Str::uuid7(),
+                    delta: 'Let me check your activities...',
+                    timestamp: (int) (microtime(true) * 1000),
+                );
+                throw new RuntimeException('Provider timed out');
+            },
+        )
+    );
+    app()->instance(ChatService::class, $chatService);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'is there an activity today?']);
+
+    $response->assertSuccessful();
+    $content = $response->streamedContent();
+
+    expect($content)->toContain('Let me check your activities...')
+        ->and($content)->toContain('Echo encountered an issue and could not complete this response')
+        ->and($content)->toContain('[DONE]');
+
+    $session->refresh()->load('messages');
+    $assistantMessage = $session->messages->where('role', 'assistant')->first();
+
+    expect($assistantMessage)->not->toBeNull()
+        ->and($assistantMessage->content)->toContain('Let me check your activities...')
+        ->and($assistantMessage->content)->toContain('Echo encountered an issue and could not complete this response');
 });

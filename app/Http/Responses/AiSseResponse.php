@@ -15,19 +15,35 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AiSseResponse
 {
+    public const STREAMING_EXECUTION_TIME_SECONDS = 180;
+
     /**
      * @param  iterable<int, object>  $events
      */
     public static function from(iterable $events): StreamedResponse
     {
         return response()->stream(function () use ($events): void {
-            foreach ($events as $event) {
-                echo 'data: '.((string) $event)."\n\n";
-                self::flush();
+            $originalLimit = (int) ini_get('max_execution_time');
+            $adjusted = false;
+
+            if ($originalLimit > 0 && $originalLimit < self::STREAMING_EXECUTION_TIME_SECONDS) {
+                set_time_limit(self::STREAMING_EXECUTION_TIME_SECONDS);
+                $adjusted = true;
             }
 
-            echo "data: [DONE]\n\n";
-            self::flush();
+            try {
+                foreach ($events as $event) {
+                    echo 'data: '.((string) $event)."\n\n";
+                    self::flush();
+                }
+
+                echo "data: [DONE]\n\n";
+                self::flush();
+            } finally {
+                if ($adjusted) {
+                    set_time_limit($originalLimit);
+                }
+            }
         }, 200, [
             'Cache-Control' => 'no-cache, no-transform',
             'Content-Type' => 'text/event-stream',

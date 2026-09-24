@@ -363,9 +363,15 @@ class ChatHistoryController extends Controller
                         $this->logError('Chat History Stream Runtime Error', $e, $session, $loggingContext);
 
                         // If text was already delivered, do not append a second
-                        // complete answer. The partial answer is still useful and
-                        // the runtime error remains available through its log id.
+                        // complete answer. Append an interrupted notice so the
+                        // user is informed and subsequent turns do not treat an
+                        // open-ended preamble as a completed answer.
                         if ($emittedText) {
+                            $notice = "\n\n*(Echo encountered an issue and could not complete this response. Please ask again.)*";
+                            foreach ($this->chatService->streamText($notice) as $event) {
+                                yield $event;
+                            }
+
                             return;
                         }
                     }

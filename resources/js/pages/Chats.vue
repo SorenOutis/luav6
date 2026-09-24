@@ -28,6 +28,7 @@ import {
 import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
+import ChatThinkingIndicator from '@/components/ChatThinkingIndicator.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
@@ -1450,11 +1451,16 @@ onBeforeUnmount(() => {
                                         <Sparkles
                                             class="h-3 w-3 shrink-0 text-primary/70"
                                             :class="{
-                                                'animate-pulse':
+                                                'motion-safe:animate-pulse':
                                                     msg.typing && !msg.content,
                                             }"
                                         />
-                                        <span>{{ thinkingLabel(msg) }}</span>
+                                        <ChatThinkingIndicator
+                                            v-if="msg.typing && !msg.content"
+                                        />
+                                        <span v-else>{{
+                                            thinkingLabel(msg)
+                                        }}</span>
                                         <ChevronDown
                                             class="h-3 w-3 shrink-0 transition-transform duration-200"
                                             :class="{
@@ -1486,23 +1492,9 @@ onBeforeUnmount(() => {
                                     "
                                     class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 shadow-xs"
                                 >
-                                    <div class="flex items-center gap-1.5">
-                                        <span
-                                            class="text-[11px] font-medium text-muted-foreground/80"
-                                            >Thinking</span
-                                        >
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        ></span>
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                            style="animation-delay: 150ms"
-                                        ></span>
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                            style="animation-delay: 300ms"
-                                        ></span>
-                                    </div>
+                                    <ChatThinkingIndicator
+                                        class="text-[11px] font-medium text-muted-foreground"
+                                    />
                                 </div>
                                 <span
                                     v-else-if="msg.typing && msg.content"
