@@ -230,24 +230,28 @@ class Section extends Model
             return false;
         }
 
-        if (empty($this->activity_record_terms)) {
-            return true;
-        }
+        if (is_array($this->activity_record_terms)) {
+            if (empty($this->activity_record_terms)) {
+                return false;
+            }
 
-        if (empty($term)) {
-            return true;
-        }
-
-        if (in_array($term, $this->activity_record_terms, true)) {
-            return true;
-        }
-
-        foreach ($this->activity_record_terms as $allowed) {
-            if (str_contains(strtolower($allowed), strtolower($term)) || str_contains(strtolower($term), strtolower($allowed))) {
+            if (empty($term)) {
                 return true;
             }
+
+            if (in_array($term, $this->activity_record_terms, true)) {
+                return true;
+            }
+
+            foreach ($this->activity_record_terms as $allowed) {
+                if (str_contains(strtolower($allowed), strtolower($term)) || str_contains(strtolower($term), strtolower($allowed))) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        return false;
+        return true;
     }
 }

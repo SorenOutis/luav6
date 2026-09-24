@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\ActivityTask;
+use App\Models\ActivityTaskScore;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 
@@ -248,6 +251,9 @@ it('passes exam term, total points, and missed status to activityScores', functi
 
     $examScore = $res->viewData('page')['props']['activityScores'][0]['exams'][0];
     expect($examScore['title'])->toBe('Quarter 1 Quiz')
+        ->and($examScore['category'])->toBe('written')
+        ->and($examScore['section_id'])->toBe($missedExam->section_id)
+        ->and($examScore['section_name'])->toBe($section->name)
         ->and($examScore['term'])->toBe('1st Quarter')
         ->and($examScore['is_missed'])->toBeTrue()
         ->and((float) $examScore['total_points'])->toBe(10.0);
@@ -310,4 +316,138 @@ it('filters activityScores by allowed section activity_record_terms', function (
 
     expect($allExamTitlesNow)->toContain('Prelim Exam');
     expect($allExamTitlesNow)->toContain('Midterm Exam');
+
+    // When activity_record_terms is explicitly set to empty array (all unchecked), no terms are allowed
+    $section->update(['activity_record_terms' => []]);
+    $resNone = actingAs($user)->get(route('activities.index'))->assertOk();
+    $noneScores = $resNone->viewData('page')['props']['activityScores'];
+    expect($noneScores)->toBeEmpty();
+});
+
+it('includes senior high performance task scores in activityScores', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'PT 1: Creative Presentation',
+        'term' => 'First Semester - 1st Quarter',
+        'task_type' => 'Performance Task',
+        'max_points' => 50,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $user->id,
+        'score' => 45,
+        'is_missed' => false,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $pt = collect($allExams)->firstWhere('title', 'PT 1: Creative Presentation');
+    expect($pt)->not->toBeNull();
+    expect($pt['activity_type'])->toBe('Performance Task');
+    expect($pt['category'])->toBe('performance');
+    expect($pt['section_id'])->toBe($task->section_id);
+    expect($pt['section_name'])->toBe($section->name);
+    expect((float) $pt['score'])->toBe(45.0);
+    expect((float) $pt['total_points'])->toBe(50.0);
+    expect((float) $pt['percentage'])->toBe(90.0);
+    expect($pt['submitted'])->toBeTrue();
+});
+
+it('includes college custom activity task scores in activityScores', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'Laboratory 1: Packet Analysis',
+        'term' => 'Prelim',
+        'task_type' => 'Laboratory',
+        'max_points' => 100,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $user->id,
+        'score' => 95,
+        'is_missed' => false,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $lab = collect($allExams)->firstWhere('title', 'Laboratory 1: Packet Analysis');
+    expect($lab)->not->toBeNull();
+    expect($lab['activity_type'])->toBe('Laboratory');
+    expect($lab['category'])->toBe('performance');
+    expect($lab['section_id'])->toBe($task->section_id);
+    expect($lab['section_name'])->toBe($section->name);
+    expect((float) $lab['score'])->toBe(95.0);
+    expect((float) $lab['total_points'])->toBe(100.0);
+    expect((float) $lab['percentage'])->toBe(95.0);
+});
+
+it('eager loads section season for both exams and tasks so they share the same season name', function () {
+    $user = User::factory()->create();
+    $season = Season::factory()->create(['name' => 'Season 1']);
+    $section = Section::factory()->create([
+        'name' => 'Section A',
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $exam = Exam::factory()->published()->create([
+        'title' => 'Written Quiz #1',
+        'term' => 'First Semester - 1st Quarter',
+        'section_id' => $section->id,
+        'starts_at' => now()->subDays(2),
+        'ends_at' => now()->addDays(2),
+    ]);
+    ExamPart::factory()->forExam($exam)->multipleChoice(2, 1, 5)->create();
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'PT #1',
+        'term' => 'First Semester - 1st Quarter',
+        'task_type' => 'Performance Task',
+        'max_points' => 100,
+    ]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    expect($scores)->toHaveCount(1);
+    expect($scores[0]['seasonName'])->toBe('Season 1');
+
+    $allExams = $scores[0]['exams'];
+    $writtenExam = collect($allExams)->firstWhere('title', 'Written Quiz #1');
+    $performanceTask = collect($allExams)->firstWhere('title', 'PT #1');
+
+    expect($writtenExam)->not->toBeNull()
+        ->and($writtenExam['season_name'])->toBe('Season 1')
+        ->and($writtenExam['section_id'])->toBe($section->id)
+        ->and($writtenExam['category'])->toBe('written');
+
+    expect($performanceTask)->not->toBeNull()
+        ->and($performanceTask['season_name'])->toBe('Season 1')
+        ->and($performanceTask['section_id'])->toBe($section->id)
+        ->and($performanceTask['category'])->toBe('performance');
 });

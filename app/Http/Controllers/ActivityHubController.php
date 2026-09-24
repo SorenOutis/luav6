@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityTask;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
@@ -15,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,7 +36,7 @@ class ActivityHubController extends Controller
         // a tab at all, so those exams were unreachable from the hub.
         $summary = $this->hubSummary($user);
         $activityScores = $this->activityScores($user);
-        $userSections = $user->sections()->get(['sections.id', 'sections.activity_record_enabled']);
+        $userSections = $user->sections()->withoutGlobalScope('workspace')->get(['sections.id', 'sections.activity_record_enabled']);
         $activityRecordEnabled = $user->is_admin
             || ($userSections->isEmpty() ? true : $userSections->contains(fn ($s) => (bool) $s->activity_record_enabled));
 
@@ -150,27 +152,52 @@ class ActivityHubController extends Controller
     {
         $exams = $this->visibleExams($user)
             ->select(['exams.id', 'exams.title', 'exams.status', 'exams.section_id', 'exams.term', 'exams.created_at', 'exams.ends_at', 'exams.starts_at'])
-            ->with(['section:id,name,school_level,activity_record_enabled,activity_record_terms', 'section.season:id,name,start_date'])
+            ->with([
+                'section' => fn ($q) => $q->withoutGlobalScope('workspace')->select(['id', 'name', 'season_id', 'school_level', 'activity_record_enabled', 'activity_record_terms']),
+                'section.season' => fn ($q) => $q->withoutGlobalScope('workspace')->select(['id', 'name', 'start_date']),
+            ])
             ->get();
 
-        if ($exams->isEmpty()) {
+        $userSectionIds = DB::table('section_user')
+            ->where('user_id', $user->id)
+            ->pluck('section_id')
+            ->all();
+
+        $tasks = ! empty($userSectionIds)
+            ? ActivityTask::withoutGlobalScope('workspace')
+                ->whereIn('section_id', $userSectionIds)
+                ->with([
+                    'section' => fn ($q) => $q->withoutGlobalScope('workspace'),
+                    'section.season' => fn ($q) => $q->withoutGlobalScope('workspace'),
+                    'scores' => fn ($q) => $q->where('user_id', $user->id),
+                ])
+                ->get()
+            : collect();
+
+        if ($exams->isEmpty() && $tasks->isEmpty()) {
             return [];
         }
 
-        $allSubmissions = ExamSubmission::query()
-            ->where('user_id', $user->id)
-            ->whereIn('exam_id', $exams->pluck('id'))
-            ->get(['id', 'exam_id', 'exam_part_id', 'status', 'score', 'is_late', 'grading_failed'])
-            ->groupBy('exam_id');
+        $allSubmissions = $exams->isNotEmpty()
+            ? ExamSubmission::query()
+                ->where('user_id', $user->id)
+                ->whereIn('exam_id', $exams->pluck('id'))
+                ->get(['id', 'exam_id', 'exam_part_id', 'status', 'score', 'is_late', 'grading_failed'])
+                ->groupBy('exam_id')
+            : collect();
 
-        $allParts = ExamPart::query()
-            ->whereIn('exam_id', $exams->pluck('id'))
-            ->get(['id', 'exam_id', 'exam_set_id', 'points', 'questions', 'sort_order'])
-            ->groupBy('exam_id');
+        $allParts = $exams->isNotEmpty()
+            ? ExamPart::query()
+                ->whereIn('exam_id', $exams->pluck('id'))
+                ->get(['id', 'exam_id', 'exam_set_id', 'points', 'questions', 'sort_order'])
+                ->groupBy('exam_id')
+            : collect();
 
-        $summaries = $this->examSets->summariesFor($user, $exams->pluck('id')->all());
+        $summaries = $exams->isNotEmpty()
+            ? $this->examSets->summariesFor($user, $exams->pluck('id')->all())
+            : [];
 
-        $rows = $exams
+        $examRows = $exams
             ->filter(function (Exam $exam) {
                 if (! $exam->section) {
                     return true;
@@ -214,7 +241,10 @@ class ActivityHubController extends Controller
                 return [
                     'id' => $exam->id,
                     'title' => $exam->title,
+                    'activity_type' => 'Written Work',
+                    'category' => 'written',
                     'term' => $exam->term ?: 'General',
+                    'section_id' => $exam->section_id,
                     'section_name' => $exam->section?->name,
                     'school_level' => $exam->section?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE,
                     'season_name' => $exam->section?->season?->name ?? 'Other',
@@ -235,14 +265,61 @@ class ActivityHubController extends Controller
                 ];
             });
 
+        $taskRows = $tasks
+            ->filter(function (ActivityTask $task) {
+                if (! $task->section) {
+                    return true;
+                }
+
+                return $task->section->isTermAllowedForActivityRecord($task->term);
+            })
+            ->map(function (ActivityTask $task) {
+                $userScore = $task->scores->first();
+                $hasScore = $userScore !== null && $userScore->score !== null;
+                $score = $hasScore ? (float) $userScore->score : null;
+                $isMissed = (bool) ($userScore?->is_missed ?? false);
+                $totalPoints = round((float) $task->max_points, 2);
+                $pct = ($score !== null && $totalPoints > 0) ? round(($score / $totalPoints) * 100, 1) : null;
+
+                $state = $hasScore ? 'completed' : ($isMissed ? 'closed' : 'open');
+
+                return [
+                    'id' => 'task_'.$task->id,
+                    'title' => $task->title,
+                    'activity_type' => $task->task_type ?: 'Performance Task',
+                    'category' => 'performance',
+                    'term' => $task->term ?: 'General',
+                    'section_id' => $task->section_id,
+                    'section_name' => $task->section?->name,
+                    'school_level' => $task->section?->school_level ?? Section::SCHOOL_LEVEL_COLLEGE,
+                    'season_name' => $task->section?->season?->name ?? 'Other',
+                    'season_start' => $task->section?->season?->start_date?->getTimestamp() ?? 0,
+                    'created_at' => $task->created_at?->getTimestamp() ?? 0,
+                    'ends_at_iso' => $task->due_date?->toIso8601String(),
+                    'score' => $score,
+                    'total_points' => $totalPoints,
+                    'percentage' => $pct,
+                    'submitted' => $hasScore,
+                    'is_missed' => $isMissed,
+                    'is_incomplete' => false,
+                    'is_pending_review' => false,
+                    'submitted_parts' => $hasScore ? 1 : 0,
+                    'total_parts' => 1,
+                    'is_late' => false,
+                    'state' => $state,
+                ];
+            });
+
+        $rows = $examRows->concat($taskRows);
+
         $seasonStarts = $rows
             ->groupBy('season_name')
             ->map(fn ($group) => $group->max('season_start'));
 
         return $rows
             ->groupBy('season_name')
-            ->map(fn ($group) => [
-                'seasonName' => $group->keys()->first(),
+            ->map(fn ($group, $seasonName) => [
+                'seasonName' => (string) $seasonName,
                 'exams' => $group
                     ->sortByDesc('created_at')
                     ->values()

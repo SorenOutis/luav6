@@ -13,6 +13,17 @@ class EditSection extends EditRecord
 {
     protected static string $resource = SectionResource::class;
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if (($data['activity_record_terms'] ?? null) === null) {
+            $data['activity_record_terms'] = array_keys(
+                Section::examTermOptions($data['school_level'] ?? Section::SCHOOL_LEVEL_COLLEGE)
+            );
+        }
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

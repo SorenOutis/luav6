@@ -109,3 +109,47 @@ test('admin can attach a student to a section with the season pivot', function (
     expect($pivot)->not->toBeNull()
         ->and((int) $pivot->season_id)->toBe((int) $season->id);
 });
+
+test('saving empty activity record terms stores empty array', function () {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    $season = Season::factory()->create();
+    $section = Section::factory()->create([
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_terms' => ['Prelim'],
+    ]);
+
+    Livewire::test(EditSection::class, [
+        'record' => $section->id,
+    ])
+        ->fillForm([
+            'name' => $section->name,
+            'season_id' => $season->id,
+            'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+            'activity_record_enabled' => true,
+            'activity_record_terms' => [],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $section->refresh();
+    expect($section->activity_record_terms)->toBe([]);
+});
+
+test('unconfigured section activity record terms formats with all options checked', function () {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    $season = Season::factory()->create();
+    $section = Section::factory()->create([
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_terms' => null,
+    ]);
+
+    $component = Livewire::test(EditSection::class, [
+        'record' => $section->id,
+    ]);
+
+    expect($component->get('data.activity_record_terms'))->toBe(['Prelim', 'Midterm', 'Final']);
+});
