@@ -3,7 +3,10 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useFileDialog } from '@vueuse/core';
 import axios from 'axios';
 import {
+    ArrowUpRight,
+    BookOpen,
     Bot,
+    Calendar,
     ChevronDown,
     FileText,
     History,
@@ -14,8 +17,10 @@ import {
     Sparkles,
     Square,
     Trash2,
+    Trophy,
     User,
     X,
+    Zap,
 } from 'lucide-vue-next';
 import {
     computed,
@@ -27,6 +32,7 @@ import {
 } from 'vue';
 import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
 import ChatThinkingIndicator from '@/components/ChatThinkingIndicator.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
@@ -182,6 +188,71 @@ const suggestions = computed<{ label: string; message: string }[]>(() => {
               },
           ];
 });
+
+interface SuggestionMeta {
+    title: string;
+    description: string;
+    icon: any;
+    iconBg: string;
+    iconColor: string;
+}
+
+const getSuggestionMeta = (chip: {
+    label: string;
+    message: string;
+}): SuggestionMeta => {
+    const raw = (chip.label + ' ' + chip.message).toLowerCase();
+
+    if (raw.includes('assignment')) {
+        return {
+            title: 'My Assignments',
+            description: 'Check deadlines, sections & status',
+            icon: BookOpen,
+            iconBg: 'bg-blue-500/10 border-blue-500/20',
+            iconColor: 'text-blue-500 dark:text-blue-400',
+        };
+    }
+
+    if (raw.includes('exam')) {
+        return {
+            title: 'Upcoming Exams',
+            description: 'View schedules, dates & parts',
+            icon: Calendar,
+            iconBg: 'bg-amber-500/10 border-amber-500/20',
+            iconColor: 'text-amber-500 dark:text-amber-400',
+        };
+    }
+
+    if (raw.includes('progress') || raw.includes('score')) {
+        return {
+            title: 'Learning Progress',
+            description: 'Check level, XP & season rank',
+            icon: Trophy,
+            iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+            iconColor: 'text-emerald-500 dark:text-emerald-400',
+        };
+    }
+
+    if (raw.includes('xp') || raw.includes('streak')) {
+        return {
+            title: 'Daily Streak & XP',
+            description: 'Check streak or claim your daily reward',
+            icon: Zap,
+            iconBg: 'bg-purple-500/10 border-purple-500/20',
+            iconColor: 'text-purple-500 dark:text-purple-400',
+        };
+    }
+
+    const cleanLabel =
+        chip.label.replace(/^[\p{Emoji}\s]+/u, '').trim() || chip.label;
+    return {
+        title: cleanLabel,
+        description: chip.message,
+        icon: Sparkles,
+        iconBg: 'bg-primary/10 border-primary/20',
+        iconColor: 'text-primary',
+    };
+};
 
 /* ──────────────── Local state ──────────────── */
 
@@ -1191,43 +1262,67 @@ onBeforeUnmount(() => {
                             class="flex h-full flex-col items-center px-3 py-4 text-center sm:px-4 sm:py-8"
                         >
                             <div
-                                class="m-auto flex w-full max-w-xl flex-col items-center"
+                                class="m-auto flex w-full max-w-2xl flex-col items-center"
                             >
-                                <!-- System logo -->
+                                <!-- Animated AI Presence Orb & Status Badge -->
                                 <div
-                                    class="welcome-logo mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 shadow-lg ring-1 shadow-primary/10 ring-primary/20 sm:mb-6 sm:h-20 sm:w-20 sm:rounded-3xl"
+                                    class="welcome-logo mb-4 flex flex-col items-center sm:mb-5"
                                 >
-                                    <img
-                                        v-if="branding.logoUrl"
-                                        :src="branding.logoUrl"
-                                        alt="Echo"
-                                        class="h-8 w-8 object-contain sm:h-12 sm:w-12"
-                                    />
-                                    <AppLogoIcon
-                                        v-else
-                                        class="h-7 w-7 text-primary sm:h-10 sm:w-10"
-                                    />
+                                    <ChatAiOrb size="md" />
+
+                                    <div
+                                        class="mt-3.5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-[11px] font-medium text-foreground shadow-xs backdrop-blur-md"
+                                    >
+                                        <span class="relative flex h-2 w-2">
+                                            <span
+                                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                                            />
+                                            <span
+                                                class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"
+                                            />
+                                        </span>
+                                        <span class="text-muted-foreground"
+                                            >Echo Assistant</span
+                                        >
+                                        <span class="h-3 w-px bg-border/80" />
+                                        <span class="font-semibold text-primary"
+                                            >Online</span
+                                        >
+                                    </div>
                                 </div>
 
                                 <!-- Greeting -->
-                                <div class="welcome-greeting">
+                                <div
+                                    class="welcome-greeting space-y-1.5 text-center"
+                                >
                                     <p
-                                        class="text-xs font-medium tracking-wide text-primary sm:text-sm"
+                                        class="text-xs font-semibold tracking-wider text-primary uppercase sm:text-sm"
                                     >
                                         {{ greetingLine }}
                                     </p>
-                                    <h2
-                                        class="mt-1 text-xl font-bold tracking-tight text-foreground sm:mt-1.5 sm:text-3xl"
+                                    <h1
+                                        class="text-2xl font-black tracking-tight text-foreground sm:text-4xl"
                                     >
-                                        How can I help you today?
-                                    </h2>
+                                        How can I help you
+                                        <span
+                                            class="bg-gradient-to-r from-primary via-purple-400 to-cyan-400 bg-clip-text text-transparent"
+                                            >today?</span
+                                        >
+                                    </h1>
+                                    <p
+                                        class="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground/80 sm:text-[13px]"
+                                    >
+                                        Ask about assignments, review upcoming
+                                        exams, track your progress, or get
+                                        personalized study help.
+                                    </p>
                                 </div>
 
-                                <!-- Centered input -->
+                                <!-- Centered input card -->
                                 <form
                                     v-if="aiChatEnabled"
                                     data-tour="chats-composer"
-                                    class="welcome-input mt-5 w-full max-w-xl sm:mt-8"
+                                    class="welcome-input mt-5 w-full max-w-2xl sm:mt-7"
                                     @submit.prevent="sendMessage"
                                 >
                                     <div
@@ -1276,7 +1371,7 @@ onBeforeUnmount(() => {
                                             </div>
                                             <button
                                                 type="button"
-                                                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                                class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                                 :aria-label="`Remove ${att.name}`"
                                                 @click="removeAttachment(index)"
                                             >
@@ -1284,44 +1379,74 @@ onBeforeUnmount(() => {
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="group relative">
+                                    <div
+                                        class="group relative rounded-2xl border border-border/60 bg-card/80 p-2 shadow-xl shadow-black/5 backdrop-blur-xl transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20"
+                                    >
                                         <Textarea
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
                                             placeholder="Ask about assignments, exams, or your study progress..."
                                             :maxlength="MAX_MESSAGE_CHARACTERS"
-                                            class="min-h-[56px] resize-none rounded-2xl border-border/40 bg-background/70 py-3 pr-12 pl-12 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30 sm:min-h-[72px] sm:py-3.5 sm:pr-14 sm:pl-14"
+                                            class="min-h-[56px] w-full resize-none border-0 bg-transparent px-3 pt-2.5 pb-2 text-[14px] leading-relaxed shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0 sm:min-h-[72px] sm:text-[15px]"
                                             @keydown="handleComposerKeydown"
                                         />
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            class="absolute bottom-2.5 left-2.5 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
-                                            title="Attach files"
-                                            :disabled="isLoading"
-                                            @click="openFileDialog"
+                                        <div
+                                            class="flex items-center justify-between border-t border-border/30 px-1 pt-1.5"
                                         >
-                                            <Paperclip class="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            size="icon"
-                                            class="absolute right-2.5 bottom-2.5 h-9 w-9 rounded-xl shadow-md transition-transform duration-200 group-focus-within:scale-105"
-                                            :disabled="
-                                                !inputMessage.trim() ||
-                                                isLoading
-                                            "
-                                        >
-                                            <Send class="h-4 w-4" />
-                                        </Button>
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="h-8 cursor-pointer gap-1.5 rounded-lg px-2 text-xs font-normal text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                    title="Attach files"
+                                                    :disabled="isLoading"
+                                                    @click="openFileDialog"
+                                                >
+                                                    <Paperclip
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                    <span
+                                                        class="hidden sm:inline"
+                                                        >Attach</span
+                                                    >
+                                                </Button>
+                                                <span
+                                                    class="hidden text-[11px] text-muted-foreground/60 sm:inline"
+                                                >
+                                                    Drop files or images (up to
+                                                    5 MB)
+                                                </span>
+                                            </div>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <span
+                                                    class="hidden text-[11px] text-muted-foreground/50 sm:inline"
+                                                >
+                                                    Press ↵ to send
+                                                </span>
+                                                <Button
+                                                    type="submit"
+                                                    size="icon-sm"
+                                                    class="h-8 w-8 cursor-pointer rounded-lg shadow-sm transition-transform duration-200 active:scale-95 enabled:hover:scale-105"
+                                                    :disabled="
+                                                        !inputMessage.trim() ||
+                                                        isLoading
+                                                    "
+                                                >
+                                                    <Send class="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <p
-                                        class="mt-3 text-[11px] text-muted-foreground/60"
+                                        class="mt-2.5 text-center text-[11px] text-muted-foreground/60"
                                     >
-                                        Drag in files or use the paperclip. Echo
-                                        can make mistakes — double-check
-                                        important answers.
+                                        Echo can make mistakes — verify
+                                        important exam and grade details.
                                     </p>
                                 </form>
                                 <div
@@ -1333,20 +1458,88 @@ onBeforeUnmount(() => {
                                     {{ maintenanceMessage }}
                                 </div>
 
-                                <!-- Suggestions -->
+                                <!-- Suggestions (Interactive Cards) -->
                                 <div
                                     v-if="aiChatEnabled"
                                     data-tour="chats-suggestions"
-                                    class="welcome-suggestions mt-4 flex flex-wrap justify-center gap-1.5 sm:mt-6"
+                                    class="welcome-suggestions mt-6 w-full max-w-2xl sm:mt-8"
                                 >
-                                    <button
-                                        v-for="(chip, i) in suggestions"
-                                        :key="i"
-                                        @click="useSuggestion(chip.message)"
-                                        class="cursor-pointer rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-95"
+                                    <div
+                                        class="mb-2.5 flex items-center justify-between px-1 text-left"
                                     >
-                                        {{ chip.label }}
-                                    </button>
+                                        <span
+                                            class="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                        >
+                                            Suggested prompts
+                                        </span>
+                                        <span
+                                            class="text-[11px] text-muted-foreground/60"
+                                        >
+                                            Click to start
+                                        </span>
+                                    </div>
+                                    <div
+                                        class="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+                                    >
+                                        <button
+                                            v-for="(chip, i) in suggestions"
+                                            :key="i"
+                                            type="button"
+                                            @click="useSuggestion(chip.message)"
+                                            class="group relative flex cursor-pointer flex-col items-start gap-1 rounded-xl border border-border/50 bg-card/50 p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/90 hover:shadow-md active:scale-[0.98]"
+                                        >
+                                            <div
+                                                class="flex w-full items-center justify-between"
+                                            >
+                                                <div
+                                                    class="flex items-center gap-2"
+                                                >
+                                                    <div
+                                                        :class="[
+                                                            'flex h-7 w-7 items-center justify-center rounded-lg border',
+                                                            getSuggestionMeta(
+                                                                chip,
+                                                            ).iconBg,
+                                                        ]"
+                                                    >
+                                                        <component
+                                                            :is="
+                                                                getSuggestionMeta(
+                                                                    chip,
+                                                                ).icon
+                                                            "
+                                                            :class="[
+                                                                'h-3.5 w-3.5',
+                                                                getSuggestionMeta(
+                                                                    chip,
+                                                                ).iconColor,
+                                                            ]"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
+                                                    >
+                                                        {{
+                                                            getSuggestionMeta(
+                                                                chip,
+                                                            ).title
+                                                        }}
+                                                    </span>
+                                                </div>
+                                                <ArrowUpRight
+                                                    class="h-3.5 w-3.5 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
+                                                />
+                                            </div>
+                                            <p
+                                                class="line-clamp-1 pl-9 text-[11px] text-muted-foreground/80"
+                                            >
+                                                {{
+                                                    getSuggestionMeta(chip)
+                                                        .description
+                                                }}
+                                            </p>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
