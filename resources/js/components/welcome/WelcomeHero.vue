@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { ArrowRight } from 'lucide-vue-next';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
 import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
 
@@ -47,11 +48,29 @@ withDefaults(
             "
             class="relative z-10 max-w-2xl py-4 sm:py-8"
         >
-            <p
-                class="mb-6 text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+            <a
+                href="#interactive-echo"
+                class="group mb-6 inline-flex items-center gap-2.5 rounded-full border border-[#D97757]/25 bg-[#D97757]/[0.06] py-1 pr-4 pl-1.5 text-xs font-medium text-foreground shadow-xs backdrop-blur-sm transition-all hover:border-[#D97757]/50 hover:bg-[#D97757]/12"
             >
-                A school-ready learning platform
-            </p>
+                <div
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
+                >
+                    <ChatAiOrb
+                        size="status"
+                        animate-idle
+                        color="#D97757"
+                        class="h-4 w-4"
+                    />
+                </div>
+                <span class="tracking-wide">
+                    Meet Echo · Intelligent Study Companion
+                </span>
+                <span
+                    class="font-mono text-[10px] text-[#D97757] transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                    >→</span
+                >
+            </a>
             <h1
                 id="welcome-heading"
                 class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.4rem]"

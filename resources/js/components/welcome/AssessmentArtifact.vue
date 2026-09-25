@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { CheckCircle2, Flame, Lightbulb, Sparkles } from 'lucide-vue-next';
+import { CheckCircle2, Flame, Lightbulb } from 'lucide-vue-next';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 </script>
 
 <template>
@@ -92,8 +93,13 @@ import { CheckCircle2, Flame, Lightbulb, Sparkles } from 'lucide-vue-next';
                     <span
                         class="flex items-center gap-1.5 font-bold text-[#D97757]"
                     >
-                        <Sparkles class="h-3.5 w-3.5" />
-                        AI Drafted Feedback
+                        <ChatAiOrb
+                            size="status"
+                            animate-idle
+                            color="#D97757"
+                            class="h-3.5 w-3.5"
+                        />
+                        Echo AI Drafted Feedback
                     </span>
                     <span
                         class="rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[10px] font-semibold text-[#D97757]"

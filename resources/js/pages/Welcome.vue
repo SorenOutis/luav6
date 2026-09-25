@@ -10,6 +10,7 @@ import {
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import DualPerspectiveShowcase from '@/components/welcome/DualPerspectiveShowcase.vue';
+import EchoInteractiveDemo from '@/components/welcome/EchoInteractiveDemo.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -300,6 +301,19 @@ const webSiteJsonLd = [
                     :dashboard="() => dashboard().url"
                     :login="() => login().url"
                 />
+            </Motion>
+
+            <Motion
+                :initial="
+                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                "
+                :in-view="
+                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                "
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition(0.06)"
+            >
+                <EchoInteractiveDemo />
             </Motion>
 
             <Motion
