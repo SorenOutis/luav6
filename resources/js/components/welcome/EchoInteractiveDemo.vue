@@ -96,14 +96,8 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
         </div>
 
         <div
-            class="surface-card relative mx-auto mt-12 max-w-3xl overflow-hidden rounded-2xl border border-border/80 bg-card/95 p-6 shadow-xl backdrop-blur-md sm:p-8"
+            class="surface-card relative mx-auto mt-12 max-w-3xl overflow-hidden rounded-2xl border border-border/80 bg-card/95 p-4 shadow-[0_20px_45px_-12px_rgba(26,26,30,0.1)] backdrop-blur-xl sm:p-7 md:p-8 dark:shadow-[0_24px_50px_-15px_rgba(0,0,0,0.6)]"
         >
-            <!-- Ambient focal background -->
-            <div
-                class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-[#D97757]/10 blur-3xl"
-                aria-hidden="true"
-            />
-
             <!-- Top Row: Interactive Persona & Status -->
             <div
                 class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left"
@@ -170,7 +164,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                     :key="prompt.id"
                     type="button"
                     :disabled="isGenerating && selectedPrompt.id === prompt.id"
-                    class="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all"
+                    class="cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-[0.97]"
                     :class="
                         selectedPrompt.id === prompt.id
                             ? 'border-[#D97757] bg-[#D97757]/10 text-[#D97757] shadow-xs'

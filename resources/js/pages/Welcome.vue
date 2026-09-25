@@ -574,15 +574,9 @@ const webSiteJsonLd = [
             >
                 <section
                     id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
+                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl border border-border/80 bg-card px-6 py-10 text-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
                     aria-labelledby="cta-heading"
                 >
-                    <!-- Background ambient terracotta glow -->
-                    <div
-                        class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-[#D97757]/20 blur-3xl"
-                        aria-hidden="true"
-                    ></div>
-
                     <div
                         class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                     >
@@ -594,13 +588,13 @@ const webSiteJsonLd = [
                             </p>
                             <h2
                                 id="cta-heading"
-                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
+                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] text-foreground sm:text-4xl"
                             >
                                 If assessment matters to your school, let’s
                                 talk.
                             </h2>
                             <p
-                                class="mt-4 text-sm text-primary-foreground/70 sm:text-base"
+                                class="mt-4 text-sm text-muted-foreground sm:text-base"
                             >
                                 Start with a teacher, a class, or a whole
                                 school.
@@ -610,7 +604,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-if="$page.props.auth?.user"
                                 :href="dashboard().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Open dashboard
                                 <ArrowRight
@@ -621,7 +615,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Create a free account
                                 <ArrowRight
@@ -629,12 +623,12 @@ const webSiteJsonLd = [
                                     aria-hidden="true"
                                 />
                             </Link>
-                            <a
-                                href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
-                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-primary-foreground/45 px-5 text-sm font-medium text-primary-foreground transition-colors hover:border-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                            <Link
+                                :href="login().url"
+                                class="inline-flex min-h-12 items-center justify-center rounded-xl border border-border/80 bg-secondary/30 px-5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
-                                Contact sales
-                            </a>
+                                Sign in
+                            </Link>
                         </div>
                     </div>
                 </section>
