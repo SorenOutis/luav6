@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 describe('ChatAiOrb', () => {
-    it('renders the harmonic ripple waves and core sphere', () => {
+    it('renders harmonic ripple waves, core sphere, and 5 echo waveform bars', () => {
         const wrapper = mount(ChatAiOrb);
 
         expect(wrapper.find('.ambient-bloom').exists()).toBe(true);
         expect(wrapper.find('.orb-sphere').exists()).toBe(true);
         expect(wrapper.findAll('.harmonic-ripple')).toHaveLength(3);
+        expect(wrapper.findAll('.echo-bar')).toHaveLength(5);
         expect(wrapper.classes()).toContain('h-24');
     });
 

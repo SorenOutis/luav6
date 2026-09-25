@@ -8,6 +8,7 @@ import {
     Bot,
     Calendar,
     ChevronDown,
+    Compass,
     FileText,
     History,
     Image as ImageIcon,
@@ -248,7 +249,7 @@ const getSuggestionMeta = (chip: {
     return {
         title: cleanLabel,
         description: chip.message,
-        icon: Sparkles,
+        icon: Compass,
         iconBg: 'bg-primary/10 border-primary/20',
         iconColor: 'text-primary',
     };

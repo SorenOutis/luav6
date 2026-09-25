@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Sparkles } from 'lucide-vue-next';
-
 withDefaults(
     defineProps<{
         size?: 'sm' | 'md' | 'lg';
@@ -20,9 +18,9 @@ withDefaults(
             'h-32 w-32': size === 'lg',
         }"
         role="img"
-        aria-label="Echo AI Presence"
+        aria-label="Echo Acoustic AI Presence"
     >
-        <!-- Concentric ambient harmonic ripples (expanding outward) -->
+        <!-- Concentric ambient harmonic ripples (expanding sound/echo waves) -->
         <span class="harmonic-ripple ripple-1" aria-hidden="true" />
         <span class="harmonic-ripple ripple-2" aria-hidden="true" />
         <span class="harmonic-ripple ripple-3" aria-hidden="true" />
@@ -33,16 +31,16 @@ withDefaults(
             aria-hidden="true"
         />
 
-        <!-- Glass Orb Core -->
+        <!-- Glass Orb Core (Acoustic Chamber) -->
         <div
-            class="orb-sphere group relative flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-2xl transition-transform duration-300 hover:scale-105 active:scale-95 sm:h-16 sm:w-16"
+            class="orb-sphere group relative flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 sm:h-16 sm:w-16"
         >
             <!-- Fluid specular gradient surface -->
             <div class="orb-aurora-mesh absolute inset-0 rounded-full" />
 
             <!-- Edge glass specular highlight -->
             <div
-                class="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/5 to-white/30"
+                class="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/5 to-white/25"
             />
 
             <!-- Subtle inner breathing glow -->
@@ -50,21 +48,23 @@ withDefaults(
                 class="orb-inner-glow pointer-events-none absolute inset-1.5 rounded-full blur-sm"
             />
 
-            <!-- Center icon -->
+            <!-- Center Graphic: Animated Echo Acoustic Waveform (Sound / Voice AI) -->
             <div
-                class="relative z-10 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                class="echo-waveform relative z-10 flex h-7 items-center justify-center gap-1 sm:h-8"
+                aria-hidden="true"
             >
-                <Sparkles
-                    class="h-6 w-6 transition-transform duration-500 group-hover:scale-110 sm:h-7 sm:w-7"
-                    stroke-width="1.75"
-                />
+                <span class="echo-bar bar-1" />
+                <span class="echo-bar bar-2" />
+                <span class="echo-bar bar-3" />
+                <span class="echo-bar bar-4" />
+                <span class="echo-bar bar-5" />
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-/* ── Harmonic Ripple Waves (Concentric Sound/Thought Frequency) ── */
+/* ── Harmonic Ripple Waves (Concentric Sound/Echo Frequency) ── */
 .harmonic-ripple {
     position: absolute;
     top: 50%;
@@ -132,7 +132,7 @@ withDefaults(
     }
 }
 
-/* ── Glass Orb Core (The Living Sphere) ── */
+/* ── Glass Orb Core (The Living Acoustic Sphere) ── */
 .orb-sphere {
     background: radial-gradient(
         circle at 35% 30%,
@@ -202,6 +202,58 @@ withDefaults(
     }
 }
 
+/* ── Echo Waveform Bars (Dynamic Acoustic AI Voice / Frequency) ── */
+.echo-bar {
+    display: inline-block;
+    width: 3px;
+    border-radius: 9999px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.7), #ffffff);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    transform-origin: center;
+    animation: echo-wave 1.5s ease-in-out infinite alternate;
+}
+
+.bar-1 {
+    height: 8px;
+    animation-delay: -0.6s;
+}
+
+.bar-2 {
+    height: 16px;
+    animation-delay: -0.3s;
+}
+
+.bar-3 {
+    height: 24px;
+    animation-delay: 0s;
+}
+
+.bar-4 {
+    height: 16px;
+    animation-delay: -0.3s;
+}
+
+.bar-5 {
+    height: 8px;
+    animation-delay: -0.6s;
+}
+
+@keyframes echo-wave {
+    0% {
+        transform: scaleY(0.4);
+        opacity: 0.45;
+    }
+    100% {
+        transform: scaleY(1.15);
+        opacity: 1;
+    }
+}
+
+.orb-sphere:hover .echo-bar {
+    animation-duration: 1s;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
     .harmonic-ripple {
@@ -217,9 +269,13 @@ withDefaults(
     .ambient-bloom,
     .orb-sphere,
     .orb-aurora-mesh,
-    .orb-inner-glow {
+    .orb-inner-glow,
+    .echo-bar {
         animation: none !important;
         transform: none !important;
+    }
+    .echo-bar {
+        opacity: 0.8;
     }
 }
 </style>
