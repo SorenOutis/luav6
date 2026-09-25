@@ -1,45 +1,16 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { readFileSync } from 'node:fs';
+import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
-const mocks = vi.hoisted(() => ({
-    options: {} as Record<string, any>,
-    inputs: ['listening', 'thinking', 'speaking', 'asleep'].map((name) => ({
-        name,
-        value: false,
-    })),
-    cleanup: vi.fn(),
-    stopRendering: vi.fn(),
-    startRendering: vi.fn(),
-    rgb: vi.fn(),
-    resize: vi.fn(),
-    setWasmUrl: vi.fn(),
-    setWasmFallbackUrl: vi.fn(),
-}));
-
-vi.mock('@rive-app/webgl2', () => ({
-    RuntimeLoader: {
-        setWasmUrl: mocks.setWasmUrl,
-        setWasmFallbackUrl: mocks.setWasmFallbackUrl,
-    },
-    Rive: class {
-        constructor(options: Record<string, any>) {
-            mocks.options = options;
-        }
-        stateMachineInputs() {
-            return mocks.inputs;
-        }
-        cleanup = mocks.cleanup;
-        stopRendering = mocks.stopRendering;
-        startRendering = mocks.startRendering;
-        resizeDrawingSurfaceToCanvas = mocks.resize;
-        viewModelInstance = { color: () => ({ rgb: mocks.rgb }) };
-    },
-}));
-
 let reduced = false;
+let hidden = false;
 let motionChanged: () => void;
 let intersect: (entries: { isIntersecting: boolean }[]) => void;
+const removeMotionListener = vi.fn();
+const observe = vi.fn();
+const disconnect = vi.fn();
 const wrappers: ReturnType<typeof mount>[] = [];
 
 function render(props = {}) {
@@ -50,11 +21,9 @@ function render(props = {}) {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    mocks.options = {};
-    mocks.inputs.forEach((input) => {
-        input.value = false;
-    });
     reduced = false;
+    hidden = false;
+    vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
     vi.stubGlobal('matchMedia', () => ({
         get matches() {
             return reduced;
@@ -62,184 +31,169 @@ beforeEach(() => {
         addEventListener: (_: string, callback: () => void) => {
             motionChanged = callback;
         },
-        removeEventListener: vi.fn(),
+        removeEventListener: removeMotionListener,
     }));
-    vi.stubGlobal(
-        'ResizeObserver',
-        class {
-            observe() {}
-            disconnect() {}
-        },
-    );
     vi.stubGlobal(
         'IntersectionObserver',
         class {
             constructor(callback: typeof intersect) {
                 intersect = callback;
             }
-            observe() {}
-            disconnect() {}
+            observe = observe;
+            disconnect = disconnect;
         },
     );
 });
 
 afterEach(() => {
     wrappers.splice(0).forEach((wrapper) => wrapper.unmount());
-    document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
-    vi.useRealTimers();
+    vi.restoreAllMocks();
 });
 
-describe('ChatAiOrb Command persona', () => {
-    it('loads Command with local WASM and applies latest state after load', async () => {
+describe('ChatAiOrb geometric wolf', () => {
+    it('renders local decorative SVG with grouped animated facets', () => {
         const wrapper = render();
-        await flushPromises();
+        expect(wrapper.find('svg[data-wolf-mark]').attributes('viewBox')).toBe(
+            '0 0 120 120',
+        );
+        expect(wrapper.attributes('aria-hidden')).toBe('true');
+        expect(wrapper.find('svg').attributes('focusable')).toBe('false');
+        expect(wrapper.find('canvas, image, img').exists()).toBe(false);
+        for (const part of [
+            'wolf-ear-left',
+            'wolf-ear-right',
+            'wolf-muzzle',
+            'wolf-spark',
+        ]) {
+            expect(wrapper.findAll(`g.${part} path`)).toHaveLength(2);
+        }
+    });
+
+    it('keeps ordinary idle static and maps each explicit state', async () => {
+        const wrapper = render();
+        expect(wrapper.attributes('data-motion')).toBe('idle');
+        for (const state of [
+            'listening',
+            'thinking',
+            'speaking',
+            'asleep',
+            'idle',
+        ] as const) {
+            await wrapper.setProps({ state });
+            expect(wrapper.attributes('data-motion')).toBe(state);
+        }
+    });
+
+    it('uses welcome motion only for opted-in idle state', async () => {
+        const wrapper = render({ animateIdle: true });
+        expect(wrapper.attributes('data-motion')).toBe('welcome');
         await wrapper.setProps({ state: 'thinking' });
-        expect(mocks.options.src).toMatch(/command-2\.0\.riv$/);
-        expect(mocks.options.stateMachines).toBe('default');
-        expect(mocks.options.autoBind).toBe(true);
-        expect(mocks.setWasmUrl).toHaveBeenCalled();
-        expect(mocks.setWasmFallbackUrl).toHaveBeenCalledWith(null);
-        mocks.options.onLoad();
-        await flushPromises();
-        expect(mocks.inputs.map((input) => input.value)).toEqual([
-            false,
-            true,
-            false,
-            false,
-        ]);
-        expect(wrapper.find('[data-persona-fallback]').exists()).toBe(false);
-        await wrapper.setProps({ state: 'speaking' });
-        expect(mocks.inputs.map((input) => input.value)).toEqual([
-            false,
-            false,
-            true,
-            false,
-        ]);
+        expect(wrapper.attributes('data-motion')).toBe('thinking');
         await wrapper.setProps({ state: 'idle' });
-        expect(mocks.inputs.every((input) => !input.value)).toBe(true);
+        expect(wrapper.attributes('data-motion')).toBe('welcome');
+        await wrapper.setProps({ animateIdle: false });
+        expect(wrapper.attributes('data-motion')).toBe('idle');
     });
 
-    it('follows actual theme and pauses when offscreen', async () => {
-        render();
-        await flushPromises();
-        mocks.options.onLoad();
-        expect(mocks.rgb).toHaveBeenLastCalledWith(0, 0, 0);
-        document.documentElement.classList.add('dark');
-        await flushPromises();
-        expect(mocks.rgb).toHaveBeenLastCalledWith(255, 255, 255);
-        intersect([{ isIntersecting: false }]);
-        expect(mocks.stopRendering).toHaveBeenCalled();
-        intersect([{ isIntersecting: true }]);
-        expect(mocks.startRendering).toHaveBeenCalled();
-    });
-
-    it('applies custom system accent color when provided and updates dynamically', async () => {
-        const wrapper = render({ color: '#f59e0b' });
-        await flushPromises();
-        mocks.options.onLoad();
-        expect(mocks.rgb).toHaveBeenLastCalledWith(245, 158, 11);
+    it('inherits theme color and supports reactive brand overrides', async () => {
+        const wrapper = render();
+        expect(wrapper.classes()).toContain('text-foreground');
+        expect(wrapper.element.style.color).toBe('');
+        await wrapper.setProps({ color: '#f59e0b' });
+        expect(wrapper.element.style.color).toBe('rgb(245, 158, 11)');
         await wrapper.setProps({ color: '#ea580c' });
-        expect(mocks.rgb).toHaveBeenLastCalledWith(234, 88, 12);
+        expect(wrapper.element.style.color).toBe('rgb(234, 88, 12)');
+        await wrapper.setProps({ color: undefined });
+        expect(wrapper.element.style.color).toBe('');
     });
 
-    it('uses static fallback for reduced motion and reacts to preference changes', async () => {
+    it('applies reduced motion variant on preference changes without hiding wolf', async () => {
         reduced = true;
-        const wrapper = render();
-        await flushPromises();
-        expect(mocks.options.src).toBeUndefined();
-        expect(wrapper.find('[data-persona-fallback]').exists()).toBe(true);
+        const wrapper = render({ animateIdle: true });
+        await nextTick();
+        expect(wrapper.classes()).toContain('is-reduced');
+        expect(wrapper.find('[data-wolf-mark]').exists()).toBe(true);
         reduced = false;
         motionChanged();
-        await flushPromises();
-        mocks.options.onLoad();
+        await nextTick();
+        expect(wrapper.classes()).not.toContain('is-reduced');
         reduced = true;
         motionChanged();
-        await flushPromises();
-        expect(mocks.stopRendering).toHaveBeenCalled();
-        expect(wrapper.find('[data-persona-fallback]').exists()).toBe(true);
+        await nextTick();
+        expect(wrapper.classes()).toContain('is-reduced');
     });
 
-    it('cleans up failed loads and retains fallback', async () => {
-        const wrapper = render();
-        await flushPromises();
-        mocks.options.onLoadError();
-        await flushPromises();
-        expect(mocks.cleanup).toHaveBeenCalledOnce();
-        expect(wrapper.find('[data-persona-fallback]').exists()).toBe(true);
-    });
-
-    it('cleans up on unmount and ignores late load callbacks', async () => {
-        const wrapper = render();
-        await flushPromises();
-        wrapper.unmount();
-        mocks.options.onLoad();
-        expect(mocks.cleanup).toHaveBeenCalledOnce();
-        expect(mocks.resize).not.toHaveBeenCalled();
-    });
-
-    it('does not create runtime when unmounted during lazy import', async () => {
-        const wrapper = render();
-        wrapper.unmount();
-        await flushPromises();
-        expect(mocks.options.src).toBeUndefined();
-    });
-
-    it('cycles actual listening input for two seconds with half-second idle rest', async () => {
-        const wrapper = render({ animateIdle: true });
-        await flushPromises();
-        vi.useFakeTimers();
-        mocks.options.onLoad();
-        expect(mocks.inputs[0].value).toBe(true);
-        vi.advanceTimersByTime(1999);
-        expect(mocks.inputs[0].value).toBe(true);
-        vi.advanceTimersByTime(1);
-        expect(mocks.inputs.every((input) => !input.value)).toBe(true);
-        vi.advanceTimersByTime(499);
-        expect(mocks.inputs[0].value).toBe(false);
-        vi.advanceTimersByTime(1);
-        expect(mocks.inputs[0].value).toBe(true);
-        await wrapper.setProps({ state: 'thinking' });
-        expect(vi.getTimerCount()).toBe(0);
-        expect(mocks.inputs.map((input) => input.value)).toEqual([
-            false,
-            true,
-            false,
-            false,
-        ]);
-        wrapper.unmount();
-    });
-
-    it('stops welcome timers offscreen, for reduced motion, and on unmount', async () => {
-        const wrapper = render({ animateIdle: true });
-        await flushPromises();
-        vi.useFakeTimers();
-        mocks.options.onLoad();
+    it('pauses offscreen and resumes only when visible in active document', async () => {
+        const wrapper = render({ state: 'thinking' });
+        expect(observe).toHaveBeenCalledWith(wrapper.element);
         intersect([{ isIntersecting: false }]);
-        expect(vi.getTimerCount()).toBe(0);
+        await nextTick();
+        expect(wrapper.classes()).toContain('is-paused');
+        hidden = true;
+        document.dispatchEvent(new Event('visibilitychange'));
         intersect([{ isIntersecting: true }]);
-        expect(mocks.inputs[0].value).toBe(true);
-        reduced = true;
-        motionChanged();
-        expect(vi.getTimerCount()).toBe(0);
-        expect(mocks.inputs[0].value).toBe(false);
-        reduced = false;
-        motionChanged();
-        expect(vi.getTimerCount()).toBe(1);
-        wrapper.unmount();
-        expect(vi.getTimerCount()).toBe(0);
+        await nextTick();
+        expect(wrapper.classes()).toContain('is-paused');
+        hidden = false;
+        document.dispatchEvent(new Event('visibilitychange'));
+        await nextTick();
+        expect(wrapper.classes()).not.toContain('is-paused');
     });
 
-    it('supports welcome and compact status sizes without decorative effects', () => {
+    it('pauses when mounted in hidden document', async () => {
+        hidden = true;
+        const wrapper = render({ animateIdle: true });
+        await nextTick();
+        expect(wrapper.classes()).toContain('is-paused');
+    });
+
+    it('supports browsers without IntersectionObserver', () => {
+        vi.stubGlobal('IntersectionObserver', undefined);
+        expect(render().find('[data-wolf-mark]').exists()).toBe(true);
+    });
+
+    it('removes listeners and disconnects observer on unmount', () => {
+        const removeDocumentListener = vi.spyOn(
+            document,
+            'removeEventListener',
+        );
+        render();
+        wrappers.pop()!.unmount();
+        expect(removeMotionListener).toHaveBeenCalledWith(
+            'change',
+            motionChanged,
+        );
+        expect(removeDocumentListener).toHaveBeenCalledWith(
+            'visibilitychange',
+            motionChanged,
+        );
+        expect(disconnect).toHaveBeenCalledOnce();
+    });
+
+    it('preserves welcome and compact status sizes', () => {
         expect(render().classes()).toContain('h-24');
         expect(render({ size: 'sm' }).classes()).toContain('h-20');
-        const large = render({ size: 'lg' });
-        expect(large.classes()).toContain('h-32');
-        expect(large.find('canvas').classes()).toContain('scale-150');
-        const status = render({ size: 'status' });
-        expect(status.classes()).toContain('h-7');
-        expect(status.find('canvas').classes()).not.toContain('scale-150');
-        expect(status.attributes('aria-hidden')).toBe('true');
-        expect(status.find('.orb-sphere').exists()).toBe(false);
+        expect(render({ size: 'lg' }).classes()).toContain('h-32');
+        expect(render({ size: 'status' }).classes()).toContain('h-7');
+    });
+
+    it('gates CSS motion and preserves welcome rest', () => {
+        const source = readFileSync(
+            'resources/js/components/ChatAiOrb.vue',
+            'utf8',
+        );
+        expect(source).toContain('wolf-to-circle 3.6s');
+        expect(source).toContain('wolf-circle-reveal 3.6s');
+        expect(source).toContain('wolf-spark-reveal 3.6s');
+        expect(source).toContain('wolf-fade-fox 3.6s');
+        expect(source).toContain('wolf-fade-spark 3.6s');
+        expect(source).toContain(".is-reduced [data-motion='welcome']");
+        expect(source).toContain('.is-paused .wolf-spark');
+        expect(render().find('circle.wolf-circle').attributes('r')).toBe('30');
+        expect(render().find('g.wolf-spark').exists()).toBe(true);
+        expect(source).not.toMatch(
+            /@rive-app|radial-gradient|setInterval|setTimeout/,
+        );
     });
 });

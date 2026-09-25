@@ -1546,18 +1546,15 @@ onBeforeUnmount(() => {
                                     class="h-3.5 w-3.5"
                                 />
                                 <ChatAiOrb
-                                    v-else-if="msg.typing && isLoading"
+                                    v-else
                                     size="status"
-                                    state="thinking"
+                                    :state="
+                                        msg.typing && isLoading
+                                            ? 'thinking'
+                                            : 'idle'
+                                    "
                                     :color="brandAccentColor"
                                 />
-                                <img
-                                    v-else-if="branding.logoUrl"
-                                    :src="branding.logoUrl"
-                                    alt="Echo"
-                                    class="h-full w-full object-contain p-1"
-                                />
-                                <Bot v-else class="h-3.5 w-3.5 text-primary" />
                             </div>
                             <div
                                 v-if="msg.role === 'user'"
