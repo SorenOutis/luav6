@@ -13,6 +13,11 @@ use Stringable;
 
 class CreateAssignmentTool extends PendingWriteTool implements Tool
 {
+    public function name(): string
+    {
+        return 'create_assignment';
+    }
+
     public function description(): Stringable|string
     {
         return 'Prepare an assignment for human review. This tool never creates the assignment directly. It creates a server-issued approval card showing the exact sections, title, due date, and instructions; only a UI approval can execute it.';

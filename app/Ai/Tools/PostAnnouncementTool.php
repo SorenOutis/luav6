@@ -10,6 +10,11 @@ use Stringable;
 
 class PostAnnouncementTool extends PendingWriteTool implements Tool
 {
+    public function name(): string
+    {
+        return 'post_announcement';
+    }
+
     public function description(): Stringable|string
     {
         return 'Prepare an active announcement for human review. This tool does not post it. It creates a server-issued approval card containing the exact title, body, link, and visibility; only a UI approval can publish it.';

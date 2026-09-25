@@ -26,6 +26,7 @@ import {
 } from 'vue';
 import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import ChatThinkingIndicator from '@/components/ChatThinkingIndicator.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -1176,11 +1177,16 @@ watch(inputMessage, () => {
                                         <Sparkles
                                             class="h-3 w-3 shrink-0 text-primary/70"
                                             :class="{
-                                                'animate-pulse':
+                                                'motion-safe:animate-pulse':
                                                     msg.typing && !msg.content,
                                             }"
                                         />
-                                        <span>{{ thinkingLabel(msg) }}</span>
+                                        <ChatThinkingIndicator
+                                            v-if="msg.typing && !msg.content"
+                                        />
+                                        <span v-else>{{
+                                            thinkingLabel(msg)
+                                        }}</span>
                                         <ChevronDown
                                             class="h-3 w-3 shrink-0 transition-transform duration-200"
                                             :class="{
@@ -1214,27 +1220,10 @@ watch(inputMessage, () => {
                                     "
                                     class="max-w-full rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3 py-2 text-xs leading-relaxed text-foreground shadow-xs"
                                 >
-                                    <div
+                                    <ChatThinkingIndicator
                                         v-if="msg.typing && !msg.content"
-                                        class="flex items-center gap-1.5 py-0.5"
-                                    >
-                                        <span
-                                            class="text-[10px] font-medium text-muted-foreground/80"
-                                            >Thinking</span
-                                        >
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                            style="animation-delay: 0ms"
-                                        ></span>
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                            style="animation-delay: 150ms"
-                                        ></span>
-                                        <span
-                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                            style="animation-delay: 300ms"
-                                        ></span>
-                                    </div>
+                                        class="py-0.5 text-[10px] font-medium text-muted-foreground"
+                                    />
                                     <span
                                         v-else-if="msg.typing"
                                         class="whitespace-pre-wrap"
