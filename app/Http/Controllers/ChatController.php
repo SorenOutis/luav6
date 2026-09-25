@@ -46,8 +46,7 @@ class ChatController extends Controller
 
     /**
      * Build the client-facing error structure. The correlation `id` is always
-     * returned; the exception class and raw message are only exposed when
-     * APP_DEBUG is enabled, never to students.
+     * returned; exception details remain in server logs even in debug mode.
      *
      * @return array{id: string, type: string|null, message: string}
      */
@@ -55,8 +54,8 @@ class ChatController extends Controller
     {
         return [
             'id' => $errorId,
-            'type' => config('app.debug') ? $e::class : null,
-            'message' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
+            'type' => null,
+            'message' => 'An unexpected error occurred.',
         ];
     }
 
@@ -274,19 +273,8 @@ class ChatController extends Controller
             }
 
             $errorId = $this->logError('Chat Stream Error', $e, $loggingContext);
-            $payload = $this->errorPayload($e, $errorId);
 
             $message = 'Sorry, something went wrong. Please try again in a moment.';
-
-            // Surface the correlation id so the failure can be reported and
-            // matched to a log line; expose the raw detail only to admins or
-            // when APP_DEBUG is enabled.
-            if ($request->user()?->is_admin || config('app.debug')) {
-                $message .= " (Reference: {$payload['id']})";
-                if ($payload['message'] !== 'An unexpected error occurred.') {
-                    $message .= " — {$payload['message']}";
-                }
-            }
 
             return AiSseResponse::from($this->chatService->streamText($message));
         }

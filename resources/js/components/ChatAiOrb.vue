@@ -1,281 +1,243 @@
 <script setup lang="ts">
-withDefaults(
+import type { Rive } from '@rive-app/webgl2';
+import wasmUrl from '@rive-app/webgl2/rive.wasm?url';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+const props = withDefaults(
     defineProps<{
-        size?: 'sm' | 'md' | 'lg';
+        size?: 'sm' | 'md' | 'lg' | 'status';
+        state?: 'idle' | 'listening' | 'thinking' | 'speaking' | 'asleep';
+        animateIdle?: boolean;
+        color?: string;
     }>(),
-    {
-        size: 'md',
-    },
+    { size: 'md', state: 'idle', animateIdle: false },
 );
+
+// Command asset and input contract from Vercel AI Elements Persona.
+const source =
+    'https://ejiidnob33g9ap1r.public.blob.vercel-storage.com/command-2.0.riv';
+const canvas = ref<HTMLCanvasElement>();
+const ready = ref(false);
+const reducedMotion = ref(false);
+let rive: Rive | undefined;
+let disposed = false;
+let visible = true;
+let initializing = false;
+let failed = false;
+let motionQuery: MediaQueryList | undefined;
+let resizeObserver: ResizeObserver | undefined;
+let visibilityObserver: IntersectionObserver | undefined;
+let themeObserver: MutationObserver | undefined;
+
+let welcomeTimer: ReturnType<typeof setTimeout> | undefined;
+
+function parseRgb(colorStr?: string): [number, number, number] | null {
+    if (!colorStr) return null;
+    const clean = colorStr.trim();
+    const hexMatch = clean.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch) {
+        const hex = hexMatch[1];
+        if (hex.length === 3) {
+            return [
+                parseInt(hex[0] + hex[0], 16),
+                parseInt(hex[1] + hex[1], 16),
+                parseInt(hex[2] + hex[2], 16),
+            ];
+        }
+        return [
+            parseInt(hex.slice(0, 2), 16),
+            parseInt(hex.slice(2, 4), 16),
+            parseInt(hex.slice(4, 6), 16),
+        ];
+    }
+    const rgbMatch = clean.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (rgbMatch) {
+        return [
+            parseInt(rgbMatch[1], 10),
+            parseInt(rgbMatch[2], 10),
+            parseInt(rgbMatch[3], 10),
+        ];
+    }
+    return null;
+}
+
+function clearWelcomeTimer() {
+    clearTimeout(welcomeTimer);
+    welcomeTimer = undefined;
+}
+
+function applyState(state: typeof props.state) {
+    if (!ready.value || !rive) return;
+    for (const input of rive.stateMachineInputs('default') ?? []) {
+        if (
+            ['listening', 'thinking', 'speaking', 'asleep'].includes(input.name)
+        ) {
+            input.value = input.name === state;
+        }
+    }
+}
+
+function syncState() {
+    clearWelcomeTimer();
+    const canCycle =
+        ready.value &&
+        props.animateIdle &&
+        props.state === 'idle' &&
+        !reducedMotion.value &&
+        !document.hidden &&
+        visible &&
+        !disposed;
+    if (!canCycle) {
+        applyState(props.state);
+        return;
+    }
+
+    // Welcome preview uses Rive's own transitions, not a microphone state.
+    function cycle(listening: boolean) {
+        applyState(listening ? 'listening' : 'idle');
+        welcomeTimer = setTimeout(
+            () => cycle(!listening),
+            listening ? 2000 : 500,
+        );
+    }
+    cycle(true);
+}
+
+function syncTheme() {
+    const custom = parseRgb(props.color);
+    if (custom) {
+        rive?.viewModelInstance
+            ?.color('color')
+            ?.rgb(custom[0], custom[1], custom[2]);
+        return;
+    }
+    const color = document.documentElement.classList.contains('dark') ? 255 : 0;
+    rive?.viewModelInstance?.color('color')?.rgb(color, color, color);
+}
+
+function syncPlayback() {
+    syncState();
+    if (!ready.value || !rive) return;
+    if (reducedMotion.value || document.hidden || !visible) {
+        rive.stopRendering();
+    } else {
+        rive.startRendering();
+    }
+}
+
+function handleFailure() {
+    clearWelcomeTimer();
+    failed = true;
+    ready.value = false;
+    rive?.cleanup();
+    rive = undefined;
+}
+
+async function initialize() {
+    if (disposed || initializing || rive || failed || reducedMotion.value)
+        return;
+    initializing = true;
+    try {
+        const { Rive, RuntimeLoader } = await import('@rive-app/webgl2');
+        if (disposed || reducedMotion.value || !canvas.value) return;
+        RuntimeLoader.setWasmUrl(wasmUrl);
+        RuntimeLoader.setWasmFallbackUrl(null);
+        rive = new Rive({
+            canvas: canvas.value,
+            src: source,
+            stateMachines: 'default',
+            autoBind: true,
+            autoplay: true,
+            onLoad: () => {
+                if (disposed || !rive) return;
+                ready.value = true;
+                rive.resizeDrawingSurfaceToCanvas();
+                syncTheme();
+                syncPlayback();
+            },
+            onLoadError: handleFailure,
+        });
+    } catch {
+        handleFailure();
+    } finally {
+        initializing = false;
+    }
+}
+
+function syncMotion() {
+    reducedMotion.value = motionQuery?.matches ?? false;
+    syncPlayback();
+    if (!reducedMotion.value) void initialize();
+}
+
+function resize() {
+    rive?.resizeDrawingSurfaceToCanvas();
+}
+
+watch(() => [props.state, props.animateIdle], syncState);
+watch(() => props.color, syncTheme);
+
+onMounted(() => {
+    motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    motionQuery.addEventListener('change', syncMotion);
+    document.addEventListener('visibilitychange', syncPlayback);
+    window.addEventListener('resize', resize);
+    themeObserver = new MutationObserver(syncTheme);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+    });
+    if (canvas.value) {
+        resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(canvas.value);
+        visibilityObserver = new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting;
+            syncPlayback();
+        });
+        visibilityObserver.observe(canvas.value);
+    }
+    syncMotion();
+});
+
+onBeforeUnmount(() => {
+    disposed = true;
+    clearWelcomeTimer();
+    motionQuery?.removeEventListener('change', syncMotion);
+    document.removeEventListener('visibilitychange', syncPlayback);
+    window.removeEventListener('resize', resize);
+    resizeObserver?.disconnect();
+    visibilityObserver?.disconnect();
+    themeObserver?.disconnect();
+    rive?.cleanup();
+    rive = undefined;
+});
 </script>
 
 <template>
     <div
-        class="relative flex items-center justify-center select-none"
+        class="relative shrink-0 text-foreground select-none"
         :class="{
             'h-24 w-24 sm:h-28 sm:w-28': size === 'md',
             'h-20 w-20': size === 'sm',
             'h-32 w-32': size === 'lg',
+            'h-7 w-7': size === 'status',
         }"
-        role="img"
-        aria-label="Echo Acoustic AI Presence"
+        aria-hidden="true"
     >
-        <!-- Concentric ambient harmonic ripples (expanding sound/echo waves) -->
-        <span class="harmonic-ripple ripple-1" aria-hidden="true" />
-        <span class="harmonic-ripple ripple-2" aria-hidden="true" />
-        <span class="harmonic-ripple ripple-3" aria-hidden="true" />
-
-        <!-- Soft diffuse background bloom -->
-        <div
-            class="ambient-bloom pointer-events-none absolute inset-0 -m-6 rounded-full blur-2xl transition-all duration-700 sm:-m-10"
-            aria-hidden="true"
+        <canvas
+            ref="canvas"
+            class="h-full w-full"
+            :class="{
+                invisible: !ready || reducedMotion,
+                'scale-150': size === 'lg',
+            }"
         />
-
-        <!-- Glass Orb Core (Acoustic Chamber) -->
-        <div
-            class="orb-sphere group relative flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 sm:h-16 sm:w-16"
+        <span
+            v-if="!ready || reducedMotion"
+            class="absolute inset-0 flex items-center justify-center font-mono text-[1.5em]"
+            :style="props.color ? { color: props.color } : undefined"
+            data-persona-fallback
+            >E</span
         >
-            <!-- Fluid specular gradient surface -->
-            <div class="orb-aurora-mesh absolute inset-0 rounded-full" />
-
-            <!-- Edge glass specular highlight -->
-            <div
-                class="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/5 to-white/25"
-            />
-
-            <!-- Subtle inner breathing glow -->
-            <div
-                class="orb-inner-glow pointer-events-none absolute inset-1.5 rounded-full blur-sm"
-            />
-
-            <!-- Center Graphic: Animated Echo Acoustic Waveform (Sound / Voice AI) -->
-            <div
-                class="echo-waveform relative z-10 flex h-7 items-center justify-center gap-1 sm:h-8"
-                aria-hidden="true"
-            >
-                <span class="echo-bar bar-1" />
-                <span class="echo-bar bar-2" />
-                <span class="echo-bar bar-3" />
-                <span class="echo-bar bar-4" />
-                <span class="echo-bar bar-5" />
-            </div>
-        </div>
     </div>
 </template>
-
-<style scoped>
-/* ── Harmonic Ripple Waves (Concentric Sound/Echo Frequency) ── */
-.harmonic-ripple {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    border-radius: 9999px;
-    border: 1px solid
-        color-mix(in srgb, var(--color-primary, #6366f1) 35%, transparent);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    animation: ripple-pulse 4.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-}
-
-.ripple-1 {
-    width: 80px;
-    height: 80px;
-    animation-delay: 0s;
-}
-
-.ripple-2 {
-    width: 80px;
-    height: 80px;
-    animation-delay: 1.5s;
-}
-
-.ripple-3 {
-    width: 80px;
-    height: 80px;
-    animation-delay: 3s;
-}
-
-@keyframes ripple-pulse {
-    0% {
-        width: 60px;
-        height: 60px;
-        opacity: 0.7;
-        transform: translate(-50%, -50%) scale(0.9);
-    }
-    100% {
-        width: 170px;
-        height: 170px;
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(1.05);
-    }
-}
-
-/* ── Ambient Bloom (Diffuse color wash) ── */
-.ambient-bloom {
-    background: radial-gradient(
-        circle,
-        color-mix(in srgb, var(--color-primary, #6366f1) 40%, transparent) 0%,
-        color-mix(in srgb, #818cf8 25%, transparent) 40%,
-        transparent 70%
-    );
-    animation: bloom-breathe 4s ease-in-out infinite alternate;
-}
-
-@keyframes bloom-breathe {
-    0% {
-        opacity: 0.45;
-        transform: scale(0.95);
-    }
-    100% {
-        opacity: 0.75;
-        transform: scale(1.08);
-    }
-}
-
-/* ── Glass Orb Core (The Living Acoustic Sphere) ── */
-.orb-sphere {
-    background: radial-gradient(
-        circle at 35% 30%,
-        rgba(30, 27, 75, 0.95) 0%,
-        rgba(15, 23, 42, 0.98) 70%
-    );
-    box-shadow:
-        0 12px 32px -4px
-            color-mix(in srgb, var(--color-primary, #6366f1) 35%, transparent),
-        inset 0 1px 2px rgba(255, 255, 255, 0.4),
-        inset 0 -2px 6px rgba(0, 0, 0, 0.8);
-    animation: sphere-levitate 4s ease-in-out infinite alternate;
-}
-
-@keyframes sphere-levitate {
-    0% {
-        transform: translateY(0);
-    }
-    100% {
-        transform: translateY(-4px);
-    }
-}
-
-/* ── Aurora Mesh Surface ── */
-.orb-aurora-mesh {
-    background: conic-gradient(
-        from 0deg at 50% 50%,
-        #6366f1 0deg,
-        #8b5cf6 90deg,
-        #06b6d4 180deg,
-        #3b82f6 270deg,
-        #6366f1 360deg
-    );
-    mix-blend-mode: overlay;
-    opacity: 0.65;
-    animation: aurora-spin 12s linear infinite;
-}
-
-@keyframes aurora-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* ── Inner Glow ── */
-.orb-inner-glow {
-    background: radial-gradient(
-        circle,
-        rgba(255, 255, 255, 0.5) 0%,
-        color-mix(in srgb, var(--color-primary, #6366f1) 60%, transparent) 50%,
-        transparent 80%
-    );
-    animation: inner-breathe 3s ease-in-out infinite alternate;
-}
-
-@keyframes inner-breathe {
-    0% {
-        opacity: 0.4;
-        transform: scale(0.85);
-    }
-    100% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
-}
-
-/* ── Echo Waveform Bars (Dynamic Acoustic AI Voice / Frequency) ── */
-.echo-bar {
-    display: inline-block;
-    width: 3px;
-    border-radius: 9999px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.7), #ffffff);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-    transform-origin: center;
-    animation: echo-wave 1.5s ease-in-out infinite alternate;
-}
-
-.bar-1 {
-    height: 8px;
-    animation-delay: -0.6s;
-}
-
-.bar-2 {
-    height: 16px;
-    animation-delay: -0.3s;
-}
-
-.bar-3 {
-    height: 24px;
-    animation-delay: 0s;
-}
-
-.bar-4 {
-    height: 16px;
-    animation-delay: -0.3s;
-}
-
-.bar-5 {
-    height: 8px;
-    animation-delay: -0.6s;
-}
-
-@keyframes echo-wave {
-    0% {
-        transform: scaleY(0.4);
-        opacity: 0.45;
-    }
-    100% {
-        transform: scaleY(1.15);
-        opacity: 1;
-    }
-}
-
-.orb-sphere:hover .echo-bar {
-    animation-duration: 1s;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
-}
-
-/* ── Reduced Motion ── */
-@media (prefers-reduced-motion: reduce) {
-    .harmonic-ripple {
-        animation: none !important;
-        opacity: 0.2;
-        width: 110px;
-        height: 110px;
-    }
-    .ripple-2,
-    .ripple-3 {
-        display: none;
-    }
-    .ambient-bloom,
-    .orb-sphere,
-    .orb-aurora-mesh,
-    .orb-inner-glow,
-    .echo-bar {
-        animation: none !important;
-        transform: none !important;
-    }
-    .echo-bar {
-        opacity: 0.8;
-    }
-}
-</style>

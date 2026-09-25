@@ -14,6 +14,7 @@ use App\Services\AiChatLogger;
 use App\Services\ChatService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Streaming\Events\TextDelta;
 
@@ -31,6 +32,36 @@ beforeEach(function () {
     Setting::set('ai_provider', 'openai');
     Setting::set('openai_api_key', 'db-key');
 });
+
+it('keeps provider details out of stream replies even for admins in debug mode', function (bool $history, bool $fallback) {
+    config(['app.debug' => true]);
+    $user = User::factory()->create(['is_admin' => true]);
+    $session = $user->chatSessions()->create(['title' => 'Error handling']);
+    $exception = ProviderOverloadedException::forProvider('private-provider-id');
+    $service = mock(ChatService::class, [app(AiChatLogger::class)])->makePartial();
+    if ($fallback) {
+        $service->shouldReceive('stream')->andReturn(new StreamableAgentResponse(
+            (string) Str::uuid7(),
+            function () use ($exception) {
+                throw $exception;
+                yield;
+            },
+        ));
+        $service->shouldReceive('prompt')->andThrow($exception);
+    } else {
+        $service->shouldReceive('stream')->andThrow($exception);
+    }
+    app()->instance(ChatService::class, $service);
+
+    $response = $this->actingAs($user)->postJson(
+        $history ? route('chats.stream', $session) : route('chat.stream'),
+        ['message' => 'Hello'],
+    );
+    $response->assertSuccessful();
+    expect($response->streamedContent())
+        ->toContain('Please try again in a moment')
+        ->not->toContain('private-provider-id', 'Reference:', 'overloaded');
+})->with([[false, false], [true, false], [true, true]]);
 
 it('streams an echo response as server-sent events', function () {
     AssistantAgent::fake(['Streamed reply']);

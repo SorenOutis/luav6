@@ -156,12 +156,21 @@ const chatsTourSteps: TourStep[] = [
     },
 ];
 
-const branding = computed<{ logoUrl?: string | null; name?: string }>(
+const branding = computed<{
+    logoUrl?: string | null;
+    name?: string;
+    accentColor?: string;
+}>(
     () =>
         (page.props.schoolBranding ?? {}) as {
             logoUrl?: string | null;
             name?: string;
+            accentColor?: string;
         },
+);
+
+const brandAccentColor = computed(
+    () => branding.value.accentColor || '#f59e0b',
 );
 
 const suggestions = computed<{ label: string; message: string }[]>(() => {
@@ -1139,6 +1148,7 @@ onBeforeUnmount(() => {
             <Card
                 data-testid="chat-workspace"
                 class="relative min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-none border-0 py-0 shadow-none md:rounded-xl md:border md:border-border/40"
+                :style="{ '--school-accent': brandAccentColor }"
                 @dragenter="onDragEnter"
                 @dragover="onDragOver"
                 @dragleave="onDragLeave"
@@ -1176,11 +1186,11 @@ onBeforeUnmount(() => {
                 </transition>
 
                 <CardHeader
-                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 px-3 py-2 md:py-3 md:pr-3 md:pl-4"
+                    class="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/40 px-3 py-2 md:py-3 md:pr-3 md:pl-4"
                 >
                     <div class="flex min-w-0 items-center gap-2">
                         <div
-                            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--school-accent,#f59e0b)]/15 text-[var(--school-accent,#f59e0b)]"
                         >
                             <img
                                 v-if="branding.logoUrl"
@@ -1188,7 +1198,7 @@ onBeforeUnmount(() => {
                                 alt="Echo"
                                 class="h-5 w-5 object-contain"
                             />
-                            <AppLogoIcon v-else class="h-4 w-4 text-primary" />
+                            <AppLogoIcon v-else class="h-4 w-4" />
                         </div>
                         <div class="min-w-0">
                             <h1
@@ -1260,22 +1270,22 @@ onBeforeUnmount(() => {
                              so the welcome content can't be clipped at the top
                              on short viewports (unlike justify-center). -->
                         <div
-                            class="relative flex h-full flex-col items-center justify-center px-4 py-6 text-center sm:py-10"
+                            data-testid="chat-welcome"
+                            class="relative flex min-h-full flex-col items-center px-1 pt-2 pb-6 text-center sm:px-4 sm:py-10"
                         >
-                            <!-- Subtle ambient top gradient wash for depth -->
-                            <div
-                                class="pointer-events-none absolute -top-24 left-1/2 h-72 w-full max-w-2xl -translate-x-1/2 rounded-full bg-gradient-to-b from-primary/10 via-primary/3 to-transparent blur-3xl"
-                                aria-hidden="true"
-                            />
-
                             <div
                                 class="relative z-10 m-auto flex w-full max-w-2xl flex-col items-center"
                             >
-                                <!-- Living AI Presence (Harmonic Ripple Orb) -->
+                                <!-- Command welcome presence -->
                                 <div
-                                    class="welcome-logo mb-6 flex flex-col items-center"
+                                    class="welcome-logo flex flex-col items-center"
                                 >
-                                    <ChatAiOrb size="md" />
+                                    <ChatAiOrb
+                                        size="lg"
+                                        animate-idle
+                                        :color="brandAccentColor"
+                                        class="max-sm:h-20 max-sm:w-20"
+                                    />
                                 </div>
 
                                 <!-- Greeting -->
@@ -1283,12 +1293,12 @@ onBeforeUnmount(() => {
                                     class="welcome-greeting space-y-1.5 text-center"
                                 >
                                     <p
-                                        class="text-xs font-medium text-muted-foreground"
+                                        class="text-xs font-semibold tracking-wide text-[var(--school-accent,#f59e0b)]"
                                     >
                                         {{ greetingLine }}
                                     </p>
                                     <h1
-                                        class="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl"
+                                        class="mx-auto max-w-[18rem] text-2xl leading-tight font-semibold tracking-tight text-balance text-foreground sm:max-w-none sm:text-4xl"
                                     >
                                         How can I help you today?
                                     </h1>
@@ -1305,7 +1315,7 @@ onBeforeUnmount(() => {
                                 <form
                                     v-if="aiChatEnabled"
                                     data-tour="chats-composer"
-                                    class="welcome-input mt-7 w-full max-w-2xl sm:mt-8"
+                                    class="welcome-input mt-5 w-full max-w-2xl sm:mt-8"
                                     @submit.prevent="sendMessage"
                                 >
                                     <div
@@ -1363,14 +1373,14 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                     <div
-                                        class="group relative rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-xl transition-all duration-200 focus-within:border-foreground/30 focus-within:ring-1 focus-within:ring-foreground/20"
+                                        class="group relative rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-xl transition-all duration-200 focus-within:border-[var(--school-accent,#f59e0b)]/40 focus-within:ring-1 focus-within:ring-[var(--school-accent,#f59e0b)]/20"
                                     >
                                         <Textarea
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
                                             placeholder="Message Echo or ask a question about your courses..."
                                             :maxlength="MAX_MESSAGE_CHARACTERS"
-                                            class="min-h-[68px] w-full resize-none border-0 bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-relaxed shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:min-h-[80px] sm:text-[15px]"
+                                            class="min-h-[68px] w-full resize-none border-0 bg-transparent px-3 pt-3 pb-2 text-base leading-relaxed shadow-none placeholder:text-muted-foreground/60 focus:outline-none! focus-visible:ring-0 focus-visible:ring-offset-0 sm:min-h-[80px] sm:px-4 sm:pt-3.5 sm:text-[15px]"
                                             @keydown="handleComposerKeydown"
                                         />
                                         <div
@@ -1411,7 +1421,13 @@ onBeforeUnmount(() => {
                                                 <Button
                                                     type="submit"
                                                     size="icon-sm"
-                                                    class="h-8 w-8 cursor-pointer rounded-lg shadow-xs transition-transform duration-150 active:scale-95 enabled:hover:scale-105 disabled:opacity-30"
+                                                    class="h-8 w-8 cursor-pointer rounded-lg shadow-xs transition-all duration-150 active:scale-95 enabled:hover:scale-105 disabled:opacity-30"
+                                                    :class="
+                                                        inputMessage.trim() &&
+                                                        !isLoading
+                                                            ? 'bg-[var(--school-accent,#f59e0b)] text-white hover:brightness-105'
+                                                            : ''
+                                                    "
                                                     :disabled="
                                                         !inputMessage.trim() ||
                                                         isLoading
@@ -1442,23 +1458,23 @@ onBeforeUnmount(() => {
                                 <div
                                     v-if="aiChatEnabled"
                                     data-tour="chats-suggestions"
-                                    class="welcome-suggestions mt-8 w-full max-w-2xl"
+                                    class="welcome-suggestions mt-5 w-full max-w-2xl sm:mt-8"
                                 >
                                     <div
-                                        class="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+                                        class="grid grid-cols-2 gap-2 sm:gap-2.5"
                                     >
                                         <button
                                             v-for="(chip, i) in suggestions"
                                             :key="i"
                                             type="button"
                                             @click="useSuggestion(chip.message)"
-                                            class="group relative flex cursor-pointer items-center justify-between rounded-xl border border-border/70 bg-card/60 px-3.5 py-3 text-left transition-all duration-150 hover:border-border hover:bg-muted/40 active:scale-[0.99]"
+                                            class="group relative flex min-h-16 cursor-pointer items-center justify-between rounded-xl border border-border/70 bg-card/60 px-2.5 py-3 text-left transition-colors duration-150 hover:border-border hover:bg-muted/40 sm:px-3.5"
                                         >
                                             <div
-                                                class="flex min-w-0 items-center gap-3 pr-2"
+                                                class="flex min-w-0 items-center gap-2 sm:gap-3 sm:pr-2"
                                             >
                                                 <div
-                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-foreground/80 transition-colors group-hover:bg-primary/10 group-hover:text-primary"
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-foreground/80 transition-colors group-hover:bg-[var(--school-accent,#f59e0b)]/15 group-hover:text-[var(--school-accent,#f59e0b)]"
                                                 >
                                                     <component
                                                         :is="
@@ -1471,7 +1487,7 @@ onBeforeUnmount(() => {
                                                 </div>
                                                 <div class="min-w-0">
                                                     <p
-                                                        class="truncate text-[13px] font-medium text-foreground"
+                                                        class="text-xs leading-snug font-medium text-foreground sm:truncate sm:text-[13px]"
                                                     >
                                                         {{
                                                             getSuggestionMeta(
@@ -1480,7 +1496,7 @@ onBeforeUnmount(() => {
                                                         }}
                                                     </p>
                                                     <p
-                                                        class="truncate text-xs text-muted-foreground"
+                                                        class="hidden truncate text-xs text-muted-foreground sm:block"
                                                     >
                                                         {{
                                                             getSuggestionMeta(
@@ -1491,7 +1507,7 @@ onBeforeUnmount(() => {
                                                 </div>
                                             </div>
                                             <ArrowUpRight
-                                                class="h-4 w-4 shrink-0 text-muted-foreground/35 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
+                                                class="hidden h-4 w-4 shrink-0 text-muted-foreground/35 group-hover:text-foreground sm:block"
                                             />
                                         </button>
                                     </div>
@@ -1528,6 +1544,12 @@ onBeforeUnmount(() => {
                                 <User
                                     v-if="msg.role === 'user'"
                                     class="h-3.5 w-3.5"
+                                />
+                                <ChatAiOrb
+                                    v-else-if="msg.typing && isLoading"
+                                    size="status"
+                                    state="thinking"
+                                    :color="brandAccentColor"
                                 />
                                 <img
                                     v-else-if="branding.logoUrl"
@@ -1597,7 +1619,7 @@ onBeforeUnmount(() => {
                                         class="flex cursor-pointer items-center gap-1.5 rounded-md py-0.5 pr-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                                     >
                                         <Sparkles
-                                            class="h-3 w-3 shrink-0 text-primary/70"
+                                            class="h-3 w-3 shrink-0 text-[var(--school-accent,#f59e0b)]/80"
                                             :class="{
                                                 'motion-safe:animate-pulse':
                                                     msg.typing && !msg.content,
@@ -1774,7 +1796,7 @@ onBeforeUnmount(() => {
                                 v-model="inputMessage"
                                 placeholder="Continue the conversation... (drag & drop files)"
                                 :maxlength="MAX_MESSAGE_CHARACTERS"
-                                class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30"
+                                class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-[var(--school-accent,#f59e0b)]/40"
                                 @keydown="handleComposerKeydown"
                             />
                             <Button
@@ -1792,7 +1814,12 @@ onBeforeUnmount(() => {
                                 v-else
                                 type="submit"
                                 size="icon"
-                                class="h-10 w-10 shrink-0 rounded-xl shadow-md"
+                                class="h-10 w-10 shrink-0 rounded-xl shadow-md transition-all"
+                                :class="
+                                    inputMessage.trim() && !isLoading
+                                        ? 'bg-[var(--school-accent,#f59e0b)] text-white hover:brightness-105'
+                                        : ''
+                                "
                                 :disabled="!inputMessage.trim() || isLoading"
                             >
                                 <Send class="h-4 w-4" />

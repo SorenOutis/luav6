@@ -405,13 +405,6 @@ class ChatHistoryController extends Controller
                         $errorId = $this->logError('Chat History Stream Fallback Error', $fallbackError, $session, $loggingContext);
                         $message = 'Sorry, something went wrong. Please try again in a moment.';
 
-                        if ($request->user()?->is_admin || config('app.debug')) {
-                            $message .= " (Reference: {$errorId})";
-                            if (config('app.debug')) {
-                                $message .= ' — '.$fallbackError->getMessage();
-                            }
-                        }
-
                         foreach ($this->chatService->streamText($message) as $event) {
                             yield $event;
                         }
@@ -456,16 +449,8 @@ class ChatHistoryController extends Controller
             }
 
             $errorId = $this->logError('Chat History Stream Error', $e, $session, $loggingContext);
-            $payload = $this->errorPayload($e, $errorId);
 
             $message = 'Sorry, something went wrong. Please try again in a moment.';
-
-            if ($request->user()?->is_admin || config('app.debug')) {
-                $message .= " (Reference: {$payload['id']})";
-                if ($payload['message'] !== 'An unexpected error occurred.') {
-                    $message .= " — {$payload['message']}";
-                }
-            }
 
             return AiSseResponse::from($this->chatService->streamText($message));
         }
@@ -535,8 +520,7 @@ class ChatHistoryController extends Controller
 
     /**
      * Build the client-facing error structure. The correlation `id` is always
-     * returned so failures can be referenced; the exception class and raw
-     * message are only exposed when APP_DEBUG is enabled, never to students.
+     * returned so failures can be referenced; exception details stay in server logs.
      *
      * @return array{id: string, type: string|null, message: string}
      */
@@ -544,8 +528,8 @@ class ChatHistoryController extends Controller
     {
         return [
             'id' => $errorId,
-            'type' => config('app.debug') ? $e::class : null,
-            'message' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
+            'type' => null,
+            'message' => 'An unexpected error occurred.',
         ];
     }
 

@@ -45,6 +45,7 @@
     "dependencies": {
         "@inertiajs/vue3": "^2.3.25",
         "@motionone/vue": "^10.16.4",
+        "@rive-app/webgl2": "2.43.1",
         "@vueuse/core": "^12.8.2",
         "axios": "^1.19.0",
         "class-variance-authority": "^0.7.1",
