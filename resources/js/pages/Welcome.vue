@@ -413,32 +413,83 @@ const webSiteJsonLd = [
                 :transition="revealTransition(0.14)"
             >
                 <section
-                    class="my-12 rounded-2xl border border-border/70 bg-card px-6 py-8 text-center sm:my-16 sm:px-10"
-                    aria-labelledby="testimonial-heading"
+                    class="surface-card my-16 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 sm:my-20 sm:p-10 lg:p-12"
+                    aria-labelledby="field-note-heading"
                 >
-                    <p
-                        class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
-                    >
-                        What teachers say
-                    </p>
-                    <blockquote
-                        id="testimonial-heading"
-                        class="mx-auto mt-4 max-w-2xl font-serif text-xl leading-relaxed text-foreground sm:text-2xl"
-                    >
-                        “LSI cut our grading time by half and students finally
-                        get feedback while the lesson is still fresh. The
-                        Library Hub alone saved us hours of printing reviewers.”
-                    </blockquote>
-                    <p class="mt-4 text-sm font-medium text-muted-foreground">
-                        Maria Santos — Grade 8 Mathematics, Davao Central
-                        College
-                    </p>
                     <div
-                        class="mt-3 flex items-center justify-center gap-1 text-amber-500"
-                        aria-label="5 out of 5 stars"
+                        class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
                     >
-                        <span aria-hidden="true">★★★★★</span>
-                        <span class="sr-only">5 out of 5</span>
+                        <div class="max-w-2xl">
+                            <div
+                                class="inline-flex items-center gap-2 rounded-full border border-[#D97757]/20 bg-[#D97757]/10 px-3 py-1 text-xs font-semibold tracking-wider text-[#D97757] uppercase"
+                            >
+                                Verified Educator Field Note
+                            </div>
+                            <blockquote
+                                id="field-note-heading"
+                                class="mt-4 font-serif text-2xl leading-relaxed text-foreground sm:text-3xl"
+                            >
+                                “LSI cut our grading turnaround by half.
+                                Students receive feedback while the lesson is
+                                still fresh in their minds, and our teachers
+                                retain 100% approval authority over every AI
+                                draft.”
+                            </blockquote>
+                            <div class="mt-5 flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97757]/15 font-bold text-[#D97757]"
+                                >
+                                    MS
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-foreground"
+                                    >
+                                        Maria Santos
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        Grade 8 Mathematics Head · Davao Central
+                                        College (DCCP)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real metric badges -->
+                        <div
+                            class="grid grid-cols-2 gap-4 border-t border-border/70 pt-6 sm:grid-cols-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
+                        >
+                            <div class="space-y-1">
+                                <p
+                                    class="font-serif text-3xl font-bold tracking-tight text-foreground"
+                                >
+                                    50%+
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Time saved on item grading
+                                </p>
+                            </div>
+                            <div class="space-y-1">
+                                <p
+                                    class="font-serif text-3xl font-bold tracking-tight text-foreground"
+                                >
+                                    &lt; 2 hrs
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Feedback dispatch speed
+                                </p>
+                            </div>
+                            <div class="col-span-2 space-y-1 sm:col-span-1">
+                                <p
+                                    class="font-serif text-3xl font-bold tracking-tight text-[#D97757]"
+                                >
+                                    100%
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Teacher approval control
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </Motion>

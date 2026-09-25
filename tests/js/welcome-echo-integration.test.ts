@@ -44,10 +44,17 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.wolf-persona').exists()).toBe(true);
     });
 
-    it('renders mini Echo persona in AssessmentArtifact AI feedback header', () => {
+    it('renders mini Echo persona in AssessmentArtifact and toggles approval', async () => {
         const wrapper = mount(AssessmentArtifact);
         expect(wrapper.text()).toContain('Echo AI Drafted Feedback');
         expect(wrapper.find('.wolf-persona').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Teacher Review Required');
+
+        const button = wrapper.find('button');
+        await button.trigger('click');
+        expect(wrapper.text()).toContain('Approved ✓');
+        expect(wrapper.text()).toContain('Verified by Teacher');
+        expect(wrapper.text()).toContain('25/28 Completed');
     });
 
     it('simulates thinking and speaking transitions in EchoInteractiveDemo', async () => {

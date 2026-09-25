@@ -7,9 +7,9 @@ import {
     Flame,
     GraduationCap,
     School,
-    Sparkles,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 type PerspectiveKey = 'teacher' | 'learner' | 'school';
 
@@ -244,9 +244,14 @@ const perspectives = [
                                     <div
                                         class="flex items-center gap-1.5 text-[11px] font-semibold text-[#D97757]"
                                     >
-                                        <Sparkles class="h-3.5 w-3.5" />
-                                        AI Suggested Feedback (Review before
-                                        send):
+                                        <ChatAiOrb
+                                            size="status"
+                                            animate-idle
+                                            color="#D97757"
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        Echo AI Feedback (Teacher approval
+                                        required):
                                     </div>
                                     <p class="mt-1 text-xs text-foreground">
                                         "Accurate factoring! Connect this to the

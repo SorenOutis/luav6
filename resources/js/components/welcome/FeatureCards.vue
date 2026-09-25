@@ -4,10 +4,10 @@ import {
     CheckCircle2,
     ListChecks,
     ShieldCheck,
-    Sparkles,
     TrendingUp,
     UserRound,
 } from 'lucide-vue-next';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 withDefaults(
     defineProps<{
@@ -163,9 +163,14 @@ const principles = [
                             class="flex items-center justify-between text-[11px]"
                         >
                             <span
-                                class="flex items-center gap-1 font-semibold text-[#D97757]"
+                                class="flex items-center gap-1.5 font-semibold text-[#D97757]"
                             >
-                                <Sparkles class="h-3.5 w-3.5" />
+                                <ChatAiOrb
+                                    size="status"
+                                    animate-idle
+                                    color="#D97757"
+                                    class="h-3.5 w-3.5"
+                                />
                                 AI Draft Ready
                             </span>
                             <span
