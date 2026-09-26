@@ -50,7 +50,7 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.wolf-persona').exists()).toBe(true);
         expect(wrapper.text()).toContain('Teacher Review Required');
 
-        const button = wrapper.find('button');
+        const button = wrapper.find('[data-testid="approve-feedback-button"]');
         await button.trigger('click');
         expect(wrapper.text()).toContain('Approved ✓');
         expect(wrapper.text()).toContain('Verified by Teacher');

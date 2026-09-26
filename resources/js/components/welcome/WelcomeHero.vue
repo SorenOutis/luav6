@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { ArrowRight, Check, Compass } from 'lucide-vue-next';
+import { ArrowRight, Compass } from 'lucide-vue-next';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
 
@@ -35,7 +35,7 @@ withDefaults(
         aria-labelledby="welcome-heading"
         data-hero-priority="high"
         fetchpriority="high"
-        class="welcome-hero relative flex flex-col items-center border-b border-border/60 pt-6 pb-16 text-center sm:pt-10 sm:pb-24 lg:pt-16 lg:pb-32"
+        class="welcome-hero relative flex flex-col items-center border-b border-border/60 pt-6 pb-14 text-center sm:pt-10 sm:pb-20 lg:pt-16 lg:pb-28"
     >
         <!-- Centered Main Content Area -->
         <Motion
@@ -51,7 +51,7 @@ withDefaults(
             <!-- Google Material 3 Assistant Chip -->
             <a
                 href="#interactive-echo"
-                class="group mb-6 inline-flex items-center gap-2.5 rounded-full border border-border/80 bg-card/90 py-1.5 pr-4 pl-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary/50 hover:shadow-sm active:scale-[0.98] sm:mb-8"
+                class="group mb-5 inline-flex items-center gap-2.5 rounded-full border border-border/80 bg-card py-1.5 pr-4 pl-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary/50 active:scale-[0.98] sm:mb-7"
             >
                 <div
                     class="flex h-5 w-5 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
@@ -73,50 +73,25 @@ withDefaults(
                 >
             </a>
 
-            <!-- Google-Style Display Headline (Friendly, Clean, Modern Sans) -->
+            <!-- Confident Google-Style Display Headline -->
             <h1
                 id="welcome-heading"
-                class="max-w-3xl font-sans text-4xl leading-[1.08] font-semibold tracking-tight text-foreground sm:text-6xl sm:leading-[1.04] md:text-7xl lg:text-[5.25rem]"
+                class="max-w-3xl font-sans text-3xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.04] md:text-6xl lg:text-[4.75rem]"
             >
                 Make every assessment count.
             </h1>
 
-            <!-- Balanced, Concise Value Proposition -->
+            <!-- Purposeful Subtitle -->
             <p
-                class="mt-6 max-w-2xl text-base leading-relaxed font-normal text-muted-foreground sm:text-lg md:text-xl"
+                class="mt-4 max-w-2xl text-sm leading-relaxed font-normal text-muted-foreground sm:mt-5 sm:text-base md:text-lg"
             >
-                Create section assessments, review student responses with
-                teacher-approved AI insights, and turn every score into
-                tomorrow's lesson.
+                The formative assessment platform built for DepEd classrooms —
+                where student practice directly informs tomorrow’s lesson.
             </p>
 
-            <!-- Material 3 Tonal Filter Chips -->
+            <!-- Clean Google-Style Pill Action Buttons -->
             <div
-                class="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs font-medium"
-            >
-                <span
-                    class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/70 px-3.5 py-1 text-foreground"
-                >
-                    <Check class="h-3 w-3 text-[#D97757]" />
-                    Teacher-Controlled
-                </span>
-                <span
-                    class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/70 px-3.5 py-1 text-foreground"
-                >
-                    <Check class="h-3 w-3 text-[#D97757]" />
-                    DepEd K-12 Aligned
-                </span>
-                <span
-                    class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/70 px-3.5 py-1 text-foreground"
-                >
-                    <Check class="h-3 w-3 text-[#D97757]" />
-                    Human-in-the-Loop AI
-                </span>
-            </div>
-
-            <!-- Google-Style Pill Action Buttons -->
-            <div
-                class="mt-8 flex w-full flex-col items-center justify-center gap-3 sm:mt-10 sm:w-auto sm:flex-row"
+                class="mt-7 flex w-full flex-col items-center justify-center gap-3 sm:mt-8 sm:w-auto sm:flex-row"
             >
                 <Link
                     v-if="auth.user"
@@ -139,32 +114,25 @@ withDefaults(
                     class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-7 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     <Compass class="h-4 w-4 text-[#D97757]" />
-                    Explore live demo
+                    Explore interactive demo
                 </a>
-                <Link
-                    v-if="!auth.user"
-                    :href="login()"
-                    class="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-transparent px-6 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] sm:w-auto sm:text-base"
-                >
-                    Sign in
-                </Link>
             </div>
         </Motion>
 
         <!-- Centered Google Classroom Workbench Showcase -->
         <Motion
-            :initial="prefersReducedMotion ? false : { opacity: 0, y: 24 }"
+            :initial="prefersReducedMotion ? false : { opacity: 0, y: 20 }"
             :animate="{ opacity: 1, y: 0 }"
             :transition="
                 prefersReducedMotion
                     ? { duration: 0 }
                     : {
-                          duration: 0.65,
+                          duration: 0.6,
                           easing: [0.23, 1, 0.32, 1],
-                          delay: 0.12,
+                          delay: 0.1,
                       }
             "
-            class="mt-12 w-full max-w-3xl px-2 sm:mt-16 sm:px-6"
+            class="mt-10 w-full max-w-3xl px-2 sm:mt-14 sm:px-6"
         >
             <AssessmentArtifact />
         </Motion>
