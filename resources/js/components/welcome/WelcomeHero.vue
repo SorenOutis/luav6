@@ -3,7 +3,6 @@ import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { ArrowRight, Compass } from 'lucide-vue-next';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
-import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
 
 withDefaults(
     defineProps<{
@@ -35,7 +34,7 @@ withDefaults(
         aria-labelledby="welcome-heading"
         data-hero-priority="high"
         fetchpriority="high"
-        class="welcome-hero relative flex flex-col items-center border-b border-border/60 pt-2 pb-12 text-center sm:pt-4 sm:pb-16 lg:pt-4 lg:pb-20"
+        class="welcome-hero relative flex flex-col items-center border-b border-border/60 pt-4 pb-14 text-center sm:pt-6 sm:pb-20 lg:pt-8 lg:pb-28"
     >
         <!-- Centered Main Content Area -->
         <Motion
@@ -91,12 +90,12 @@ withDefaults(
 
             <!-- Clean Google-Style Pill Action Buttons -->
             <div
-                class="mt-5 flex w-full flex-col items-center justify-center gap-3 sm:mt-6 sm:w-auto sm:flex-row"
+                class="mt-6 flex w-full flex-col items-center justify-center gap-3 sm:mt-8 sm:w-auto sm:flex-row"
             >
                 <Link
                     v-if="auth.user"
                     :href="dashboard()"
-                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     Open dashboard
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
@@ -104,37 +103,19 @@ withDefaults(
                 <Link
                     v-else-if="canRegister"
                     :href="register()"
-                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     Create free account
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <a
                     href="#interactive-echo"
-                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-7 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-7 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     <Compass class="h-4 w-4 text-[#D97757]" />
                     Explore interactive demo
                 </a>
             </div>
-        </Motion>
-
-        <!-- Centered Google Classroom Workbench Showcase -->
-        <Motion
-            :initial="prefersReducedMotion ? false : { opacity: 0, y: 16 }"
-            :animate="{ opacity: 1, y: 0 }"
-            :transition="
-                prefersReducedMotion
-                    ? { duration: 0 }
-                    : {
-                          duration: 0.55,
-                          easing: [0.23, 1, 0.32, 1],
-                          delay: 0.08,
-                      }
-            "
-            class="mt-7 w-full max-w-3xl px-2 sm:mt-9 sm:px-6"
-        >
-            <AssessmentArtifact />
         </Motion>
     </section>
 </template>
