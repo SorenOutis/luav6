@@ -191,7 +191,7 @@ const webSiteJsonLd = [
         />
 
         <main
-            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-2 pb-16 sm:px-6 sm:pt-4 sm:pb-24 lg:px-16 lg:pt-4 lg:pb-32"
         >
             <WelcomeHero
                 :can-register="props.canRegister"
