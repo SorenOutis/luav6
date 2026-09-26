@@ -259,21 +259,21 @@ const webSiteJsonLd = [
                 :transition="revealTransition(0.14)"
             >
                 <section
-                    class="surface-card my-16 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 sm:my-20 sm:p-10 lg:p-12"
+                    class="surface-card my-16 overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-20 sm:p-10 lg:p-12"
                     aria-labelledby="field-note-heading"
                 >
                     <div
                         class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
                     >
                         <div class="max-w-2xl">
-                            <div
-                                class="inline-flex items-center gap-2 rounded-full border border-[#D97757]/20 bg-[#D97757]/10 px-3 py-1 text-xs font-semibold tracking-wider text-[#D97757] uppercase"
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
                             >
                                 Verified Educator Field Note
-                            </div>
+                            </span>
                             <blockquote
                                 id="field-note-heading"
-                                class="mt-4 font-serif text-2xl leading-relaxed text-foreground sm:text-3xl"
+                                class="mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
                             >
                                 “LSI cut our grading turnaround by half.
                                 Students receive feedback while the lesson is
@@ -307,7 +307,7 @@ const webSiteJsonLd = [
                         >
                             <div class="space-y-1">
                                 <p
-                                    class="font-serif text-3xl font-bold tracking-tight text-foreground"
+                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
                                 >
                                     50%+
                                 </p>
@@ -317,7 +317,7 @@ const webSiteJsonLd = [
                             </div>
                             <div class="space-y-1">
                                 <p
-                                    class="font-serif text-3xl font-bold tracking-tight text-foreground"
+                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
                                 >
                                     &lt; 2 hrs
                                 </p>
@@ -327,7 +327,7 @@ const webSiteJsonLd = [
                             </div>
                             <div class="col-span-2 space-y-1 sm:col-span-1">
                                 <p
-                                    class="font-serif text-3xl font-bold tracking-tight text-[#D97757]"
+                                    class="font-sans text-3xl font-bold tracking-tight text-[#D97757]"
                                 >
                                     100%
                                 </p>
@@ -376,7 +376,7 @@ const webSiteJsonLd = [
                 >
                     <h2
                         id="faq-heading"
-                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                        class="text-center font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
                     >
                         Questions, answered.
                     </h2>
@@ -420,27 +420,27 @@ const webSiteJsonLd = [
             >
                 <section
                     id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl border border-border/80 bg-card px-6 py-10 text-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
+                    class="welcome-cta relative mt-16 overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-10 text-foreground shadow-xs sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
                     aria-labelledby="cta-heading"
                 >
                     <div
                         class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                     >
                         <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
                             >
                                 Start with the next lesson
-                            </p>
+                            </span>
                             <h2
                                 id="cta-heading"
-                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] text-foreground sm:text-4xl"
+                                class="mt-4 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
                             >
                                 If assessment matters to your school, let’s
                                 talk.
                             </h2>
                             <p
-                                class="mt-4 text-sm text-muted-foreground sm:text-base"
+                                class="mt-4 text-sm font-normal text-muted-foreground sm:text-base"
                             >
                                 Start with a teacher, a class, or a whole
                                 school.
@@ -450,7 +450,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-if="$page.props.auth?.user"
                                 :href="dashboard().url"
-                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Open dashboard
                                 <ArrowRight
@@ -461,9 +461,9 @@ const webSiteJsonLd = [
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
-                                Create a free account
+                                Create free account
                                 <ArrowRight
                                     class="h-4 w-4"
                                     aria-hidden="true"
@@ -471,7 +471,7 @@ const webSiteJsonLd = [
                             </Link>
                             <Link
                                 :href="login().url"
-                                class="inline-flex min-h-12 items-center justify-center rounded-xl border border-border/80 bg-secondary/30 px-5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                                class="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-secondary/30 px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Sign in
                             </Link>
