@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import {
-    ArrowRight,
-    BarChart3,
-    ClipboardList,
-    Lightbulb,
-} from 'lucide-vue-next';
+import { ArrowRight } from 'lucide-vue-next';
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import DualPerspectiveShowcase from '@/components/welcome/DualPerspectiveShowcase.vue';
+import EchoInteractiveDemo from '@/components/welcome/EchoInteractiveDemo.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -36,21 +32,6 @@ const revealTransition = (delay = 0) =>
     effectiveReducedMotion.value
         ? { duration: 0 }
         : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
-
-const loopSteps = [
-    {
-        icon: ClipboardList,
-        title: 'A learner answers',
-    },
-    {
-        icon: BarChart3,
-        title: 'A teacher sees the pattern',
-    },
-    {
-        icon: Lightbulb,
-        title: 'The next lesson gets clearer',
-    },
-];
 
 const faqs = [
     {
@@ -210,7 +191,7 @@ const webSiteJsonLd = [
         />
 
         <main
-            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-2 pb-16 sm:px-6 sm:pt-4 sm:pb-24 lg:px-16 lg:pt-4 lg:pb-32"
         >
             <WelcomeHero
                 :can-register="props.canRegister"
@@ -230,57 +211,16 @@ const webSiteJsonLd = [
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition()"
+                :transition="revealTransition(0.04)"
+                id="how-it-works"
             >
-                <section
-                    id="how-it-works"
-                    class="welcome-story grid scroll-mt-32 gap-10 border-b border-border/70 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
-                    aria-labelledby="story-heading"
-                >
-                    <div>
-                        <p
-                            class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
-                        >
-                            How LSI helps
-                        </p>
-                        <h2
-                            id="story-heading"
-                            class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] sm:text-4xl lg:text-5xl"
-                        >
-                            Turn assessment into a clear next step.
-                        </h2>
-                        <p
-                            class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
-                        >
-                            LSI brings assessment, feedback, and follow-up into
-                            one practical workflow, so teachers can act while
-                            learning is still happening.
-                        </p>
-                    </div>
-
-                    <ol
-                        class="divide-y divide-border/70 border-y border-border/70"
-                    >
-                        <li
-                            v-for="(step, index) in [
-                                'Response',
-                                'Understanding',
-                                'Next lesson',
-                            ]"
-                            :key="step"
-                            class="flex items-center gap-4 py-5"
-                        >
-                            <span
-                                class="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
-                            >
-                                {{ index + 1 }}
-                            </span>
-                            <span class="font-serif text-xl text-foreground">{{
-                                step
-                            }}</span>
-                        </li>
-                    </ol>
-                </section>
+                <FeatureCards
+                    :is-coarse-pointer="isLowEndDevice"
+                    :prefers-reduced-motion="effectiveReducedMotion"
+                    :auth="$page.props.auth"
+                    :dashboard="() => dashboard().url"
+                    :login="() => login().url"
+                />
             </Motion>
 
             <Motion
@@ -291,15 +231,9 @@ const webSiteJsonLd = [
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.04)"
+                :transition="revealTransition(0.06)"
             >
-                <FeatureCards
-                    :is-coarse-pointer="isLowEndDevice"
-                    :prefers-reduced-motion="effectiveReducedMotion"
-                    :auth="$page.props.auth"
-                    :dashboard="() => dashboard().url"
-                    :login="() => login().url"
-                />
+                <EchoInteractiveDemo />
             </Motion>
 
             <Motion
@@ -323,108 +257,86 @@ const webSiteJsonLd = [
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.12)"
-            >
-                <section
-                    class="welcome-loop surface-card my-16 rounded-2xl border border-border/80 bg-card p-6 text-foreground shadow-sm sm:my-20 sm:p-10"
-                    aria-labelledby="loop-heading"
-                >
-                    <div class="flex flex-col gap-2">
-                        <p
-                            class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
-                        >
-                            The Continuous Learning Loop
-                        </p>
-                        <h2
-                            id="loop-heading"
-                            class="font-serif text-2xl tracking-[-0.03em] text-foreground sm:text-3xl"
-                        >
-                            How does LSI turn a response into the next lesson?
-                        </h2>
-                    </div>
-                    <div class="mt-8 grid gap-6 md:grid-cols-3 md:gap-6">
-                        <article
-                            v-for="(step, index) in loopSteps"
-                            :key="step.title"
-                            class="relative flex flex-col items-start rounded-xl border border-border/60 bg-secondary/25 p-5 text-left transition-colors hover:border-[#D97757]/40"
-                        >
-                            <div
-                                class="flex w-full items-center justify-between"
-                            >
-                                <div
-                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#D97757]/20 bg-[#D97757]/10 text-[#D97757]"
-                                >
-                                    <component
-                                        :is="step.icon"
-                                        class="h-5 w-5"
-                                        stroke-width="1.5"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <span
-                                    class="text-xs font-semibold text-muted-foreground"
-                                >
-                                    0{{ index + 1 }}
-                                </span>
-                            </div>
-                            <p
-                                class="mt-4 text-sm leading-relaxed font-medium text-foreground"
-                            >
-                                {{ step.title }}
-                            </p>
-                        </article>
-                    </div>
-                    <p
-                        class="mt-8 text-center text-xs text-muted-foreground sm:text-left"
-                    >
-                        The point is not more data. It is a more useful next
-                        lesson.
-                        <Link
-                            href="/blog/assessment-to-next-lesson"
-                            class="ml-2 font-medium text-[#D97757] underline hover:text-[#D97757]/80"
-                            >Read the pillar guide →</Link
-                        >
-                    </p>
-                </section>
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.14)"
             >
                 <section
-                    class="my-12 rounded-2xl border border-border/70 bg-card px-6 py-8 text-center sm:my-16 sm:px-10"
-                    aria-labelledby="testimonial-heading"
+                    class="surface-card my-16 overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-20 sm:p-10 lg:p-12"
+                    aria-labelledby="field-note-heading"
                 >
-                    <p
-                        class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
-                    >
-                        What teachers say
-                    </p>
-                    <blockquote
-                        id="testimonial-heading"
-                        class="mx-auto mt-4 max-w-2xl font-serif text-xl leading-relaxed text-foreground sm:text-2xl"
-                    >
-                        “LSI cut our grading time by half and students finally
-                        get feedback while the lesson is still fresh. The
-                        Library Hub alone saved us hours of printing reviewers.”
-                    </blockquote>
-                    <p class="mt-4 text-sm font-medium text-muted-foreground">
-                        Maria Santos — Grade 8 Mathematics, Davao Central
-                        College
-                    </p>
                     <div
-                        class="mt-3 flex items-center justify-center gap-1 text-amber-500"
-                        aria-label="5 out of 5 stars"
+                        class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
                     >
-                        <span aria-hidden="true">★★★★★</span>
-                        <span class="sr-only">5 out of 5</span>
+                        <div class="max-w-2xl">
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
+                            >
+                                Verified Educator Field Note
+                            </span>
+                            <blockquote
+                                id="field-note-heading"
+                                class="mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
+                            >
+                                “LSI cut our grading turnaround by half.
+                                Students receive feedback while the lesson is
+                                still fresh in their minds, and our teachers
+                                retain 100% approval authority over every AI
+                                draft.”
+                            </blockquote>
+                            <div class="mt-5 flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97757]/15 font-bold text-[#D97757]"
+                                >
+                                    MS
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-foreground"
+                                    >
+                                        Maria Santos
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        Grade 8 Mathematics Head · Davao Central
+                                        College (DCCP)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real metric badges -->
+                        <div
+                            class="grid grid-cols-2 gap-4 border-t border-border/70 pt-6 sm:grid-cols-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
+                        >
+                            <div class="space-y-1">
+                                <p
+                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
+                                >
+                                    50%+
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Time saved on item grading
+                                </p>
+                            </div>
+                            <div class="space-y-1">
+                                <p
+                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
+                                >
+                                    &lt; 2 hrs
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Feedback dispatch speed
+                                </p>
+                            </div>
+                            <div class="col-span-2 space-y-1 sm:col-span-1">
+                                <p
+                                    class="font-sans text-3xl font-bold tracking-tight text-[#D97757]"
+                                >
+                                    100%
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Teacher approval control
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </Motion>
@@ -465,7 +377,7 @@ const webSiteJsonLd = [
                 >
                     <h2
                         id="faq-heading"
-                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                        class="text-center font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
                     >
                         Questions, answered.
                     </h2>
@@ -509,33 +421,27 @@ const webSiteJsonLd = [
             >
                 <section
                     id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
+                    class="welcome-cta relative mt-16 overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-10 text-foreground shadow-xs sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
                     aria-labelledby="cta-heading"
                 >
-                    <!-- Background ambient terracotta glow -->
-                    <div
-                        class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-[#D97757]/20 blur-3xl"
-                        aria-hidden="true"
-                    ></div>
-
                     <div
                         class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                     >
                         <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
                             >
                                 Start with the next lesson
-                            </p>
+                            </span>
                             <h2
                                 id="cta-heading"
-                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
+                                class="mt-4 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
                             >
                                 If assessment matters to your school, let’s
                                 talk.
                             </h2>
                             <p
-                                class="mt-4 text-sm text-primary-foreground/70 sm:text-base"
+                                class="mt-4 text-sm font-normal text-muted-foreground sm:text-base"
                             >
                                 Start with a teacher, a class, or a whole
                                 school.
@@ -545,7 +451,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-if="$page.props.auth?.user"
                                 :href="dashboard().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Open dashboard
                                 <ArrowRight
@@ -556,20 +462,20 @@ const webSiteJsonLd = [
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
-                                Create a free account
+                                Create free account
                                 <ArrowRight
                                     class="h-4 w-4"
                                     aria-hidden="true"
                                 />
                             </Link>
-                            <a
-                                href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
-                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-primary-foreground/45 px-5 text-sm font-medium text-primary-foreground transition-colors hover:border-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                            <Link
+                                :href="login().url"
+                                class="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-secondary/30 px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
-                                Contact sales
-                            </a>
+                                Sign in
+                            </Link>
                         </div>
                     </div>
                 </section>

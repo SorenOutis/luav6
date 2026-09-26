@@ -2,8 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { ArrowRight } from 'lucide-vue-next';
-import FoxCompanion from '@/components/FoxCompanion.vue';
-import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 withDefaults(
     defineProps<{
@@ -35,44 +34,68 @@ withDefaults(
         aria-labelledby="welcome-heading"
         data-hero-priority="high"
         fetchpriority="high"
-        class="welcome-hero relative grid items-center gap-10 border-b border-border/70 pb-16 sm:gap-14 sm:pb-20 lg:min-h-[640px] lg:grid-cols-[1fr_0.9fr] lg:gap-20 lg:pb-24"
+        class="welcome-hero relative flex flex-col items-center border-b border-border/60 pt-4 pb-14 text-center sm:pt-6 sm:pb-20 lg:pt-8 lg:pb-28"
     >
+        <!-- Centered Main Content Area -->
         <Motion
-            :initial="prefersReducedMotion ? false : { opacity: 0, y: 18 }"
+            :initial="prefersReducedMotion ? false : { opacity: 0, y: 16 }"
             :animate="{ opacity: 1, y: 0 }"
             :transition="
                 prefersReducedMotion
                     ? { duration: 0 }
-                    : { duration: 0.55, easing: [0.23, 1, 0.32, 1] }
+                    : { duration: 0.5, easing: [0.23, 1, 0.32, 1] }
             "
-            class="relative z-10 max-w-2xl py-4 sm:py-8"
+            class="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-4"
         >
-            <p
-                class="mb-6 text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+            <!-- Google Material 3 Assistant Chip -->
+            <a
+                href="#interactive-echo"
+                class="group mb-3.5 inline-flex items-center gap-2.5 rounded-full border border-border/80 bg-card py-1.5 pr-4 pl-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary/50 active:scale-[0.98] sm:mb-4.5"
             >
-                A school-ready learning platform
-            </p>
+                <div
+                    class="flex h-5 w-5 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
+                >
+                    <ChatAiOrb
+                        size="status"
+                        animate-idle
+                        color="#D97757"
+                        class="h-3.5 w-3.5"
+                    />
+                </div>
+                <span class="font-medium tracking-tight text-foreground">
+                    Meet Echo · Intelligent Study Companion
+                </span>
+                <span
+                    class="font-mono text-[10px] text-[#D97757] transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                    >→</span
+                >
+            </a>
+
+            <!-- Confident Google-Style Display Headline -->
             <h1
                 id="welcome-heading"
-                class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.4rem]"
+                class="max-w-3xl font-sans text-3xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.04] md:text-6xl lg:text-[4.75rem]"
             >
                 Make every assessment count.
             </h1>
+
+            <!-- Purposeful Subtitle -->
             <p
-                class="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+                class="mt-3 max-w-2xl text-sm leading-relaxed font-normal text-muted-foreground sm:mt-4 sm:text-base md:text-lg"
             >
-                Create assessments, review responses, and plan what to teach
-                next, with less work for teachers.
-            </p>
-            <p class="mt-4 text-sm font-medium text-foreground/80">
-                Teacher-controlled · Built for schools · Human-in-the-loop AI
+                The formative assessment platform built for DepEd classrooms —
+                where student practice directly informs tomorrow’s lesson.
             </p>
 
-            <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <!-- Clean Google-Style Pill Action Buttons -->
+            <div
+                class="mt-6 flex w-full flex-col items-center justify-center gap-3 sm:mt-8 sm:w-auto sm:flex-row"
+            >
                 <Link
                     v-if="auth.user"
                     :href="dashboard()"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     Open dashboard
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
@@ -80,52 +103,18 @@ withDefaults(
                 <Link
                     v-else-if="canRegister"
                     :href="register()"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md active:scale-[0.98] sm:w-auto sm:text-base"
                 >
-                    Create a free account
+                    Create free account
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link
+                    v-if="!auth.user"
                     :href="login()"
-                    class="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/80 px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-8 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
                 >
                     Log in
                 </Link>
-            </div>
-        </Motion>
-
-        <Motion
-            :initial="prefersReducedMotion ? false : { opacity: 0, y: 18 }"
-            :animate="{ opacity: 1, y: 0 }"
-            :transition="
-                prefersReducedMotion
-                    ? { duration: 0 }
-                    : {
-                          duration: 0.65,
-                          easing: [0.23, 1, 0.32, 1],
-                          delay: 0.08,
-                      }
-            "
-            class="relative z-10 flex justify-center lg:justify-end"
-        >
-            <div class="relative w-full max-w-[520px] pt-20 sm:pt-24">
-                <div
-                    aria-hidden="true"
-                    class="absolute -inset-8 -z-10 rounded-full bg-primary/[0.035] blur-3xl"
-                ></div>
-
-                <div
-                    class="pointer-events-none absolute top-0 right-0 z-20 sm:right-4"
-                >
-                    <FoxCompanion
-                        mascot="welcome-hero"
-                        :size="170"
-                        :show-message="false"
-                        label="LSI fox mascot"
-                    />
-                </div>
-
-                <AssessmentArtifact />
             </div>
         </Motion>
     </section>
