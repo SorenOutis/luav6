@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import {
-    ArrowRight,
-    BarChart3,
-    ClipboardList,
-    Lightbulb,
-} from 'lucide-vue-next';
+import { ArrowRight } from 'lucide-vue-next';
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import DualPerspectiveShowcase from '@/components/welcome/DualPerspectiveShowcase.vue';
@@ -37,21 +32,6 @@ const revealTransition = (delay = 0) =>
     effectiveReducedMotion.value
         ? { duration: 0 }
         : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
-
-const loopSteps = [
-    {
-        icon: ClipboardList,
-        title: 'A learner answers',
-    },
-    {
-        icon: BarChart3,
-        title: 'A teacher sees the pattern',
-    },
-    {
-        icon: Lightbulb,
-        title: 'The next lesson gets clearer',
-    },
-];
 
 const faqs = [
     {
@@ -231,67 +211,6 @@ const webSiteJsonLd = [
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition()"
-            >
-                <section
-                    id="how-it-works"
-                    class="welcome-story grid scroll-mt-32 gap-10 border-b border-border/70 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
-                    aria-labelledby="story-heading"
-                >
-                    <div>
-                        <p
-                            class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
-                        >
-                            How LSI helps
-                        </p>
-                        <h2
-                            id="story-heading"
-                            class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] sm:text-4xl lg:text-5xl"
-                        >
-                            Turn assessment into a clear next step.
-                        </h2>
-                        <p
-                            class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
-                        >
-                            LSI brings assessment, feedback, and follow-up into
-                            one practical workflow, so teachers can act while
-                            learning is still happening.
-                        </p>
-                    </div>
-
-                    <ol
-                        class="divide-y divide-border/70 border-y border-border/70"
-                    >
-                        <li
-                            v-for="(step, index) in [
-                                'Response',
-                                'Understanding',
-                                'Next lesson',
-                            ]"
-                            :key="step"
-                            class="flex items-center gap-4 py-5"
-                        >
-                            <span
-                                class="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
-                            >
-                                {{ index + 1 }}
-                            </span>
-                            <span class="font-serif text-xl text-foreground">{{
-                                step
-                            }}</span>
-                        </li>
-                    </ol>
-                </section>
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.04)"
             >
                 <FeatureCards
@@ -327,79 +246,6 @@ const webSiteJsonLd = [
                 :transition="revealTransition(0.08)"
             >
                 <DualPerspectiveShowcase />
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.12)"
-            >
-                <section
-                    class="welcome-loop surface-card my-16 rounded-2xl border border-border/80 bg-card p-6 text-foreground shadow-sm sm:my-20 sm:p-10"
-                    aria-labelledby="loop-heading"
-                >
-                    <div class="flex flex-col gap-2">
-                        <p
-                            class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
-                        >
-                            The Continuous Learning Loop
-                        </p>
-                        <h2
-                            id="loop-heading"
-                            class="font-serif text-2xl tracking-[-0.03em] text-foreground sm:text-3xl"
-                        >
-                            How does LSI turn a response into the next lesson?
-                        </h2>
-                    </div>
-                    <div class="mt-8 grid gap-6 md:grid-cols-3 md:gap-6">
-                        <article
-                            v-for="(step, index) in loopSteps"
-                            :key="step.title"
-                            class="relative flex flex-col items-start rounded-xl border border-border/60 bg-secondary/25 p-5 text-left transition-colors hover:border-[#D97757]/40"
-                        >
-                            <div
-                                class="flex w-full items-center justify-between"
-                            >
-                                <div
-                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#D97757]/20 bg-[#D97757]/10 text-[#D97757]"
-                                >
-                                    <component
-                                        :is="step.icon"
-                                        class="h-5 w-5"
-                                        stroke-width="1.5"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <span
-                                    class="text-xs font-semibold text-muted-foreground"
-                                >
-                                    0{{ index + 1 }}
-                                </span>
-                            </div>
-                            <p
-                                class="mt-4 text-sm leading-relaxed font-medium text-foreground"
-                            >
-                                {{ step.title }}
-                            </p>
-                        </article>
-                    </div>
-                    <p
-                        class="mt-8 text-center text-xs text-muted-foreground sm:text-left"
-                    >
-                        The point is not more data. It is a more useful next
-                        lesson.
-                        <Link
-                            href="/blog/assessment-to-next-lesson"
-                            class="ml-2 font-medium text-[#D97757] underline hover:text-[#D97757]/80"
-                            >Read the pillar guide →</Link
-                        >
-                    </p>
-                </section>
             </Motion>
 
             <Motion
