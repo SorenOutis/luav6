@@ -44,6 +44,72 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.wolf-persona').exists()).toBe(true);
     });
 
+    it.each([true, false])(
+        'shows guest login when canRegister is %s',
+        (canRegister) => {
+            const wrapper = mount(WelcomeHero, {
+                props: {
+                    canRegister,
+                    auth: { user: null },
+                    dashboard: () => '/dashboard',
+                    login: () => '/login',
+                    register: () => '/register',
+                },
+                global: {
+                    stubs: {
+                        Link: {
+                            props: ['href'],
+                            template: '<a :href="href"><slot /></a>',
+                        },
+                        Motion: { template: '<div><slot /></div>' },
+                        ChatAiOrb: true,
+                    },
+                },
+            });
+
+            expect(wrapper.get('a[href="/login"]').text()).toBe('Log in');
+            expect(wrapper.find('a[href="/register"]').exists()).toBe(
+                canRegister,
+            );
+            if (canRegister) {
+                expect(wrapper.get('a[href="/register"]').text()).toBe(
+                    'Create free account',
+                );
+            }
+            expect(wrapper.find('a[href="/dashboard"]').exists()).toBe(false);
+            wrapper.unmount();
+        },
+    );
+
+    it('shows dashboard instead of guest actions for authenticated users', () => {
+        const wrapper = mount(WelcomeHero, {
+            props: {
+                canRegister: true,
+                auth: { user: { id: 1 } },
+                dashboard: () => '/dashboard',
+                login: () => '/login',
+                register: () => '/register',
+            },
+            global: {
+                stubs: {
+                    Link: {
+                        props: ['href'],
+                        template: '<a :href="href"><slot /></a>',
+                    },
+                    Motion: { template: '<div><slot /></div>' },
+                    ChatAiOrb: true,
+                },
+            },
+        });
+
+        expect(wrapper.get('a[href="/dashboard"]').text()).toBe(
+            'Open dashboard',
+        );
+        expect(wrapper.find('a[href="/login"]').exists()).toBe(false);
+        expect(wrapper.find('a[href="/register"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
     it('renders mini Echo persona in AssessmentArtifact and toggles approval', async () => {
         const wrapper = mount(AssessmentArtifact);
         expect(wrapper.text()).toContain('Echo AI Drafted Feedback');

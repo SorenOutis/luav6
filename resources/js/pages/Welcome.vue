@@ -212,6 +212,7 @@ const webSiteJsonLd = [
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.04)"
+                id="how-it-works"
             >
                 <FeatureCards
                     :is-coarse-pointer="isLowEndDevice"

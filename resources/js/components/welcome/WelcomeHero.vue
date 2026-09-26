@@ -109,11 +109,11 @@ withDefaults(
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link
-                    v-if="canRegister && !auth.user"
-                    :href="register()"
+                    v-if="!auth.user"
+                    :href="login()"
                     class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-8 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
                 >
-                    Register
+                    Log in
                 </Link>
             </div>
         </Motion>

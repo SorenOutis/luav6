@@ -46,9 +46,9 @@ describe('welcome mobile performance', () => {
         const hero = read('resources/js/components/welcome/WelcomeHero.vue');
 
         expect(hero).toContain('Make every assessment count.');
-        expect(hero).toContain('FoxCompanion');
-        expect(hero).toContain('mascot="welcome-hero"');
-        expect(hero).toContain('label="LSI fox mascot"');
+        expect(hero).toContain('ChatAiOrb');
+        expect(hero).toContain('href="#interactive-echo"');
+        expect(hero).not.toContain('<AssessmentArtifact');
         expect(page).not.toContain('walkthroughUnlocked');
         expect(page).not.toContain('how-it-works.mp4');
         expect(page).not.toContain('welcome-bg-grid');
@@ -70,7 +70,9 @@ describe('welcome mobile performance', () => {
 
         expect(wrapper.classes()).toContain('lite-motion');
         expect(wrapper.findAll('.fragment-bar')).toHaveLength(0);
-        expect(wrapper.text()).toContain('The work stays clear.');
+        expect(wrapper.text()).toContain(
+            'Every assessment informs tomorrow’s lesson.',
+        );
         wrapper.unmount();
     });
 
@@ -82,7 +84,7 @@ describe('welcome mobile performance', () => {
         );
 
         expect(hero).toContain('Make every assessment count.');
-        expect(page).toContain('How does LSI turn a response into the next lesson?');
+        expect(page).toContain('<FeatureCards');
         expect(page).toContain('id="how-it-works"');
         expect(page).toContain('id="contact"');
         expect(page).not.toContain('TechStackCarousel');
