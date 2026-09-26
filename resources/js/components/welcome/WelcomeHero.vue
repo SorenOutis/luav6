@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { ArrowRight, Compass } from 'lucide-vue-next';
+import { ArrowRight } from 'lucide-vue-next';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
 withDefaults(
@@ -108,13 +108,13 @@ withDefaults(
                     Create free account
                     <ArrowRight class="h-4 w-4" aria-hidden="true" />
                 </Link>
-                <a
-                    href="#interactive-echo"
-                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-7 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
+                <Link
+                    v-if="canRegister && !auth.user"
+                    :href="register()"
+                    class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-8 text-sm font-medium text-foreground transition-all hover:bg-secondary/50 hover:shadow-xs active:scale-[0.98] sm:w-auto sm:text-base"
                 >
-                    <Compass class="h-4 w-4 text-[#D97757]" />
-                    Explore interactive demo
-                </a>
+                    Register
+                </Link>
             </div>
         </Motion>
     </section>
