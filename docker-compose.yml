@@ -25,6 +25,8 @@ x-app: &app
       QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
   restart: unless-stopped
   init: true
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   env_file:
     - .env
   environment:
