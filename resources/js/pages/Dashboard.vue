@@ -58,6 +58,7 @@ const POLL_PROPS = [
     'assignments',
     'upcomingExams',
     'sectionLeaderboards',
+    'availableSeasons',
     'activeSeason',
     // Keep the daily-claim status + XP history fresh so the level card's
     // "claimed today?" banner and history reflect a claim immediately.

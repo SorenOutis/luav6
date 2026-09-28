@@ -42,6 +42,16 @@ const LinkStub = {
 };
 
 describe('dashboard student shell', () => {
+    it('refreshes available seasons with leaderboard polling and manual refresh', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Dashboard.vue'),
+            'utf8',
+        );
+        const pollProps = page.match(/const POLL_PROPS = \[([\s\S]*?)\];/)?.[1];
+        expect(pollProps).toContain("'sectionLeaderboards'");
+        expect(pollProps).toContain("'availableSeasons'");
+        expect(page.match(/only: POLL_PROPS/g)).toHaveLength(2);
+    });
     it('scopes the student design tokens to the dashboard shell', () => {
         const page = readFileSync(
             join(process.cwd(), 'resources/js/pages/Dashboard.vue'),

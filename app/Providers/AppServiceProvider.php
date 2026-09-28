@@ -70,13 +70,20 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->configureQueueWorkspacePropagation();
 
-        app(AiManager::class)->extend(
-            AiSdkProviderService::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
-            fn ($app, array $config): HeaderAwareOpenAiCompatibleProvider => new HeaderAwareOpenAiCompatibleProvider(
-                $config,
-                $app->make('events'),
-            ),
-        );
+        $registerAiDriver = function (AiManager $manager, $app): void {
+            $manager->extend(
+                AiSdkProviderService::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
+                fn ($container, array $config): HeaderAwareOpenAiCompatibleProvider => new HeaderAwareOpenAiCompatibleProvider(
+                    $config,
+                    $container->make('events'),
+                ),
+            );
+        };
+
+        $this->app->resolving(AiManager::class, $registerAiDriver);
+        if ($this->app->resolved(AiManager::class)) {
+            $registerAiDriver(app(AiManager::class), $this->app);
+        }
 
         // Laravel Horizon is installed only inside the Docker image (never in
         // the repo's composer.json), so its dashboard gate is defined with a

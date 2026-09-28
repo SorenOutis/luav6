@@ -167,16 +167,33 @@ const selectSection = (index: number): void => {
     }
 };
 
-// Find the best season match: first try the globally active season,
-// then fall back to the first season the user is actually enrolled in.
-// This prevents showing "2026-2027" for users who only have sections in 2025-2026.
-const initialSeason =
-    props.availableSeasons.find(
-        (s) => s.name === (props.activeSeasonName || ''),
-    ) || props.availableSeasons[0];
+// The first available season matches the server's initial leaderboard selection.
+const initialSeason = props.availableSeasons[0];
 
 const selectedSeasonId = ref<number | null>(initialSeason?.id ?? null);
 const selectedSeasonName = ref(initialSeason?.name || '');
+const followsDefaultSeason = ref(true);
+
+watch(
+    [() => props.sectionLeaderboards, () => props.availableSeasons],
+    ([leaderboards, seasons]) => {
+        // Polls contain default-season boards, never the historical API selection.
+        if (!followsDefaultSeason.value) return;
+
+        const sectionId = isControlledSection.value
+            ? props.activeSectionId
+            : localLeaderboards.value[activeTabIndex.value]?.sectionId;
+        localLeaderboards.value = leaderboards;
+        const index = leaderboards.findIndex((s) => s.sectionId === sectionId);
+        activeTabIndex.value = Math.max(0, index);
+        if (isControlledSection.value && index === -1 && leaderboards[0]) {
+            selectSection(0);
+        }
+
+        selectedSeasonId.value = seasons[0]?.id ?? null;
+        selectedSeasonName.value = seasons[0]?.name || '';
+    },
+);
 
 onMounted(() => {
     // Controlled mode: the parent owns the selection (it restores the saved
@@ -649,6 +666,8 @@ const changeSeason = async (seasonId: number) => {
         if (r.data.selectedSeason) {
             selectedSeasonName.value = r.data.selectedSeason.name;
             selectedSeasonId.value = r.data.selectedSeason.id;
+            followsDefaultSeason.value =
+                r.data.selectedSeason.id === props.availableSeasons[0]?.id;
             emit('update:activeSeasonName', r.data.selectedSeason.name);
         }
     } catch (e) {

@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
+use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
 use App\Models\Exam;
 use App\Models\PendingAiAction;
 use App\Models\Setting;
@@ -64,6 +65,22 @@ it('discovers configured OpenAI-compatible providers and applies their runtime c
     ]);
 
     expect(app(AiManager::class)->instance($name)->providerCredentials()['key'])->toBe('gateway-key');
+});
+
+it('resolves compatible provider even when config entry is not pre-populated in container', function () {
+    $name = storeCompatibleProvider(compatibleProvider());
+    AiSdkProviderService::for($name)->applyToSdk();
+
+    // Simulate Octane worker container where dynamic config key is absent from the manager's config repository
+    $providers = config('ai.providers');
+    unset($providers[$name]);
+    config(['ai.providers' => $providers]);
+    app(AiManager::class)->forgetInstance($name);
+
+    $instance = app(AiManager::class)->instance($name);
+
+    expect($instance)->toBeInstanceOf(HeaderAwareOpenAiCompatibleProvider::class)
+        ->and($instance->providerCredentials()['key'])->toBe('gateway-key');
 });
 
 it('sends compatible-provider bearer and custom headers through the SDK driver', function () {
