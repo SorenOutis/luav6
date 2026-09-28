@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Sections\Schemas;
 
 use App\Models\Season;
 use App\Models\Section;
+use App\Support\WorkspaceContext;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -12,6 +13,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class SectionForm
 {
@@ -24,7 +26,10 @@ class SectionForm
                     ->unique(ignoreRecord: true),
                 Select::make('season_id')
                     ->label('School Year / Season')
-                    ->relationship('season', 'name')
+                    ->relationship('season', 'name', modifyQueryUsing: fn (Builder $query, ?Section $record): Builder => $query
+                        ->where('workspace_id', $record ? $record->workspace_id : app(WorkspaceContext::class)->id()))
+                    ->scopedExists(Season::class, 'id', modifyQueryUsing: fn (Builder $query, ?Section $record): Builder => $query
+                        ->where('workspace_id', $record ? $record->workspace_id : app(WorkspaceContext::class)->id()))
                     ->default(fn () => Season::current()?->id)
                     ->required(),
                 Select::make('school_level')

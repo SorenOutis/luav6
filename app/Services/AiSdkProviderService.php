@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
 use App\Models\Setting;
 use Illuminate\Support\Arr;
 use Laravel\Ai\AiManager;
@@ -286,21 +287,29 @@ class AiSdkProviderService
     public function applyToSdk(?string $model = null): void
     {
         if ($compatible = $this->compatibleProvider()) {
-            config([
-                "ai.providers.{$this->provider}" => [
-                    'driver' => self::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
-                    'key' => $compatible['api_key'],
-                    'url' => $compatible['url'],
-                    'headers' => self::headerMap($compatible['headers']),
-                    'models' => [
-                        'text' => [
-                            'default' => $model ?? $compatible['model'],
-                        ],
+            $providerConfig = [
+                'driver' => self::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
+                'key' => $compatible['api_key'],
+                'url' => $compatible['url'],
+                'headers' => self::headerMap($compatible['headers']),
+                'models' => [
+                    'text' => [
+                        'default' => $model ?? $compatible['model'],
                     ],
                 ],
-            ]);
+            ];
 
-            app(AiManager::class)->forgetInstance($this->provider);
+            config(["ai.providers.{$this->provider}" => $providerConfig]);
+
+            $creator = fn ($app, array $resolvedConfig = []): HeaderAwareOpenAiCompatibleProvider => new HeaderAwareOpenAiCompatibleProvider(
+                array_merge($providerConfig, $resolvedConfig),
+                $app->make('events'),
+            );
+
+            $manager = app(AiManager::class);
+            $manager->extend(self::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER, $creator);
+            $manager->extend($this->provider, $creator);
+            $manager->forgetInstance($this->provider);
 
             return;
         }

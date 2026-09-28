@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
+import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
@@ -15,6 +16,159 @@ vi.mock('@inertiajs/vue3', () => ({
 vi.mock('@/composables/useNumberAnimation', () => ({
     useNumberAnimation: (getter: () => number) => ref(getter()),
 }));
+
+vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+
+describe('ImprovedLeaderboard poll synchronization', () => {
+    const seasons = [
+        { id: 2, name: 'Current season' },
+        { id: 1, name: 'Historical season' },
+    ];
+    const board = (id: number, name = `Section ${id}`) => ({
+        sectionId: id,
+        sectionName: name,
+        users: [
+            {
+                id,
+                name: `Student ${name}`,
+                xp: 100,
+                xpProgress: 10,
+                streak: 1,
+                joinedAt: 'Jan 2026',
+                weeklyXp: 10,
+                trend: 'stable' as const,
+            },
+        ],
+        userRank: 0,
+        totalPlayers: 1,
+    });
+
+    beforeEach(() => {
+        localStorage.clear();
+        vi.mocked(axios.get).mockReset();
+    });
+
+    it('shows newly attached sections and refreshed users after prop replacement', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: { sectionLeaderboards: [board(1)] },
+        });
+        await wrapper.setProps({
+            sectionLeaderboards: [board(1, 'Updated'), board(2)],
+        });
+        expect(wrapper.findAll('.lb-tab')).toHaveLength(2);
+        expect(wrapper.text()).toContain('Student Updated');
+        await wrapper.findAll('.lb-tab')[1].trigger('click');
+        expect(wrapper.text()).toContain('Student Section 2');
+        wrapper.unmount();
+    });
+
+    it('preserves selected section identity across reorders and falls back after removal', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: { sectionLeaderboards: [board(1), board(2)] },
+        });
+        await wrapper.findAll('.lb-tab')[1].trigger('click');
+        await wrapper.setProps({ sectionLeaderboards: [board(2), board(1)] });
+        expect(wrapper.text()).toContain('Student Section 2');
+        expect(wrapper.text()).not.toContain('Student Section 1');
+        await wrapper.setProps({ sectionLeaderboards: [board(1)] });
+        expect(wrapper.text()).toContain('Student Section 1');
+        await wrapper.setProps({ sectionLeaderboards: [] });
+        expect(wrapper.text()).not.toContain('Student Section 1');
+        await wrapper.setProps({ sectionLeaderboards: [board(3)] });
+        expect(wrapper.text()).toContain('Student Section 3');
+        wrapper.unmount();
+    });
+
+    it('refreshes controlled sections and falls back when selected section disappears', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [board(1), board(2)],
+                activeSectionId: 2,
+            },
+        });
+        await wrapper.setProps({
+            sectionLeaderboards: [board(2, 'Updated'), board(1)],
+        });
+        expect(wrapper.text()).toContain('Student Updated');
+        await wrapper.setProps({ sectionLeaderboards: [board(1)] });
+        expect(wrapper.text()).toContain('Student Section 1');
+        expect(wrapper.emitted('update:activeSectionId')).toContainEqual([1]);
+        wrapper.unmount();
+    });
+
+    it('uses canonical first season and follows default-season changes on polls', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [board(1)],
+                availableSeasons: seasons,
+                activeSeasonName: 'Historical season',
+            },
+        });
+        expect(wrapper.get('select').element.value).toBe('2');
+        await wrapper.setProps({
+            sectionLeaderboards: [board(3)],
+            availableSeasons: [{ id: 3, name: 'New season' }, ...seasons],
+        });
+        expect(wrapper.get('select').element.value).toBe('3');
+        expect(wrapper.text()).toContain('Student Section 3');
+        wrapper.unmount();
+    });
+
+    it('shows the first attached section and its season when initially empty', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: { sectionLeaderboards: [], availableSeasons: [] },
+        });
+        await wrapper.setProps({
+            sectionLeaderboards: [board(2)],
+            availableSeasons: seasons,
+        });
+        expect(wrapper.text()).toContain('Student Section 2');
+        expect(wrapper.get('select').element.value).toBe('2');
+        wrapper.unmount();
+    });
+
+    it('keeps explicit historical API results through polls and resumes sync on returning to default', async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [board(2)],
+                availableSeasons: seasons,
+            },
+        });
+        vi.mocked(axios.get).mockResolvedValueOnce({
+            data: {
+                leaderboards: [board(1, 'History')],
+                selectedSeason: seasons[1],
+            },
+        });
+        await wrapper.get('select').setValue('1');
+        await flushPromises();
+        await wrapper.setProps({
+            sectionLeaderboards: [board(2, 'Polled')],
+            availableSeasons: [...seasons],
+        });
+        expect(wrapper.get('select').element.value).toBe('1');
+        expect(wrapper.text()).toContain('Student History');
+        expect(wrapper.text()).not.toContain('Student Polled');
+        await wrapper.setProps({
+            sectionLeaderboards: [board(3, 'Next default')],
+            availableSeasons: [{ id: 3, name: 'Next season' }, ...seasons],
+        });
+        expect(wrapper.get('select').element.value).toBe('1');
+        expect(wrapper.text()).toContain('Student History');
+        await wrapper.setProps({ availableSeasons: seasons });
+        vi.mocked(axios.get).mockResolvedValueOnce({
+            data: { leaderboards: [board(2)], selectedSeason: seasons[0] },
+        });
+        await wrapper.get('select').setValue('2');
+        await flushPromises();
+        await wrapper.setProps({
+            sectionLeaderboards: [board(2, 'Latest'), board(3)],
+        });
+        expect(wrapper.text()).toContain('Student Latest');
+        expect(wrapper.findAll('.lb-tab')).toHaveLength(2);
+        wrapper.unmount();
+    });
+});
 
 describe('ImprovedLeaderboard tied XP grouping', () => {
     const createMockUsers = () => [
