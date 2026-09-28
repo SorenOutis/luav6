@@ -32,6 +32,8 @@ x-app-prod: &app-prod
       QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
   restart: unless-stopped
   init: true
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   env_file:
     - .env.production
   read_only: true
@@ -77,7 +79,7 @@ services:
       CONTAINER_ROLE: octane
       PORT: "${PORT:-8000}"
       PHP_MEMORY_LIMIT: "${PHP_MEMORY_LIMIT:-256M}"
-    OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
+      OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
       OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
       <<: *r2-env
     ports:

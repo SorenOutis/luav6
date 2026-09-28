@@ -216,3 +216,32 @@ PostgreSQL, that no invalid indexes are left behind.
   the mounted `app_storage` (storage/) and `bootstrap_cache` volumes.
 - For a custom domain, CNAME your app to the load balancer and proxy through
   Cloudflare for CDN/DDoS protection.
+
+## Internal / Private AI Gateway Setup (Optional)
+
+If the **Base URL** entered by the administrator in **Platform Settings** (`/admin/ai-settings`) points to a private Tailscale or internal network host:
+
+1. **Install and authenticate Tailscale on the production host:**
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+   *(Or authenticate non-interactively with an auth key: `sudo tailscale up --authkey=tskey-auth-...`)*
+
+2. **Ensure the host forwards Docker container traffic to Tailscale:**
+   ```bash
+   echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
+   sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
+   ```
+   If Docker's iptables rules do not forward to `tailscale0`, allow forwarding:
+   ```bash
+   sudo iptables -I FORWARD -o tailscale0 -j ACCEPT
+   sudo iptables -I FORWARD -i tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+   ```
+
+3. **Verify connectivity to the Base URL configured in Platform Settings:**
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml \
+     exec app curl -i <YOUR_CONFIGURED_BASE_URL>/models
+   ```
+   A `200 OK` response confirms the container can reach whatever endpoint the admin entered in Platform Settings.
