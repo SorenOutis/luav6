@@ -101,3 +101,42 @@ it('allows an admin to bulk activate and deactivate tracks from the list table',
     expect($track1->fresh()->is_active)->toBeTrue()
         ->and($track2->fresh()->is_active)->toBeTrue();
 });
+
+it('allows creating a full length track exceeding 30 seconds and with optional duration', function () {
+    Storage::fake('public');
+
+    $admin = User::factory()->superAdmin()->create();
+    actingAs($admin);
+
+    $fullTrack = UploadedFile::fake()->create('full_song.mp3', 3000, 'audio/mpeg');
+
+    Livewire::test(CreateProfileMusicTrack::class)
+        ->fillForm([
+            'title' => 'Full Length Symphony',
+            'artist' => 'Orchestra',
+            'audio_path' => $fullTrack,
+            'duration_seconds' => 245.5,
+            'is_active' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $created = ProfileMusicTrack::where('title', 'Full Length Symphony')->first();
+    expect($created)->not->toBeNull()
+        ->and((float) $created->duration_seconds)->toBe(245.5);
+
+    $optionalDurationTrack = UploadedFile::fake()->create('ambient.mp3', 2000, 'audio/mpeg');
+
+    Livewire::test(CreateProfileMusicTrack::class)
+        ->fillForm([
+            'title' => 'Ambient Waves',
+            'artist' => 'Chill Artist',
+            'audio_path' => $optionalDurationTrack,
+            'duration_seconds' => null,
+            'is_active' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(ProfileMusicTrack::where('title', 'Ambient Waves')->exists())->toBeTrue();
+});

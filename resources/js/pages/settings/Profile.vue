@@ -307,6 +307,14 @@ const selectTrack = (trackId: number | null) => {
     closeMusicModal();
 };
 
+const formatTrackDuration = (duration?: number | null): string => {
+    if (!duration || duration <= 0) return 'Audio';
+    if (duration < 60) return `${Math.round(duration)}s loop`;
+    const mins = Math.floor(duration / 60);
+    const secs = Math.floor(duration % 60);
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
 // Blob URLs outlive the component unless released explicitly.
 onBeforeUnmount(() => {
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
@@ -729,7 +737,11 @@ const leaveSection = (sectionId: number) => {
                                         class="truncate text-[11px] text-muted-foreground"
                                     >
                                         {{ currentMusicTrack.artist }} •
-                                        {{ currentMusicTrack.duration }}s loop
+                                        {{
+                                            formatTrackDuration(
+                                                currentMusicTrack.duration,
+                                            )
+                                        }}
                                     </p>
                                     <p
                                         v-if="currentMusicTrack.licenseName"
@@ -1105,8 +1117,8 @@ const leaveSection = (sectionId: number) => {
                                 <p
                                     class="truncate text-[11px] text-muted-foreground"
                                 >
-                                    {{ track.artist }} • {{ track.duration }}s
-                                    loop
+                                    {{ track.artist }} •
+                                    {{ formatTrackDuration(track.duration) }}
                                 </p>
                                 <p
                                     v-if="track.licenseName"

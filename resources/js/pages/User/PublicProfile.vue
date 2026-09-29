@@ -576,6 +576,14 @@ watch(
     { immediate: true },
 );
 
+const formatMusicDuration = (duration?: number | null): string => {
+    if (!duration || duration <= 0) return 'Audio';
+    if (duration < 60) return `${Math.round(duration)}s loop`;
+    const mins = Math.floor(duration / 60);
+    const secs = Math.floor(duration % 60);
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
 onBeforeUnmount(() => {
     stopVisualizer();
     restoreUserTrack();
@@ -1649,9 +1657,14 @@ onBeforeUnmount(() => {
                             </p>
                             <div class="mt-1 flex items-center gap-2">
                                 <span
+                                    v-if="profileMusic.duration"
                                     class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary"
                                 >
-                                    {{ profileMusic.duration }}s loop
+                                    {{
+                                        formatMusicDuration(
+                                            profileMusic.duration,
+                                        )
+                                    }}
                                 </span>
                                 <span
                                     v-if="profileMusic.licenseName"
