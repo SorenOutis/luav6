@@ -9,15 +9,13 @@ FROM dunglas/frankenphp:1.12-php8.5 AS base
 
 WORKDIR /app
 
-# The FrankenPHP image does not ship Composer, so copy it in for the install
-# stages.
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
 # PHP extensions required by the production dependencies (Filament→intl,
 # PHPWord→gd), Octane's FrankenPHP server (pcntl/opcache), the optional
 # Postgres driver, and Redis (Horizon's queue backend). `curl` is used by the
 # container HEALTHCHECK; `supervisor` manages the persistent AI queue worker
 # processes when the legacy `queue` role is used instead of Horizon.
+# Composer is installed via `@composer` using `install-php-extensions` (prebundled
+# with FrankenPHP) to avoid Docker Hub pull rate limits (HTTP 429 Too Many Requests).
 # `memory_limit` defaults to 256M (PDF/DOCX extraction and batched AI essay
 # grading routinely need more than 128M) and can be overridden at build time
 # with the PHP_MEMORY_LIMIT arg or at runtime with the PHP_MEMORY_LIMIT env
@@ -26,6 +24,7 @@ ARG PHP_MEMORY_LIMIT=256M
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl supervisor \
     && install-php-extensions \
+        @composer \
         bcmath \
         exif \
         gd \
@@ -38,6 +37,7 @@ RUN apt-get update \
         redis \
         sockets \
         zip \
+    && ln -sf /usr/local/bin/composer /usr/bin/composer \
     && printf 'memory_limit = %s\n' "$PHP_MEMORY_LIMIT" > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
     && rm -rf /var/lib/apt/lists/*
 
