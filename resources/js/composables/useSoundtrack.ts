@@ -24,6 +24,7 @@ const isPausedForExam = ref(false);
 const wasPlayingBeforeExam = ref(false);
 const eqBars = ref<[number, number, number, number]>([3, 3, 3, 3]);
 const currentTrack = ref<UserSoundtrack | null>(null);
+const userTrack = ref<UserSoundtrack | null>(null);
 
 let globalAudio: HTMLAudioElement | null = null;
 let audioCtx: AudioContext | null = null;
@@ -191,6 +192,8 @@ const initRouterListener = () => {
 };
 
 const initTrack = (track: UserSoundtrack | null | undefined) => {
+    userTrack.value = track ?? null;
+
     if (!track) {
         if (isPlaying.value || (globalAudio && !globalAudio.paused)) {
             pause();
@@ -202,10 +205,48 @@ const initTrack = (track: UserSoundtrack | null | undefined) => {
     if (!currentTrack.value || currentTrack.value.id !== track.id) {
         currentTrack.value = track;
         const audio = getGlobalAudio();
-        if (audio.src !== track.audioUrl) {
-            audio.src = track.audioUrl;
+        const resolvedUrl =
+            typeof window !== 'undefined'
+                ? new URL(track.audioUrl, window.location.href).href
+                : track.audioUrl;
+        if (audio.src !== resolvedUrl) {
+            audio.src = resolvedUrl;
         }
     }
+};
+
+const restoreUserTrack = () => {
+    if (userTrack.value && currentTrack.value?.id !== userTrack.value.id) {
+        pause();
+        initTrack(userTrack.value);
+    }
+};
+
+const playTrack = async (track: UserSoundtrack) => {
+    if (!currentTrack.value || currentTrack.value.id !== track.id) {
+        currentTrack.value = track;
+        const audio = getGlobalAudio();
+        const resolvedUrl =
+            typeof window !== 'undefined'
+                ? new URL(track.audioUrl, window.location.href).href
+                : track.audioUrl;
+        if (audio.src !== resolvedUrl) {
+            audio.src = resolvedUrl;
+        }
+    }
+    await play();
+};
+
+const getAnalyserFrequencyData = (
+    target?: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> | null => {
+    if (!analyserNode) {
+        setupAudioGraph();
+    }
+    if (!analyserNode) return null;
+    const data = target ?? new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteFrequencyData(data);
+    return data;
 };
 
 const play = async () => {
@@ -227,8 +268,13 @@ const play = async () => {
         }
 
         const audio = getGlobalAudio();
-        if (audio.src !== currentTrack.value.audioUrl) {
-            audio.src = currentTrack.value.audioUrl;
+        const resolvedUrl =
+            typeof window !== 'undefined'
+                ? new URL(currentTrack.value.audioUrl, window.location.href)
+                      .href
+                : currentTrack.value.audioUrl;
+        if (audio.src !== resolvedUrl) {
+            audio.src = resolvedUrl;
         }
 
         isMuted.value = false;
@@ -328,6 +374,9 @@ export function useSoundtrack() {
         togglePlay,
         toggleMute,
         setVolume,
+        playTrack,
+        restoreUserTrack,
+        getAnalyserFrequencyData,
         pauseForExam,
         resumeFromExam,
     };

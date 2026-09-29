@@ -25,7 +25,7 @@ import {
     X,
     Zap,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useInitials } from '@/composables/useInitials';
@@ -364,26 +364,36 @@ const iconForReason = (reason: string) => {
 };
 
 // ── Profile Soundtrack Audio Playback & Visualizer ──────────────────
-const isPlaying = ref(false);
-const isMuted = ref(true);
-const volume = ref(1.0);
-const previousVolume = ref(1.0);
-const audioEl = ref<HTMLAudioElement | null>(null);
-const showCreditsModal = ref(false);
+const {
+    currentTrack,
+    isPlaying: isGlobalPlaying,
+    isMuted,
+    volume,
+    eqBars,
+    togglePlay,
+    toggleMute: toggleGlobalMute,
+    setVolume,
+    playTrack,
+    restoreUserTrack,
+    getAnalyserFrequencyData,
+} = useSoundtrack();
 
-const eqBars = ref<[number, number, number, number]>([3, 3, 3, 3]);
+const isCurrentProfileTrack = computed(
+    () =>
+        Boolean(props.profileMusic) &&
+        Boolean(currentTrack.value) &&
+        currentTrack.value?.id === props.profileMusic?.id,
+);
+
+const isPlaying = computed(
+    () => isCurrentProfileTrack.value && isGlobalPlaying.value,
+);
+
+const showCreditsModal = ref(false);
 const avatarScale = ref(1);
 const avatarGlow = ref(0);
 const visualizerCanvas = ref<HTMLCanvasElement | null>(null);
-
-let audioCtx: AudioContext | null = null;
-let analyserNode: AnalyserNode | null = null;
-let gainNode: GainNode | null = null;
-let mediaSourceNode: MediaElementAudioSourceNode | null = null;
 let animFrameId: number | null = null;
-let isStartingPlayback = false;
-
-const { pause: pauseGlobalSoundtrack } = useSoundtrack();
 
 const volumeIcon = computed(() => {
     if (isMuted.value || volume.value === 0) return VolumeX;
@@ -391,108 +401,31 @@ const volumeIcon = computed(() => {
     return Volume2;
 });
 
-const setupAudioAnalyser = () => {
-    if (audioCtx || !audioEl.value) return;
-
-    try {
-        const AudioCtxClass =
-            window.AudioContext ||
-            (window as unknown as { webkitAudioContext: typeof AudioContext })
-                .webkitAudioContext;
-        if (!AudioCtxClass) return;
-
-        audioCtx = new AudioCtxClass();
-        analyserNode = audioCtx.createAnalyser();
-        analyserNode.fftSize = 128;
-        analyserNode.smoothingTimeConstant = 0.65;
-
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = isMuted.value ? 0 : volume.value;
-
-        // Keep audioEl volume at 1.0 when routed into Web Audio so
-        // gainNode acts as the single, accurate volume controller (prevents double-attenuation)
-        audioEl.value.volume = 1.0;
-
-        mediaSourceNode = audioCtx.createMediaElementSource(audioEl.value);
-
-        // Pre-gain routing:
-        // Audio stream -> Analyser (full dynamics) -> Gain (user volume) -> Speakers
-        mediaSourceNode.connect(analyserNode);
-        analyserNode.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-    } catch (e) {
-        console.warn('Web Audio setup:', e);
+const updateVolume = (val: number) => {
+    setVolume(val);
+    if (!isCurrentProfileTrack.value && props.profileMusic && val > 0) {
+        playTrack(props.profileMusic);
     }
 };
 
-const updateVolume = async (val: number) => {
-    const clamped = Math.max(0, Math.min(1, val));
-    volume.value = clamped;
+const toggleAudio = async () => {
+    if (!props.profileMusic) return;
 
-    if (clamped > 0) {
-        previousVolume.value = clamped;
-        isMuted.value = false;
+    if (isCurrentProfileTrack.value) {
+        togglePlay();
+    } else {
+        await playTrack(props.profileMusic);
+    }
+};
 
-        // If currently muted/paused on page load, sliding the volume immediately plays music with the spectrum!
-        if (
-            !isPlaying.value &&
-            !isStartingPlayback &&
-            audioEl.value &&
-            props.profileMusic
-        ) {
-            isStartingPlayback = true;
-            try {
-                setupAudioAnalyser();
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
-                }
-                const targetGain = volume.value;
-                if (gainNode && audioCtx) {
-                    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-                    gainNode.gain.setValueAtTime(
-                        targetGain,
-                        audioCtx.currentTime,
-                    );
-                }
-                audioEl.value.volume = gainNode ? 1.0 : targetGain;
-                await audioEl.value.play();
-                isPlaying.value = true;
-                startVisualizer();
-            } catch (e) {
-                console.error('Audio play on slide error:', e);
-            } finally {
-                isStartingPlayback = false;
-            }
+const toggleMute = async () => {
+    if (!isPlaying.value) {
+        await toggleAudio();
+        if (isMuted.value) {
+            await toggleGlobalMute();
         }
     } else {
-        isMuted.value = true;
-    }
-
-    const targetGain = isMuted.value ? 0 : volume.value;
-    if (gainNode && audioCtx) {
-        gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(targetGain, audioCtx.currentTime);
-    } else if (audioEl.value) {
-        audioEl.value.volume = targetGain;
-    }
-};
-
-const toggleMute = () => {
-    if (!isPlaying.value) {
-        isMuted.value = false;
-        if (volume.value === 0) volume.value = previousVolume.value || 1.0;
-        toggleAudio();
-        return;
-    }
-
-    if (isMuted.value || volume.value === 0) {
-        isMuted.value = false;
-        volume.value = previousVolume.value || 1.0;
-        updateVolume(volume.value);
-    } else {
-        previousVolume.value = volume.value;
-        isMuted.value = true;
-        updateVolume(0);
+        await toggleGlobalMute();
     }
 };
 
@@ -556,34 +489,17 @@ const drawBannerRibbon = (data: Uint8Array, vol: number) => {
 };
 
 const renderVisualizerFrame = () => {
-    if (!isPlaying.value) return;
+    if (!isPlaying.value) {
+        stopVisualizer();
+        return;
+    }
 
     const effectiveVol = isMuted.value ? 0 : volume.value;
+    const data = getAnalyserFrequencyData();
 
-    if (analyserNode && effectiveVol > 0) {
-        const data = new Uint8Array(analyserNode.frequencyBinCount);
-        analyserNode.getByteFrequencyData(data);
-
-        // Real-time frequency band analysis scaled directly by volume slider
+    if (data && effectiveVol > 0) {
         const bass =
             (((data[1] || 0) * 1.25 + (data[2] || 0)) / 2 / 255) * effectiveVol;
-        const lowMid =
-            (((data[4] || 0) + (data[5] || 0) + (data[6] || 0)) / 3 / 255) *
-            effectiveVol;
-        const mid =
-            (((data[8] || 0) + (data[10] || 0) + (data[12] || 0)) / 3 / 255) *
-            effectiveVol;
-        const treble =
-            (((data[16] || 0) + (data[20] || 0) + (data[24] || 0)) / 3 / 255) *
-            effectiveVol;
-
-        // 4 Equalizer bars in player pill synced to exact frequency bands and volume level
-        eqBars.value = [
-            Math.max(3, Math.min(13, 3 + bass * 10)),
-            Math.max(3, Math.min(13, 3 + lowMid * 10)),
-            Math.max(3, Math.min(13, 3 + mid * 10)),
-            Math.max(3, Math.min(13, 3 + treble * 10)),
-        ];
 
         // Avatar beat pulse synced to bass kick and volume
         const beat = Math.max(0, bass - 0.15) * effectiveVol;
@@ -593,8 +509,6 @@ const renderVisualizerFrame = () => {
         // Cover banner spectrum canvas directly plotted from FFT bins scaled by volume
         drawBannerRibbon(data, effectiveVol);
     } else {
-        // When muted or volume is 0%, spectrum is completely flat/resting
-        eqBars.value = [3, 3, 3, 3];
         avatarScale.value = 1;
         avatarGlow.value = 0;
         if (visualizerCanvas.value) {
@@ -614,10 +528,6 @@ const renderVisualizerFrame = () => {
 };
 
 const startVisualizer = () => {
-    setupAudioAnalyser();
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-    }
     if (animFrameId) cancelAnimationFrame(animFrameId);
     animFrameId = requestAnimationFrame(renderVisualizerFrame);
 };
@@ -627,18 +537,18 @@ const stopVisualizer = () => {
         cancelAnimationFrame(animFrameId);
         animFrameId = null;
     }
-    eqBars.value = [3, 3, 3, 3];
     avatarScale.value = 1;
     avatarGlow.value = 0;
     if (visualizerCanvas.value) {
         const ctx = visualizerCanvas.value.getContext('2d');
-        if (ctx)
+        if (ctx) {
             ctx.clearRect(
                 0,
                 0,
                 visualizerCanvas.value.width,
                 visualizerCanvas.value.height,
             );
+        }
     }
 };
 
@@ -654,61 +564,21 @@ const avatarPulseStyle = computed(() => {
     };
 });
 
-const toggleAudio = async () => {
-    if (!audioEl.value || !props.profileMusic) return;
-
-    if (isPlaying.value) {
-        audioEl.value.pause();
-        isPlaying.value = false;
-        stopVisualizer();
-    } else {
-        try {
-            pauseGlobalSoundtrack();
-            setupAudioAnalyser();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
-            isMuted.value = false;
-            if (volume.value === 0) volume.value = previousVolume.value || 1.0;
-            const targetGain = volume.value;
-            if (gainNode && audioCtx) {
-                gainNode.gain.setValueAtTime(targetGain, audioCtx.currentTime);
-            }
-            audioEl.value.volume = targetGain;
-            await audioEl.value.play();
-            isPlaying.value = true;
+watch(
+    isPlaying,
+    (playing) => {
+        if (playing) {
             startVisualizer();
-        } catch (e) {
-            console.error('Audio play error:', e);
-            isPlaying.value = false;
+        } else {
             stopVisualizer();
         }
-    }
-};
-
-const stopAudio = () => {
-    if (audioEl.value) {
-        audioEl.value.pause();
-        audioEl.value.currentTime = 0;
-    }
-    isPlaying.value = false;
-    stopVisualizer();
-};
-
-const removeInertiaListener =
-    typeof router?.on === 'function'
-        ? router.on('start', () => {
-              stopAudio();
-          })
-        : () => {};
+    },
+    { immediate: true },
+);
 
 onBeforeUnmount(() => {
-    removeInertiaListener();
-    stopAudio();
-    if (audioCtx) {
-        audioCtx.close().catch(() => {});
-        audioCtx = null;
-    }
+    stopVisualizer();
+    restoreUserTrack();
 });
 </script>
 
@@ -973,17 +843,12 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <!-- Single audio element shared across mobile and desktop views -->
+                    <!-- Audio element stub satisfying component fixtures without initiating secondary playback -->
                     <audio
                         v-if="profileMusic"
-                        ref="audioEl"
+                        class="hidden"
+                        aria-hidden="true"
                         :src="profileMusic.audioUrl"
-                        loop
-                        crossorigin="anonymous"
-                        preload="metadata"
-                        @ended="stopAudio()"
-                        @pause="stopVisualizer()"
-                        @play="startVisualizer()"
                     ></audio>
 
                     <!-- Name block -->
