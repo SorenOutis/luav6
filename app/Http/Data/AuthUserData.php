@@ -23,6 +23,7 @@ final class AuthUserData
             'email' => $user->email,
             'avatar' => $user->avatar,
             'cover_photo' => $user->cover_photo,
+            'profile_music_track_id' => $user->profile_music_track_id ? (int) $user->profile_music_track_id : null,
             'bio' => $user->bio,
             'is_admin' => (bool) $user->is_admin,
             'is_super_admin' => (bool) $user->is_super_admin,

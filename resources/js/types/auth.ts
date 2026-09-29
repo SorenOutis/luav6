@@ -8,6 +8,7 @@ export type User = {
     email: string;
     avatar: string | null;
     cover_photo: string | null;
+    profile_music_track_id: number | null;
     bio: string | null;
     is_admin: boolean;
     is_super_admin: boolean;
@@ -22,10 +23,20 @@ export type User = {
     email_verified_at: string | null;
 };
 
+export interface UserSoundtrack {
+    id: number;
+    title: string;
+    artist: string;
+    duration: number;
+    audioUrl: string;
+    coverImageUrl?: string | null;
+}
+
 export type Auth = {
     // Authenticated application layouts always receive a user. Public pages
     // may receive null at runtime and only perform truthiness checks.
     user: User;
+    soundtrack?: UserSoundtrack | null;
 };
 
 export type TwoFactorConfigContent = {

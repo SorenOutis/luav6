@@ -4,10 +4,13 @@ import {
     BookOpen,
     Calendar,
     Camera,
+    ExternalLink,
     Flame,
+    Info,
     LayoutGrid,
     Lock,
     Medal,
+    Music,
     Pencil,
     Share2,
     Shield,
@@ -16,13 +19,17 @@ import {
     UserCheck,
     UserPlus,
     Users,
+    Volume1,
+    Volume2,
+    VolumeX,
     X,
     Zap,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useInitials } from '@/composables/useInitials';
+import { useSoundtrack } from '@/composables/useSoundtrack';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { edit as editProfile } from '@/routes/profile';
@@ -80,6 +87,18 @@ interface HistoryItem {
     section: string | null;
 }
 
+interface ProfileMusic {
+    id: number;
+    title: string;
+    artist: string;
+    duration: number;
+    audioUrl: string;
+    coverImageUrl?: string | null;
+    sourceUrl?: string | null;
+    licenseName?: string | null;
+    attributionText?: string | null;
+}
+
 const props = defineProps<{
     profileUser: {
         id: string;
@@ -120,6 +139,7 @@ const props = defineProps<{
     recentKudos?: RecentKudo[];
     followers?: SocialUser[];
     following?: SocialUser[];
+    profileMusic?: ProfileMusic | null;
 }>();
 
 const { getInitials } = useInitials();
@@ -342,6 +362,354 @@ const iconForReason = (reason: string) => {
 
     return Sparkles;
 };
+
+// ── Profile Soundtrack Audio Playback & Visualizer ──────────────────
+const isPlaying = ref(false);
+const isMuted = ref(true);
+const volume = ref(1.0);
+const previousVolume = ref(1.0);
+const audioEl = ref<HTMLAudioElement | null>(null);
+const showCreditsModal = ref(false);
+
+const eqBars = ref<[number, number, number, number]>([3, 3, 3, 3]);
+const avatarScale = ref(1);
+const avatarGlow = ref(0);
+const visualizerCanvas = ref<HTMLCanvasElement | null>(null);
+
+let audioCtx: AudioContext | null = null;
+let analyserNode: AnalyserNode | null = null;
+let gainNode: GainNode | null = null;
+let mediaSourceNode: MediaElementAudioSourceNode | null = null;
+let animFrameId: number | null = null;
+let isStartingPlayback = false;
+
+const { pause: pauseGlobalSoundtrack } = useSoundtrack();
+
+const volumeIcon = computed(() => {
+    if (isMuted.value || volume.value === 0) return VolumeX;
+    if (volume.value <= 0.5) return Volume1;
+    return Volume2;
+});
+
+const setupAudioAnalyser = () => {
+    if (audioCtx || !audioEl.value) return;
+
+    try {
+        const AudioCtxClass =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext })
+                .webkitAudioContext;
+        if (!AudioCtxClass) return;
+
+        audioCtx = new AudioCtxClass();
+        analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 128;
+        analyserNode.smoothingTimeConstant = 0.65;
+
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = isMuted.value ? 0 : volume.value;
+
+        // Keep audioEl volume at 1.0 when routed into Web Audio so
+        // gainNode acts as the single, accurate volume controller (prevents double-attenuation)
+        audioEl.value.volume = 1.0;
+
+        mediaSourceNode = audioCtx.createMediaElementSource(audioEl.value);
+
+        // Pre-gain routing:
+        // Audio stream -> Analyser (full dynamics) -> Gain (user volume) -> Speakers
+        mediaSourceNode.connect(analyserNode);
+        analyserNode.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+    } catch (e) {
+        console.warn('Web Audio setup:', e);
+    }
+};
+
+const updateVolume = async (val: number) => {
+    const clamped = Math.max(0, Math.min(1, val));
+    volume.value = clamped;
+
+    if (clamped > 0) {
+        previousVolume.value = clamped;
+        isMuted.value = false;
+
+        // If currently muted/paused on page load, sliding the volume immediately plays music with the spectrum!
+        if (
+            !isPlaying.value &&
+            !isStartingPlayback &&
+            audioEl.value &&
+            props.profileMusic
+        ) {
+            isStartingPlayback = true;
+            try {
+                setupAudioAnalyser();
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                const targetGain = volume.value;
+                if (gainNode && audioCtx) {
+                    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(
+                        targetGain,
+                        audioCtx.currentTime,
+                    );
+                }
+                audioEl.value.volume = gainNode ? 1.0 : targetGain;
+                await audioEl.value.play();
+                isPlaying.value = true;
+                startVisualizer();
+            } catch (e) {
+                console.error('Audio play on slide error:', e);
+            } finally {
+                isStartingPlayback = false;
+            }
+        }
+    } else {
+        isMuted.value = true;
+    }
+
+    const targetGain = isMuted.value ? 0 : volume.value;
+    if (gainNode && audioCtx) {
+        gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+    } else if (audioEl.value) {
+        audioEl.value.volume = targetGain;
+    }
+};
+
+const toggleMute = () => {
+    if (!isPlaying.value) {
+        isMuted.value = false;
+        if (volume.value === 0) volume.value = previousVolume.value || 1.0;
+        toggleAudio();
+        return;
+    }
+
+    if (isMuted.value || volume.value === 0) {
+        isMuted.value = false;
+        volume.value = previousVolume.value || 1.0;
+        updateVolume(volume.value);
+    } else {
+        previousVolume.value = volume.value;
+        isMuted.value = true;
+        updateVolume(0);
+    }
+};
+
+const drawBannerRibbon = (data: Uint8Array, vol: number) => {
+    const canvas = visualizerCanvas.value;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, w, height);
+
+    if (vol <= 0) return;
+
+    const grad = ctx.createLinearGradient(0, height, 0, 0);
+    grad.addColorStop(0, `rgba(217, 119, 87, ${0.15 + vol * 0.45})`);
+    grad.addColorStop(0.5, `rgba(217, 119, 87, ${vol * 0.25})`);
+    grad.addColorStop(1, 'rgba(217, 119, 87, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+
+    const bars = 48;
+    const barWidth = w / bars;
+
+    for (let i = 0; i <= bars; i++) {
+        const x = i * barWidth;
+        const binIndex = Math.min(
+            data.length - 1,
+            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
+        );
+        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
+        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
+        const y = Math.max(3, height - saturatedAmp * (height - 6));
+        ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(w, height);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sharp glowing crest line on top of the spectrum
+    ctx.strokeStyle = `rgba(217, 119, 87, ${Math.min(1.0, 0.3 + vol * 0.65)})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= bars; i++) {
+        const x = i * barWidth;
+        const binIndex = Math.min(
+            data.length - 1,
+            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
+        );
+        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
+        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
+        const y = Math.max(3, height - saturatedAmp * (height - 6));
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+};
+
+const renderVisualizerFrame = () => {
+    if (!isPlaying.value) return;
+
+    const effectiveVol = isMuted.value ? 0 : volume.value;
+
+    if (analyserNode && effectiveVol > 0) {
+        const data = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(data);
+
+        // Real-time frequency band analysis scaled directly by volume slider
+        const bass =
+            (((data[1] || 0) * 1.25 + (data[2] || 0)) / 2 / 255) * effectiveVol;
+        const lowMid =
+            (((data[4] || 0) + (data[5] || 0) + (data[6] || 0)) / 3 / 255) *
+            effectiveVol;
+        const mid =
+            (((data[8] || 0) + (data[10] || 0) + (data[12] || 0)) / 3 / 255) *
+            effectiveVol;
+        const treble =
+            (((data[16] || 0) + (data[20] || 0) + (data[24] || 0)) / 3 / 255) *
+            effectiveVol;
+
+        // 4 Equalizer bars in player pill synced to exact frequency bands and volume level
+        eqBars.value = [
+            Math.max(3, Math.min(13, 3 + bass * 10)),
+            Math.max(3, Math.min(13, 3 + lowMid * 10)),
+            Math.max(3, Math.min(13, 3 + mid * 10)),
+            Math.max(3, Math.min(13, 3 + treble * 10)),
+        ];
+
+        // Avatar beat pulse synced to bass kick and volume
+        const beat = Math.max(0, bass - 0.15) * effectiveVol;
+        avatarScale.value = 1 + beat * 0.05;
+        avatarGlow.value = beat * 24;
+
+        // Cover banner spectrum canvas directly plotted from FFT bins scaled by volume
+        drawBannerRibbon(data, effectiveVol);
+    } else {
+        // When muted or volume is 0%, spectrum is completely flat/resting
+        eqBars.value = [3, 3, 3, 3];
+        avatarScale.value = 1;
+        avatarGlow.value = 0;
+        if (visualizerCanvas.value) {
+            const ctx = visualizerCanvas.value.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(
+                    0,
+                    0,
+                    visualizerCanvas.value.width,
+                    visualizerCanvas.value.height,
+                );
+            }
+        }
+    }
+
+    animFrameId = requestAnimationFrame(renderVisualizerFrame);
+};
+
+const startVisualizer = () => {
+    setupAudioAnalyser();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    animFrameId = requestAnimationFrame(renderVisualizerFrame);
+};
+
+const stopVisualizer = () => {
+    if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+    }
+    eqBars.value = [3, 3, 3, 3];
+    avatarScale.value = 1;
+    avatarGlow.value = 0;
+    if (visualizerCanvas.value) {
+        const ctx = visualizerCanvas.value.getContext('2d');
+        if (ctx)
+            ctx.clearRect(
+                0,
+                0,
+                visualizerCanvas.value.width,
+                visualizerCanvas.value.height,
+            );
+    }
+};
+
+const avatarPulseStyle = computed(() => {
+    if (!isPlaying.value) return {};
+    return {
+        transform: `scale(${avatarScale.value})`,
+        filter:
+            avatarGlow.value > 1
+                ? `drop-shadow(0 0 ${avatarGlow.value}px rgba(217, 119, 87, 0.65))`
+                : 'none',
+        transition: 'transform 60ms ease-out, filter 120ms ease-out',
+    };
+});
+
+const toggleAudio = async () => {
+    if (!audioEl.value || !props.profileMusic) return;
+
+    if (isPlaying.value) {
+        audioEl.value.pause();
+        isPlaying.value = false;
+        stopVisualizer();
+    } else {
+        try {
+            pauseGlobalSoundtrack();
+            setupAudioAnalyser();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            isMuted.value = false;
+            if (volume.value === 0) volume.value = previousVolume.value || 1.0;
+            const targetGain = volume.value;
+            if (gainNode && audioCtx) {
+                gainNode.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+            }
+            audioEl.value.volume = targetGain;
+            await audioEl.value.play();
+            isPlaying.value = true;
+            startVisualizer();
+        } catch (e) {
+            console.error('Audio play error:', e);
+            isPlaying.value = false;
+            stopVisualizer();
+        }
+    }
+};
+
+const stopAudio = () => {
+    if (audioEl.value) {
+        audioEl.value.pause();
+        audioEl.value.currentTime = 0;
+    }
+    isPlaying.value = false;
+    stopVisualizer();
+};
+
+const removeInertiaListener =
+    typeof router?.on === 'function'
+        ? router.on('start', () => {
+              stopAudio();
+          })
+        : () => {};
+
+onBeforeUnmount(() => {
+    removeInertiaListener();
+    stopAudio();
+    if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+    }
+});
 </script>
 
 <template>
@@ -375,18 +743,29 @@ const iconForReason = (reason: string) => {
                         class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/25 to-transparent"
                         aria-hidden="true"
                     ></div>
+
+                    <!-- Live Audio Spectrum Ribbon Canvas (stays in background behind avatar) -->
+                    <canvas
+                        v-show="isPlaying"
+                        ref="visualizerCanvas"
+                        width="800"
+                        height="60"
+                        class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-12 w-full opacity-70 transition-opacity duration-300"
+                    ></canvas>
                 </div>
 
-                <!-- ════════════ Identity row ════════════ -->
-                <div class="w-full px-4 sm:px-6 lg:px-8 2xl:px-12">
+                <!-- ════════════ Identity row (elevated in front of cover and spectrum) ════════════ -->
+                <div
+                    class="relative z-10 w-full px-4 sm:px-6 lg:px-8 2xl:px-12"
+                >
                     <div
                         class="-mt-12 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between"
                     >
                         <div class="flex items-end gap-4">
-                            <!-- XP progress ring around the (larger) avatar -->
+                            <!-- XP progress ring around the (larger) avatar (highest z-index to stay strictly in front) -->
                             <div
-                                class="relative shrink-0 rounded-full p-[5px] sm:p-[6px]"
-                                :style="ringStyle"
+                                class="relative z-20 shrink-0 rounded-full p-[5px] sm:p-[6px]"
+                                :style="[ringStyle, avatarPulseStyle]"
                                 :title="`${Math.round(levelProgress)}% to the next level`"
                             >
                                 <div class="rounded-full bg-background p-[3px]">
@@ -418,6 +797,129 @@ const iconForReason = (reason: string) => {
                                         Rank #{{ stats.rank }} of
                                         {{ stats.totalPlayers }}
                                     </span>
+                                </div>
+                            </div>
+
+                            <!-- Mobile Music Widget (placed directly to the right of the avatar circle) -->
+                            <div
+                                v-if="profileMusic"
+                                class="z-10 flex min-w-0 flex-1 flex-col justify-end gap-1.5 pb-1 sm:hidden"
+                            >
+                                <!-- Top row: Music track title + equalizer / icon + info button -->
+                                <div class="flex min-w-0 items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        class="flex min-w-0 items-center gap-1.5 text-left text-xs font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none"
+                                        :title="`${profileMusic.title} by ${profileMusic.artist} (Click to toggle playback)`"
+                                        @click="toggleAudio"
+                                    >
+                                        <div
+                                            v-if="isPlaying && !isMuted"
+                                            class="flex h-3 shrink-0 items-end gap-0.5 px-0.5"
+                                            aria-hidden="true"
+                                        >
+                                            <span
+                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                                :style="{
+                                                    height: `${eqBars[0]}px`,
+                                                }"
+                                            ></span>
+                                            <span
+                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                                :style="{
+                                                    height: `${eqBars[1]}px`,
+                                                }"
+                                            ></span>
+                                            <span
+                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                                :style="{
+                                                    height: `${eqBars[2]}px`,
+                                                }"
+                                            ></span>
+                                            <span
+                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                                :style="{
+                                                    height: `${eqBars[3]}px`,
+                                                }"
+                                            ></span>
+                                        </div>
+                                        <Music
+                                            v-else
+                                            class="size-3.5 shrink-0 text-primary"
+                                        />
+
+                                        <span
+                                            class="max-w-[130px] truncate text-xs leading-tight font-bold"
+                                        >
+                                            {{ profileMusic.title }}
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        aria-label="Track details and credits"
+                                        title="Track license and attribution info"
+                                        class="flex size-4.5 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground"
+                                        @click="showCreditsModal = true"
+                                    >
+                                        <Info class="size-3" />
+                                    </button>
+                                </div>
+
+                                <!-- Bottom row: Volume speaker button + volume slider -->
+                                <div class="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        :aria-label="
+                                            isPlaying && !isMuted
+                                                ? 'Mute'
+                                                : 'Unmute / Play'
+                                        "
+                                        class="flex size-6 shrink-0 items-center justify-center rounded-full transition-all focus-visible:outline-none"
+                                        :class="
+                                            isPlaying && !isMuted
+                                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                                : 'bg-muted text-muted-foreground hover:text-foreground'
+                                        "
+                                        @click="toggleMute"
+                                    >
+                                        <component
+                                            :is="volumeIcon"
+                                            class="size-3"
+                                        />
+                                    </button>
+
+                                    <div
+                                        class="flex max-w-[115px] flex-1 items-center gap-1.5"
+                                    >
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.01"
+                                            :value="isMuted ? 0 : volume"
+                                            class="h-1.5 w-full cursor-pointer rounded-full bg-muted accent-primary"
+                                            @input="
+                                                updateVolume(
+                                                    Number(
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    ),
+                                                )
+                                            "
+                                        />
+                                        <span
+                                            class="min-w-[25px] font-mono text-[10px] text-muted-foreground"
+                                        >
+                                            {{
+                                                Math.round(
+                                                    (isMuted ? 0 : volume) *
+                                                        100,
+                                                )
+                                            }}%
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -471,6 +973,19 @@ const iconForReason = (reason: string) => {
                         </div>
                     </div>
 
+                    <!-- Single audio element shared across mobile and desktop views -->
+                    <audio
+                        v-if="profileMusic"
+                        ref="audioEl"
+                        :src="profileMusic.audioUrl"
+                        loop
+                        crossorigin="anonymous"
+                        preload="metadata"
+                        @ended="stopAudio()"
+                        @pause="stopVisualizer()"
+                        @play="startVisualizer()"
+                    ></audio>
+
                     <!-- Name block -->
                     <div class="mt-3 space-y-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -485,6 +1000,138 @@ const iconForReason = (reason: string) => {
                             >
                                 You
                             </span>
+
+                            <!-- Desktop Profile Music Player Pill (hidden on mobile, shown beside name on sm and up) -->
+                            <div
+                                v-if="profileMusic"
+                                class="group/music relative hidden items-center gap-1.5 rounded-full border border-border/80 bg-card/90 py-1 pr-2.5 pl-1.5 shadow-xs backdrop-blur-md transition-all hover:border-primary/50 sm:inline-flex"
+                            >
+                                <div
+                                    class="group/vol relative flex items-center"
+                                >
+                                    <button
+                                        type="button"
+                                        :aria-label="
+                                            isPlaying && !isMuted
+                                                ? 'Mute profile music'
+                                                : 'Unmute profile music'
+                                        "
+                                        :title="
+                                            isPlaying && !isMuted
+                                                ? `Mute (${Math.round(volume * 100)}% volume)`
+                                                : 'Unmute (100% volume)'
+                                        "
+                                        class="flex size-7 shrink-0 items-center justify-center rounded-full transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                        :class="
+                                            isPlaying && !isMuted
+                                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                                        "
+                                        @click="toggleMute"
+                                    >
+                                        <component
+                                            :is="volumeIcon"
+                                            class="size-3.5"
+                                        />
+                                    </button>
+
+                                    <div
+                                        class="flex max-w-0 items-center overflow-hidden transition-all duration-200 group-hover/vol:max-w-[110px] group-hover/vol:pl-2 focus-within:max-w-[110px] focus-within:pl-2"
+                                    >
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.01"
+                                            :value="isMuted ? 0 : volume"
+                                            :title="`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`"
+                                            class="h-1.5 w-16 cursor-pointer appearance-none rounded-full bg-muted accent-primary focus:outline-none [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-muted [&::-webkit-slider-thumb]:-mt-[3px] [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-xs"
+                                            @input="
+                                                updateVolume(
+                                                    Number(
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    ),
+                                                )
+                                            "
+                                        />
+                                        <span
+                                            class="min-w-[28px] pl-1 font-mono text-[10px] text-muted-foreground"
+                                        >
+                                            {{
+                                                Math.round(
+                                                    (isMuted ? 0 : volume) *
+                                                        100,
+                                                )
+                                            }}%
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-1.5 text-left text-xs transition-colors hover:text-primary focus-visible:outline-none"
+                                    :title="`${profileMusic.title} by ${profileMusic.artist} (Click to toggle playback)`"
+                                    @click="toggleAudio"
+                                >
+                                    <div
+                                        v-if="isPlaying"
+                                        class="flex h-3 items-end gap-0.5 px-0.5"
+                                        aria-hidden="true"
+                                    >
+                                        <span
+                                            class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                            :style="{
+                                                height: `${eqBars[0]}px`,
+                                            }"
+                                        ></span>
+                                        <span
+                                            class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                            :style="{
+                                                height: `${eqBars[1]}px`,
+                                            }"
+                                        ></span>
+                                        <span
+                                            class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                            :style="{
+                                                height: `${eqBars[2]}px`,
+                                            }"
+                                        ></span>
+                                        <span
+                                            class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
+                                            :style="{
+                                                height: `${eqBars[3]}px`,
+                                            }"
+                                        ></span>
+                                    </div>
+                                    <Music
+                                        v-else
+                                        class="size-3 text-muted-foreground"
+                                    />
+
+                                    <span
+                                        class="max-w-[130px] truncate font-medium text-foreground sm:max-w-[200px]"
+                                    >
+                                        {{ profileMusic.title }}
+                                    </span>
+                                    <span
+                                        class="hidden max-w-[120px] truncate text-[11px] text-muted-foreground sm:inline"
+                                    >
+                                        • {{ profileMusic.artist }}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    aria-label="Track details and credits"
+                                    title="Track license and attribution info"
+                                    class="flex size-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+                                    @click="showCreditsModal = true"
+                                >
+                                    <Info class="size-3" />
+                                </button>
+                            </div>
                         </div>
 
                         <p class="text-[15px] text-muted-foreground">
@@ -1088,6 +1735,100 @@ const iconForReason = (reason: string) => {
                                     : 'Not following anyone yet.'
                             }}
                         </p>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Profile Soundtrack Details & Attribution Modal -->
+        <Dialog
+            v-if="profileMusic"
+            :open="showCreditsModal"
+            @update:open="(val: boolean) => (showCreditsModal = val)"
+        >
+            <DialogContent class="max-w-md">
+                <DialogTitle
+                    class="flex items-center gap-2 text-base font-bold"
+                >
+                    <Music class="size-4 text-primary" />
+                    Track Information & Credits
+                </DialogTitle>
+                <p class="-mt-2 text-xs text-muted-foreground">
+                    Soundtrack selected by {{ profileUser.name }} (loops
+                    continuously).
+                </p>
+
+                <div class="mt-2 space-y-3.5">
+                    <div
+                        class="flex items-center gap-3.5 rounded-xl border border-border/50 bg-muted/30 p-3.5"
+                    >
+                        <div
+                            class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10"
+                        >
+                            <img
+                                v-if="profileMusic.coverImageUrl"
+                                :src="profileMusic.coverImageUrl"
+                                :alt="profileMusic.title"
+                                class="size-full object-cover"
+                            />
+                            <Music v-else class="size-6 text-primary" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4
+                                class="truncate text-sm font-bold text-foreground"
+                            >
+                                {{ profileMusic.title }}
+                            </h4>
+                            <p class="truncate text-xs text-muted-foreground">
+                                {{ profileMusic.artist }}
+                            </p>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span
+                                    class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                                >
+                                    {{ profileMusic.duration }}s loop
+                                </span>
+                                <span
+                                    v-if="profileMusic.licenseName"
+                                    class="truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                >
+                                    {{ profileMusic.licenseName }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attribution text required by NCS / CC -->
+                    <div
+                        v-if="profileMusic.attributionText"
+                        class="rounded-lg border border-border/40 bg-muted/20 p-3"
+                    >
+                        <p
+                            class="mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+                        >
+                            Attribution & License
+                        </p>
+                        <p
+                            class="max-h-36 overflow-y-auto rounded border border-border/30 bg-background/60 p-2.5 font-mono text-xs whitespace-pre-line text-foreground/90"
+                        >
+                            {{ profileMusic.attributionText }}
+                        </p>
+                    </div>
+
+                    <!-- Official source link -->
+                    <div
+                        v-if="profileMusic.sourceUrl"
+                        class="flex justify-end pt-1"
+                    >
+                        <a
+                            :href="profileMusic.sourceUrl"
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            class="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                        >
+                            <span>Official Release / Stream</span>
+                            <ExternalLink class="size-3.5" />
+                        </a>
                     </div>
                 </div>
             </DialogContent>

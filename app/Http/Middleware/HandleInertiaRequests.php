@@ -46,6 +46,28 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => AuthUserData::from($request->user()),
+                'soundtrack' => function () use ($request): ?array {
+                    $user = $request->user();
+                    if (! $user || ! $user->profile_music_track_id) {
+                        return null;
+                    }
+                    $user->loadMissing(['profileMusicTrack']);
+                    $track = $user->profileMusicTrack;
+                    if (! $track || ! $track->is_active) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => (int) $track->id,
+                        'title' => $track->title,
+                        'artist' => $track->artist,
+                        'duration' => (float) $track->duration_seconds,
+                        'audioUrl' => route('profile-music.stream', $track->id),
+                        'coverImageUrl' => $track->cover_image_path
+                            ? PublicFileUrl::resolve($track->cover_image_path)
+                            : null,
+                    ];
+                },
             ],
             'workspace' => fn () => $this->workspaceProps($request),
             'seo' => [

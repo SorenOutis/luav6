@@ -242,6 +242,24 @@ class PublicProfileController extends Controller
                 ])->values()->all();
         }
 
+        $user->loadMissing(['profileMusicTrack']);
+        $profileMusic = null;
+        if ($user->profileMusicTrack && $user->profileMusicTrack->is_active) {
+            $profileMusic = [
+                'id' => $user->profileMusicTrack->id,
+                'title' => $user->profileMusicTrack->title,
+                'artist' => $user->profileMusicTrack->artist,
+                'duration' => (float) $user->profileMusicTrack->duration_seconds,
+                'audioUrl' => route('profile-music.stream', $user->profileMusicTrack->id),
+                'coverImageUrl' => $user->profileMusicTrack->cover_image_path
+                    ? PublicFileUrl::resolve($user->profileMusicTrack->cover_image_path)
+                    : null,
+                'sourceUrl' => $user->profileMusicTrack->source_url,
+                'licenseName' => $user->profileMusicTrack->license_name,
+                'attributionText' => $user->profileMusicTrack->attribution_text,
+            ];
+        }
+
         return Inertia::render('User/PublicProfile', [
             'profileUser' => [
                 'id' => (string) $user->public_id,
@@ -286,6 +304,7 @@ class PublicProfileController extends Controller
             'recentKudos' => $recentKudos,
             'followers' => $followers,
             'following' => $following,
+            'profileMusic' => $profileMusic,
         ]);
     }
 

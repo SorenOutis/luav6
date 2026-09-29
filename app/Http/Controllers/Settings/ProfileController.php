@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Models\Workspace;
 use App\Support\AvatarGallery;
+use App\Support\PublicFileUrl;
+use App\Support\WorkspaceContext;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,12 +32,33 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user();
+        $userWorkspaceId = app(WorkspaceContext::class)->id();
+
+        $musicTracks = ProfileMusicTrack::query()
+            ->where('is_active', true)
+            ->availableForWorkspace($userWorkspaceId)
+            ->orderBy('title')
+            ->get()
+            ->map(fn (ProfileMusicTrack $track): array => [
+                'id' => $track->id,
+                'title' => $track->title,
+                'artist' => $track->artist,
+                'duration' => (float) $track->duration_seconds,
+                'audioUrl' => route('profile-music.stream', $track->id),
+                'coverImageUrl' => $track->cover_image_path ? PublicFileUrl::resolve($track->cover_image_path) : null,
+                'attributionText' => $track->attribution_text,
+                'licenseName' => $track->license_name,
+                'sourceUrl' => $track->source_url,
+            ])
+            ->values()
+            ->all();
 
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
             'userSections' => $user->sections()->orderBy('name')->get(['sections.id', 'name']),
             'avatarGallery' => AvatarGallery::items(),
+            'musicTracks' => $musicTracks,
         ]);
     }
 

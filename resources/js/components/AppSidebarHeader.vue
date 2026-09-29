@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import HeaderSoundtrackPlayer from '@/components/HeaderSoundtrackPlayer.vue';
 import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -136,6 +137,9 @@ const markAllNotificationsAsRead = () => {
         </div>
 
         <div class="flex items-center gap-2 sm:gap-4">
+            <!-- Background soundtrack player beside notification bell -->
+            <HeaderSoundtrackPlayer />
+
             <DropdownMenu>
                 <DropdownMenuTrigger :as-child="true">
                     <button
