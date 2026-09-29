@@ -40,7 +40,19 @@ class ProfileMusicTracksTable
                     ->sortable(),
                 TextColumn::make('duration_seconds')
                     ->label('Duration')
-                    ->formatStateUsing(fn ($state): string => "{$state}s")
+                    ->formatStateUsing(function ($state): string {
+                        if ($state === null || $state === '') {
+                            return '—';
+                        }
+                        $seconds = (float) $state;
+                        if ($seconds < 60) {
+                            return "{$seconds}s";
+                        }
+                        $mins = (int) floor($seconds / 60);
+                        $rem = (int) round(fmod($seconds, 60));
+
+                        return sprintf('%d:%02d', $mins, $rem);
+                    })
                     ->sortable(),
                 TextColumn::make('preview')
                     ->label('Listen')

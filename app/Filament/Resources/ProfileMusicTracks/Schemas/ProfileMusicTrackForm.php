@@ -57,8 +57,8 @@ class ProfileMusicTrackForm
                         ]),
                     ]),
 
-                Section::make('Audio Clip & Browser Trimmer')
-                    ->description('Built-in client-side audio trimmer. Select any audio file to preview and trim up to 30 seconds.')
+                Section::make('Audio Track & Optional Trimmer')
+                    ->description('Upload any full soundtrack or use the built-in browser trimmer to preview and optionally clip a specific segment.')
                     ->schema([
                         ViewField::make('audio_trimmer')
                             ->view('filament.components.audio-trimmer')
@@ -66,7 +66,7 @@ class ProfileMusicTrackForm
                             ->columnSpanFull(),
                         Grid::make(2)->schema([
                             FileUpload::make('audio_path')
-                                ->label('Audio File (Trimmed Clip)')
+                                ->label('Audio File')
                                 ->disk('public')
                                 ->directory('profile-music')
                                 ->acceptedFileTypes([
@@ -90,17 +90,16 @@ class ProfileMusicTrackForm
                                     'mimetypes' => 'The audio file must be a valid audio format (WAV, MP3, OGG, M4A, AAC, FLAC).',
                                 ])
                                 ->required()
-                                ->maxSize(20480)
-                                ->helperText('Upload the 30-second WAV clip exported above or any pre-trimmed audio file.'),
+                                ->maxSize(51200)
+                                ->helperText('Upload any complete song/soundtrack or a trimmed clip exported from the trimmer above.'),
                             TextInput::make('duration_seconds')
-                                ->label('Duration (Seconds)')
+                                ->label('Duration (Seconds, Optional)')
                                 ->numeric()
-                                ->required()
-                                ->minValue(0.5)
-                                ->maxValue(30.0)
+                                ->nullable()
+                                ->minValue(0.1)
                                 ->step(0.1)
-                                ->default(30.0)
-                                ->helperText('Maximum 30.0 seconds. Automatically populated when exporting with the trimmer.'),
+                                ->placeholder('e.g. 185.0')
+                                ->helperText('Optional track length in seconds. Automatically populated when using the trimmer or previewer.'),
                         ]),
                         FileUpload::make('cover_image_path')
                             ->label('Cover Artwork (Optional)')
