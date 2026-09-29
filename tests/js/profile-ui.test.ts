@@ -31,6 +31,12 @@ vi.mock('@inertiajs/vue3', () => {
                 () =>
                     h('div', slots.default?.()),
         }),
+        router: {
+            post: vi.fn(),
+            delete: vi.fn(),
+            visit: vi.fn(),
+            on: vi.fn(() => () => {}),
+        },
     };
 });
 

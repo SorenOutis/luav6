@@ -39,6 +39,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PendingAiActionController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\ProfileKudoController;
+use App\Http\Controllers\ProfileMusicStreamController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -90,6 +91,11 @@ Route::post('/csp/report', CspReportController::class)
 // Serves the uploaded school logo as the site favicon (falling back to the
 // bundled /favicon.ico when no logo is set).
 Route::get('/favicon.png', FaviconController::class)->name('favicon');
+
+// Streams approved profile music with full CORS headers so Web Audio
+// AnalyserNode can read real frequency amplitudes with 0 CORS errors.
+Route::get('profile-music/{track}/stream', [ProfileMusicStreamController::class, 'stream'])
+    ->name('profile-music.stream');
 
 // Polled by the Maintenance page (every 30s) so students are brought back
 // automatically when maintenance turns off. Public on purpose: logged-out

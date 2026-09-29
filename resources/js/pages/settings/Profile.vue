@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Camera, Crop, Hash, Loader2, LogOut, Plus } from 'lucide-vue-next';
+import {
+    Camera,
+    Crop,
+    Hash,
+    Loader2,
+    LogOut,
+    Music,
+    Play,
+    Plus,
+    Square,
+    VolumeX,
+} from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarPickerModal from '@/components/AvatarPickerModal.vue';
@@ -12,6 +23,7 @@ import InputError from '@/components/InputError.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useInitials } from '@/composables/useInitials';
@@ -23,11 +35,24 @@ import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { BreadcrumbItem } from '@/types';
 
+export interface ProfileMusicTrackItem {
+    id: number;
+    title: string;
+    artist: string;
+    duration: number;
+    audioUrl: string;
+    coverImageUrl?: string | null;
+    attributionText?: string | null;
+    licenseName?: string | null;
+    sourceUrl?: string | null;
+}
+
 type Props = {
     mustVerifyEmail: boolean;
     status?: string;
     userSections: Array<{ id: number; name: string }>;
     avatarGallery?: AvatarGalleryItem[];
+    musicTracks?: ProfileMusicTrackItem[];
 };
 
 const props = defineProps<Props>();
@@ -199,10 +224,72 @@ const closeSectionModal = () => {
     showSectionModal.value = false;
 };
 
+// ── Profile Music Selection ─────────────────────────────────────────
+const musicTracks = computed(() => props.musicTracks ?? []);
+const selectedMusicTrackId = ref<number | null>(
+    user.value.profile_music_track_id
+        ? Number(user.value.profile_music_track_id)
+        : null,
+);
+const currentMusicTrack = computed(
+    () =>
+        musicTracks.value.find((t) => t.id === selectedMusicTrackId.value) ??
+        null,
+);
+
+const showMusicModal = ref(false);
+const previewingTrackId = ref<number | null>(null);
+const previewAudioEl = ref<HTMLAudioElement | null>(null);
+
+const togglePreviewTrack = (track: ProfileMusicTrackItem) => {
+    if (previewingTrackId.value === track.id) {
+        stopMusicPreview();
+        return;
+    }
+
+    stopMusicPreview();
+    previewingTrackId.value = track.id;
+    const audio = new Audio(track.audioUrl);
+    audio.loop = true;
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+    audio.onended = () => {
+        if (previewingTrackId.value === track.id) {
+            previewingTrackId.value = null;
+        }
+    };
+    previewAudioEl.value = audio;
+};
+
+const stopMusicPreview = () => {
+    if (previewAudioEl.value) {
+        previewAudioEl.value.pause();
+        previewAudioEl.value.currentTime = 0;
+        previewAudioEl.value = null;
+    }
+    previewingTrackId.value = null;
+};
+
+const openMusicModal = () => {
+    stopMusicPreview();
+    showMusicModal.value = true;
+};
+
+const closeMusicModal = () => {
+    stopMusicPreview();
+    showMusicModal.value = false;
+};
+
+const selectTrack = (trackId: number | null) => {
+    selectedMusicTrackId.value = trackId;
+    closeMusicModal();
+};
+
 // Blob URLs outlive the component unless released explicitly.
 onBeforeUnmount(() => {
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
     if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value);
+    stopMusicPreview();
 });
 
 const leaveSection = (sectionId: number) => {
@@ -537,6 +624,137 @@ const leaveSection = (sectionId: number) => {
                         <InputError class="mt-2" :message="errors.bio" />
                     </div>
 
+                    <!-- Profile Music Section -->
+                    <div
+                        class="flex flex-col gap-3 rounded-xl border border-border/50 p-4"
+                    >
+                        <div
+                            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <Music class="h-4 w-4 text-primary" />
+                                    <h4 class="text-sm font-semibold">
+                                        Profile Soundtrack
+                                    </h4>
+                                </div>
+                                <p class="mt-0.5 text-xs text-muted-foreground">
+                                    Choose an approved short looping music clip
+                                    (NCS, etc.) to play when classmates view
+                                    your profile.
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="openMusicModal"
+                                >
+                                    <Music class="mr-1.5 h-3.5 w-3.5" />
+                                    {{
+                                        currentMusicTrack
+                                            ? 'Change Soundtrack'
+                                            : 'Choose Music'
+                                    }}
+                                </Button>
+                                <Button
+                                    v-if="selectedMusicTrackId"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="text-muted-foreground hover:text-foreground"
+                                    @click="selectTrack(null)"
+                                >
+                                    Remove
+                                </Button>
+                            </div>
+                        </div>
+
+                        <!-- Hidden form input for submission -->
+                        <input
+                            type="hidden"
+                            name="profile_music_track_id"
+                            :value="selectedMusicTrackId || ''"
+                        />
+
+                        <!-- Current track preview card -->
+                        <div
+                            v-if="currentMusicTrack"
+                            class="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-muted/30 p-3"
+                        >
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div
+                                    class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-primary"
+                                >
+                                    <img
+                                        v-if="currentMusicTrack.coverImageUrl"
+                                        :src="currentMusicTrack.coverImageUrl"
+                                        :alt="currentMusicTrack.title"
+                                        class="size-full object-cover"
+                                    />
+                                    <Music v-else class="size-5" />
+                                </div>
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-xs font-semibold text-foreground"
+                                    >
+                                        {{ currentMusicTrack.title }}
+                                    </p>
+                                    <p
+                                        class="truncate text-[11px] text-muted-foreground"
+                                    >
+                                        {{ currentMusicTrack.artist }} •
+                                        {{ currentMusicTrack.duration }}s loop
+                                    </p>
+                                    <p
+                                        v-if="currentMusicTrack.licenseName"
+                                        class="mt-0.5 text-[10px] text-muted-foreground/80"
+                                    >
+                                        {{ currentMusicTrack.licenseName }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                class="h-8 shrink-0 gap-1.5 text-xs"
+                                @click="togglePreviewTrack(currentMusicTrack)"
+                            >
+                                <component
+                                    :is="
+                                        previewingTrackId ===
+                                        currentMusicTrack.id
+                                            ? Square
+                                            : Play
+                                    "
+                                    class="h-3.5 w-3.5"
+                                />
+                                {{
+                                    previewingTrackId === currentMusicTrack.id
+                                        ? 'Stop'
+                                        : 'Preview'
+                                }}
+                            </Button>
+                        </div>
+
+                        <div
+                            v-else
+                            class="flex items-center gap-3 rounded-lg border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground"
+                        >
+                            <VolumeX class="size-4 shrink-0 opacity-60" />
+                            <span
+                                >No profile music selected. Your profile will be
+                                silent by default.</span
+                            >
+                        </div>
+
+                        <InputError :message="errors.profile_music_track_id" />
+                    </div>
+
                     <div
                         class="space-y-4 rounded-xl border border-border/50 p-4"
                     >
@@ -780,5 +998,142 @@ const leaveSection = (sectionId: number) => {
             @cropped="applyCroppedCover"
             @cancel="cancelCoverCrop"
         />
+
+        <!-- Profile Soundtrack Selection Modal -->
+        <Dialog
+            :open="showMusicModal"
+            @update:open="(val: boolean) => (!val ? closeMusicModal() : null)"
+        >
+            <DialogContent class="max-w-lg">
+                <DialogTitle class="text-base font-bold"
+                    >Choose Profile Soundtrack</DialogTitle
+                >
+                <p class="-mt-2 text-xs text-muted-foreground">
+                    Select a soundtrack for your profile. All tracks are
+                    pre-approved short looping clips.
+                </p>
+
+                <div class="mt-2 max-h-[380px] space-y-2 overflow-y-auto pr-1">
+                    <!-- None (silent) option -->
+                    <div
+                        class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors"
+                        :class="
+                            selectedMusicTrackId === null
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border/40 hover:bg-muted/30'
+                        "
+                        @click="selectTrack(null)"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                            >
+                                <VolumeX class="size-4" />
+                            </div>
+                            <div>
+                                <p
+                                    class="text-xs font-semibold text-foreground"
+                                >
+                                    No Music (Silent)
+                                </p>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Do not play any music on profile.
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            v-if="selectedMusicTrackId === null"
+                            class="text-xs font-semibold text-primary"
+                            >Selected</span
+                        >
+                    </div>
+
+                    <!-- Track options -->
+                    <div
+                        v-for="track in musicTracks"
+                        :key="track.id"
+                        class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors"
+                        :class="
+                            selectedMusicTrackId === track.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border/40 hover:bg-muted/30'
+                        "
+                        @click="selectTrack(track.id)"
+                    >
+                        <div class="flex min-w-0 items-center gap-3">
+                            <div
+                                class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-primary"
+                            >
+                                <img
+                                    v-if="track.coverImageUrl"
+                                    :src="track.coverImageUrl"
+                                    :alt="track.title"
+                                    class="size-full object-cover"
+                                />
+                                <Music v-else class="size-4" />
+                            </div>
+                            <div class="min-w-0">
+                                <p
+                                    class="truncate text-xs font-semibold text-foreground"
+                                >
+                                    {{ track.title }}
+                                </p>
+                                <p
+                                    class="truncate text-[11px] text-muted-foreground"
+                                >
+                                    {{ track.artist }} • {{ track.duration }}s
+                                    loop
+                                </p>
+                                <p
+                                    v-if="track.licenseName"
+                                    class="mt-0.5 truncate text-[10px] text-muted-foreground/80"
+                                >
+                                    {{ track.licenseName }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex shrink-0 items-center gap-2"
+                            @click.stop
+                        >
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                class="h-7 px-2 text-xs"
+                                @click="togglePreviewTrack(track)"
+                            >
+                                <component
+                                    :is="
+                                        previewingTrackId === track.id
+                                            ? Square
+                                            : Play
+                                    "
+                                    class="mr-1 h-3.5 w-3.5"
+                                />
+                                {{
+                                    previewingTrackId === track.id
+                                        ? 'Stop'
+                                        : 'Preview'
+                                }}
+                            </Button>
+                            <span
+                                v-if="selectedMusicTrackId === track.id"
+                                class="text-xs font-semibold text-primary"
+                                >Selected</span
+                            >
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="musicTracks.length === 0"
+                        class="py-8 text-center text-xs text-muted-foreground"
+                    >
+                        No music tracks are currently available in the library.
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

@@ -12,6 +12,7 @@ use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
@@ -101,6 +102,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'last_claimed_at',
         'avatar',
         'cover_photo',
+        'profile_music_track_id',
         'bio',
         'profile_visibility',
         'profile_show_activity',
@@ -397,6 +399,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function getFilamentAvatarUrl(): ?string
     {
         return $this->avatar;
+    }
+
+    public function profileMusicTrack(): BelongsTo
+    {
+        return $this->belongsTo(ProfileMusicTrack::class, 'profile_music_track_id');
     }
 
     public function sections()
