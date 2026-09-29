@@ -192,6 +192,9 @@ const initRouterListener = () => {
 
 const initTrack = (track: UserSoundtrack | null | undefined) => {
     if (!track) {
+        if (isPlaying.value || (globalAudio && !globalAudio.paused)) {
+            pause();
+        }
         currentTrack.value = null;
         return;
     }

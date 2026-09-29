@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ProfileMusicTracks\Tables;
 use App\Filament\Support\WorkspaceTable;
 use App\Models\ProfileMusicTrack;
 use App\Support\PublicFileUrl;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -12,8 +13,10 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\HtmlString;
 
 class ProfileMusicTracksTable
@@ -51,9 +54,8 @@ class ProfileMusicTracksTable
                             '<audio controls preload="none" src="'.e($url).'" style="height: 30px; width: 180px;"></audio>'
                         );
                     }),
-                IconColumn::make('is_active')
+                ToggleColumn::make('is_active')
                     ->label('Active')
-                    ->boolean()
                     ->sortable(),
                 IconColumn::make('is_global')
                     ->label('All Workspaces')
@@ -97,6 +99,18 @@ class ProfileMusicTracksTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('activate')
+                        ->label('Activate Selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('deactivate')
+                        ->label('Deactivate Selected')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

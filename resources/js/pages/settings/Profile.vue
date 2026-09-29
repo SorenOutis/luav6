@@ -12,7 +12,7 @@ import {
     Square,
     VolumeX,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarPickerModal from '@/components/AvatarPickerModal.vue';
 import type { AvatarGalleryItem } from '@/components/AvatarPickerModal.vue';
@@ -227,7 +227,10 @@ const closeSectionModal = () => {
 // ── Profile Music Selection ─────────────────────────────────────────
 const musicTracks = computed(() => props.musicTracks ?? []);
 const selectedMusicTrackId = ref<number | null>(
-    user.value.profile_music_track_id
+    user.value.profile_music_track_id &&
+        musicTracks.value.some(
+            (t) => t.id === Number(user.value.profile_music_track_id),
+        )
         ? Number(user.value.profile_music_track_id)
         : null,
 );
@@ -235,6 +238,25 @@ const currentMusicTrack = computed(
     () =>
         musicTracks.value.find((t) => t.id === selectedMusicTrackId.value) ??
         null,
+);
+
+watch(
+    () => [props.musicTracks, user.value.profile_music_track_id],
+    () => {
+        if (!user.value.profile_music_track_id) {
+            selectedMusicTrackId.value = null;
+        } else if (
+            !musicTracks.value.some(
+                (t) => t.id === Number(user.value.profile_music_track_id),
+            )
+        ) {
+            selectedMusicTrackId.value = null;
+        } else {
+            selectedMusicTrackId.value = Number(
+                user.value.profile_music_track_id,
+            );
+        }
+    },
 );
 
 const showMusicModal = ref(false);
@@ -626,6 +648,7 @@ const leaveSection = (sectionId: number) => {
 
                     <!-- Profile Music Section -->
                     <div
+                        v-if="musicTracks.length > 0"
                         class="flex flex-col gap-3 rounded-xl border border-border/50 p-4"
                     >
                         <div
@@ -1001,6 +1024,7 @@ const leaveSection = (sectionId: number) => {
 
         <!-- Profile Soundtrack Selection Modal -->
         <Dialog
+            v-if="musicTracks.length > 0"
             :open="showMusicModal"
             @update:open="(val: boolean) => (!val ? closeMusicModal() : null)"
         >

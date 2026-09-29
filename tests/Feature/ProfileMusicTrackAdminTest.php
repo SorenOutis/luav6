@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Resources\ProfileMusicTracks\Pages\CreateProfileMusicTrack;
+use App\Filament\Resources\ProfileMusicTracks\Pages\ListProfileMusicTracks;
 use App\Models\ProfileMusicTrack;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -62,4 +63,41 @@ it('accepts audio/x-wav uploads when creating a track', function () {
         ->assertHasNoFormErrors();
 
     expect(ProfileMusicTrack::where('title', 'Manhid 30s')->exists())->toBeTrue();
+});
+
+it('allows an admin to toggle the active status of a track from the list table', function () {
+    $admin = User::factory()->superAdmin()->create();
+    actingAs($admin);
+
+    $track = ProfileMusicTrack::factory()->create(['is_active' => true]);
+
+    Livewire::test(ListProfileMusicTracks::class)
+        ->call('updateTableColumnState', 'is_active', (string) $track->getKey(), false);
+
+    expect($track->fresh()->is_active)->toBeFalse();
+
+    Livewire::test(ListProfileMusicTracks::class)
+        ->call('updateTableColumnState', 'is_active', (string) $track->getKey(), true);
+
+    expect($track->fresh()->is_active)->toBeTrue();
+});
+
+it('allows an admin to bulk activate and deactivate tracks from the list table', function () {
+    $admin = User::factory()->superAdmin()->create();
+    actingAs($admin);
+
+    $track1 = ProfileMusicTrack::factory()->create(['is_active' => true]);
+    $track2 = ProfileMusicTrack::factory()->create(['is_active' => true]);
+
+    Livewire::test(ListProfileMusicTracks::class)
+        ->callTableBulkAction('deactivate', [$track1, $track2]);
+
+    expect($track1->fresh()->is_active)->toBeFalse()
+        ->and($track2->fresh()->is_active)->toBeFalse();
+
+    Livewire::test(ListProfileMusicTracks::class)
+        ->callTableBulkAction('activate', [$track1, $track2]);
+
+    expect($track1->fresh()->is_active)->toBeTrue()
+        ->and($track2->fresh()->is_active)->toBeTrue();
 });

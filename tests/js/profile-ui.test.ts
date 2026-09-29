@@ -265,6 +265,29 @@ describe('public profile — social layout', () => {
             }).text(),
         ).not.toContain('Edit profile');
     });
+
+    it('does not render profile music controls or player when profileMusic is null', () => {
+        const wrapper = mountProfile({ profileMusic: null });
+
+        expect(wrapper.text()).not.toContain('Listen');
+        expect(wrapper.find('audio').exists()).toBe(false);
+        expect(wrapper.find('button[title*="playback"]').exists()).toBe(false);
+    });
+
+    it('renders profile music player when profileMusic is provided', () => {
+        const wrapper = mountProfile({
+            profileMusic: {
+                id: 1,
+                title: 'Spectre',
+                artist: 'Alan Walker',
+                duration: 29.5,
+                audioUrl: '/profile-music/1/stream',
+            },
+        });
+
+        expect(wrapper.text()).toContain('Spectre');
+        expect(wrapper.find('audio').exists()).toBe(true);
+    });
 });
 
 describe('dashboard greeting avatar', () => {
