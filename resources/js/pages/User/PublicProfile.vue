@@ -429,11 +429,99 @@ const toggleMute = async () => {
     }
 };
 
-const drawBannerRibbon = (data: Uint8Array, vol: number) => {
+const MAX_SPECTRUM_BARS = 64;
+const smoothedBars = new Float32Array(MAX_SPECTRUM_BARS);
+const peakBars = new Float32Array(MAX_SPECTRUM_BARS);
+const peakHold = new Int32Array(MAX_SPECTRUM_BARS);
+
+const interpolateSpectrumColor = (t: number) => {
+    const stops = [
+        { t: 0.0, r: 251, g: 113, b: 133 }, // Soft Rose
+        { t: 0.25, r: 251, g: 146, b: 60 }, // Soft Peach / Amber
+        { t: 0.5, r: 192, g: 132, b: 252 }, // Soft Lavender
+        { t: 0.75, r: 56, g: 189, b: 248 }, // Sky Blue
+        { t: 1.0, r: 52, g: 211, b: 153 }, // Soft Mint
+    ];
+    const clampedT = Math.max(0, Math.min(1, t));
+    for (let k = 0; k < stops.length - 1; k++) {
+        if (clampedT >= stops[k].t && clampedT <= stops[k + 1].t) {
+            const span = stops[k + 1].t - stops[k].t;
+            const factor = (clampedT - stops[k].t) / span;
+            const r = Math.round(
+                stops[k].r + (stops[k + 1].r - stops[k].r) * factor,
+            );
+            const g = Math.round(
+                stops[k].g + (stops[k + 1].g - stops[k].g) * factor,
+            );
+            const b = Math.round(
+                stops[k].b + (stops[k + 1].b - stops[k].b) * factor,
+            );
+            return { r, g, b };
+        }
+    }
+    return { r: 52, g: 211, b: 153 };
+};
+
+const drawPillBar = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    h: number,
+    radius: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, h, [radius, radius, 0, 0]);
+        ctx.fill();
+    } else {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+};
+
+const drawPeakCap = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    h: number,
+    radius: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, h, radius);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, width, h);
+    }
+};
+
+const drawBannerRadioSpectrum = (data: Uint8Array, vol: number) => {
     const canvas = visualizerCanvas.value;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const dpr =
+        typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const displayWidth = canvas.clientWidth || 800;
+    const displayHeight = canvas.clientHeight || 260;
+    const targetW = Math.round(displayWidth * dpr);
+    const targetH = Math.round(displayHeight * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+    }
 
     const w = canvas.width;
     const height = canvas.height;
@@ -441,51 +529,96 @@ const drawBannerRibbon = (data: Uint8Array, vol: number) => {
 
     if (vol <= 0) return;
 
-    const grad = ctx.createLinearGradient(0, height, 0, 0);
-    grad.addColorStop(0, `rgba(217, 119, 87, ${0.15 + vol * 0.45})`);
-    grad.addColorStop(0.5, `rgba(217, 119, 87, ${vol * 0.25})`);
-    grad.addColorStop(1, 'rgba(217, 119, 87, 0.0)');
+    // Responsive bar count across device widths
+    const numBars = displayWidth < 500 ? 32 : displayWidth < 900 ? 44 : 56;
 
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(0, height);
+    // Evenly distributed across the full width of the cover photo
+    const paddingX = Math.round(10 * dpr);
+    const availableWidth = w - paddingX * 2;
+    const slotWidth = availableWidth / numBars;
+    const barWidth = Math.max(2.5 * dpr, slotWidth * 0.68);
+    const gap = slotWidth - barWidth;
 
-    const bars = 48;
-    const barWidth = w / bars;
+    const maxBarHeight = height * 0.58;
+    const minBarHeight = Math.max(4 * dpr, height * 0.055);
+    const radius = Math.min(barWidth / 2, 4 * dpr);
 
-    for (let i = 0; i <= bars; i++) {
-        const x = i * barWidth;
-        const binIndex = Math.min(
-            data.length - 1,
-            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
-        );
-        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
-        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
-        const y = Math.max(3, height - saturatedAmp * (height - 6));
-        ctx.lineTo(x, y);
+    // Map across musical audio spectrum: bins 1 to 36 (~340Hz to ~12.5kHz)
+    // Audio files rarely have energy past bin 38, so this ensures 100% width activity with zero dead zones.
+    const minBin = 1;
+    const maxActiveBin = Math.min(data.length - 1, 36);
+
+    for (let i = 0; i < numBars; i++) {
+        const norm = i / (numBars - 1);
+
+        const binFloat =
+            minBin + Math.pow(norm, 1.25) * (maxActiveBin - minBin);
+        const i0 = Math.floor(binFloat);
+        const i1 = Math.min(data.length - 1, i0 + 1);
+        const frac = binFloat - i0;
+        const rawVal =
+            ((data[i0] || 0) * (1 - frac) + (data[i1] || 0) * frac) / 255;
+
+        // Equal-loudness treble compensation so high hats and cymbals dance actively
+        const compensation = 1.0 + Math.pow(norm, 1.1) * 1.6;
+        const target = Math.min(1.0, rawVal * compensation) * vol;
+
+        // Smooth physics: snappy attack and gravity decay
+        if (target > smoothedBars[i]) {
+            smoothedBars[i] += (target - smoothedBars[i]) * 0.45;
+        } else {
+            smoothedBars[i] = Math.max(0, smoothedBars[i] - 0.035);
+        }
+
+        // Floating peak indicator physics
+        if (smoothedBars[i] >= peakBars[i]) {
+            peakBars[i] = smoothedBars[i];
+            peakHold[i] = 12;
+        } else if (peakHold[i] > 0) {
+            peakHold[i]--;
+        } else {
+            peakBars[i] = Math.max(0, peakBars[i] - 0.016);
+        }
+
+        const barH = Math.max(minBarHeight, smoothedBars[i] * maxBarHeight);
+        const barY = height - barH;
+        const x = paddingX + i * slotWidth + gap / 2;
+        const { r, g, b } = interpolateSpectrumColor(norm);
+
+        // Translucent vertical gradient: subtle transparent fade at bottom, soft luminous glow at tip
+        const barGrad = ctx.createLinearGradient(0, height, 0, barY);
+        barGrad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.08)`);
+        barGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.32)`);
+        barGrad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 0.60)`);
+
+        ctx.fillStyle = barGrad;
+        drawPillBar(ctx, x, barY, barWidth, barH, radius);
+
+        // Floating peak cap (classic radio spectrum meter style)
+        if (peakBars[i] > 0.04 || smoothedBars[i] > 0.04) {
+            const effectivePeak = Math.max(smoothedBars[i], peakBars[i]);
+            const peakH = Math.max(2 * dpr, 2.5 * dpr);
+            const peakY = Math.max(
+                2 * dpr,
+                height - (effectivePeak * maxBarHeight + peakH + 3 * dpr),
+            );
+            const peakAlpha = Math.min(0.85, 0.4 + effectivePeak * 0.4);
+
+            ctx.save();
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${peakAlpha})`;
+            ctx.shadowBlur = 4 * dpr;
+            ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
+            drawPeakCap(
+                ctx,
+                x,
+                peakY,
+                barWidth,
+                peakH,
+                Math.min(barWidth / 2, 2 * dpr),
+            );
+            ctx.restore();
+        }
     }
-
-    ctx.lineTo(w, height);
-    ctx.closePath();
-    ctx.fill();
-
-    // Sharp glowing crest line on top of the spectrum
-    ctx.strokeStyle = `rgba(217, 119, 87, ${Math.min(1.0, 0.3 + vol * 0.65)})`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i <= bars; i++) {
-        const x = i * barWidth;
-        const binIndex = Math.min(
-            data.length - 1,
-            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
-        );
-        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
-        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
-        const y = Math.max(3, height - saturatedAmp * (height - 6));
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
 };
 
 const renderVisualizerFrame = () => {
@@ -506,11 +639,14 @@ const renderVisualizerFrame = () => {
         avatarScale.value = 1 + beat * 0.05;
         avatarGlow.value = beat * 24;
 
-        // Cover banner spectrum canvas directly plotted from FFT bins scaled by volume
-        drawBannerRibbon(data, effectiveVol);
+        // Cover banner radio spectrum canvas
+        drawBannerRadioSpectrum(data, effectiveVol);
     } else {
         avatarScale.value = 1;
         avatarGlow.value = 0;
+        smoothedBars.fill(0);
+        peakBars.fill(0);
+        peakHold.fill(0);
         if (visualizerCanvas.value) {
             const ctx = visualizerCanvas.value.getContext('2d');
             if (ctx) {
@@ -539,6 +675,9 @@ const stopVisualizer = () => {
     }
     avatarScale.value = 1;
     avatarGlow.value = 0;
+    smoothedBars.fill(0);
+    peakBars.fill(0);
+    peakHold.fill(0);
     if (visualizerCanvas.value) {
         const ctx = visualizerCanvas.value.getContext('2d');
         if (ctx) {
@@ -622,13 +761,11 @@ onBeforeUnmount(() => {
                         aria-hidden="true"
                     ></div>
 
-                    <!-- Live Audio Spectrum Ribbon Canvas (stays in background behind avatar) -->
+                    <!-- Live Audio Radio Spectrum Canvas (stays in background behind avatar) -->
                     <canvas
                         v-show="isPlaying"
                         ref="visualizerCanvas"
-                        width="800"
-                        height="60"
-                        class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-12 w-full opacity-70 transition-opacity duration-300"
+                        class="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-80 transition-opacity duration-700"
                     ></canvas>
                 </div>
 
