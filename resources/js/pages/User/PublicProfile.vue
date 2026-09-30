@@ -429,10 +429,10 @@ const toggleMute = async () => {
     }
 };
 
-const NUM_SPECTRUM_BARS = 52;
-const smoothedBars = new Float32Array(NUM_SPECTRUM_BARS);
-const peakBars = new Float32Array(NUM_SPECTRUM_BARS);
-const peakHold = new Int32Array(NUM_SPECTRUM_BARS);
+const MAX_SPECTRUM_BARS = 64;
+const smoothedBars = new Float32Array(MAX_SPECTRUM_BARS);
+const peakBars = new Float32Array(MAX_SPECTRUM_BARS);
+const peakHold = new Int32Array(MAX_SPECTRUM_BARS);
 
 const interpolateSpectrumColor = (t: number) => {
     const stops = [
@@ -514,7 +514,7 @@ const drawBannerRadioSpectrum = (data: Uint8Array, vol: number) => {
     const dpr =
         typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
     const displayWidth = canvas.clientWidth || 800;
-    const displayHeight = canvas.clientHeight || 130;
+    const displayHeight = canvas.clientHeight || 260;
     const targetW = Math.round(displayWidth * dpr);
     const targetH = Math.round(displayHeight * dpr);
 
@@ -529,36 +529,45 @@ const drawBannerRadioSpectrum = (data: Uint8Array, vol: number) => {
 
     if (vol <= 0) return;
 
-    const slotWidth = w / NUM_SPECTRUM_BARS;
-    const gap = Math.max(1.5 * dpr, slotWidth * 0.3);
-    const barWidth = Math.max(2 * dpr, slotWidth - gap);
-    const totalUsedWidth = (NUM_SPECTRUM_BARS - 1) * slotWidth + barWidth;
-    const offsetX = (w - totalUsedWidth) / 2;
+    // Responsive bar count across device widths
+    const numBars = displayWidth < 500 ? 32 : displayWidth < 900 ? 44 : 56;
 
-    const maxBarHeight = height * 0.78;
-    const minBarHeight = 3 * dpr;
+    // Evenly distributed across the full width of the cover photo
+    const paddingX = Math.round(10 * dpr);
+    const availableWidth = w - paddingX * 2;
+    const slotWidth = availableWidth / numBars;
+    const barWidth = Math.max(2.5 * dpr, slotWidth * 0.68);
+    const gap = slotWidth - barWidth;
+
+    const maxBarHeight = height * 0.58;
+    const minBarHeight = Math.max(4 * dpr, height * 0.055);
     const radius = Math.min(barWidth / 2, 4 * dpr);
 
-    for (let i = 0; i < NUM_SPECTRUM_BARS; i++) {
-        const norm = i / (NUM_SPECTRUM_BARS - 1);
+    // Map across musical audio spectrum: bins 1 to 36 (~340Hz to ~12.5kHz)
+    // Audio files rarely have energy past bin 38, so this ensures 100% width activity with zero dead zones.
+    const minBin = 1;
+    const maxActiveBin = Math.min(data.length - 1, 36);
 
-        // Logarithmic distribution across audio frequencies
-        const binFloat = Math.pow(norm, 1.35) * (data.length - 8) + 1;
+    for (let i = 0; i < numBars; i++) {
+        const norm = i / (numBars - 1);
+
+        const binFloat =
+            minBin + Math.pow(norm, 1.25) * (maxActiveBin - minBin);
         const i0 = Math.floor(binFloat);
         const i1 = Math.min(data.length - 1, i0 + 1);
         const frac = binFloat - i0;
         const rawVal =
             ((data[i0] || 0) * (1 - frac) + (data[i1] || 0) * frac) / 255;
 
-        // Equal-loudness treble compensation so higher frequencies stay active
-        const compensation = 1.0 + Math.pow(norm, 1.25) * 1.7;
+        // Equal-loudness treble compensation so high hats and cymbals dance actively
+        const compensation = 1.0 + Math.pow(norm, 1.1) * 1.6;
         const target = Math.min(1.0, rawVal * compensation) * vol;
 
         // Smooth physics: snappy attack and gravity decay
         if (target > smoothedBars[i]) {
             smoothedBars[i] += (target - smoothedBars[i]) * 0.45;
         } else {
-            smoothedBars[i] = Math.max(0, smoothedBars[i] - 0.032);
+            smoothedBars[i] = Math.max(0, smoothedBars[i] - 0.035);
         }
 
         // Floating peak indicator physics
@@ -573,26 +582,27 @@ const drawBannerRadioSpectrum = (data: Uint8Array, vol: number) => {
 
         const barH = Math.max(minBarHeight, smoothedBars[i] * maxBarHeight);
         const barY = height - barH;
-        const x = offsetX + i * slotWidth;
+        const x = paddingX + i * slotWidth + gap / 2;
         const { r, g, b } = interpolateSpectrumColor(norm);
 
         // Translucent vertical gradient: subtle transparent fade at bottom, soft luminous glow at tip
         const barGrad = ctx.createLinearGradient(0, height, 0, barY);
-        barGrad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.06)`);
-        barGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.28)`);
-        barGrad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 0.55)`);
+        barGrad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.08)`);
+        barGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.32)`);
+        barGrad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 0.60)`);
 
         ctx.fillStyle = barGrad;
         drawPillBar(ctx, x, barY, barWidth, barH, radius);
 
         // Floating peak cap (classic radio spectrum meter style)
-        if (peakBars[i] > 0.06) {
+        if (peakBars[i] > 0.04 || smoothedBars[i] > 0.04) {
+            const effectivePeak = Math.max(smoothedBars[i], peakBars[i]);
             const peakH = Math.max(2 * dpr, 2.5 * dpr);
             const peakY = Math.max(
                 2 * dpr,
-                height - (peakBars[i] * maxBarHeight + peakH + 3 * dpr),
+                height - (effectivePeak * maxBarHeight + peakH + 3 * dpr),
             );
-            const peakAlpha = Math.min(0.75, 0.35 + peakBars[i] * 0.4);
+            const peakAlpha = Math.min(0.85, 0.4 + effectivePeak * 0.4);
 
             ctx.save();
             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${peakAlpha})`;
@@ -755,9 +765,7 @@ onBeforeUnmount(() => {
                     <canvas
                         v-show="isPlaying"
                         ref="visualizerCanvas"
-                        width="1200"
-                        height="160"
-                        class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-28 w-full opacity-75 transition-opacity duration-700 sm:h-36 md:h-44"
+                        class="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-80 transition-opacity duration-700"
                     ></canvas>
                 </div>
 
