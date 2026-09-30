@@ -429,11 +429,26 @@ const toggleMute = async () => {
     }
 };
 
+let visualizerPhase = 0;
+
 const drawBannerRibbon = (data: Uint8Array, vol: number) => {
     const canvas = visualizerCanvas.value;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Dynamically match canvas resolution to rendered DOM size for maximum sharpness
+    const dpr =
+        typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const displayWidth = canvas.clientWidth || 800;
+    const displayHeight = canvas.clientHeight || 180;
+    const targetW = Math.round(displayWidth * dpr);
+    const targetH = Math.round(displayHeight * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+    }
 
     const w = canvas.width;
     const height = canvas.height;
@@ -441,51 +456,167 @@ const drawBannerRibbon = (data: Uint8Array, vol: number) => {
 
     if (vol <= 0) return;
 
-    const grad = ctx.createLinearGradient(0, height, 0, 0);
-    grad.addColorStop(0, `rgba(217, 119, 87, ${0.15 + vol * 0.45})`);
-    grad.addColorStop(0.5, `rgba(217, 119, 87, ${vol * 0.25})`);
-    grad.addColorStop(1, 'rgba(217, 119, 87, 0.0)');
+    visualizerPhase += 0.035;
+    const phase = visualizerPhase;
 
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-
-    const bars = 48;
+    // Number of control points along the wave
+    const bars = 64;
     const barWidth = w / bars;
 
+    // Precalculate amplitude points for smooth multi-layered wave
+    const frontPoints: { x: number; y: number }[] = [];
+    const backPoints: { x: number; y: number }[] = [];
+
     for (let i = 0; i <= bars; i++) {
         const x = i * barWidth;
+        const norm = i / bars;
+
+        // Exponential distribution across frequency bins: bass on left, mids, treble on right
         const binIndex = Math.min(
             data.length - 1,
-            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
+            Math.floor(Math.pow(norm, 1.15) * (data.length - 1)),
         );
-        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
-        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
-        const y = Math.max(3, height - saturatedAmp * (height - 6));
-        ctx.lineTo(x, y);
+
+        // High frequencies typically have lower FFT amplitude; boost them smoothly
+        const trebleBoost = 1.0 + Math.pow(norm, 0.75) * 1.85;
+        const rawAmp = ((data[binIndex] || 0) / 255) * trebleBoost * vol;
+
+        // Organic harmonic ripple so wave feels alive and fluid
+        const ripple1 = Math.sin(norm * Math.PI * 4 + phase) * 0.06;
+        const ripple2 = Math.cos(norm * Math.PI * 6 - phase * 0.8) * 0.04;
+        const rippleBack = Math.sin(norm * Math.PI * 3.5 + phase + 1.2) * 0.08;
+
+        // Front wave amplitude: reaches up to 75-88% of canvas height
+        const saturatedAmp = Math.min(
+            0.92,
+            Math.max(
+                0.04,
+                (Math.pow(rawAmp, 0.8) * 1.35 + ripple1 + ripple2) * vol,
+            ),
+        );
+        const yFront = Math.max(6, height - saturatedAmp * (height - 12));
+        frontPoints.push({ x, y: yFront });
+
+        // Back wave amplitude: softer, slightly delayed for 3D parallax depth
+        const backAmp = Math.min(
+            0.85,
+            Math.max(
+                0.03,
+                (Math.pow(rawAmp, 0.85) * 1.1 + rippleBack) * vol * 0.82,
+            ),
+        );
+        const yBack = Math.max(8, height - backAmp * (height - 14));
+        backPoints.push({ x, y: yBack });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 1. Back Layer: Atmospheric Aurora Glow Wave
+    // ─────────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    ctx.lineTo(backPoints[0].x, backPoints[0].y);
+
+    for (let i = 0; i < backPoints.length - 1; i++) {
+        const xc = (backPoints[i].x + backPoints[i + 1].x) / 2;
+        const yc = (backPoints[i].y + backPoints[i + 1].y) / 2;
+        ctx.quadraticCurveTo(backPoints[i].x, backPoints[i].y, xc, yc);
+    }
     ctx.lineTo(w, height);
     ctx.closePath();
+
+    // Vibrant deep purple-to-cyan aurora gradient
+    const backFill = ctx.createLinearGradient(0, 0, w, 0);
+    backFill.addColorStop(0.0, `rgba(168, 85, 247, ${0.18 + vol * 0.22})`); // Purple
+    backFill.addColorStop(0.35, `rgba(59, 130, 246, ${0.16 + vol * 0.2})`); // Royal Blue
+    backFill.addColorStop(0.7, `rgba(6, 182, 212, ${0.18 + vol * 0.22})`); // Cyan
+    backFill.addColorStop(1.0, `rgba(236, 72, 153, ${0.18 + vol * 0.22})`); // Pink
+    ctx.fillStyle = backFill;
     ctx.fill();
 
-    // Sharp glowing crest line on top of the spectrum
-    ctx.strokeStyle = `rgba(217, 119, 87, ${Math.min(1.0, 0.3 + vol * 0.65)})`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i <= bars; i++) {
-        const x = i * barWidth;
-        const binIndex = Math.min(
-            data.length - 1,
-            Math.floor(Math.pow(i / bars, 1.2) * (data.length * 0.8)),
-        );
-        const rawAmp = ((data[binIndex] || 0) / 255) * vol;
-        const saturatedAmp = Math.min(1.0, Math.pow(rawAmp, 0.9) * 1.15);
-        const y = Math.max(3, height - saturatedAmp * (height - 6));
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    }
+    // Soft glowing crest for back wave
+    ctx.strokeStyle = `rgba(56, 189, 248, ${Math.min(0.8, 0.25 + vol * 0.45)})`;
+    ctx.lineWidth = 1.5 * dpr;
     ctx.stroke();
+    ctx.restore();
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. Front Layer: Vibrant Multi-Color Spectrum Wave
+    // ─────────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    ctx.lineTo(frontPoints[0].x, frontPoints[0].y);
+
+    for (let i = 0; i < frontPoints.length - 1; i++) {
+        const xc = (frontPoints[i].x + frontPoints[i + 1].x) / 2;
+        const yc = (frontPoints[i].y + frontPoints[i + 1].y) / 2;
+        ctx.quadraticCurveTo(frontPoints[i].x, frontPoints[i].y, xc, yc);
+    }
+    ctx.lineTo(w, height);
+    ctx.closePath();
+
+    // Horizontal multi-color gradient (Neon Rainbow / Sunset Aurora)
+    // Rose -> Pink -> Violet -> Cyan -> Emerald -> Warm Amber -> Coral
+    const multiColorGrad = ctx.createLinearGradient(0, 0, w, 0);
+    multiColorGrad.addColorStop(0.0, '#F43F5E'); // Vibrant Rose
+    multiColorGrad.addColorStop(0.18, '#EC4899'); // Neon Pink
+    multiColorGrad.addColorStop(0.36, '#8B5CF6'); // Electric Violet
+    multiColorGrad.addColorStop(0.54, '#06B6D4'); // Bright Cyan
+    multiColorGrad.addColorStop(0.72, '#10B981'); // Emerald Mint
+    multiColorGrad.addColorStop(0.9, '#F59E0B'); // Warm Amber
+    multiColorGrad.addColorStop(1.0, '#FB923C'); // Coral Orange
+
+    ctx.fillStyle = multiColorGrad;
+    ctx.globalAlpha = Math.min(0.75, 0.35 + vol * 0.4);
+    ctx.fill();
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. Glowing Luminous Crest Line
+    // ─────────────────────────────────────────────────────────────
+    ctx.beginPath();
+    ctx.moveTo(frontPoints[0].x, frontPoints[0].y);
+    for (let i = 0; i < frontPoints.length - 1; i++) {
+        const xc = (frontPoints[i].x + frontPoints[i + 1].x) / 2;
+        const yc = (frontPoints[i].y + frontPoints[i + 1].y) / 2;
+        ctx.quadraticCurveTo(frontPoints[i].x, frontPoints[i].y, xc, yc);
+    }
+    ctx.lineTo(
+        frontPoints[frontPoints.length - 1].x,
+        frontPoints[frontPoints.length - 1].y,
+    );
+
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = multiColorGrad;
+    ctx.lineWidth = 2.5 * dpr;
+    ctx.shadowBlur = 10 * dpr;
+    ctx.shadowColor = 'rgba(6, 182, 212, 0.85)';
+    ctx.stroke();
+
+    // Reset shadow blur
+    ctx.shadowBlur = 0;
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. Dancing Peak Sparkles on High-Energy Crests
+    // ─────────────────────────────────────────────────────────────
+    if (vol > 0.2) {
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 2; i < frontPoints.length - 2; i += 5) {
+            const pt = frontPoints[i];
+            const peakHeightRatio = (height - pt.y) / height;
+            if (peakHeightRatio > 0.45) {
+                const radius = Math.min(
+                    3.5 * dpr,
+                    1.5 * dpr + peakHeightRatio * 2.5 * dpr,
+                );
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    ctx.restore();
 };
 
 const renderVisualizerFrame = () => {
@@ -626,9 +757,9 @@ onBeforeUnmount(() => {
                     <canvas
                         v-show="isPlaying"
                         ref="visualizerCanvas"
-                        width="800"
-                        height="60"
-                        class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-12 w-full opacity-70 transition-opacity duration-300"
+                        width="1200"
+                        height="220"
+                        class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-36 w-full opacity-90 transition-opacity duration-500 sm:h-48 md:h-60 lg:h-72"
                     ></canvas>
                 </div>
 
