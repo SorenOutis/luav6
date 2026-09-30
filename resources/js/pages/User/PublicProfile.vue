@@ -429,11 +429,83 @@ const toggleMute = async () => {
     }
 };
 
-let visualizerPhase = 0;
-let smoothBass = 0;
-let smoothMids = 0;
+const NUM_SPECTRUM_BARS = 52;
+const smoothedBars = new Float32Array(NUM_SPECTRUM_BARS);
+const peakBars = new Float32Array(NUM_SPECTRUM_BARS);
+const peakHold = new Int32Array(NUM_SPECTRUM_BARS);
 
-const drawBannerRibbon = (data: Uint8Array, vol: number) => {
+const interpolateSpectrumColor = (t: number) => {
+    const stops = [
+        { t: 0.0, r: 251, g: 113, b: 133 }, // Soft Rose
+        { t: 0.25, r: 251, g: 146, b: 60 }, // Soft Peach / Amber
+        { t: 0.5, r: 192, g: 132, b: 252 }, // Soft Lavender
+        { t: 0.75, r: 56, g: 189, b: 248 }, // Sky Blue
+        { t: 1.0, r: 52, g: 211, b: 153 }, // Soft Mint
+    ];
+    const clampedT = Math.max(0, Math.min(1, t));
+    for (let k = 0; k < stops.length - 1; k++) {
+        if (clampedT >= stops[k].t && clampedT <= stops[k + 1].t) {
+            const span = stops[k + 1].t - stops[k].t;
+            const factor = (clampedT - stops[k].t) / span;
+            const r = Math.round(
+                stops[k].r + (stops[k + 1].r - stops[k].r) * factor,
+            );
+            const g = Math.round(
+                stops[k].g + (stops[k + 1].g - stops[k].g) * factor,
+            );
+            const b = Math.round(
+                stops[k].b + (stops[k + 1].b - stops[k].b) * factor,
+            );
+            return { r, g, b };
+        }
+    }
+    return { r: 52, g: 211, b: 153 };
+};
+
+const drawPillBar = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    h: number,
+    radius: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, h, [radius, radius, 0, 0]);
+        ctx.fill();
+    } else {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+};
+
+const drawPeakCap = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    h: number,
+    radius: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, h, radius);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, width, h);
+    }
+};
+
+const drawBannerRadioSpectrum = (data: Uint8Array, vol: number) => {
     const canvas = visualizerCanvas.value;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -457,178 +529,86 @@ const drawBannerRibbon = (data: Uint8Array, vol: number) => {
 
     if (vol <= 0) return;
 
-    visualizerPhase += 0.022;
-    const phase = visualizerPhase;
+    const slotWidth = w / NUM_SPECTRUM_BARS;
+    const gap = Math.max(1.5 * dpr, slotWidth * 0.3);
+    const barWidth = Math.max(2 * dpr, slotWidth - gap);
+    const totalUsedWidth = (NUM_SPECTRUM_BARS - 1) * slotWidth + barWidth;
+    const offsetX = (w - totalUsedWidth) / 2;
 
-    // Extract frequency energy from FFT data
-    let bassSum = 0;
-    for (let i = 1; i <= 6; i++) {
-        bassSum += data[i] || 0;
+    const maxBarHeight = height * 0.78;
+    const minBarHeight = 3 * dpr;
+    const radius = Math.min(barWidth / 2, 4 * dpr);
+
+    for (let i = 0; i < NUM_SPECTRUM_BARS; i++) {
+        const norm = i / (NUM_SPECTRUM_BARS - 1);
+
+        // Logarithmic distribution across audio frequencies
+        const binFloat = Math.pow(norm, 1.35) * (data.length - 8) + 1;
+        const i0 = Math.floor(binFloat);
+        const i1 = Math.min(data.length - 1, i0 + 1);
+        const frac = binFloat - i0;
+        const rawVal =
+            ((data[i0] || 0) * (1 - frac) + (data[i1] || 0) * frac) / 255;
+
+        // Equal-loudness treble compensation so higher frequencies stay active
+        const compensation = 1.0 + Math.pow(norm, 1.25) * 1.7;
+        const target = Math.min(1.0, rawVal * compensation) * vol;
+
+        // Smooth physics: snappy attack and gravity decay
+        if (target > smoothedBars[i]) {
+            smoothedBars[i] += (target - smoothedBars[i]) * 0.45;
+        } else {
+            smoothedBars[i] = Math.max(0, smoothedBars[i] - 0.032);
+        }
+
+        // Floating peak indicator physics
+        if (smoothedBars[i] >= peakBars[i]) {
+            peakBars[i] = smoothedBars[i];
+            peakHold[i] = 12;
+        } else if (peakHold[i] > 0) {
+            peakHold[i]--;
+        } else {
+            peakBars[i] = Math.max(0, peakBars[i] - 0.016);
+        }
+
+        const barH = Math.max(minBarHeight, smoothedBars[i] * maxBarHeight);
+        const barY = height - barH;
+        const x = offsetX + i * slotWidth;
+        const { r, g, b } = interpolateSpectrumColor(norm);
+
+        // Translucent vertical gradient: subtle transparent fade at bottom, soft luminous glow at tip
+        const barGrad = ctx.createLinearGradient(0, height, 0, barY);
+        barGrad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.06)`);
+        barGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.28)`);
+        barGrad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 0.55)`);
+
+        ctx.fillStyle = barGrad;
+        drawPillBar(ctx, x, barY, barWidth, barH, radius);
+
+        // Floating peak cap (classic radio spectrum meter style)
+        if (peakBars[i] > 0.06) {
+            const peakH = Math.max(2 * dpr, 2.5 * dpr);
+            const peakY = Math.max(
+                2 * dpr,
+                height - (peakBars[i] * maxBarHeight + peakH + 3 * dpr),
+            );
+            const peakAlpha = Math.min(0.75, 0.35 + peakBars[i] * 0.4);
+
+            ctx.save();
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${peakAlpha})`;
+            ctx.shadowBlur = 4 * dpr;
+            ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
+            drawPeakCap(
+                ctx,
+                x,
+                peakY,
+                barWidth,
+                peakH,
+                Math.min(barWidth / 2, 2 * dpr),
+            );
+            ctx.restore();
+        }
     }
-    const currentBass = (bassSum / (6 * 255)) * vol;
-
-    let midsSum = 0;
-    for (let i = 7; i <= 24; i++) {
-        midsSum += data[i] || 0;
-    }
-    const currentMids = (midsSum / (18 * 255)) * vol;
-
-    // Organic smoothing so waves swell and breathe gracefully
-    smoothBass += (currentBass - smoothBass) * 0.16;
-    smoothMids += (currentMids - smoothMids) * 0.16;
-
-    const totalEnergy = Math.min(1.0, smoothBass * 0.6 + smoothMids * 0.4);
-
-    // Dynamic wave amplitude: resting gentle wave when quiet, swelling up to 55-70% height on beats
-    const frontMaxAmp = height * (0.24 + totalEnergy * 0.42);
-    const backMaxAmp = height * (0.18 + totalEnergy * 0.35);
-
-    const steps = 60;
-    const stepW = w / steps;
-
-    // ─────────────────────────────────────────────────────────────
-    // 1. Back Layer: Soft Ethereal Aurora Wave (Gentle Parallax)
-    // ─────────────────────────────────────────────────────────────
-    const backPoints: { x: number; y: number }[] = [];
-    for (let i = 0; i <= steps; i++) {
-        const x = i * stepW;
-        const nx = i / steps;
-
-        // Continuous multi-harmonic sine wave
-        const s1 = Math.sin(nx * Math.PI * 2.2 + phase * 0.85);
-        const s2 = Math.sin(nx * Math.PI * 4.6 - phase * 1.1 + 1.2);
-        const s3 = Math.cos(nx * Math.PI * 3.1 + phase * 0.6);
-        const wave = s1 * 0.55 + s2 * 0.3 + s3 * 0.15; // -1 to 1
-
-        const y = height - (height * 0.15 + (wave * 0.5 + 0.5) * backMaxAmp);
-        backPoints.push({ x, y: Math.max(10, Math.min(height - 4, y)) });
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    ctx.lineTo(backPoints[0].x, backPoints[0].y);
-
-    for (let i = 0; i < backPoints.length - 1; i++) {
-        const xc = (backPoints[i].x + backPoints[i + 1].x) / 2;
-        const yc = (backPoints[i].y + backPoints[i + 1].y) / 2;
-        ctx.quadraticCurveTo(backPoints[i].x, backPoints[i].y, xc, yc);
-    }
-    ctx.lineTo(w, height);
-    ctx.closePath();
-
-    // Soft translucent gradient fill (fading to 0 at the crest)
-    const backFill = ctx.createLinearGradient(0, height, 0, 0);
-    backFill.addColorStop(
-        0.0,
-        `rgba(99, 102, 241, ${0.12 + totalEnergy * 0.1})`,
-    );
-    backFill.addColorStop(
-        0.45,
-        `rgba(168, 85, 247, ${0.08 + totalEnergy * 0.08})`,
-    );
-    backFill.addColorStop(
-        0.85,
-        `rgba(236, 72, 153, ${0.03 + totalEnergy * 0.04})`,
-    );
-    backFill.addColorStop(1.0, 'rgba(236, 72, 153, 0.0)');
-    ctx.fillStyle = backFill;
-    ctx.fill();
-
-    // Soft crest line
-    ctx.beginPath();
-    ctx.moveTo(backPoints[0].x, backPoints[0].y);
-    for (let i = 0; i < backPoints.length - 1; i++) {
-        const xc = (backPoints[i].x + backPoints[i + 1].x) / 2;
-        const yc = (backPoints[i].y + backPoints[i + 1].y) / 2;
-        ctx.quadraticCurveTo(backPoints[i].x, backPoints[i].y, xc, yc);
-    }
-    ctx.lineTo(
-        backPoints[backPoints.length - 1].x,
-        backPoints[backPoints.length - 1].y,
-    );
-    ctx.strokeStyle = `rgba(168, 85, 247, ${0.2 + totalEnergy * 0.2})`;
-    ctx.lineWidth = 1.2 * dpr;
-    ctx.stroke();
-    ctx.restore();
-
-    // ─────────────────────────────────────────────────────────────
-    // 2. Front Layer: Luminous Translucent Liquid Wave
-    // ─────────────────────────────────────────────────────────────
-    const frontPoints: { x: number; y: number }[] = [];
-    for (let i = 0; i <= steps; i++) {
-        const x = i * stepW;
-        const nx = i / steps;
-
-        // Smooth traveling sine wave with frequency modulation
-        const w1 = Math.sin(nx * Math.PI * 2.6 + phase * 1.15);
-        const w2 = Math.sin(nx * Math.PI * 5.4 - phase * 1.5);
-        const w3 =
-            Math.cos(nx * Math.PI * 8.2 + phase * 1.7) *
-            (0.15 + smoothMids * 0.25);
-        const wave = w1 * 0.52 + w2 * 0.33 + w3 * 0.15;
-
-        const y = height - (height * 0.18 + (wave * 0.5 + 0.5) * frontMaxAmp);
-        frontPoints.push({ x, y: Math.max(8, Math.min(height - 4, y)) });
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    ctx.lineTo(frontPoints[0].x, frontPoints[0].y);
-
-    for (let i = 0; i < frontPoints.length - 1; i++) {
-        const xc = (frontPoints[i].x + frontPoints[i + 1].x) / 2;
-        const yc = (frontPoints[i].y + frontPoints[i + 1].y) / 2;
-        ctx.quadraticCurveTo(frontPoints[i].x, frontPoints[i].y, xc, yc);
-    }
-    ctx.lineTo(w, height);
-    ctx.closePath();
-
-    // Vertical translucent gradient: soft sky blue -> purple -> soft coral -> transparent top
-    const frontFill = ctx.createLinearGradient(0, height, 0, 0);
-    frontFill.addColorStop(
-        0.0,
-        `rgba(14, 165, 233, ${0.14 + totalEnergy * 0.12})`,
-    );
-    frontFill.addColorStop(
-        0.35,
-        `rgba(168, 85, 247, ${0.1 + totalEnergy * 0.1})`,
-    );
-    frontFill.addColorStop(
-        0.75,
-        `rgba(244, 63, 94, ${0.05 + totalEnergy * 0.06})`,
-    );
-    frontFill.addColorStop(1.0, 'rgba(244, 63, 94, 0.0)'); // Clean fade to transparent
-    ctx.fillStyle = frontFill;
-    ctx.fill();
-
-    // Graceful glowing crest line with soft multi-color pastel gradient
-    ctx.beginPath();
-    ctx.moveTo(frontPoints[0].x, frontPoints[0].y);
-    for (let i = 0; i < frontPoints.length - 1; i++) {
-        const xc = (frontPoints[i].x + frontPoints[i + 1].x) / 2;
-        const yc = (frontPoints[i].y + frontPoints[i + 1].y) / 2;
-        ctx.quadraticCurveTo(frontPoints[i].x, frontPoints[i].y, xc, yc);
-    }
-    ctx.lineTo(
-        frontPoints[frontPoints.length - 1].x,
-        frontPoints[frontPoints.length - 1].y,
-    );
-
-    const crestGrad = ctx.createLinearGradient(0, 0, w, 0);
-    crestGrad.addColorStop(0.0, 'rgba(251, 113, 133, 0.55)'); // Soft Rose
-    crestGrad.addColorStop(0.28, 'rgba(192, 132, 252, 0.60)'); // Soft Lavender
-    crestGrad.addColorStop(0.62, 'rgba(56, 189, 248, 0.60)'); // Soft Sky Blue
-    crestGrad.addColorStop(1.0, 'rgba(45, 212, 191, 0.55)'); // Soft Mint
-
-    ctx.strokeStyle = crestGrad;
-    ctx.lineWidth = 1.6 * dpr;
-    ctx.shadowBlur = 6 * dpr;
-    ctx.shadowColor = 'rgba(192, 132, 252, 0.35)';
-    ctx.stroke();
-
-    ctx.restore();
 };
 
 const renderVisualizerFrame = () => {
@@ -649,11 +629,14 @@ const renderVisualizerFrame = () => {
         avatarScale.value = 1 + beat * 0.05;
         avatarGlow.value = beat * 24;
 
-        // Cover banner spectrum canvas directly plotted from FFT bins scaled by volume
-        drawBannerRibbon(data, effectiveVol);
+        // Cover banner radio spectrum canvas
+        drawBannerRadioSpectrum(data, effectiveVol);
     } else {
         avatarScale.value = 1;
         avatarGlow.value = 0;
+        smoothedBars.fill(0);
+        peakBars.fill(0);
+        peakHold.fill(0);
         if (visualizerCanvas.value) {
             const ctx = visualizerCanvas.value.getContext('2d');
             if (ctx) {
@@ -682,6 +665,9 @@ const stopVisualizer = () => {
     }
     avatarScale.value = 1;
     avatarGlow.value = 0;
+    smoothedBars.fill(0);
+    peakBars.fill(0);
+    peakHold.fill(0);
     if (visualizerCanvas.value) {
         const ctx = visualizerCanvas.value.getContext('2d');
         if (ctx) {
@@ -765,7 +751,7 @@ onBeforeUnmount(() => {
                         aria-hidden="true"
                     ></div>
 
-                    <!-- Live Audio Spectrum Ribbon Canvas (stays in background behind avatar) -->
+                    <!-- Live Audio Radio Spectrum Canvas (stays in background behind avatar) -->
                     <canvas
                         v-show="isPlaying"
                         ref="visualizerCanvas"
