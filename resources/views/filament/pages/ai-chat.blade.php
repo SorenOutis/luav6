@@ -411,7 +411,7 @@
                                 <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 sm:h-14 sm:w-14">
                                     <div
                                         class="wolf-persona relative h-7 w-7 text-amber-500 dark:text-amber-400 sm:h-8 sm:w-8"
-                                        :data-motion="isStreaming ? 'thinking' : 'welcome'"
+                                        :data-motion="isStreaming ? 'thinking' : (isRecording ? 'listening' : 'welcome')"
                                         aria-hidden="true"
                                     >
                                         <svg
@@ -520,22 +520,41 @@
                                         class="min-h-[64px] w-full resize-none border-0 bg-transparent p-0 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                     ></textarea>
 
-                                    {{-- Listening Feedback Banner --}}
-                                    <div x-show="isListening" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
+                                    {{-- Recording Feedback Banner --}}
+                                    <div x-show="isRecording" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
                                         <div class="flex items-center gap-2">
                                             <span class="relative flex h-2 w-2">
                                                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                                                 <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                                             </span>
-                                            <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
+                                            <span class="font-medium animate-pulse" x-text="'Recording... ' + formatDuration(recordingSeconds)"></span>
+                                            <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(speak clearly)</span>
                                         </div>
-                                        <button
-                                            type="button"
-                                            @click.stop.prevent="toggleVoiceRecognition()"
-                                            class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-600 underline hover:text-red-700 dark:text-red-300"
-                                        >
-                                            Done
-                                        </button>
+                                        <div class="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                @click.stop.prevent="stopAndTranscribe()"
+                                                class="rounded bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white shadow-xs hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                                            >
+                                                Done & Transcribe
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click.stop.prevent="cancelRecording()"
+                                                class="text-[11px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {{-- Transcribing Feedback Banner --}}
+                                    <div x-show="isTranscribing" x-cloak class="mt-2 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+                                        <svg class="h-3.5 w-3.5 animate-spin text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span class="font-medium">Transcribing voice with Echo AI...</span>
                                     </div>
 
                                     <div x-show="voiceError" x-cloak class="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
@@ -559,19 +578,27 @@
                                         </div>
 
                                         <div class="flex items-center gap-1.5">
-                                            {{-- Microphone Dictation Button --}}
+                                            {{-- Microphone Direct Recording Button --}}
                                             <button
                                                 type="button"
-                                                @click.stop.prevent="toggleVoiceRecognition()"
-                                                :disabled="isStreaming"
-                                                class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
-                                                :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
-                                                :title="isListening ? 'Stop listening (Microphone active)' : 'Voice input (Click to speak)'"
+                                                @click.stop.prevent="toggleVoice()"
+                                                :disabled="isStreaming || isTranscribing"
+                                                class="relative flex h-7 w-7 items-center justify-center rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                :class="isRecording ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
+                                                :title="isRecording ? 'Stop recording & transcribe' : (isTranscribing ? 'Transcribing...' : 'Record voice (Direct microphone)')"
                                             >
-                                                <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
-                                                <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                                </svg>
+                                                <span x-show="isRecording" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                                <template x-if="!isTranscribing">
+                                                    <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                                    </svg>
+                                                </template>
+                                                <template x-if="isTranscribing">
+                                                    <svg class="relative h-3.5 w-3.5 animate-spin text-amber-500" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </template>
                                             </button>
 
                                             {{-- Send Button --}}
@@ -1295,22 +1322,41 @@
                             class="w-full resize-none border-0 bg-transparent px-1 py-1 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                         ></textarea>
 
-                        {{-- Listening Feedback Banner --}}
-                        <div x-show="isListening" x-cloak class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
+                        {{-- Recording Feedback Banner --}}
+                        <div x-show="isRecording" x-cloak class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
                             <div class="flex items-center gap-2">
                                 <span class="relative flex h-2 w-2">
                                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                                     <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                                 </span>
-                                <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
+                                <span class="font-medium animate-pulse" x-text="'Recording... ' + formatDuration(recordingSeconds)"></span>
+                                <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(speak clearly)</span>
                             </div>
-                            <button
-                                type="button"
-                                @click.stop.prevent="toggleVoiceRecognition()"
-                                class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-600 underline hover:text-red-700 dark:text-red-300"
-                            >
-                                Done
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    @click.stop.prevent="stopAndTranscribe()"
+                                    class="rounded bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white shadow-xs hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                                >
+                                    Done & Transcribe
+                                </button>
+                                <button
+                                    type="button"
+                                    @click.stop.prevent="cancelRecording()"
+                                    class="text-[11px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Transcribing Feedback Banner --}}
+                        <div x-show="isTranscribing" x-cloak class="mb-2 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+                            <svg class="h-3.5 w-3.5 animate-spin text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="font-medium">Transcribing voice with Echo AI...</span>
                         </div>
 
                         <div x-show="voiceError" x-cloak class="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
@@ -1336,19 +1382,27 @@
                             </div>
 
                             <div class="flex items-center gap-1.5">
-                                {{-- Microphone Dictation Button --}}
+                                {{-- Microphone Direct Recording Button --}}
                                 <button
                                     type="button"
-                                    @click.stop.prevent="toggleVoiceRecognition()"
-                                    :disabled="isStreaming"
-                                    class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
-                                    :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
-                                    :title="isListening ? 'Stop listening (Microphone active)' : 'Voice input (Click to speak)'"
+                                    @click.stop.prevent="toggleVoice()"
+                                    :disabled="isStreaming || isTranscribing"
+                                    class="relative flex h-7 w-7 items-center justify-center rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                    :class="isRecording ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
+                                    :title="isRecording ? 'Stop recording & transcribe' : (isTranscribing ? 'Transcribing...' : 'Record voice (Direct microphone)')"
                                 >
-                                    <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
-                                    <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                    </svg>
+                                    <span x-show="isRecording" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                    <template x-if="!isTranscribing">
+                                        <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                        </svg>
+                                    </template>
+                                    <template x-if="isTranscribing">
+                                        <svg class="relative h-3.5 w-3.5 animate-spin text-amber-500" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </template>
                                 </button>
 
                                 <button
@@ -1647,8 +1701,14 @@
                 continuationFollowUp: '',
 
                 isListening: false,
-                voiceSupported: (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)),
-                voiceRecognition: null,
+                isRecording: false,
+                isTranscribing: false,
+                recordingSeconds: 0,
+                recordingTimer: null,
+                mediaRecorder: null,
+                audioChunks: [],
+                audioStream: null,
+                voiceSupported: (typeof window !== 'undefined' && !!(window.navigator?.mediaDevices?.getUserMedia && window.MediaRecorder)),
                 voiceError: null,
                 isSpeaking: false,
 
@@ -1685,10 +1745,12 @@
 
                 init() {
                     this.isListening = false;
+                    this.isRecording = false;
+                    this.isTranscribing = false;
+                    this.recordingSeconds = 0;
                     this.isStreaming = false;
                     this.voiceError = null;
                     this.isSpeaking = false;
-                    this.initVoice();
 
                     this.$nextTick(() => {
                         if (this.$refs.welcomeComposerInput && !this.activeSessionId) {
@@ -2564,9 +2626,8 @@
                     }
 
                     this.stopSpeaking();
-                    if (this.voiceRecognition && this.isListening) {
-                        try { this.voiceRecognition.stop(); } catch (e) {}
-                        this.isListening = false;
+                    if (this.isRecording) {
+                        this.cancelRecording();
                     }
 
                     // Append user message
@@ -2842,136 +2903,212 @@
                     }
                 },
 
-                initVoice() {
-                    const SpeechRecognition = typeof window !== 'undefined'
-                        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-                        : null;
-
-                    if (!SpeechRecognition) {
-                        this.voiceSupported = false;
-                        return;
-                    }
-
-                    this.voiceSupported = true;
-                    try {
-                        const rec = new SpeechRecognition();
-                        rec.continuous = false;
-                        rec.interimResults = true;
-                        // Use en-US for universal speech recognition engine compatibility across Edge and Chrome
-                        rec.lang = 'en-US';
-
-                        let baseText = '';
-
-                        rec.onstart = () => {
-                            this.isListening = true;
-                            this.voiceError = null;
-                            baseText = (this.inputMessage || '').trim();
-                        };
-
-                        rec.onresult = (event) => {
-                            let interim = '';
-                            let finalTranscript = '';
-
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += event.results[i][0].transcript;
-                                } else {
-                                    interim += event.results[i][0].transcript;
-                                }
-                            }
-
-                            const spoken = (finalTranscript || interim).trim();
-                            if (spoken) {
-                                this.inputMessage = baseText ? (baseText + ' ' + spoken) : spoken;
-                                this.$nextTick(() => {
-                                    if (this.$refs.composerInput) {
-                                        this.autoGrowTextarea({ target: this.$refs.composerInput });
-                                    }
-                                    if (this.$refs.welcomeComposerInput) {
-                                        this.autoGrowTextarea({ target: this.$refs.welcomeComposerInput });
-                                    }
-                                });
-                            }
-                        };
-
-                        rec.onerror = (event) => {
-                            console.warn('Speech recognition error event:', event.error, event);
-                            if (event.error === 'no-speech') {
-                                this.isListening = false;
-                                return;
-                            }
-
-                            if (event.error === 'not-allowed') {
-                                this.voiceError = 'Microphone was blocked. In Windows Settings: 1) Privacy & security > Microphone -> turn ON "Let desktop apps access your microphone". 2) Privacy & security > Speech -> turn ON "Online speech recognition". (Or try Google Chrome).';
-                            } else if (event.error === 'network') {
-                                this.voiceError = 'Speech service network error. Please verify your internet connection or try in Google Chrome.';
-                            } else if (event.error === 'audio-capture') {
-                                this.voiceError = 'No audio captured from microphone. Verify default input device in Windows Sound settings.';
-                            } else if (event.error === 'language-not-supported') {
-                                this.voiceError = 'Language not supported by the browser speech engine.';
-                            } else {
-                                this.voiceError = 'Mic error: ' + event.error;
-                            }
-
-                            setTimeout(() => { this.voiceError = null; }, 10000);
-                            this.isListening = false;
-                        };
-
-                        rec.onend = () => {
-                            this.isListening = false;
-                        };
-
-                        this.voiceRecognition = rec;
-                    } catch (e) {
-                        console.error('Speech recognition init error:', e);
-                        this.voiceSupported = false;
+                toggleVoice() {
+                    if (this.isStreaming || this.isTranscribing) return;
+                    if (this.isRecording) {
+                        this.stopAndTranscribe();
+                    } else {
+                        this.startRecording();
                     }
                 },
 
-                toggleVoiceRecognition() {
-                    if (this.isStreaming) return;
-
-                    const SpeechRecognition = typeof window !== 'undefined'
-                        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-                        : null;
-
-                    if (!SpeechRecognition) {
-                        this.voiceError = 'Voice activation requires a browser with Web Speech API support (Google Chrome, Microsoft Edge, Safari, or Opera).';
-                        return;
-                    }
-
-                    if (this.isListening) {
-                        if (this.voiceRecognition) {
-                            try { this.voiceRecognition.stop(); } catch (e) {}
-                        }
-                        this.isListening = false;
-                        return;
-                    }
-
+                async startRecording() {
+                    if (this.isStreaming || this.isTranscribing) return;
                     this.voiceError = null;
 
-                    // Initialize or refresh speech recognition instance
-                    this.initVoice();
+                    if (typeof window === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        this.voiceError = 'Direct microphone recording is not supported in this browser environment.';
+                        return;
+                    }
 
-                    if (!this.voiceRecognition) {
-                        this.voiceError = 'Speech recognition could not be initialized.';
+                    if (typeof MediaRecorder === 'undefined') {
+                        this.voiceError = 'MediaRecorder is not supported in this browser.';
                         return;
                     }
 
                     try {
-                        this.voiceRecognition.start();
-                    } catch (e) {
-                        console.error('Speech recognition start failed:', e);
-                        try {
-                            this.voiceRecognition.stop();
-                        } catch (err) {}
-                        this.initVoice();
-                        try {
-                            this.voiceRecognition.start();
-                        } catch (err) {
-                            this.voiceError = 'Could not start microphone. In Windows Settings > Privacy & security > Microphone, make sure "Let desktop apps access your microphone" is ON.';
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                            }
+                        });
+
+                        this.audioStream = stream;
+                        this.audioChunks = [];
+
+                        let mimeType = 'audio/webm';
+                        if (typeof MediaRecorder.isTypeSupported === 'function') {
+                            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                                mimeType = 'audio/webm;codecs=opus';
+                            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                                mimeType = 'audio/webm';
+                            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                                mimeType = 'audio/mp4';
+                            } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+                                mimeType = 'audio/ogg';
+                            }
+                        }
+
+                        const options = mimeType ? { mimeType } : undefined;
+                        this.mediaRecorder = new MediaRecorder(stream, options);
+
+                        this.mediaRecorder.ondataavailable = (event) => {
+                            if (event.data && event.data.size > 0) {
+                                this.audioChunks.push(event.data);
+                            }
+                        };
+
+                        this.mediaRecorder.onerror = (err) => {
+                            console.error('MediaRecorder error:', err);
+                            this.voiceError = 'Recording error encountered. Please try again.';
+                            this.cancelRecording();
+                        };
+
+                        this.mediaRecorder.start(250);
+                        this.isRecording = true;
+                        this.recordingSeconds = 0;
+
+                        if (this.recordingTimer) {
+                            clearInterval(this.recordingTimer);
+                        }
+                        this.recordingTimer = setInterval(() => {
+                            this.recordingSeconds++;
+                        }, 1000);
+
+                    } catch (err) {
+                        console.error('Microphone access error:', err);
+                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                            this.voiceError = 'Microphone permission was denied. Please click the camera/mic icon in the browser address bar and select "Allow".';
+                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                            this.voiceError = 'No microphone device found on your system. Please connect an audio input device.';
+                        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                            this.voiceError = 'Microphone is currently in use by another application or locked by the system.';
+                        } else {
+                            this.voiceError = 'Could not access microphone: ' + (err.message || err.name || 'Unknown error');
                         }
                     }
+                },
+
+                async stopAndTranscribe() {
+                    if (!this.isRecording || !this.mediaRecorder) return;
+
+                    const recorder = this.mediaRecorder;
+                    const stream = this.audioStream;
+                    const elapsed = this.recordingSeconds;
+
+                    if (this.recordingTimer) {
+                        clearInterval(this.recordingTimer);
+                        this.recordingTimer = null;
+                    }
+                    this.isRecording = false;
+
+                    const stopPromise = new Promise((resolve) => {
+                        recorder.onstop = resolve;
+                    });
+
+                    try {
+                        if (recorder.state !== 'inactive') {
+                            recorder.stop();
+                        }
+                    } catch (e) {
+                        console.warn('Error stopping recorder:', e);
+                    }
+
+                    if (stream) {
+                        stream.getTracks().forEach(t => t.stop());
+                        this.audioStream = null;
+                    }
+
+                    await stopPromise;
+
+                    if (!this.audioChunks || this.audioChunks.length === 0) {
+                        this.voiceError = 'No audio data captured. Please speak into the microphone.';
+                        this.audioChunks = [];
+                        return;
+                    }
+
+                    const mimeType = recorder.mimeType || 'audio/webm';
+                    const blob = new Blob(this.audioChunks, { type: mimeType });
+                    this.audioChunks = [];
+
+                    if (blob.size < 200) {
+                        this.voiceError = 'Recording was too short. Please speak clearly into the microphone.';
+                        return;
+                    }
+
+                    this.isTranscribing = true;
+                    this.voiceError = null;
+
+                    try {
+                        const formData = new FormData();
+                        const ext = mimeType.includes('mp4') ? 'mp4' : (mimeType.includes('ogg') ? 'ogg' : 'webm');
+                        formData.append('audio', blob, `voice_${Date.now()}.${ext}`);
+
+                        const res = await fetch('/api/chats/transcribe', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const data = await res.json();
+
+                        if (!res.ok) {
+                            throw new Error(data.error || `Transcription failed (${res.status})`);
+                        }
+
+                        if (data.text && data.text.trim()) {
+                            const clean = data.text.trim();
+                            if (this.inputMessage && this.inputMessage.trim()) {
+                                this.inputMessage = this.inputMessage.trim() + ' ' + clean;
+                            } else {
+                                this.inputMessage = clean;
+                            }
+
+                            this.$nextTick(() => {
+                                if (this.$refs.composerInput) {
+                                    this.autoGrowTextarea({ target: this.$refs.composerInput });
+                                    this.$refs.composerInput.focus();
+                                }
+                                if (this.$refs.welcomeComposerInput) {
+                                    this.autoGrowTextarea({ target: this.$refs.welcomeComposerInput });
+                                    this.$refs.welcomeComposerInput.focus();
+                                }
+                            });
+                        } else {
+                            this.voiceError = 'No speech detected in recording. Please try speaking again.';
+                            setTimeout(() => { this.voiceError = null; }, 5000);
+                        }
+                    } catch (e) {
+                        console.error('Transcription request failed:', e);
+                        this.voiceError = e.message || 'Transcription failed. Please try again.';
+                    } finally {
+                        this.isTranscribing = false;
+                    }
+                },
+
+                cancelRecording() {
+                    if (this.recordingTimer) {
+                        clearInterval(this.recordingTimer);
+                        this.recordingTimer = null;
+                    }
+                    this.isRecording = false;
+                    this.recordingSeconds = 0;
+                    this.audioChunks = [];
+
+                    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                        try { this.mediaRecorder.stop(); } catch (e) {}
+                    }
+                    if (this.audioStream) {
+                        this.audioStream.getTracks().forEach(t => t.stop());
+                        this.audioStream = null;
+                    }
+                    this.voiceError = null;
                 },
 
                 speakText(text) {

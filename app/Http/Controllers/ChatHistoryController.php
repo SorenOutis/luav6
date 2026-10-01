@@ -8,11 +8,13 @@ use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Services\AiChatLogger;
+use App\Services\AiSdkProviderService;
 use App\Services\ChatService;
 use App\Support\StudentPageRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Ai\Responses\Data\Meta;
@@ -644,5 +646,165 @@ class ChatHistoryController extends Controller
             'messagePagination' => $messagePage['meta'],
             'updatedAt' => $session->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Transcribe direct microphone audio recording into text.
+     */
+    public function transcribe(Request $request): JsonResponse
+    {
+        $request->validate([
+            'audio' => 'required',
+        ]);
+
+        $audioData = $request->input('audio');
+        $mimeType = 'audio/webm';
+        $base64 = null;
+
+        if ($request->hasFile('audio')) {
+            $file = $request->file('audio');
+            $mimeType = $file->getMimeType() ?: 'audio/webm';
+            $base64 = base64_encode(file_get_contents($file->getRealPath()));
+        } elseif (is_string($audioData)) {
+            if (preg_match('/^data:(.*?);base64,(.*)$/s', $audioData, $matches)) {
+                $mimeType = $matches[1] ?: 'audio/webm';
+                $base64 = $matches[2];
+            } else {
+                $base64 = $audioData;
+            }
+        }
+
+        if (! $base64) {
+            return response()->json(['error' => 'No valid audio data provided.'], 422);
+        }
+
+        try {
+            $text = $this->transcribeAudio($base64, $mimeType);
+
+            return response()->json([
+                'text' => trim($text),
+            ]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'error' => 'Transcription failed: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Transcribe audio base64 payload using the active AI provider or fallback.
+     */
+    protected function transcribeAudio(string $base64, string $mimeType): string
+    {
+        $providerSetting = (string) Setting::get('ai_provider', 'gemini');
+        $systemPrompt = 'Transcribe the following speech recording verbatim into text. Return ONLY the transcribed words with proper punctuation. Do not add any conversational commentary, explanations, quotes, or markdown wrappers. If the audio is silent, blank, or contains no intelligible words, return nothing.';
+
+        // 1. If OpenAI-compatible provider is active:
+        if (str_starts_with($providerSetting, 'openai-compatible-')) {
+            $id = substr($providerSetting, strlen('openai-compatible-'));
+            $providers = Setting::get(AiSdkProviderService::OPENAI_COMPATIBLE_SETTINGS_KEY, []);
+            if (is_string($providers)) {
+                $providers = json_decode($providers, true) ?: [];
+            }
+
+            $activeConfig = null;
+            foreach ($providers as $p) {
+                if (($p['id'] ?? '') === $id) {
+                    $activeConfig = $p;
+                    break;
+                }
+            }
+
+            if ($activeConfig && ! empty($activeConfig['url'])) {
+                $baseUrl = rtrim($activeConfig['url'], '/');
+                $apiKey = $activeConfig['api_key'] ?? '';
+                $model = ! empty($activeConfig['model']) ? $activeConfig['model'] : 'agy/gemini-3.5-flash-lite';
+
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Content-Type' => 'application/json',
+                ])->timeout(35)->post("{$baseUrl}/chat/completions", [
+                    'model' => $model,
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => $systemPrompt,
+                                ],
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => [
+                                        'url' => "data:{$mimeType};base64,{$base64}",
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ]);
+
+                if ($response->successful()) {
+                    $content = $response->json('choices.0.message.content') ?? '';
+                    $cleaned = trim((string) $content);
+                    if ($cleaned === 'EMPTY' || str_starts_with($cleaned, 'EMPTY:')) {
+                        return '';
+                    }
+
+                    return $cleaned;
+                }
+            }
+        }
+
+        // 2. If OpenAI key is available, use Whisper
+        $openAiKey = config('ai.providers.openai.key') ?: Setting::get('openai_api_key');
+        if ($openAiKey) {
+            $audioBytes = base64_decode($base64);
+            $extension = str_contains($mimeType, 'wav') ? 'wav' : 'webm';
+            $response = Http::withToken($openAiKey)
+                ->attach('file', $audioBytes, "audio.{$extension}")
+                ->timeout(35)
+                ->post('https://api.openai.com/v1/audio/transcriptions', [
+                    'model' => 'whisper-1',
+                ]);
+
+            if ($response->successful()) {
+                return (string) ($response->json('text') ?? '');
+            }
+        }
+
+        // 3. Fallback: If Gemini API key is configured
+        $geminiKey = config('ai.providers.gemini.key') ?: Setting::get('gemini_api_key');
+        if ($geminiKey) {
+            $response = Http::timeout(35)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$geminiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $systemPrompt],
+                            [
+                                'inline_data' => [
+                                    'mime_type' => $mimeType,
+                                    'data' => $base64,
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            if ($response->successful()) {
+                $text = (string) ($response->json('candidates.0.content.parts.0.text') ?? '');
+                $cleaned = trim($text);
+                if ($cleaned === 'EMPTY' || str_starts_with($cleaned, 'EMPTY:')) {
+                    return '';
+                }
+
+                return $cleaned;
+            }
+        }
+
+        return '';
     }
 }

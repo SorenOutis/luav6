@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\MaintenanceStatusController;
 use App\Http\Controllers\Api\StreakRestoreController;
 use App\Http\Controllers\Api\XpHistoryController;
+use App\Http\Controllers\ArtworksController;
+use App\Http\Controllers\ArtworkSubmissionController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
 use App\Http\Controllers\AssignmentInviteController;
@@ -43,6 +45,7 @@ use App\Http\Controllers\ProfileMusicStreamController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TermsController;
@@ -56,6 +59,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
+Route::get('/shop', ShopController::class)->name('shop');
+Route::get('/gallery', ArtworksController::class)->name('gallery');
+Route::get('/showcase', fn () => redirect()->route('gallery'))->name('showcase');
+Route::get('/artworks', fn () => redirect()->route('gallery'));
+Route::get('/gallery/submit', [ArtworkSubmissionController::class, 'create'])->middleware('auth')->name('gallery.submit');
+Route::post('/gallery/submit', [ArtworkSubmissionController::class, 'store'])->middleware(['auth', 'throttle:10,1'])->name('gallery.submit.store');
+Route::get('/artworks/submit', fn () => redirect()->route('gallery.submit'));
+Route::get('/showcase/submit', fn () => redirect()->route('gallery.submit'));
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
 Route::get('/privacy', PrivacyPolicyController::class)->name('privacy');
 Route::get('/terms', TermsController::class)->name('terms');
@@ -275,6 +286,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
         ->middleware('throttle:chats')
         ->name('chats.destroy');
+    Route::post('api/chats/transcribe', [ChatHistoryController::class, 'transcribe'])
+        ->middleware('throttle:chats')
+        ->name('chats.transcribe');
 
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');
