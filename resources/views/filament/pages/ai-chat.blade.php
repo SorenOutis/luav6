@@ -672,19 +672,6 @@
                                             </details>
                                         </div>
 
-                                        {{-- Message Body (Markdown formatted) with streaming cursor --}}
-                                        <div x-show="msg.content" class="flex items-start">
-                                            <div
-                                                class="prose prose-sm dark:prose-invert max-w-none pt-0.5 text-xs leading-relaxed text-zinc-800 sm:text-sm dark:text-zinc-200"
-                                                x-html="formatMarkdown(msg.content)"
-                                            ></div>
-                                            <span
-                                                x-show="msg.typing"
-                                                class="mt-1 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-2xs bg-amber-500"
-                                                title="Generating..."
-                                            ></span>
-                                        </div>
-
                                         {{-- Live ReUI Agent Activity Console (During Real-time Execution & Streaming) --}}
                                         <div
                                             x-show="!getActionsForMessage(msg, index).length && msg.activity"
@@ -1192,6 +1179,19 @@
                                                 </div>
                                             </div>
                                         </template>
+
+                                        {{-- Message Body (Markdown formatted) with streaming cursor --}}
+                                        <div x-show="msg.content" class="flex items-start">
+                                            <div
+                                                class="prose prose-sm dark:prose-invert max-w-none pt-0.5 text-xs leading-relaxed text-zinc-800 sm:text-sm dark:text-zinc-200"
+                                                x-html="formatMarkdown(msg.content)"
+                                            ></div>
+                                            <span
+                                                x-show="msg.typing"
+                                                class="mt-1 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-2xs bg-amber-500"
+                                                title="Generating..."
+                                            ></span>
+                                        </div>
 
                                         {{-- Message Actions (Copy) --}}
                                         <div x-show="!msg.typing && msg.content" class="flex items-center gap-2 pt-0.5">
@@ -1746,7 +1746,9 @@
                                 content: m.content,
                                 thinking: m.thinking || null,
                                 thinkingOpen: false,
-                                typing: false
+                                typing: false,
+                                createdAt: m.createdAt || null,
+                                actionIds: []
                             }));
                             this.scrollToBottom();
                             this.$nextTick(() => {
@@ -1756,6 +1758,7 @@
                             });
                         }
                         await this.loadAiActions(this.activeSessionId || identifier);
+                        this.associateActionsWithMessages();
                     } catch (e) {
                         console.error('Error loading session messages:', e);
                     }
@@ -1906,20 +1909,128 @@
                     }
                 },
 
+                associateActionsWithMessages() {
+                    if (!this.messages.length || !this.aiActions.length) return;
+
+                    const assistantMessages = [];
+                    for (let i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].role === 'assistant') {
+                            let prevUserTime = null;
+                            for (let u = i - 1; u >= 0; u--) {
+                                if (this.messages[u].role === 'user' && this.messages[u].createdAt) {
+                                    const parsed = Date.parse(this.messages[u].createdAt);
+                                    if (!isNaN(parsed)) {
+                                        prevUserTime = parsed;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            let nextUserTime = null;
+                            for (let u = i + 1; u < this.messages.length; u++) {
+                                if (this.messages[u].role === 'user' && this.messages[u].createdAt) {
+                                    const parsed = Date.parse(this.messages[u].createdAt);
+                                    if (!isNaN(parsed)) {
+                                        nextUserTime = parsed;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            const rawMsgTime = this.messages[i].createdAt;
+                            const parsedMsgTime = rawMsgTime ? Date.parse(rawMsgTime) : null;
+                            const msgTime = (parsedMsgTime !== null && !isNaN(parsedMsgTime)) ? parsedMsgTime : null;
+
+                            assistantMessages.push({
+                                msg: this.messages[i],
+                                index: i,
+                                msgTime: msgTime,
+                                startTime: prevUserTime ?? (msgTime ? msgTime - 60000 : null),
+                                endTime: nextUserTime ?? Infinity,
+                            });
+                        }
+                    }
+
+                    if (!assistantMessages.length) return;
+
+                    assistantMessages.forEach(am => {
+                        am.msg.actionIds = am.msg.actionIds || [];
+                    });
+
+                    const assignedActionIds = new Set();
+                    this.messages.forEach(m => {
+                        if (m.actionIds) {
+                            m.actionIds.forEach(id => assignedActionIds.add(id));
+                        }
+                    });
+
+                    this.aiActions.forEach(action => {
+                        if (assignedActionIds.has(action.id)) return;
+
+                        const rawActionTime = action.createdAt;
+                        const parsedActionTime = rawActionTime ? Date.parse(rawActionTime) : null;
+                        const actionTime = (parsedActionTime !== null && !isNaN(parsedActionTime)) ? parsedActionTime : null;
+                        let matched = null;
+
+                        if (actionTime !== null) {
+                            matched = assistantMessages.find(am => {
+                                const start = am.startTime ?? 0;
+                                const end = am.endTime ?? Infinity;
+                                return actionTime >= (start - 10000) && actionTime < end;
+                            });
+                        }
+
+                        if (!matched && actionTime !== null) {
+                            let closest = null;
+                            let minDiff = Infinity;
+                            assistantMessages.forEach(am => {
+                                if (am.msgTime !== null) {
+                                    const diff = Math.abs(actionTime - am.msgTime);
+                                    if (diff < minDiff) {
+                                        minDiff = diff;
+                                        closest = am;
+                                    }
+                                }
+                            });
+                            matched = closest;
+                        }
+
+                        if (!matched) {
+                            matched = assistantMessages[assistantMessages.length - 1];
+                        }
+
+                        if (matched) {
+                            if (!matched.msg.actionIds) {
+                                matched.msg.actionIds = [];
+                            }
+                            if (!matched.msg.actionIds.includes(action.id)) {
+                                matched.msg.actionIds.push(action.id);
+                            }
+                            assignedActionIds.add(action.id);
+                        }
+                    });
+                },
+
                 getActionsForMessage(msg, index) {
                     if (msg.role !== 'assistant') return [];
                     if (msg.action) return [msg.action];
 
-                    let lastAssistantIdx = -1;
-                    for (let i = this.messages.length - 1; i >= 0; i--) {
-                        if (this.messages[i].role === 'assistant') {
-                            lastAssistantIdx = i;
-                            break;
-                        }
+                    if (msg.actionIds && msg.actionIds.length > 0) {
+                        return this.aiActions.filter(a => msg.actionIds.includes(a.id));
                     }
-                    if (index === lastAssistantIdx && this.aiActions.length > 0) {
-                        return this.aiActions;
+
+                    // Fallback: If this is the last assistant message and there are actions not claimed by any message
+                    const isLastAssistant = !this.messages.slice(index + 1).some(m => m.role === 'assistant');
+                    if (isLastAssistant && this.aiActions.length > 0) {
+                        const assignedIds = new Set();
+                        this.messages.forEach(m => {
+                            if (m.actionIds) {
+                                m.actionIds.forEach(id => assignedIds.add(id));
+                            }
+                        });
+                        return this.aiActions.filter(a => !assignedIds.has(a.id));
                     }
+
                     return [];
                 },
 
@@ -2135,7 +2246,18 @@
                         if (target.activity) {
                             target.activity.status = 'needs_approval';
                         }
-                        this.loadAiActions(sessionId);
+                        const beforeActionIds = new Set((this.aiActions || []).map(a => a.id));
+                        this.loadAiActions(sessionId).then(() => {
+                            (this.aiActions || []).forEach(a => {
+                                if (!beforeActionIds.has(a.id)) {
+                                    target.actionIds = target.actionIds || [];
+                                    if (!target.actionIds.includes(a.id)) {
+                                        target.actionIds.push(a.id);
+                                    }
+                                }
+                            });
+                            this.associateActionsWithMessages();
+                        });
                     }
                 },
 
@@ -2319,7 +2441,8 @@
                     this.messages.push({
                         role: 'user',
                         content: text,
-                        typing: false
+                        typing: false,
+                        createdAt: new Date().toISOString()
                     });
 
                     // Update session title locally if new
@@ -2339,6 +2462,8 @@
                         thinkingMs: null,
                         elapsedSeconds: 0,
                         typing: true,
+                        createdAt: new Date().toISOString(),
+                        actionIds: [],
                         activity: hasLikelyTask ? {
                             title: this.deriveTaskTitle(text),
                             status: 'running',
@@ -2395,6 +2520,7 @@
                     });
 
                     this.abortController = new AbortController();
+                    const existingActionIds = new Set((this.aiActions || []).map(a => a.id));
 
                     try {
                         const response = await fetch(`/api/chats/${sessionId}/stream`, {
@@ -2496,19 +2622,33 @@
                                         }
                                     }
                                 });
-                                if (this.aiActions.length > 0) {
-                                    target.activity.status = 'needs_approval';
-                                } else {
-                                    target.activity.status = 'completed';
-                                    if (!target.activity.hasToolCalls && this.aiActions.length === 0) {
-                                        target.activity = null;
-                                    }
-                                }
                             }
                         }
                         this.isStreaming = false;
                         this.abortController = null;
                         await this.loadAiActions(sessionId);
+                        if (target) {
+                            (this.aiActions || []).forEach(a => {
+                                if (!existingActionIds.has(a.id)) {
+                                    target.actionIds = target.actionIds || [];
+                                    if (!target.actionIds.includes(a.id)) {
+                                        target.actionIds.push(a.id);
+                                    }
+                                }
+                            });
+                        }
+                        this.associateActionsWithMessages();
+                        if (target && target.activity) {
+                            const targetActions = this.getActionsForMessage(target, assistantIndex);
+                            if (targetActions.length > 0) {
+                                target.activity.status = 'needs_approval';
+                            } else {
+                                target.activity.status = 'completed';
+                                if (!target.activity.hasToolCalls && targetActions.length === 0) {
+                                    target.activity = null;
+                                }
+                            }
+                        }
                         this.scrollToBottom();
                     }
                 },

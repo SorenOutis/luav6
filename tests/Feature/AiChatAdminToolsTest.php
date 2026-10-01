@@ -387,7 +387,7 @@ it('refuses to stage an assignment with no target sections', function () {
     expect((new CreateAssignmentTool)->handle(new Request([
         'title' => 'Nowhere Assignment',
         'due_date' => '2026-09-01',
-    ])))->toContain('at least one section_id')
+    ])))->toContain('no sections exist in this workspace')
         ->and(PendingAiAction::count())->toBe(0);
 });
 
