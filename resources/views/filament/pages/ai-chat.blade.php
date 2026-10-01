@@ -538,7 +538,17 @@
                                         </button>
                                     </div>
 
-                                    <div x-show="voiceError" class="mt-1 text-[11px] text-amber-500" x-text="voiceError"></div>
+                                    <div x-show="voiceError" x-cloak class="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                        <svg class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <div class="flex-1 leading-relaxed" x-text="voiceError"></div>
+                                        <button type="button" @click="voiceError = null" class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
                                     <div class="mt-2 flex items-center justify-between border-t border-zinc-100 pt-2.5 dark:border-zinc-800/80">
                                         <div class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
@@ -1302,7 +1312,17 @@
                             </button>
                         </div>
 
-                        <div x-show="voiceError" class="mb-1 text-[11px] text-amber-500" x-text="voiceError"></div>
+                        <div x-show="voiceError" x-cloak class="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                            <svg class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1 leading-relaxed" x-text="voiceError"></div>
+                            <button type="button" @click="voiceError = null" class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
 
                         <div class="flex items-center justify-between border-t border-zinc-100 pt-2 dark:border-zinc-800/80">
                             <div class="flex items-center gap-1.5 px-1 text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -2826,7 +2846,8 @@
                         const rec = new SpeechRecognition();
                         rec.continuous = false;
                         rec.interimResults = true;
-                        rec.lang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
+                        // Use en-US for universal speech recognition engine compatibility across Edge and Chrome
+                        rec.lang = 'en-US';
 
                         let baseText = '';
 
@@ -2863,12 +2884,25 @@
                         };
 
                         rec.onerror = (event) => {
-                            if (event.error !== 'no-speech') {
-                                this.voiceError = event.error === 'not-allowed'
-                                    ? 'Microphone permission denied. Allow mic access in your browser settings.'
-                                    : ('Mic error: ' + event.error);
-                                setTimeout(() => { this.voiceError = null; }, 5000);
+                            console.warn('Speech recognition error event:', event.error, event);
+                            if (event.error === 'no-speech') {
+                                this.isListening = false;
+                                return;
                             }
+
+                            if (event.error === 'not-allowed') {
+                                this.voiceError = 'Microphone was blocked. In Windows Settings: 1) Privacy & security > Microphone -> turn ON "Let desktop apps access your microphone". 2) Privacy & security > Speech -> turn ON "Online speech recognition". (Or try Google Chrome).';
+                            } else if (event.error === 'network') {
+                                this.voiceError = 'Speech service network error. Please verify your internet connection or try in Google Chrome.';
+                            } else if (event.error === 'audio-capture') {
+                                this.voiceError = 'No audio captured from microphone. Verify default input device in Windows Sound settings.';
+                            } else if (event.error === 'language-not-supported') {
+                                this.voiceError = 'Language not supported by the browser speech engine.';
+                            } else {
+                                this.voiceError = 'Mic error: ' + event.error;
+                            }
+
+                            setTimeout(() => { this.voiceError = null; }, 10000);
                             this.isListening = false;
                         };
 
@@ -2883,7 +2917,7 @@
                     }
                 },
 
-                toggleVoiceRecognition() {
+                async toggleVoiceRecognition() {
                     if (this.isStreaming) return;
 
                     const SpeechRecognition = typeof window !== 'undefined'
@@ -2891,29 +2925,57 @@
                         : null;
 
                     if (!SpeechRecognition) {
-                        alert('Voice activation requires a browser with Web Speech API support (Google Chrome, Microsoft Edge, Safari, or Opera).');
+                        this.voiceError = 'Voice activation requires a browser with Web Speech API support (Google Chrome, Microsoft Edge, Safari, or Opera).';
                         return;
                     }
 
-                    if (!this.voiceRecognition) {
-                        this.initVoice();
+                    if (this.isListening) {
+                        if (this.voiceRecognition) {
+                            try { this.voiceRecognition.stop(); } catch (e) {}
+                        }
+                        this.isListening = false;
+                        return;
                     }
 
-                    if (this.isListening) {
+                    this.voiceError = null;
+
+                    // 1. Prime microphone hardware and check OS / browser permission
+                    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                         try {
-                            this.voiceRecognition.stop();
-                        } catch (e) {}
-                        this.isListening = false;
-                    } else {
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            stream.getTracks().forEach(track => track.stop());
+                        } catch (err) {
+                            console.warn('Microphone hardware check failed:', err);
+                            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                                this.voiceError = 'Microphone blocked by Windows or browser. In Windows Settings > Privacy & security > Microphone, turn ON "Let desktop apps access your microphone".';
+                                return;
+                            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                                this.voiceError = 'No microphone device was detected on your computer.';
+                                return;
+                            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                                this.voiceError = 'Microphone is currently in use by another app or system process.';
+                                return;
+                            }
+                        }
+                    }
+
+                    // 2. Initialize or refresh speech recognition instance
+                    this.initVoice();
+
+                    if (!this.voiceRecognition) {
+                        this.voiceError = 'Speech recognition could not be initialized.';
+                        return;
+                    }
+
+                    try {
+                        this.voiceRecognition.start();
+                    } catch (e) {
+                        console.error('Speech recognition start failed:', e);
+                        this.initVoice();
                         try {
                             this.voiceRecognition.start();
-                        } catch (e) {
-                            this.initVoice();
-                            try {
-                                this.voiceRecognition.start();
-                            } catch (err) {
-                                this.voiceError = 'Could not access microphone.';
-                            }
+                        } catch (err) {
+                            this.voiceError = 'Could not start speech recognition. In Windows Settings > Privacy & security > Speech, make sure "Online speech recognition" is enabled.';
                         }
                     }
                 },
