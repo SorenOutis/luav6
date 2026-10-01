@@ -71,13 +71,44 @@ class AdminAiChat extends Page
 
         $workspace = app(WorkspaceContext::class)->workspace();
 
-        $initialSessions = ChatSession::query()
+        $requestedParam = request()->query('c') ?? request()->query('session');
+        $initialActiveSession = null;
+
+        $sessionsQuery = ChatSession::query()
             ->where('user_id', $user?->id)
             ->latest('updated_at')
             ->limit(30)
-            ->get()
+            ->get();
+
+        if ($requestedParam && $user) {
+            $matchedSession = $sessionsQuery->first(function (ChatSession $s) use ($requestedParam): bool {
+                return $s->uuid === $requestedParam || (string) $s->id === (string) $requestedParam;
+            });
+
+            if (! $matchedSession) {
+                $matchedSession = ChatSession::query()
+                    ->where('user_id', $user->id)
+                    ->where(function ($q) use ($requestedParam): void {
+                        if (is_numeric($requestedParam)) {
+                            $q->where('id', (int) $requestedParam)->orWhere('uuid', $requestedParam);
+                        } else {
+                            $q->where('uuid', $requestedParam);
+                        }
+                    })
+                    ->first();
+
+                if ($matchedSession) {
+                    $sessionsQuery->prepend($matchedSession);
+                }
+            }
+
+            $initialActiveSession = $matchedSession;
+        }
+
+        $initialSessions = $sessionsQuery
             ->map(fn (ChatSession $session) => [
                 'id' => $session->id,
+                'uuid' => $session->uuid,
                 'title' => $session->title ?: 'New chat',
                 'updated_at' => $session->updated_at?->toISOString(),
                 'updated_at_human' => $session->updated_at?->diffForHumans(),
@@ -100,6 +131,11 @@ class AdminAiChat extends Page
                 'email' => $user?->email,
             ],
             'initialSessions' => $initialSessions,
+            'initialActiveSession' => $initialActiveSession ? [
+                'id' => $initialActiveSession->id,
+                'uuid' => $initialActiveSession->uuid,
+                'title' => $initialActiveSession->title ?: 'New chat',
+            ] : null,
         ];
     }
 }

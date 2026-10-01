@@ -35,6 +35,7 @@ use App\Filament\Pages\AdminAiChat;
 use App\Models\ActivityTask;
 use App\Models\Announcement;
 use App\Models\Assignment;
+use App\Models\ChatSession;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamPart;
@@ -47,6 +48,7 @@ use App\Models\User;
 use App\Services\PendingAiActionService;
 use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Laravel\Ai\Tools\Request;
 use Livewire\Livewire;
 
@@ -1020,4 +1022,162 @@ it('approves draft exam creation with mixed question types creating distinct exa
         ->and($part2->title)->toBe('Part 2: Essay')
         ->and($part2->points)->toBe(5)
         ->and($part2->questions)->toHaveCount(1);
+});
+
+it('automatically assigns a valid UUIDv7 to a chat session upon creation', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create([
+        'title' => 'Biology Lesson Plan',
+    ]);
+
+    expect($session->uuid)->not->toBeNull()
+        ->and(Str::isUuid($session->uuid))->toBeTrue();
+});
+
+it('returns both id and uuid when creating a new chat via api/chats', function () {
+    $admin = User::factory()->admin()->create();
+
+    $response = $this->actingAs($admin)
+        ->postJson('/api/chats')
+        ->assertOk()
+        ->assertJsonStructure([
+            'session' => ['id', 'uuid'],
+        ]);
+
+    $uuid = $response->json('session.uuid');
+    expect(Str::isUuid($uuid))->toBeTrue();
+
+    $session = ChatSession::query()->where('uuid', $uuid)->first();
+    expect($session)->not->toBeNull()
+        ->and($session->user_id)->toBe($admin->id);
+});
+
+it('resolves chat sessions via route model binding by both UUID and integer ID', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create([
+        'title' => 'Physics Calculations',
+    ]);
+    $session->messages()->create([
+        'role' => 'user',
+        'content' => 'What is the speed of light?',
+    ]);
+
+    // Resolved by UUID
+    $this->actingAs($admin)
+        ->getJson("/api/chats/{$session->uuid}/messages")
+        ->assertOk()
+        ->assertJsonPath('session.id', $session->id)
+        ->assertJsonPath('session.uuid', $session->uuid)
+        ->assertJsonPath('session.title', 'Physics Calculations');
+
+    // Resolved by legacy integer ID
+    $this->actingAs($admin)
+        ->getJson("/api/chats/{$session->id}/messages")
+        ->assertOk()
+        ->assertJsonPath('session.id', $session->id)
+        ->assertJsonPath('session.uuid', $session->uuid);
+});
+
+it('selects initial active session when deep-linked via ?c=<uuid> and ?session=<uuid>', function () {
+    $admin = User::factory()->admin()->create();
+    $session1 = $admin->chatSessions()->create(['title' => 'History Essay Discussion']);
+    $session2 = $admin->chatSessions()->create(['title' => 'Algebra Trigonometry Review']);
+
+    $this->actingAs($admin);
+
+    // Deep-linked with ?c=<uuid>
+    $this->get("/admin/ai-chat?c={$session1->uuid}")
+        ->assertOk()
+        ->assertSee($session1->uuid)
+        ->assertSee('History Essay Discussion');
+
+    // Deep-linked with ?session=<uuid> fallback
+    $this->get("/admin/ai-chat?session={$session2->uuid}")
+        ->assertOk()
+        ->assertSee($session2->uuid)
+        ->assertSee('Algebra Trigonometry Review');
+});
+
+it('prepends an older deep-linked session to initial sessions when not in top 30', function () {
+    $admin = User::factory()->admin()->create();
+
+    // Create 35 sessions, the target one is the oldest
+    $oldSession = $admin->chatSessions()->create([
+        'title' => 'Oldest Important Chat',
+        'created_at' => now()->subDays(40),
+        'updated_at' => now()->subDays(40),
+    ]);
+
+    for ($i = 1; $i <= 32; $i++) {
+        $admin->chatSessions()->create([
+            'title' => "Recent Chat {$i}",
+            'created_at' => now()->subMinutes(35 - $i),
+            'updated_at' => now()->subMinutes(35 - $i),
+        ]);
+    }
+
+    $this->actingAs($admin);
+
+    // Without query param, oldest chat is not in top 30
+    $this->get('/admin/ai-chat')
+        ->assertOk()
+        ->assertDontSee('Oldest Important Chat');
+
+    // With ?c=<uuid>, it is fetched and included in initialSessions
+    $this->get("/admin/ai-chat?c={$oldSession->uuid}")
+        ->assertOk()
+        ->assertSee('Oldest Important Chat')
+        ->assertSee($oldSession->uuid);
+});
+
+it('isolates chat session deep links so users cannot access other users chats', function () {
+    $admin1 = User::factory()->admin()->create();
+    $admin2 = User::factory()->admin()->create();
+
+    $session1 = $admin1->chatSessions()->create(['title' => 'Secret Admin 1 Chat']);
+
+    // Admin 2 tries to access Admin 1's chat messages via UUID
+    $this->actingAs($admin2)
+        ->getJson("/api/chats/{$session1->uuid}/messages")
+        ->assertNotFound();
+
+    // Admin 2 opens deep-link: Admin 1's chat should not be loaded into Admin 2's session
+    $this->actingAs($admin2)
+        ->get("/admin/ai-chat?c={$session1->uuid}")
+        ->assertOk()
+        ->assertDontSee('Secret Admin 1 Chat');
+});
+
+it('filters pending AI actions by session UUID', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $session = $admin->chatSessions()->create(['title' => 'Quiz Creation Chat']);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $exam = Exam::factory()->create([
+        'workspace_id' => $workspaceId,
+        'admin_id' => $admin->id,
+        'title' => 'Exam to Delete',
+    ]);
+
+    $action = app(PendingAiActionService::class)->stage(
+        type: 'delete_exam',
+        title: 'Delete Exam',
+        summary: 'Delete Exam to Delete',
+        payload: ['exam_id' => $exam->id],
+        preview: ['field' => 'Title', 'before' => $exam->title, 'after' => null],
+        chatSessionId: $session->id,
+    );
+
+    // Query pending actions by session UUID
+    $this->getJson("/api/ai-actions?session_id={$session->uuid}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $action->public_id);
+
+    // Query by integer ID also works
+    $this->getJson("/api/ai-actions?session_id={$session->id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
 });

@@ -131,7 +131,18 @@ class ChatHistoryController extends Controller
         $session = $this->sessionForUser($request, $session);
         $beforeId = $request->integer('before_id') ?: null;
 
-        return response()->json($this->messagePage($session, $beforeId));
+        $page = $this->messagePage($session, $beforeId);
+
+        return response()->json(array_merge($page, [
+            'session' => [
+                'id' => $session->id,
+                'uuid' => $session->uuid,
+                'title' => $session->title ?? 'New chat',
+                'source' => $session->source,
+                'updated_at' => $session->updated_at?->toIso8601String(),
+                'updated_at_human' => $session->updated_at?->diffForHumans(),
+            ],
+        ]));
     }
 
     /**
@@ -151,7 +162,10 @@ class ChatHistoryController extends Controller
             ]);
 
             return response()->json([
-                'session' => ['id' => $session->id],
+                'session' => [
+                    'id' => $session->id,
+                    'uuid' => $session->uuid,
+                ],
             ]);
         } catch (Throwable $e) {
             $errorId = $this->logError('Chat History Store Error', $e);
@@ -542,7 +556,7 @@ class ChatHistoryController extends Controller
     private function sessionPage($user, ?string $cursor = null): array
     {
         $paginator = $user->chatSessions()
-            ->select(['chat_sessions.id', 'chat_sessions.user_id', 'chat_sessions.title', 'chat_sessions.source', 'chat_sessions.updated_at'])
+            ->select(['chat_sessions.id', 'chat_sessions.uuid', 'chat_sessions.user_id', 'chat_sessions.title', 'chat_sessions.source', 'chat_sessions.updated_at'])
             ->withCount('messages')
             ->addSelect([
                 'last_message' => ChatMessage::query()
@@ -564,6 +578,7 @@ class ChatHistoryController extends Controller
             'data' => collect($paginator->items())
                 ->map(fn (ChatSession $session) => [
                     'id' => $session->id,
+                    'uuid' => $session->uuid,
                     'title' => $session->title ?? 'New chat',
                     'source' => $session->source,
                     'messageCount' => (int) $session->messages_count,
@@ -621,6 +636,7 @@ class ChatHistoryController extends Controller
 
         return [
             'id' => $session->id,
+            'uuid' => $session->uuid,
             'title' => $session->title ?? 'New chat',
             'source' => $session->source,
             'messageCount' => $session->messages()->count(),

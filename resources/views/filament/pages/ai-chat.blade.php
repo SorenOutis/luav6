@@ -7,6 +7,7 @@
         workspace: {{ Js::from($workspace) }},
         adminUser: {{ Js::from($adminUser) }},
         initialSessions: {{ Js::from($initialSessions) }},
+        initialActiveSession: {{ Js::from($initialActiveSession) }},
         foxChatUrl: '{{ asset('images/mascots/fox-chat.webp') }}',
         foxWelcomeUrl: '{{ asset('images/mascots/fox-welcome.webp') }}',
     })"
@@ -83,7 +84,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.today" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -93,16 +94,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -114,7 +127,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.yesterday" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -124,16 +137,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -145,7 +170,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.previousWeek" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -155,16 +180,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -176,7 +213,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.older" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -186,16 +223,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -297,6 +346,30 @@
                     <div class="hidden rounded-lg border border-zinc-200/90 bg-zinc-50/80 px-2 py-1 text-[11px] font-medium text-zinc-600 md:block dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
                         <span x-text="workspace.name"></span>
                     </div>
+
+                    <template x-if="activeSessionId || activeSessionUuid">
+                        <button
+                            type="button"
+                            @click="copyConversationLink()"
+                            class="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition"
+                            :class="linkCopied
+                                ? 'border-emerald-500/40 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                : 'border-zinc-200/90 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-850 dark:hover:text-zinc-200'"
+                            :title="linkCopied ? 'Link copied to clipboard!' : 'Copy link to this conversation'"
+                        >
+                            <template x-if="!linkCopied">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                            </template>
+                            <template x-if="linkCopied">
+                                <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </template>
+                            <span x-text="linkCopied ? 'Copied!' : 'Copy link'" class="hidden text-[11px] sm:inline"></span>
+                        </button>
+                    </template>
 
                     <a
                         href="/admin/ai-chat"
@@ -1439,12 +1512,15 @@
                 workspace: config.workspace,
                 adminUser: config.adminUser,
                 sessions: config.initialSessions || [],
+                initialActiveSession: config.initialActiveSession || null,
                 foxChatUrl: config.foxChatUrl,
                 foxWelcomeUrl: config.foxWelcomeUrl,
 
                 sidebarOpen: true,
                 searchQuery: '',
-                activeSessionId: null,
+                activeSessionId: config.initialActiveSession ? config.initialActiveSession.id : null,
+                activeSessionUuid: config.initialActiveSession ? config.initialActiveSession.uuid : null,
+                linkCopied: false,
                 messages: [],
                 aiActions: [],
                 inputMessage: '',
@@ -1489,8 +1565,42 @@
 
                 init() {
                     this.$nextTick(() => {
-                        if (this.$refs.welcomeComposerInput) {
+                        if (this.$refs.welcomeComposerInput && !this.activeSessionId) {
                             this.$refs.welcomeComposerInput.focus();
+                        }
+                    });
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const requestedParam = urlParams.get('c') || urlParams.get('session');
+
+                    if (this.initialActiveSession) {
+                        this.selectSession(this.initialActiveSession, false);
+                    } else if (requestedParam) {
+                        this.selectSession(requestedParam, false);
+                    }
+
+                    window.addEventListener('popstate', () => {
+                        if (this.isStreaming) return;
+                        const currentParams = new URLSearchParams(window.location.search);
+                        const targetUuid = currentParams.get('c') || currentParams.get('session');
+
+                        if (targetUuid) {
+                            if (this.activeSessionUuid !== targetUuid && String(this.activeSessionId) !== String(targetUuid)) {
+                                this.selectSession(targetUuid, false);
+                            }
+                        } else {
+                            if (this.activeSessionId !== null || this.activeSessionUuid !== null) {
+                                this.activeSessionId = null;
+                                this.activeSessionUuid = null;
+                                this.messages = [];
+                                this.aiActions = [];
+                                this.inputMessage = '';
+                                this.$nextTick(() => {
+                                    if (this.$refs.welcomeComposerInput) {
+                                        this.$refs.welcomeComposerInput.focus();
+                                    }
+                                });
+                            }
                         }
                     });
                 },
@@ -1569,14 +1679,46 @@
                     return { today, yesterday, previousWeek, older };
                 },
 
-                async selectSession(sessionId) {
+                async selectSession(target, updateUrl = true) {
                     if (this.isStreaming) return;
-                    this.activeSessionId = sessionId;
+
+                    let session = null;
+                    let identifier = target;
+
+                    if (typeof target === 'object' && target !== null) {
+                        session = target;
+                        identifier = target.uuid || target.id;
+                    } else if (target) {
+                        session = this.sessions.find(s => s.uuid === target || String(s.id) === String(target));
+                        identifier = target;
+                    }
+
+                    if (session) {
+                        this.activeSessionId = session.id;
+                        this.activeSessionUuid = session.uuid || null;
+                    } else {
+                        if (typeof identifier === 'number' || (typeof identifier === 'string' && /^\d+$/.test(identifier))) {
+                            this.activeSessionId = parseInt(identifier, 10);
+                            this.activeSessionUuid = null;
+                        } else {
+                            this.activeSessionId = null;
+                            this.activeSessionUuid = String(identifier);
+                        }
+                    }
+
+                    if (updateUrl) {
+                        const url = new URL(window.location.href);
+                        const urlParam = this.activeSessionUuid || this.activeSessionId || identifier;
+                        url.searchParams.set('c', urlParam);
+                        url.searchParams.delete('session');
+                        window.history.pushState({ sessionUuid: urlParam }, '', url.toString());
+                    }
+
                     this.messages = [];
                     this.aiActions = [];
 
                     try {
-                        const res = await fetch(`/api/chats/${sessionId}/messages`, {
+                        const res = await fetch(`/api/chats/${identifier}/messages`, {
                             headers: {
                                 'Accept': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest'
@@ -1584,6 +1726,20 @@
                         });
                         if (res.ok) {
                             const data = await res.json();
+                            if (data.session) {
+                                this.activeSessionId = data.session.id;
+                                this.activeSessionUuid = data.session.uuid;
+                                if (!this.sessions.some(s => s.id === data.session.id)) {
+                                    this.sessions.unshift({
+                                        id: data.session.id,
+                                        uuid: data.session.uuid,
+                                        title: data.session.title || 'New chat',
+                                        updated_at: data.session.updated_at,
+                                        updated_at_human: data.session.updated_at_human || 'recently'
+                                    });
+                                }
+                            }
+
                             this.messages = (data.data || []).map(m => ({
                                 id: m.id,
                                 role: m.role,
@@ -1599,7 +1755,7 @@
                                 }
                             });
                         }
-                        await this.loadAiActions(sessionId);
+                        await this.loadAiActions(this.activeSessionId || identifier);
                     } catch (e) {
                         console.error('Error loading session messages:', e);
                     }
@@ -1608,9 +1764,17 @@
                 newChat() {
                     if (this.isStreaming) return;
                     this.activeSessionId = null;
+                    this.activeSessionUuid = null;
                     this.messages = [];
                     this.aiActions = [];
                     this.inputMessage = '';
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('c');
+                    url.searchParams.delete('session');
+                    const cleanUrl = url.pathname + (url.search ? url.search : '');
+                    window.history.pushState({}, '', cleanUrl);
+
                     this.$nextTick(() => {
                         if (this.$refs.welcomeComposerInput) {
                             this.$refs.welcomeComposerInput.focus();
@@ -1634,12 +1798,20 @@
                             const json = await res.json();
                             const newSession = {
                                 id: json.session.id,
+                                uuid: json.session.uuid,
                                 title: 'New chat',
                                 updated_at: new Date().toISOString(),
                                 updated_at_human: 'just now'
                             };
                             this.sessions.unshift(newSession);
                             this.activeSessionId = newSession.id;
+                            this.activeSessionUuid = newSession.uuid;
+
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('c', newSession.uuid || newSession.id);
+                            url.searchParams.delete('session');
+                            window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
+
                             return newSession.id;
                         }
                     } catch (e) {
@@ -1663,16 +1835,46 @@
                             this.sessions = this.sessions.filter(s => s.id !== sessionId);
                             if (this.activeSessionId === sessionId) {
                                 if (this.sessions.length > 0) {
-                                    this.selectSession(this.sessions[0].id);
+                                    this.selectSession(this.sessions[0]);
                                 } else {
-                                    this.activeSessionId = null;
-                                    this.messages = [];
-                                    this.aiActions = [];
+                                    this.newChat();
                                 }
                             }
                         }
                     } catch (e) {
                         console.error('Error deleting session:', e);
+                    }
+                },
+
+                async copyConversationLink(item = null) {
+                    const targetUuid = (item && (item.uuid || item.id)) || this.activeSessionUuid || this.activeSessionId;
+                    if (!targetUuid) return;
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('c', targetUuid);
+                    url.searchParams.delete('session');
+                    const fullUrl = url.toString();
+
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(fullUrl);
+                        } else {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = fullUrl;
+                            textarea.style.position = 'fixed';
+                            textarea.style.left = '-9999px';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                        }
+
+                        this.linkCopied = true;
+                        setTimeout(() => {
+                            this.linkCopied = false;
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy link:', err);
                     }
                 },
 
