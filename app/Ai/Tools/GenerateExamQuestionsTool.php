@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Models\Exam;
+use App\Services\TopicResearchService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
@@ -44,7 +45,21 @@ class GenerateExamQuestionsTool extends PendingWriteTool implements Tool
             return 'Error: exam not found in this workspace. Use exams_admin for valid exam IDs.';
         }
 
+        $topic = trim((string) ($request['topic'] ?? '')) ?: null;
         $sourceText = trim((string) ($request['source_text'] ?? ''));
+
+        if ($sourceText === '' && $topic !== null) {
+            try {
+                $researcher = app(TopicResearchService::class);
+                $researched = $researcher->research($topic);
+                if ($researched && mb_strlen($researched) > 100) {
+                    $sourceText = $researched;
+                }
+            } catch (\Throwable) {
+                // Ignore network issues and fall back to required check
+            }
+        }
+
         if ($sourceText === '') {
             return 'Error: source_text is required.';
         }
@@ -71,7 +86,6 @@ class GenerateExamQuestionsTool extends PendingWriteTool implements Tool
         if (! in_array($difficulty, ['easy', 'medium', 'hard'], true)) {
             $difficulty = 'medium';
         }
-        $topic = trim((string) ($request['topic'] ?? '')) ?: null;
         $points = max(1, (int) ($request['points'] ?? 1));
         $instructions = trim((string) ($request['instructions'] ?? '')) ?: null;
         $countSummary = collect($counts)

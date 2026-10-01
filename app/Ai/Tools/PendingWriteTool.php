@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Exceptions\PendingAiActionException;
+use App\Models\User;
 use App\Services\PendingAiActionService;
 use App\Support\WorkspaceContext;
 
@@ -26,6 +27,22 @@ abstract class PendingWriteTool
         array $payload,
         array $changes,
     ): string {
+        $hasWorkspace = false;
+        foreach ($changes as $change) {
+            if (isset($change['field']) && in_array(strtolower((string) $change['field']), ['workspace', 'target workspace'], true)) {
+                $hasWorkspace = true;
+                break;
+            }
+        }
+
+        if (! $hasWorkspace) {
+            $changes[] = [
+                'field' => 'Workspace',
+                'before' => null,
+                'after' => $this->workspaceName(),
+            ];
+        }
+
         try {
             $action = $this->pendingActions->stage(
                 $type,
@@ -47,6 +64,11 @@ abstract class PendingWriteTool
             .'. The administrator must review the exact diff and click Approve; do not ask them to type a confirmation and do not call this tool again for the same change.';
     }
 
+    protected function workspaceName(): string
+    {
+        return app(WorkspaceContext::class)->workspace()?->name ?? 'Active Workspace';
+    }
+
     protected function workspaceId(): ?int
     {
         return app(WorkspaceContext::class)->id();
@@ -55,5 +77,21 @@ abstract class PendingWriteTool
     protected function adminError(): ?string
     {
         return auth()->user()?->is_admin ? null : 'Only admins can use this tool.';
+    }
+
+    protected function findWorkspaceUser(int $userId): ?User
+    {
+        $workspaceId = $this->workspaceId();
+
+        return User::query()
+            ->whereKey($userId)
+            ->where(function ($query) use ($workspaceId) {
+                if (! $workspaceId) {
+                    return;
+                }
+                $query->whereHas('workspaces', fn ($q) => $q->whereKey($workspaceId))
+                    ->orWhereHas('sections', fn ($q) => $q->where('workspace_id', $workspaceId));
+            })
+            ->first();
     }
 }
