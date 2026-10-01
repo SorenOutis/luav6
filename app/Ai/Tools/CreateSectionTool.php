@@ -32,9 +32,29 @@ class CreateSectionTool extends PendingWriteTool implements Tool
             return 'Error: section name is required (e.g. "Grade 10 - Rizal" or "BSIT 3-A").';
         }
 
-        $schoolLevel = trim((string) ($request['school_level'] ?? Section::SCHOOL_LEVEL_COLLEGE));
+        $schoolLevel = trim((string) ($request['school_level'] ?? ''));
         if (! in_array($schoolLevel, [Section::SCHOOL_LEVEL_COLLEGE, Section::SCHOOL_LEVEL_SENIOR_HIGH], true)) {
-            $schoolLevel = Section::SCHOOL_LEVEL_COLLEGE;
+            $nameLower = strtolower($name);
+            if (
+                str_contains($nameLower, 'grade 11') ||
+                str_contains($nameLower, 'grade 12') ||
+                str_contains($nameLower, 'gr 11') ||
+                str_contains($nameLower, 'gr 12') ||
+                str_contains($nameLower, 'g11') ||
+                str_contains($nameLower, 'g12') ||
+                str_contains($nameLower, 'shs') ||
+                str_contains($nameLower, 'senior high') ||
+                str_contains($nameLower, 'stem') ||
+                str_contains($nameLower, 'abm') ||
+                str_contains($nameLower, 'humss') ||
+                str_contains($nameLower, 'gas') ||
+                str_contains($nameLower, 'tvl') ||
+                str_contains($nameLower, 'ict')
+            ) {
+                $schoolLevel = Section::SCHOOL_LEVEL_SENIOR_HIGH;
+            } else {
+                $schoolLevel = Section::SCHOOL_LEVEL_COLLEGE;
+            }
         }
 
         $leaderboardEnabled = (bool) ($request['leaderboard_enabled'] ?? true);
@@ -73,7 +93,7 @@ class CreateSectionTool extends PendingWriteTool implements Tool
     {
         return [
             'name' => $schema->string()->description('The section or class name, e.g. "Grade 10 - Rizal" or "CS 101 - A".')->required(),
-            'school_level' => $schema->string()->description('Either "college" or "senior_high". Defaults to "college".'),
+            'school_level' => $schema->string()->description('Optional school level: "college" or "senior_high". Auto-inferred from section name (e.g. SHS/STEM/Grade 11 -> senior_high). NEVER ask the teacher for this.'),
             'leaderboard_enabled' => $schema->boolean()->description('Whether gamification leaderboard is enabled. Defaults to true.'),
         ];
     }

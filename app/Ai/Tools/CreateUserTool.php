@@ -42,7 +42,9 @@ class CreateUserTool extends PendingWriteTool implements Tool
         }
 
         $password = (string) ($request['password'] ?? '');
-        if (strlen($password) < 6) {
+        if ($password === '') {
+            $password = 'Student123!';
+        } elseif (strlen($password) < 6) {
             return 'Error: password must be at least 6 characters long.';
         }
 
@@ -110,7 +112,7 @@ class CreateUserTool extends PendingWriteTool implements Tool
         return [
             'name' => $schema->string()->description('Full name of the user, e.g. "Juan Dela Cruz".')->required(),
             'email' => $schema->string()->description('Unique email address for logging in.')->required(),
-            'password' => $schema->string()->description('Password for the user account (minimum 6 characters).')->required(),
+            'password' => $schema->string()->description('Optional password for the user account (defaults to "Student123!" if omitted).'),
             'is_admin' => $schema->boolean()->description('True if creating a co-administrator; false for a student. Defaults to false.'),
             'section_ids' => $schema->string()->description('Optional comma-separated list of section IDs to enroll the student into, e.g. "1, 2".'),
         ];

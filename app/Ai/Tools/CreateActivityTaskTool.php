@@ -28,14 +28,33 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
         }
 
         $sectionId = (int) ($request['section_id'] ?? 0);
-        $section = Section::query()
-            ->withoutGlobalScope('workspace')
-            ->whereKey($sectionId)
-            ->where('workspace_id', $this->workspaceId())
-            ->first();
+        $section = null;
+        if ($sectionId > 0) {
+            $section = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->whereKey($sectionId)
+                ->where('workspace_id', $this->workspaceId())
+                ->first();
+        }
+
+        if (! $section && ! empty($request['section_name'])) {
+            $section = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $this->workspaceId())
+                ->where('name', trim((string) $request['section_name']))
+                ->first();
+        }
 
         if (! $section) {
-            return "Error: section with ID {$sectionId} not found in this workspace. Check workspace_overview or sections_admin for valid section IDs.";
+            $section = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $this->workspaceId())
+                ->orderBy('id')
+                ->first();
+        }
+
+        if (! $section) {
+            return 'Error: no sections exist in this workspace. Create a class section first.';
         }
 
         $title = trim((string) ($request['title'] ?? ''));
@@ -47,15 +66,42 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
             ? (float) $request['max_points']
             : 100.0;
 
-        $term = trim((string) ($request['term'] ?? 'Midterm')) ?: 'Midterm';
+        $term = trim((string) ($request['term'] ?? ''));
+        if ($term === '') {
+            $titleLower = strtolower($title);
+            if (str_contains($titleLower, 'prelim')) {
+                $term = 'Prelim';
+            } elseif (str_contains($titleLower, 'midterm')) {
+                $term = 'Midterm';
+            } elseif (str_contains($titleLower, 'semi-final') || str_contains($titleLower, 'semifinal')) {
+                $term = 'Semi-Final';
+            } elseif (str_contains($titleLower, 'final')) {
+                $term = 'Final';
+            } elseif (str_contains($titleLower, '1st quarter') || str_contains($titleLower, 'quarter 1')) {
+                $term = 'First Semester - 1st Quarter';
+            } elseif (str_contains($titleLower, '2nd quarter') || str_contains($titleLower, 'quarter 2')) {
+                $term = 'First Semester - 2nd Quarter';
+            } elseif (str_contains($titleLower, '3rd quarter') || str_contains($titleLower, 'quarter 3')) {
+                $term = 'Second Semester - 1st Quarter';
+            } elseif (str_contains($titleLower, '4th quarter') || str_contains($titleLower, 'quarter 4')) {
+                $term = 'Second Semester - 2nd Quarter';
+            } elseif ($section->school_level === Section::SCHOOL_LEVEL_SENIOR_HIGH) {
+                $term = 'First Semester - 1st Quarter';
+            } else {
+                $term = 'Midterm';
+            }
+        }
+
         $description = trim((string) ($request['description'] ?? '')) ?: null;
 
-        $dueDate = null;
-        if (! empty($request['due_date'])) {
+        $rawDueDate = (string) ($request['due_date'] ?? '');
+        if ($rawDueDate === '') {
+            $dueDate = now()->addDays(7);
+        } else {
             try {
-                $dueDate = Carbon::parse($request['due_date']);
+                $dueDate = Carbon::parse($rawDueDate);
             } catch (\Throwable) {
-                return 'Error: invalid due_date format.';
+                $dueDate = now()->addDays(7);
             }
         }
 
@@ -88,11 +134,12 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'section_id' => $schema->integer()->description('The ID of the section to assign this activity to.')->required(),
             'title' => $schema->string()->description('The task or activity title, e.g. "Laboratory Exercise 1".')->required(),
+            'section_id' => $schema->integer()->description('Optional ID of the section to assign this activity to. Defaults to the primary section in the active workspace. NEVER ask the teacher for section IDs.'),
+            'section_name' => $schema->string()->description('Optional name of the section if ID is unknown.'),
             'max_points' => $schema->number()->description('Max possible points (defaults to 100).'),
-            'term' => $schema->string()->description('Grading term (e.g. "Prelim", "Midterm", "Final").'),
-            'due_date' => $schema->string()->description('Optional due date, e.g. "2026-10-20".'),
+            'term' => $schema->string()->description('Optional grading term (e.g. "Prelim", "Midterm", "Final"). Auto-inferred or defaults to "Midterm". NEVER ask the teacher for terms.'),
+            'due_date' => $schema->string()->description('Optional due date, e.g. "2026-10-20". Defaults to 7 days from now.'),
             'description' => $schema->string()->description('Optional activity instructions.'),
         ];
     }

@@ -35,27 +35,34 @@ class CreateAssignmentTool extends PendingWriteTool implements Tool
         }
 
         // Accepted as a comma-separated list ("3,7") or a plain array,
-        // whichever the model produces.
+        // whichever the model produces. If omitted, targets all sections in the active workspace.
         $rawSections = $request['section_ids'] ?? '';
         $sectionIds = collect(is_array($rawSections) ? $rawSections : explode(',', (string) $rawSections))
             ->map(fn ($id) => (int) trim((string) $id))
-            ->filter()
+            ->filter(fn (int $id) => $id > 0)
             ->unique()
             ->values();
 
         if ($sectionIds->isEmpty()) {
-            return 'Error: at least one section_id is required. An assignment with no sections reaches no students. Use workspace_overview for valid section IDs.';
-        }
+            $sections = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $this->workspaceId())
+                ->get();
 
-        $sections = Section::query()
-            ->withoutGlobalScope('workspace')
-            ->whereIn('id', $sectionIds)
-            ->where('workspace_id', $this->workspaceId())
-            ->get();
+            if ($sections->isEmpty()) {
+                return 'Error: no sections exist in this workspace. Create a class section first.';
+            }
+        } else {
+            $sections = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->whereIn('id', $sectionIds)
+                ->where('workspace_id', $this->workspaceId())
+                ->get();
 
-        $missing = $sectionIds->diff($sections->pluck('id'));
-        if ($missing->isNotEmpty()) {
-            return 'Error: section(s) ['.$missing->implode(', ').'] do not exist in this workspace. Use workspace_overview for valid section IDs.';
+            $missing = $sectionIds->diff($sections->pluck('id'));
+            if ($missing->isNotEmpty()) {
+                return 'Error: section(s) ['.$missing->implode(', ').'] do not exist in this workspace. Use workspace_overview for valid section IDs.';
+            }
         }
 
         // The course is an optional label; targeting is done by section.
@@ -71,10 +78,15 @@ class CreateAssignmentTool extends PendingWriteTool implements Tool
             }
         }
 
-        try {
-            $dueDate = Carbon::parse((string) ($request['due_date'] ?? ''));
-        } catch (\Throwable) {
-            return 'Error: due_date must be valid, e.g. "2026-08-25" or "2026-08-25 23:59".';
+        $rawDueDate = (string) ($request['due_date'] ?? '');
+        if ($rawDueDate === '') {
+            $dueDate = now()->addDays(7)->setTime(23, 59);
+        } else {
+            try {
+                $dueDate = Carbon::parse($rawDueDate);
+            } catch (\Throwable) {
+                $dueDate = now()->addDays(7)->setTime(23, 59);
+            }
         }
 
         $description = trim((string) ($request['description'] ?? '')) ?: null;
@@ -117,9 +129,8 @@ class CreateAssignmentTool extends PendingWriteTool implements Tool
         return [
             'title' => $schema->string()->description('Assignment title.')->required(),
             'section_ids' => $schema->string()
-                ->description('Comma-separated section IDs from workspace_overview that receive this assignment, e.g. "3" or "3,7". At least one is required.')
-                ->required(),
-            'due_date' => $schema->string()->description('Due date, e.g. "2026-08-25" or "2026-08-25 23:59".')->required(),
+                ->description('Optional comma-separated section IDs (or array) from workspace_overview. Defaults to all sections in the active workspace. NEVER ask the teacher for section IDs.'),
+            'due_date' => $schema->string()->description('Optional due date, e.g. "2026-08-25" or "2026-08-25 23:59". Defaults to 7 days from now at 11:59 PM. NEVER ask the teacher for due dates.'),
             'course_id' => $schema->integer()->description('Optional course ID from workspace_overview, used as a label only.'),
             'description' => $schema->string()->description('Optional assignment instructions.'),
         ];
