@@ -521,7 +521,7 @@
                                     ></textarea>
 
                                     {{-- Listening Feedback Banner --}}
-                                    <div x-show="isListening" class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
+                                    <div x-show="isListening" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
                                         <div class="flex items-center gap-2">
                                             <span class="relative flex h-2 w-2">
                                                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
@@ -568,7 +568,7 @@
                                                 :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
                                                 :title="isListening ? 'Stop listening (Microphone active)' : 'Voice input (Click to speak)'"
                                             >
-                                                <span x-show="isListening" class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                                <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
                                                 <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                                                 </svg>
@@ -1280,6 +1280,7 @@
             {{-- Docked Prompt Composer -------------------------------------------- --}}
             <div
                 x-show="messages.length > 0"
+                x-cloak
                 class="border-t border-zinc-200/90 bg-white/95 p-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95"
             >
                 <div class="mx-auto max-w-3xl">
@@ -1295,7 +1296,7 @@
                         ></textarea>
 
                         {{-- Listening Feedback Banner --}}
-                        <div x-show="isListening" class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
+                        <div x-show="isListening" x-cloak class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-500 dark:text-red-400">
                             <div class="flex items-center gap-2">
                                 <span class="relative flex h-2 w-2">
                                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
@@ -1344,7 +1345,7 @@
                                     :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
                                     :title="isListening ? 'Stop listening (Microphone active)' : 'Voice input (Click to speak)'"
                                 >
-                                    <span x-show="isListening" class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                    <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
                                     <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                                     </svg>
@@ -1352,6 +1353,7 @@
 
                                 <button
                                     x-show="isStreaming"
+                                    x-cloak
                                     type="button"
                                     @click="stopStreaming()"
                                     class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -1364,6 +1366,7 @@
 
                                 <button
                                     x-show="!isStreaming"
+                                    x-cloak
                                     type="submit"
                                     :disabled="!inputMessage.trim()"
                                     class="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-white transition hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -1386,6 +1389,10 @@
     </div>
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         .welcome-logo,
         .welcome-greeting,
         .welcome-input,
@@ -1677,6 +1684,10 @@
                 },
 
                 init() {
+                    this.isListening = false;
+                    this.isStreaming = false;
+                    this.voiceError = null;
+                    this.isSpeaking = false;
                     this.initVoice();
 
                     this.$nextTick(() => {
@@ -2917,7 +2928,7 @@
                     }
                 },
 
-                async toggleVoiceRecognition() {
+                toggleVoiceRecognition() {
                     if (this.isStreaming) return;
 
                     const SpeechRecognition = typeof window !== 'undefined'
@@ -2939,27 +2950,7 @@
 
                     this.voiceError = null;
 
-                    // 1. Prime microphone hardware and check OS / browser permission
-                    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        try {
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                            stream.getTracks().forEach(track => track.stop());
-                        } catch (err) {
-                            console.warn('Microphone hardware check failed:', err);
-                            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                                this.voiceError = 'Microphone blocked by Windows or browser. In Windows Settings > Privacy & security > Microphone, turn ON "Let desktop apps access your microphone".';
-                                return;
-                            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                                this.voiceError = 'No microphone device was detected on your computer.';
-                                return;
-                            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                                this.voiceError = 'Microphone is currently in use by another app or system process.';
-                                return;
-                            }
-                        }
-                    }
-
-                    // 2. Initialize or refresh speech recognition instance
+                    // Initialize or refresh speech recognition instance
                     this.initVoice();
 
                     if (!this.voiceRecognition) {
@@ -2971,11 +2962,14 @@
                         this.voiceRecognition.start();
                     } catch (e) {
                         console.error('Speech recognition start failed:', e);
+                        try {
+                            this.voiceRecognition.stop();
+                        } catch (err) {}
                         this.initVoice();
                         try {
                             this.voiceRecognition.start();
                         } catch (err) {
-                            this.voiceError = 'Could not start speech recognition. In Windows Settings > Privacy & security > Speech, make sure "Online speech recognition" is enabled.';
+                            this.voiceError = 'Could not start microphone. In Windows Settings > Privacy & security > Microphone, make sure "Let desktop apps access your microphone" is ON.';
                         }
                     }
                 },
