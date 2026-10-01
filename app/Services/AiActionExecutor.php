@@ -20,6 +20,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\GamificationSyncContext;
+use App\Support\PlatformMaintenance;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -69,6 +70,7 @@ class AiActionExecutor
             'delete_activity_task' => $this->prepareDeleteActivityTask($action),
             'award_student_xp' => $this->prepareAwardStudentXp($action),
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
+            'manage_maintenance' => $this->prepareManageMaintenance($action),
             default => throw new PendingAiActionException('This AI action type is no longer supported.'),
         };
     }
@@ -1002,5 +1004,19 @@ class AiActionExecutor
         if ($expectedUpdatedAt !== $actual) {
             throw new PendingAiActionException('This record changed after the preview was created. Ask Echo to prepare a fresh action before approving it.', 409);
         }
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageMaintenance(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload ?? [];
+
+        return function () use ($payload): string {
+            PlatformMaintenance::save($payload);
+
+            $status = ! empty($payload['maintenance_enabled']) ? 'enabled' : 'disabled';
+
+            return "Platform maintenance mode has been successfully {$status}.";
+        };
     }
 }

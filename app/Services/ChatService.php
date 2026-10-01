@@ -326,20 +326,31 @@ class ChatService
             $workspaceId = $workspace?->id ?? $workspaceContext->id() ?? 'N/A';
             $activeSeason = Season::current();
             $seasonName = $activeSeason?->name ?? 'Active Academic Season';
+            $isSuperAdmin = $user->isSuperAdmin();
+            $roleLabel = $isSuperAdmin ? 'Super Administrator (Full platform access)' : 'Teacher/Workspace Admin (workspace manager)';
+            $isSuperAdminText = $isSuperAdmin ? 'YES' : 'NO';
+
+            $scopeInstructions = $isSuperAdmin
+                ? "- The user is a SUPER ADMINISTRATOR. They have complete, unrestricted authority over the entire platform.\n".
+                  "- ALLOW ALL administrative actions they request, including platform-wide maintenance mode (enable, disable, update message/title), platform settings, and managing users across the entire site.\n".
+                  "- NEVER say an action is 'outside your scope' or that you cannot manage platform settings. For maintenance mode, use the `manage_maintenance` tool to stage their request for approval.\n".
+                  "- All workspace tools also remain available and default to active workspace \"{$workspaceName}\"."
+                : "- The user is a WORKSPACE ADMINISTRATOR. Their authority is strictly limited to their active workspace (\"{$workspaceName}\").\n".
+                  "- All entity creation (sections, courses, exams, assignments, announcements, learning materials, tasks) automatically targets this workspace.\n".
+                  "- NEVER ask the prompter which workspace to use or leave the workspace blank; it is already resolved.\n".
+                  '- Standard workspace admins CANNOT toggle platform maintenance mode or modify global platform settings. If requested, politely inform them that platform maintenance is restricted to Super Administrators.';
 
             return "=== AUTHENTICATED USER & ACTIVE WORKSPACE CONTEXT ===\n".
-                "Role: Teacher/Admin (workspace manager)\n".
+                "Role: {$roleLabel}\n".
+                "Is Super Admin: {$isSuperAdminText}\n".
                 "Name: {$user->name}\n".
                 "Email: {$user->email}\n".
                 "Active Workspace: {$workspaceName} (ID: {$workspaceId})\n".
                 "Active School Year / Season: {$seasonName}\n".
                 "======================================================\n".
-                "WORKSPACE INSTRUCTIONS:\n".
-                "- The prompter's active workspace is \"{$workspaceName}\" (ID: {$workspaceId}).\n".
-                "- All entity creation (sections, courses, exams, assignments, announcements, learning materials, tasks) automatically targets this workspace.\n".
-                "- NEVER ask the prompter which workspace to use or leave the workspace blank; it is already resolved.\n".
-                "- When creating class sections, the workspace and active school year are automatically bound.\n".
-                '- Address them as a colleague managing their workspace, and use the tools for all workspace data.';
+                "PERMISSIONS & WORKSPACE INSTRUCTIONS:\n".
+                $scopeInstructions."\n".
+                '- Address them as a colleague managing their workspace, and use the tools for all workspace and platform operations.';
         }
 
         $progress = $user->activeSeasonProgress();

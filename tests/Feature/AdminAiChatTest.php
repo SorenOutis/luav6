@@ -24,6 +24,7 @@ use App\Ai\Tools\DeleteSectionTool;
 use App\Ai\Tools\DeleteUserTool;
 use App\Ai\Tools\GradeSubmissionTool;
 use App\Ai\Tools\LearningMaterialsAdminTool;
+use App\Ai\Tools\ManageMaintenanceTool;
 use App\Ai\Tools\PostAnnouncementTool;
 use App\Ai\Tools\RecordGradeTool;
 use App\Ai\Tools\ResetUserPasswordTool;
@@ -50,6 +51,7 @@ use App\Models\PendingAiAction;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\PendingAiActionService;
+use App\Support\PlatformMaintenance;
 use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -1431,4 +1433,81 @@ it('creates user account defaulting password when omitted', function () {
 
     $created = User::query()->where('email', 'autostudent@example.com')->firstOrFail();
     expect(Hash::check('Student123!', $created->password))->toBeTrue();
+});
+
+it('allows any admin to inspect platform maintenance status', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'status']));
+
+    expect($result)->toContain('Current Platform Maintenance Status:');
+});
+
+it('strictly blocks standard workspace admin from modifying maintenance mode', function () {
+    $admin = User::factory()->admin()->create(['is_super_admin' => false]);
+    $this->actingAs($admin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'disable']));
+
+    expect($result)->toContain('PERMISSION DENIED');
+    expect(PendingAiAction::query()->where('action_type', 'manage_maintenance')->count())->toBe(0);
+});
+
+it('allows super admin to stage and execute disabling maintenance mode', function () {
+    PlatformMaintenance::enable('Down for updates', 'We will be back soon.');
+    expect(PlatformMaintenance::isEnabled())->toBeTrue();
+
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'disable']));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'manage_maintenance')->firstOrFail();
+    expect($action->payload['maintenance_enabled'])->toBeFalse();
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(PlatformMaintenance::isEnabled())->toBeFalse();
+});
+
+it('allows super admin to stage and execute enabling maintenance mode with custom message', function () {
+    PlatformMaintenance::disable();
+    expect(PlatformMaintenance::isEnabled())->toBeFalse();
+
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request([
+        'action' => 'enable',
+        'title' => 'Scheduled Maintenance',
+        'message' => 'Upgrading servers until 5 PM.',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'manage_maintenance')->firstOrFail();
+    expect($action->payload['maintenance_enabled'])->toBeTrue()
+        ->and($action->payload['maintenance_title'])->toBe('Scheduled Maintenance')
+        ->and($action->payload['maintenance_message'])->toBe('Upgrading servers until 5 PM.');
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(PlatformMaintenance::isEnabled())->toBeTrue()
+        ->and(PlatformMaintenance::title())->toBe('Scheduled Maintenance')
+        ->and(PlatformMaintenance::message())->toBe('Upgrading servers until 5 PM.');
+
+    PlatformMaintenance::disable();
 });

@@ -52,6 +52,7 @@ class PendingAiActionService
         'delete_activity_task',
         'award_student_xp',
         'generate_exam_questions',
+        'manage_maintenance',
     ];
 
     public function __construct(
