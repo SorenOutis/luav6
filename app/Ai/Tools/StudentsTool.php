@@ -44,6 +44,7 @@ class StudentsTool implements Tool
             ->limit(10)
             ->get()
             ->map(fn (User $student) => [
+                'id' => $student->id,
                 'name' => $student->name,
                 'email' => $student->email,
                 'sections' => $student->sections->pluck('name')->values(),

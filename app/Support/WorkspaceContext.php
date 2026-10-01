@@ -157,6 +157,15 @@ class WorkspaceContext
                 ->value('sections.workspace_id');
         }
 
+        // Administrators without explicit workspace linkage fall back to the
+        // primary active workspace so AI actions and workspace data never resolve blank.
+        if (! $workspaceId && $user->is_admin) {
+            $workspaceId = Workspace::query()
+                ->whereNull('archived_at')
+                ->orderBy('id')
+                ->value('id');
+        }
+
         $this->workspaceId = $workspaceId ? (int) $workspaceId : null;
     }
 }

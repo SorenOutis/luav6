@@ -6,8 +6,10 @@ use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
 use App\Models\AiBudgetReservation;
 use App\Models\ChatSession;
+use App\Models\Season;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -318,12 +320,26 @@ class ChatService
         }
 
         if ($user->is_admin) {
-            return "=== AUTHENTICATED USER ===\n".
-                "Role: Teacher/Admin (workspace owner)\n".
+            $workspaceContext = app(WorkspaceContext::class);
+            $workspace = $workspaceContext->workspace();
+            $workspaceName = $workspace?->name ?? 'Active Workspace';
+            $workspaceId = $workspace?->id ?? $workspaceContext->id() ?? 'N/A';
+            $activeSeason = Season::current();
+            $seasonName = $activeSeason?->name ?? 'Active Academic Season';
+
+            return "=== AUTHENTICATED USER & ACTIVE WORKSPACE CONTEXT ===\n".
+                "Role: Teacher/Admin (workspace manager)\n".
                 "Name: {$user->name}\n".
                 "Email: {$user->email}\n".
-                "===========================\n".
-                'Address them as a colleague managing their workspace, and use the tools for all workspace data.';
+                "Active Workspace: {$workspaceName} (ID: {$workspaceId})\n".
+                "Active School Year / Season: {$seasonName}\n".
+                "======================================================\n".
+                "WORKSPACE INSTRUCTIONS:\n".
+                "- The prompter's active workspace is \"{$workspaceName}\" (ID: {$workspaceId}).\n".
+                "- All entity creation (sections, courses, exams, assignments, announcements, learning materials, tasks) automatically targets this workspace.\n".
+                "- NEVER ask the prompter which workspace to use or leave the workspace blank; it is already resolved.\n".
+                "- When creating class sections, the workspace and active school year are automatically bound.\n".
+                '- Address them as a colleague managing their workspace, and use the tools for all workspace data.';
         }
 
         $progress = $user->activeSeasonProgress();

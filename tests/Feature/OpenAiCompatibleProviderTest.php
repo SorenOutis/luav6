@@ -171,8 +171,20 @@ it('exposes admin tool names matching the agent instructions', function () {
     $names = array_map(fn ($tool): string => ToolNameResolver::resolve($tool), $agent->tools());
 
     expect($names)->toBe([
-        'workspace_overview', 'students', 'exams_admin', 'submissions_to_grade',
-        'generate_exam_questions', 'create_exam', 'update_exam', 'post_announcement', 'create_assignment',
+        'workspace_overview', 'students', 'exams_admin',
+        'courses_admin', 'sections_admin', 'assignments_admin',
+        'announcements_admin', 'materials_admin', 'research_topic', 'activity_tasks_admin',
+        'submissions_to_grade', 'grades_admin',
+        'generate_exam_questions', 'create_exam', 'update_exam', 'delete_exam',
+        'record_grade', 'update_grade', 'delete_grade', 'grade_submission',
+        'create_user', 'update_user', 'reset_user_password', 'delete_user',
+        'create_section', 'update_section', 'delete_section',
+        'create_course', 'update_course', 'delete_course',
+        'post_announcement', 'update_announcement', 'delete_announcement',
+        'create_assignment', 'update_assignment', 'delete_assignment',
+        'create_learning_material', 'delete_learning_material',
+        'create_activity_task', 'delete_activity_task',
+        'award_student_xp',
     ]);
 
     foreach ($names as $name) {
