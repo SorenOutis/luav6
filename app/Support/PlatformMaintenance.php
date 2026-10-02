@@ -107,4 +107,24 @@ class PlatformMaintenance
         $image = (string) ($data['maintenance_image'] ?? static::DEFAULT_IMAGE);
         Setting::setGlobal(static::IMAGE_KEY, array_key_exists($image, static::images()) ? $image : static::DEFAULT_IMAGE);
     }
+
+    public static function enable(?string $title = null, ?string $message = null, ?string $image = null): void
+    {
+        static::save([
+            'maintenance_enabled' => true,
+            'maintenance_title' => $title ?? static::title(),
+            'maintenance_message' => $message ?? static::message(),
+            'maintenance_image' => $image ?? static::image(),
+        ]);
+    }
+
+    public static function disable(): void
+    {
+        static::save([
+            'maintenance_enabled' => false,
+            'maintenance_title' => static::title(),
+            'maintenance_message' => static::message(),
+            'maintenance_image' => static::image(),
+        ]);
+    }
 }

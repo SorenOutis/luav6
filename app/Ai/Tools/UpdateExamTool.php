@@ -113,8 +113,41 @@ class UpdateExamTool extends PendingWriteTool implements Tool
             }
         }
 
+        if (isset($request['term'])) {
+            $newTerm = trim((string) $request['term']);
+            if ($newTerm !== '' && $newTerm !== (string) $exam->term) {
+                $updates['term'] = $newTerm;
+                $preview[] = ['field' => 'Term / Period', 'before' => $exam->term ?? 'None', 'after' => $newTerm];
+            }
+        }
+
+        if (isset($request['blocked_user_ids'])) {
+            $rawBlocked = $request['blocked_user_ids'];
+            if (! is_array($rawBlocked)) {
+                $rawBlocked = is_string($rawBlocked) ? explode(',', $rawBlocked) : [];
+            }
+            $newBlockedIds = collect($rawBlocked)
+                ->map(fn ($id) => (int) trim((string) $id))
+                ->filter(fn (int $id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            $currentBlockedIds = $exam->blockedUsers()->pluck('users.id')->sort()->values()->all();
+            if ($currentBlockedIds !== collect($newBlockedIds)->sort()->values()->all()) {
+                $updates['blocked_user_ids'] = $newBlockedIds;
+                $beforeCount = count($currentBlockedIds);
+                $afterCount = count($newBlockedIds);
+                $preview[] = [
+                    'field' => 'Blocked Students',
+                    'before' => $beforeCount > 0 ? "{$beforeCount} student(s) blocked" : 'None (open to all)',
+                    'after' => $afterCount > 0 ? "{$afterCount} student(s) blocked" : 'None (open to all)',
+                ];
+            }
+        }
+
         if ($updates === []) {
-            return 'Nothing to update — provide a status, starts_at/exam_date, ends_at, or duration_minutes that differs from the current value.';
+            return 'Nothing to update — provide a status, starts_at/exam_date, ends_at, term, blocked_user_ids, or duration_minutes that differs from the current value.';
         }
 
         return $this->stageAction(
@@ -139,6 +172,8 @@ class UpdateExamTool extends PendingWriteTool implements Tool
             'exam_date' => $schema->string()->description('Legacy alias for starts_at, e.g. "2026-08-20 09:00".'),
             'ends_at' => $schema->string()->description('New end date/time, e.g. "2026-08-20 10:00". Use an empty string to make the exam open-ended.'),
             'duration_minutes' => $schema->integer()->description('New duration in minutes (5–600).'),
+            'term' => $schema->string()->description('New grading period / term, e.g. "Prelim", "Midterm", "Final".'),
+            'blocked_user_ids' => $schema->array()->description('Array of student user IDs to block from this exam. Pass empty array [] to unblock all students.'),
         ];
     }
 }

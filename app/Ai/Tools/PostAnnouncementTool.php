@@ -30,8 +30,11 @@ class PostAnnouncementTool extends PendingWriteTool implements Tool
         $description = trim((string) ($request['description'] ?? ''));
         $link = trim((string) ($request['link'] ?? '')) ?: null;
 
-        if ($title === '' || $description === '') {
-            return 'Error: both a title and a description are required.';
+        if ($title === '') {
+            return 'Error: an announcement title is required.';
+        }
+        if ($description === '') {
+            $description = $title;
         }
         if (mb_strlen($description) > 10000) {
             return 'Error: announcement body is too long (maximum 10,000 characters).';
@@ -60,7 +63,7 @@ class PostAnnouncementTool extends PendingWriteTool implements Tool
     {
         return [
             'title' => $schema->string()->description('Announcement title.')->required(),
-            'description' => $schema->string()->description('Announcement body text.')->required(),
+            'description' => $schema->string()->description('Optional announcement body text. Defaults to title if omitted.'),
             'link' => $schema->string()->description('Optional URL attached to the announcement.'),
         ];
     }

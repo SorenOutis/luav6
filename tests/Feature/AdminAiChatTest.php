@@ -7,7 +7,9 @@ use App\Ai\Tools\AssignmentsAdminTool;
 use App\Ai\Tools\AwardStudentXpTool;
 use App\Ai\Tools\CoursesAdminTool;
 use App\Ai\Tools\CreateActivityTaskTool;
+use App\Ai\Tools\CreateAssignmentTool;
 use App\Ai\Tools\CreateCourseTool;
+use App\Ai\Tools\CreateExamTool;
 use App\Ai\Tools\CreateLearningMaterialTool;
 use App\Ai\Tools\CreateSectionTool;
 use App\Ai\Tools\CreateUserTool;
@@ -22,12 +24,15 @@ use App\Ai\Tools\DeleteSectionTool;
 use App\Ai\Tools\DeleteUserTool;
 use App\Ai\Tools\GradeSubmissionTool;
 use App\Ai\Tools\LearningMaterialsAdminTool;
+use App\Ai\Tools\ManageMaintenanceTool;
+use App\Ai\Tools\PostAnnouncementTool;
 use App\Ai\Tools\RecordGradeTool;
 use App\Ai\Tools\ResetUserPasswordTool;
 use App\Ai\Tools\SectionsAdminTool;
 use App\Ai\Tools\UpdateAnnouncementTool;
 use App\Ai\Tools\UpdateAssignmentTool;
 use App\Ai\Tools\UpdateCourseTool;
+use App\Ai\Tools\UpdateExamTool;
 use App\Ai\Tools\UpdateGradeTool;
 use App\Ai\Tools\UpdateSectionTool;
 use App\Ai\Tools\UpdateUserTool;
@@ -35,6 +40,7 @@ use App\Filament\Pages\AdminAiChat;
 use App\Models\ActivityTask;
 use App\Models\Announcement;
 use App\Models\Assignment;
+use App\Models\ChatSession;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamPart;
@@ -45,8 +51,10 @@ use App\Models\PendingAiAction;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\PendingAiActionService;
+use App\Support\PlatformMaintenance;
 use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Laravel\Ai\Tools\Request;
 use Livewire\Livewire;
 
@@ -1020,4 +1028,486 @@ it('approves draft exam creation with mixed question types creating distinct exa
         ->and($part2->title)->toBe('Part 2: Essay')
         ->and($part2->points)->toBe(5)
         ->and($part2->questions)->toHaveCount(1);
+});
+
+it('automatically assigns a valid UUIDv7 to a chat session upon creation', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create([
+        'title' => 'Biology Lesson Plan',
+    ]);
+
+    expect($session->uuid)->not->toBeNull()
+        ->and(Str::isUuid($session->uuid))->toBeTrue();
+});
+
+it('returns both id and uuid when creating a new chat via api/chats', function () {
+    $admin = User::factory()->admin()->create();
+
+    $response = $this->actingAs($admin)
+        ->postJson('/api/chats')
+        ->assertOk()
+        ->assertJsonStructure([
+            'session' => ['id', 'uuid'],
+        ]);
+
+    $uuid = $response->json('session.uuid');
+    expect(Str::isUuid($uuid))->toBeTrue();
+
+    $session = ChatSession::query()->where('uuid', $uuid)->first();
+    expect($session)->not->toBeNull()
+        ->and($session->user_id)->toBe($admin->id);
+});
+
+it('resolves chat sessions via route model binding by both UUID and integer ID', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create([
+        'title' => 'Physics Calculations',
+    ]);
+    $session->messages()->create([
+        'role' => 'user',
+        'content' => 'What is the speed of light?',
+    ]);
+
+    // Resolved by UUID
+    $this->actingAs($admin)
+        ->getJson("/api/chats/{$session->uuid}/messages")
+        ->assertOk()
+        ->assertJsonPath('session.id', $session->id)
+        ->assertJsonPath('session.uuid', $session->uuid)
+        ->assertJsonPath('session.title', 'Physics Calculations');
+
+    // Resolved by legacy integer ID
+    $this->actingAs($admin)
+        ->getJson("/api/chats/{$session->id}/messages")
+        ->assertOk()
+        ->assertJsonPath('session.id', $session->id)
+        ->assertJsonPath('session.uuid', $session->uuid);
+});
+
+it('selects initial active session when deep-linked via ?c=<uuid> and ?session=<uuid>', function () {
+    $admin = User::factory()->admin()->create();
+    $session1 = $admin->chatSessions()->create(['title' => 'History Essay Discussion']);
+    $session2 = $admin->chatSessions()->create(['title' => 'Algebra Trigonometry Review']);
+
+    $this->actingAs($admin);
+
+    // Deep-linked with ?c=<uuid>
+    $this->get("/admin/ai-chat?c={$session1->uuid}")
+        ->assertOk()
+        ->assertSee($session1->uuid)
+        ->assertSee('History Essay Discussion');
+
+    // Deep-linked with ?session=<uuid> fallback
+    $this->get("/admin/ai-chat?session={$session2->uuid}")
+        ->assertOk()
+        ->assertSee($session2->uuid)
+        ->assertSee('Algebra Trigonometry Review');
+});
+
+it('prepends an older deep-linked session to initial sessions when not in top 30', function () {
+    $admin = User::factory()->admin()->create();
+
+    // Create 35 sessions, the target one is the oldest
+    $oldSession = $admin->chatSessions()->create([
+        'title' => 'Oldest Important Chat',
+        'created_at' => now()->subDays(40),
+        'updated_at' => now()->subDays(40),
+    ]);
+
+    for ($i = 1; $i <= 32; $i++) {
+        $admin->chatSessions()->create([
+            'title' => "Recent Chat {$i}",
+            'created_at' => now()->subMinutes(35 - $i),
+            'updated_at' => now()->subMinutes(35 - $i),
+        ]);
+    }
+
+    $this->actingAs($admin);
+
+    // Without query param, oldest chat is not in top 30
+    $this->get('/admin/ai-chat')
+        ->assertOk()
+        ->assertDontSee('Oldest Important Chat');
+
+    // With ?c=<uuid>, it is fetched and included in initialSessions
+    $this->get("/admin/ai-chat?c={$oldSession->uuid}")
+        ->assertOk()
+        ->assertSee('Oldest Important Chat')
+        ->assertSee($oldSession->uuid);
+});
+
+it('isolates chat session deep links so users cannot access other users chats', function () {
+    $admin1 = User::factory()->admin()->create();
+    $admin2 = User::factory()->admin()->create();
+
+    $session1 = $admin1->chatSessions()->create(['title' => 'Secret Admin 1 Chat']);
+
+    // Admin 2 tries to access Admin 1's chat messages via UUID
+    $this->actingAs($admin2)
+        ->getJson("/api/chats/{$session1->uuid}/messages")
+        ->assertNotFound();
+
+    // Admin 2 opens deep-link: Admin 1's chat should not be loaded into Admin 2's session
+    $this->actingAs($admin2)
+        ->get("/admin/ai-chat?c={$session1->uuid}")
+        ->assertOk()
+        ->assertDontSee('Secret Admin 1 Chat');
+});
+
+it('filters pending AI actions by session UUID', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $session = $admin->chatSessions()->create(['title' => 'Quiz Creation Chat']);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $exam = Exam::factory()->create([
+        'workspace_id' => $workspaceId,
+        'admin_id' => $admin->id,
+        'title' => 'Exam to Delete',
+    ]);
+
+    $action = app(PendingAiActionService::class)->stage(
+        type: 'delete_exam',
+        title: 'Delete Exam',
+        summary: 'Delete Exam to Delete',
+        payload: ['exam_id' => $exam->id],
+        preview: ['field' => 'Title', 'before' => $exam->title, 'after' => null],
+        chatSessionId: $session->id,
+    );
+
+    // Query pending actions by session UUID
+    $this->getJson("/api/ai-actions?session_id={$session->uuid}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $action->public_id);
+
+    // Query by integer ID also works
+    $this->getJson("/api/ai-actions?session_id={$session->id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
+it('stages and creates an exam with auto-inferred term and blocked students upon approval', function () {
+    $admin = User::factory()->admin()->create();
+    $student1 = User::factory()->create(['name' => 'Alice Student']);
+    $student2 = User::factory()->create(['name' => 'Bob Blocked']);
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'name' => 'BSCS 3-A',
+    ]);
+
+    $tool = new CreateExamTool;
+    // Test title with "Prelim" -> should auto-infer term 'Prelim'
+    // blocked_students passes Bob's name -> should resolve to student2 ID
+    $result = (string) $tool->handle(new Request([
+        'title' => 'Prelim Algorithms Exam',
+        'section_id' => $section->id,
+        'blocked_students' => ['Bob Blocked'],
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_exam')->firstOrFail();
+    expect($action->payload['term'])->toBe('Prelim');
+    expect($action->payload['blocked_user_ids'])->toContain($student2->id);
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $createdExam = Exam::query()->where('title', 'Prelim Algorithms Exam')->firstOrFail();
+    expect($createdExam->term)->toBe('Prelim');
+    expect($createdExam->duration_minutes)->toBe(60);
+    expect($createdExam->blockedUsers->pluck('id')->all())->toContain($student2->id);
+    expect($createdExam->blockedUsers->pluck('id')->all())->not->toContain($student1->id);
+});
+
+it('updates exam term and blocked students upon approval', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create(['name' => 'Charlie Student']);
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $exam = Exam::factory()->create([
+        'workspace_id' => $workspaceId,
+        'admin_id' => $admin->id,
+        'title' => 'Midterm Biology',
+        'term' => 'Midterm',
+    ]);
+
+    $tool = new UpdateExamTool;
+    $result = (string) $tool->handle(new Request([
+        'exam_id' => $exam->id,
+        'term' => 'Final',
+        'blocked_user_ids' => [$student->id],
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'update_exam')->firstOrFail();
+    $nonce = pendingActionNonce($action);
+
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $exam->refresh();
+    expect($exam->term)->toBe('Final');
+    expect($exam->blockedUsers->pluck('id')->all())->toContain($student->id);
+});
+
+it('creates assignment defaulting due date and workspace sections when omitted', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section1 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Alpha']);
+    $section2 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Beta']);
+
+    $tool = new CreateAssignmentTool;
+    // Omit section_ids and due_date
+    $result = (string) $tool->handle(new Request([
+        'title' => 'Research Paper 1',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_assignment')->firstOrFail();
+    expect($action->payload['section_ids'])->toContain($section1->id, $section2->id);
+    expect($action->payload['due_date'])->not->toBeEmpty();
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $assignment = Assignment::query()->where('title', 'Research Paper 1')->firstOrFail();
+    expect($assignment->sections->pluck('id')->all())->toContain($section1->id, $section2->id);
+});
+
+it('creates activity task with default term, due date, and workspace section', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'name' => 'BSIT 1-A',
+    ]);
+
+    $tool = new CreateActivityTaskTool;
+    // Title mentions Prelim, omit section_id and due_date
+    $result = (string) $tool->handle(new Request([
+        'title' => 'Prelim Lab Exercise',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_activity_task')->firstOrFail();
+    expect($action->payload['term'])->toBe('Prelim');
+    expect($action->payload['section_id'])->toBe($section->id);
+    expect($action->payload['due_date'])->not->toBeEmpty();
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $task = ActivityTask::query()->where('title', 'Prelim Lab Exercise')->firstOrFail();
+    expect($task->term)->toBe('Prelim');
+    expect($task->section_id)->toBe($section->id);
+});
+
+it('records grade auto-resolving section and default term from student enrollment', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create(['name' => 'Diana Student']);
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'name' => 'Math Section',
+    ]);
+    $section->users()->attach($student->id);
+
+    $tool = new RecordGradeTool;
+    // Omit section_id, period, subject
+    $result = (string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'score' => 95,
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'record_grade')->firstOrFail();
+    expect($action->payload['section_id'])->toBe($section->id);
+    expect($action->payload['period'])->toBe('Midterm');
+    expect($action->payload['subject'])->toBe('Math Section');
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $grade = Grade::query()->where('user_id', $student->id)->firstOrFail();
+    expect((float) $grade->score)->toBe(95.0);
+    expect($grade->period)->toBe('Midterm');
+});
+
+it('creates section auto-inferring senior high school level and configuring activity record terms', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new CreateSectionTool;
+    // Section name matches SHS / Grade 11
+    $result = (string) $tool->handle(new Request([
+        'name' => 'Grade 11 - STEM Einstein',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_section')->firstOrFail();
+    expect($action->payload['school_level'])->toBe(Section::SCHOOL_LEVEL_SENIOR_HIGH);
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $createdSection = Section::query()->where('name', 'Grade 11 - STEM Einstein')->firstOrFail();
+    expect($createdSection->school_level)->toBe(Section::SCHOOL_LEVEL_SENIOR_HIGH);
+    expect($createdSection->activity_record_enabled)->toBeTrue();
+    expect($createdSection->activity_record_terms)->toContain('First Semester - 1st Quarter');
+});
+
+it('posts announcement defaulting description to title when omitted', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new PostAnnouncementTool;
+    $result = (string) $tool->handle(new Request([
+        'title' => 'Campus closed due to typhoon',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'post_announcement')->firstOrFail();
+    expect($action->payload['description'])->toBe('Campus closed due to typhoon');
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $announcement = Announcement::query()->where('title', 'Campus closed due to typhoon')->firstOrFail();
+    expect($announcement->description)->toBe('Campus closed due to typhoon');
+});
+
+it('creates user account defaulting password when omitted', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new CreateUserTool;
+    $result = (string) $tool->handle(new Request([
+        'name' => 'New Student Auto',
+        'email' => 'autostudent@example.com',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_user')->firstOrFail();
+    expect($action->payload['password'])->toBe('Student123!');
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $created = User::query()->where('email', 'autostudent@example.com')->firstOrFail();
+    expect(Hash::check('Student123!', $created->password))->toBeTrue();
+});
+
+it('allows any admin to inspect platform maintenance status', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'status']));
+
+    expect($result)->toContain('Current Platform Maintenance Status:');
+});
+
+it('strictly blocks standard workspace admin from modifying maintenance mode', function () {
+    $admin = User::factory()->admin()->create(['is_super_admin' => false]);
+    $this->actingAs($admin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'disable']));
+
+    expect($result)->toContain('PERMISSION DENIED');
+    expect(PendingAiAction::query()->where('action_type', 'manage_maintenance')->count())->toBe(0);
+});
+
+it('allows super admin to stage and execute disabling maintenance mode', function () {
+    PlatformMaintenance::enable('Down for updates', 'We will be back soon.');
+    expect(PlatformMaintenance::isEnabled())->toBeTrue();
+
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request(['action' => 'disable']));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'manage_maintenance')->firstOrFail();
+    expect($action->payload['maintenance_enabled'])->toBeFalse();
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(PlatformMaintenance::isEnabled())->toBeFalse();
+});
+
+it('allows super admin to stage and execute enabling maintenance mode with custom message', function () {
+    PlatformMaintenance::disable();
+    expect(PlatformMaintenance::isEnabled())->toBeFalse();
+
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    $tool = new ManageMaintenanceTool;
+    $result = (string) $tool->handle(new Request([
+        'action' => 'enable',
+        'title' => 'Scheduled Maintenance',
+        'message' => 'Upgrading servers until 5 PM.',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'manage_maintenance')->firstOrFail();
+    expect($action->payload['maintenance_enabled'])->toBeTrue()
+        ->and($action->payload['maintenance_title'])->toBe('Scheduled Maintenance')
+        ->and($action->payload['maintenance_message'])->toBe('Upgrading servers until 5 PM.');
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(PlatformMaintenance::isEnabled())->toBeTrue()
+        ->and(PlatformMaintenance::title())->toBe('Scheduled Maintenance')
+        ->and(PlatformMaintenance::message())->toBe('Upgrading servers until 5 PM.');
+
+    PlatformMaintenance::disable();
 });

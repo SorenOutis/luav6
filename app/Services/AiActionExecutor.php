@@ -20,6 +20,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\GamificationSyncContext;
+use App\Support\PlatformMaintenance;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -69,6 +70,7 @@ class AiActionExecutor
             'delete_activity_task' => $this->prepareDeleteActivityTask($action),
             'award_student_xp' => $this->prepareAwardStudentXp($action),
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
+            'manage_maintenance' => $this->prepareManageMaintenance($action),
             default => throw new PendingAiActionException('This AI action type is no longer supported.'),
         };
     }
@@ -102,6 +104,7 @@ class AiActionExecutor
                 'admin_id' => $action->user_id,
                 'title' => $payload['title'],
                 'description' => $payload['description'] ?? null,
+                'term' => $payload['term'] ?? null,
                 'exam_date' => $examDate,
                 // Keep the legacy alias in sync with the schedule.
                 'starts_at' => $examDate,
@@ -110,6 +113,10 @@ class AiActionExecutor
                 'status' => 'draft',
                 'section_id' => $sectionId,
             ]);
+
+            if (! empty($payload['blocked_user_ids']) && is_array($payload['blocked_user_ids'])) {
+                app(ExamBlockService::class)->sync($exam, $payload['blocked_user_ids']);
+            }
 
             $questionMessage = '';
             if (! empty($payload['questions']) && is_array($payload['questions'])) {
@@ -141,7 +148,9 @@ class AiActionExecutor
                 $questionMessage = " with {$count} question(s){$extraParts} attached";
             }
 
-            return "Draft exam created: \"{$exam->title}\" (ID {$exam->id}){$questionMessage}.";
+            $blockedMessage = ! empty($payload['blocked_user_ids']) ? ' ('.count($payload['blocked_user_ids']).' student(s) blocked)' : '';
+
+            return "Draft exam created: \"{$exam->title}\" (ID {$exam->id}){$questionMessage}{$blockedMessage}.";
         };
     }
 
@@ -171,9 +180,18 @@ class AiActionExecutor
                 } elseif ($field === 'status') {
                     $exam->status = $value;
                     $changes[] = "status → {$value}";
+                } elseif ($field === 'term') {
+                    $exam->term = $value;
+                    $changes[] = "term → {$value}";
                 }
             }
             $exam->save();
+
+            if (isset($payload['changes']['blocked_user_ids'])) {
+                $blockedIds = (array) $payload['changes']['blocked_user_ids'];
+                app(ExamBlockService::class)->sync($exam, $blockedIds);
+                $changes[] = 'blocked students → '.(count($blockedIds) > 0 ? count($blockedIds).' student(s)' : 'none (open to all)');
+            }
 
             return "Exam \"{$exam->title}\" (ID {$exam->id}) updated: ".implode('; ', $changes).'.';
         };
@@ -575,10 +593,17 @@ class AiActionExecutor
                 $seasonId = Season::current()?->id;
             }
 
+            $schoolLevel = $payload['school_level'] ?? Section::SCHOOL_LEVEL_COLLEGE;
+            $defaultTerms = $schoolLevel === Section::SCHOOL_LEVEL_SENIOR_HIGH
+                ? ['First Semester - 1st Quarter', 'First Semester - 2nd Quarter', 'Second Semester - 1st Quarter', 'Second Semester - 2nd Quarter']
+                : ['Prelim', 'Midterm', 'Final'];
+
             $section = Section::query()->create([
                 'name' => $payload['name'],
-                'school_level' => $payload['school_level'] ?? Section::SCHOOL_LEVEL_COLLEGE,
+                'school_level' => $schoolLevel,
                 'leaderboard_enabled' => $payload['leaderboard_enabled'] ?? true,
+                'activity_record_enabled' => true,
+                'activity_record_terms' => $defaultTerms,
                 'join_code' => $joinCode,
                 'workspace_id' => $action->workspace_id,
                 'admin_id' => $action->user_id,
@@ -979,5 +1004,19 @@ class AiActionExecutor
         if ($expectedUpdatedAt !== $actual) {
             throw new PendingAiActionException('This record changed after the preview was created. Ask Echo to prepare a fresh action before approving it.', 409);
         }
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageMaintenance(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload ?? [];
+
+        return function () use ($payload): string {
+            PlatformMaintenance::save($payload);
+
+            $status = ! empty($payload['maintenance_enabled']) ? 'enabled' : 'disabled';
+
+            return "Platform maintenance mode has been successfully {$status}.";
+        };
     }
 }

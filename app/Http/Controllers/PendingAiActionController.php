@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\PendingAiActionException;
+use App\Models\ChatSession;
 use App\Models\PendingAiAction;
 use App\Services\PendingAiActionService;
 use Illuminate\Http\JsonResponse;
@@ -16,13 +17,23 @@ class PendingAiActionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'session_id' => ['nullable', 'integer', 'min:1'],
+            'session_id' => ['nullable'],
         ]);
+
+        $chatSessionId = null;
+        if (! empty($validated['session_id'])) {
+            $raw = (string) $validated['session_id'];
+            if (is_numeric($raw)) {
+                $chatSessionId = (int) $raw;
+            } elseif (Str::isUuid($raw)) {
+                $chatSessionId = ChatSession::where('uuid', $raw)->value('id');
+            }
+        }
 
         try {
             $actions = $this->actions->forUser(
                 $request->user(),
-                isset($validated['session_id']) ? (int) $validated['session_id'] : null,
+                $chatSessionId,
             );
 
             return response()->json([

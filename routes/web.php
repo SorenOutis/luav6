@@ -275,6 +275,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
         ->middleware('throttle:chats')
         ->name('chats.destroy');
+    Route::post('api/chats/transcribe', [ChatHistoryController::class, 'transcribe'])
+        ->middleware('throttle:chats')
+        ->name('chats.transcribe');
 
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');

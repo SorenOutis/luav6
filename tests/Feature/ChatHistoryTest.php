@@ -16,6 +16,8 @@ use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AiSdkProviderService;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
     Setting::flushAllCaches();
@@ -341,4 +343,48 @@ it('routes admin chats on the history page to the admin agent', function () {
         ->postJson(route('chats.message', $session), ['message' => 'Overview'])
         ->assertOk()
         ->assertJsonPath('response', 'Admin reply');
+});
+
+it('validates audio is required for transcription', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('chats.transcribe'), [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['audio']);
+});
+
+it('transcribes direct audio input', function () {
+    Http::fake([
+        '*' => Http::response([
+            'choices' => [
+                [
+                    'message' => [
+                        'content' => 'Create a 20-minute quiz for Section 10-A',
+                    ],
+                ],
+            ],
+        ], 200),
+    ]);
+
+    Setting::set('ai_provider', 'openai-compatible-test');
+    Setting::set(AiSdkProviderService::OPENAI_COMPATIBLE_SETTINGS_KEY, json_encode([
+        [
+            'id' => 'test',
+            'name' => 'test',
+            'url' => 'https://api.example.com/v1',
+            'api_key' => 'test-key',
+        ],
+    ]));
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('chats.transcribe'), [
+            'audio' => 'data:audio/webm;base64,dGVzdGF1ZGlv',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'text' => 'Create a 20-minute quiz for Section 10-A',
+        ]);
 });

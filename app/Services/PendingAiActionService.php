@@ -52,6 +52,7 @@ class PendingAiActionService
         'delete_activity_task',
         'award_student_xp',
         'generate_exam_questions',
+        'manage_maintenance',
     ];
 
     public function __construct(
@@ -345,6 +346,7 @@ class PendingAiActionService
                 'name' => $action->workspace->name,
             ] : null,
             'changes' => $action->preview['changes'] ?? [],
+            'createdAt' => $action->created_at?->toIso8601String(),
             'expiresAt' => $action->expires_at?->toIso8601String(),
             'approvedAt' => $action->approved_at?->toIso8601String(),
             'executedAt' => $action->executed_at?->toIso8601String(),

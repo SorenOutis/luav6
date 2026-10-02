@@ -7,6 +7,7 @@
         workspace: {{ Js::from($workspace) }},
         adminUser: {{ Js::from($adminUser) }},
         initialSessions: {{ Js::from($initialSessions) }},
+        initialActiveSession: {{ Js::from($initialActiveSession) }},
         foxChatUrl: '{{ asset('images/mascots/fox-chat.webp') }}',
         foxWelcomeUrl: '{{ asset('images/mascots/fox-welcome.webp') }}',
     })"
@@ -83,7 +84,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.today" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -93,16 +94,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -114,7 +127,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.yesterday" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -124,16 +137,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -145,7 +170,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.previousWeek" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -155,16 +180,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -176,7 +213,7 @@
                         <div class="space-y-0.5">
                             <template x-for="item in groupedSessions.older" :key="item.id">
                                 <div
-                                    @click="selectSession(item.id)"
+                                    @click="selectSession(item)"
                                     :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
                                     class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
                                 >
@@ -186,16 +223,28 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click.stop="confirmDeleteSession(item.id)"
-                                        class="opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                                        title="Delete chat"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            @click.stop="copyConversationLink(item)"
+                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            title="Copy link"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click.stop="confirmDeleteSession(item.id)"
+                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            title="Delete chat"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -298,6 +347,30 @@
                         <span x-text="workspace.name"></span>
                     </div>
 
+                    <template x-if="activeSessionId || activeSessionUuid">
+                        <button
+                            type="button"
+                            @click="copyConversationLink()"
+                            class="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition"
+                            :class="linkCopied
+                                ? 'border-emerald-500/40 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                : 'border-zinc-200/90 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-850 dark:hover:text-zinc-200'"
+                            :title="linkCopied ? 'Link copied to clipboard!' : 'Copy link to this conversation'"
+                        >
+                            <template x-if="!linkCopied">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                            </template>
+                            <template x-if="linkCopied">
+                                <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </template>
+                            <span x-text="linkCopied ? 'Copied!' : 'Copy link'" class="hidden text-[11px] sm:inline"></span>
+                        </button>
+                    </template>
+
                     <a
                         href="/admin/ai-chat"
                         target="_blank"
@@ -338,7 +411,7 @@
                                 <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 sm:h-14 sm:w-14">
                                     <div
                                         class="wolf-persona relative h-7 w-7 text-amber-500 dark:text-amber-400 sm:h-8 sm:w-8"
-                                        :data-motion="isStreaming ? 'thinking' : 'welcome'"
+                                        :data-motion="isStreaming ? 'thinking' : (isListening ? 'listening' : 'welcome')"
                                         aria-hidden="true"
                                     >
                                         <svg
@@ -447,6 +520,37 @@
                                         class="min-h-[64px] w-full resize-none border-0 bg-transparent p-0 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                     ></textarea>
 
+                                    {{-- Listening Feedback Banner (Free Browser Dictation - 0 Tokens) --}}
+                                    <div x-show="isListening" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
+                                        <div class="flex items-center gap-2">
+                                            <span class="relative flex h-2 w-2">
+                                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                                <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                                            </span>
+                                            <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
+                                            <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(0 tokens)</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click.stop.prevent="toggleVoice()"
+                                            class="rounded bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white shadow-xs hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+
+                                    <div x-show="voiceError" x-cloak class="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                        <svg class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <div class="flex-1 leading-relaxed" x-text="voiceError"></div>
+                                        <button type="button" @click="voiceError = null" class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
                                     <div class="mt-2 flex items-center justify-between border-t border-zinc-100 pt-2.5 dark:border-zinc-800/80">
                                         <div class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
                                             <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
@@ -455,7 +559,23 @@
                                             <span class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500" x-text="modelName"></span>
                                         </div>
 
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1.5">
+                                            {{-- Free Microphone Dictation Button (0 Tokens) --}}
+                                            <button
+                                                type="button"
+                                                @click.stop.prevent="toggleVoice()"
+                                                :disabled="isStreaming"
+                                                class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
+                                                :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
+                                                :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'"
+                                            >
+                                                <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                                <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Send Button --}}
                                             <button
                                                 type="submit"
                                                 :disabled="!inputMessage.trim() || isStreaming"
@@ -597,19 +717,6 @@
                                                 </summary>
                                                 <div class="mt-2 whitespace-pre-wrap border-t border-zinc-200/60 pt-2 font-mono text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:text-zinc-400" x-text="msg.thinking"></div>
                                             </details>
-                                        </div>
-
-                                        {{-- Message Body (Markdown formatted) with streaming cursor --}}
-                                        <div x-show="msg.content" class="flex items-start">
-                                            <div
-                                                class="prose prose-sm dark:prose-invert max-w-none pt-0.5 text-xs leading-relaxed text-zinc-800 sm:text-sm dark:text-zinc-200"
-                                                x-html="formatMarkdown(msg.content)"
-                                            ></div>
-                                            <span
-                                                x-show="msg.typing"
-                                                class="mt-1 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-2xs bg-amber-500"
-                                                title="Generating..."
-                                            ></span>
                                         </div>
 
                                         {{-- Live ReUI Agent Activity Console (During Real-time Execution & Streaming) --}}
@@ -1120,7 +1227,20 @@
                                             </div>
                                         </template>
 
-                                        {{-- Message Actions (Copy) --}}
+                                        {{-- Message Body (Markdown formatted) with streaming cursor --}}
+                                        <div x-show="msg.content" class="flex items-start">
+                                            <div
+                                                class="prose prose-sm dark:prose-invert max-w-none pt-0.5 text-xs leading-relaxed text-zinc-800 sm:text-sm dark:text-zinc-200"
+                                                x-html="formatMarkdown(msg.content)"
+                                            ></div>
+                                            <span
+                                                x-show="msg.typing"
+                                                class="mt-1 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-2xs bg-amber-500"
+                                                title="Generating..."
+                                            ></span>
+                                        </div>
+
+                                        {{-- Message Actions (Copy & Read Aloud) --}}
                                         <div x-show="!msg.typing && msg.content" class="flex items-center gap-2 pt-0.5">
                                             <button
                                                 type="button"
@@ -1132,6 +1252,22 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                                 </svg>
                                                 <span>Copy</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                @click="speakText(msg.content)"
+                                                class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                                :title="isSpeaking ? 'Stop speaking' : 'Read aloud with voice'"
+                                            >
+                                                <svg x-show="!isSpeaking" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                                </svg>
+                                                <svg x-show="isSpeaking" class="h-3.5 w-3.5 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                                </svg>
+                                                <span x-text="isSpeaking ? 'Speaking...' : 'Listen'"></span>
                                             </button>
                                         </div>
                                     </div>
@@ -1145,6 +1281,7 @@
             {{-- Docked Prompt Composer -------------------------------------------- --}}
             <div
                 x-show="messages.length > 0"
+                x-cloak
                 class="border-t border-zinc-200/90 bg-white/95 p-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95"
             >
                 <div class="mx-auto max-w-3xl">
@@ -1159,6 +1296,37 @@
                             class="w-full resize-none border-0 bg-transparent px-1 py-1 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                         ></textarea>
 
+                        {{-- Listening Feedback Banner (Free Browser Dictation - 0 Tokens) --}}
+                        <div x-show="isListening" x-cloak class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
+                            <div class="flex items-center gap-2">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                                </span>
+                                <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
+                                <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(0 tokens)</span>
+                            </div>
+                            <button
+                                type="button"
+                                @click.stop.prevent="toggleVoice()"
+                                class="rounded bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white shadow-xs hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                            >
+                                Done
+                            </button>
+                        </div>
+
+                        <div x-show="voiceError" x-cloak class="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                            <svg class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1 leading-relaxed" x-text="voiceError"></div>
+                            <button type="button" @click="voiceError = null" class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
                         <div class="flex items-center justify-between border-t border-zinc-100 pt-2 dark:border-zinc-800/80">
                             <div class="flex items-center gap-1.5 px-1 text-[11px] text-zinc-400 dark:text-zinc-500">
                                 <span class="hidden sm:inline">Press</span>
@@ -1169,9 +1337,25 @@
                                 <span class="hidden sm:inline">for new line</span>
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1.5">
+                                {{-- Free Microphone Dictation Button (0 Tokens) --}}
+                                <button
+                                    type="button"
+                                    @click.stop.prevent="toggleVoice()"
+                                    :disabled="isStreaming"
+                                    class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
+                                    :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
+                                    :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'"
+                                >
+                                    <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
+                                    <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                    </svg>
+                                </button>
+
                                 <button
                                     x-show="isStreaming"
+                                    x-cloak
                                     type="button"
                                     @click="stopStreaming()"
                                     class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -1184,6 +1368,7 @@
 
                                 <button
                                     x-show="!isStreaming"
+                                    x-cloak
                                     type="submit"
                                     :disabled="!inputMessage.trim()"
                                     class="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-white transition hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -1206,6 +1391,10 @@
     </div>
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         .welcome-logo,
         .welcome-greeting,
         .welcome-input,
@@ -1439,12 +1628,15 @@
                 workspace: config.workspace,
                 adminUser: config.adminUser,
                 sessions: config.initialSessions || [],
+                initialActiveSession: config.initialActiveSession || null,
                 foxChatUrl: config.foxChatUrl,
                 foxWelcomeUrl: config.foxWelcomeUrl,
 
                 sidebarOpen: true,
                 searchQuery: '',
-                activeSessionId: null,
+                activeSessionId: config.initialActiveSession ? config.initialActiveSession.id : null,
+                activeSessionUuid: config.initialActiveSession ? config.initialActiveSession.uuid : null,
+                linkCopied: false,
                 messages: [],
                 aiActions: [],
                 inputMessage: '',
@@ -1455,6 +1647,12 @@
                 continuationInterval: null,
                 continuationCountdown: 0,
                 continuationFollowUp: '',
+
+                isListening: false,
+                voiceSupported: (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)),
+                voiceRecognition: null,
+                voiceError: null,
+                isSpeaking: false,
 
                 promptStarters: [
                     {
@@ -1488,9 +1686,48 @@
                 },
 
                 init() {
+                    this.isListening = false;
+                    this.isStreaming = false;
+                    this.voiceError = null;
+                    this.isSpeaking = false;
+
                     this.$nextTick(() => {
-                        if (this.$refs.welcomeComposerInput) {
+                        if (this.$refs.welcomeComposerInput && !this.activeSessionId) {
                             this.$refs.welcomeComposerInput.focus();
+                        }
+                    });
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const requestedParam = urlParams.get('c') || urlParams.get('session');
+
+                    if (this.initialActiveSession) {
+                        this.selectSession(this.initialActiveSession, false);
+                    } else if (requestedParam) {
+                        this.selectSession(requestedParam, false);
+                    }
+
+                    window.addEventListener('popstate', () => {
+                        if (this.isStreaming) return;
+                        const currentParams = new URLSearchParams(window.location.search);
+                        const targetUuid = currentParams.get('c') || currentParams.get('session');
+
+                        if (targetUuid) {
+                            if (this.activeSessionUuid !== targetUuid && String(this.activeSessionId) !== String(targetUuid)) {
+                                this.selectSession(targetUuid, false);
+                            }
+                        } else {
+                            if (this.activeSessionId !== null || this.activeSessionUuid !== null) {
+                                this.activeSessionId = null;
+                                this.activeSessionUuid = null;
+                                this.messages = [];
+                                this.aiActions = [];
+                                this.inputMessage = '';
+                                this.$nextTick(() => {
+                                    if (this.$refs.welcomeComposerInput) {
+                                        this.$refs.welcomeComposerInput.focus();
+                                    }
+                                });
+                            }
                         }
                     });
                 },
@@ -1569,14 +1806,46 @@
                     return { today, yesterday, previousWeek, older };
                 },
 
-                async selectSession(sessionId) {
+                async selectSession(target, updateUrl = true) {
                     if (this.isStreaming) return;
-                    this.activeSessionId = sessionId;
+
+                    let session = null;
+                    let identifier = target;
+
+                    if (typeof target === 'object' && target !== null) {
+                        session = target;
+                        identifier = target.uuid || target.id;
+                    } else if (target) {
+                        session = this.sessions.find(s => s.uuid === target || String(s.id) === String(target));
+                        identifier = target;
+                    }
+
+                    if (session) {
+                        this.activeSessionId = session.id;
+                        this.activeSessionUuid = session.uuid || null;
+                    } else {
+                        if (typeof identifier === 'number' || (typeof identifier === 'string' && /^\d+$/.test(identifier))) {
+                            this.activeSessionId = parseInt(identifier, 10);
+                            this.activeSessionUuid = null;
+                        } else {
+                            this.activeSessionId = null;
+                            this.activeSessionUuid = String(identifier);
+                        }
+                    }
+
+                    if (updateUrl) {
+                        const url = new URL(window.location.href);
+                        const urlParam = this.activeSessionUuid || this.activeSessionId || identifier;
+                        url.searchParams.set('c', urlParam);
+                        url.searchParams.delete('session');
+                        window.history.pushState({ sessionUuid: urlParam }, '', url.toString());
+                    }
+
                     this.messages = [];
                     this.aiActions = [];
 
                     try {
-                        const res = await fetch(`/api/chats/${sessionId}/messages`, {
+                        const res = await fetch(`/api/chats/${identifier}/messages`, {
                             headers: {
                                 'Accept': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest'
@@ -1584,13 +1853,29 @@
                         });
                         if (res.ok) {
                             const data = await res.json();
+                            if (data.session) {
+                                this.activeSessionId = data.session.id;
+                                this.activeSessionUuid = data.session.uuid;
+                                if (!this.sessions.some(s => s.id === data.session.id)) {
+                                    this.sessions.unshift({
+                                        id: data.session.id,
+                                        uuid: data.session.uuid,
+                                        title: data.session.title || 'New chat',
+                                        updated_at: data.session.updated_at,
+                                        updated_at_human: data.session.updated_at_human || 'recently'
+                                    });
+                                }
+                            }
+
                             this.messages = (data.data || []).map(m => ({
                                 id: m.id,
                                 role: m.role,
                                 content: m.content,
                                 thinking: m.thinking || null,
                                 thinkingOpen: false,
-                                typing: false
+                                typing: false,
+                                createdAt: m.createdAt || null,
+                                actionIds: []
                             }));
                             this.scrollToBottom();
                             this.$nextTick(() => {
@@ -1599,7 +1884,8 @@
                                 }
                             });
                         }
-                        await this.loadAiActions(sessionId);
+                        await this.loadAiActions(this.activeSessionId || identifier);
+                        this.associateActionsWithMessages();
                     } catch (e) {
                         console.error('Error loading session messages:', e);
                     }
@@ -1608,9 +1894,17 @@
                 newChat() {
                     if (this.isStreaming) return;
                     this.activeSessionId = null;
+                    this.activeSessionUuid = null;
                     this.messages = [];
                     this.aiActions = [];
                     this.inputMessage = '';
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('c');
+                    url.searchParams.delete('session');
+                    const cleanUrl = url.pathname + (url.search ? url.search : '');
+                    window.history.pushState({}, '', cleanUrl);
+
                     this.$nextTick(() => {
                         if (this.$refs.welcomeComposerInput) {
                             this.$refs.welcomeComposerInput.focus();
@@ -1634,12 +1928,20 @@
                             const json = await res.json();
                             const newSession = {
                                 id: json.session.id,
+                                uuid: json.session.uuid,
                                 title: 'New chat',
                                 updated_at: new Date().toISOString(),
                                 updated_at_human: 'just now'
                             };
                             this.sessions.unshift(newSession);
                             this.activeSessionId = newSession.id;
+                            this.activeSessionUuid = newSession.uuid;
+
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('c', newSession.uuid || newSession.id);
+                            url.searchParams.delete('session');
+                            window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
+
                             return newSession.id;
                         }
                     } catch (e) {
@@ -1663,16 +1965,46 @@
                             this.sessions = this.sessions.filter(s => s.id !== sessionId);
                             if (this.activeSessionId === sessionId) {
                                 if (this.sessions.length > 0) {
-                                    this.selectSession(this.sessions[0].id);
+                                    this.selectSession(this.sessions[0]);
                                 } else {
-                                    this.activeSessionId = null;
-                                    this.messages = [];
-                                    this.aiActions = [];
+                                    this.newChat();
                                 }
                             }
                         }
                     } catch (e) {
                         console.error('Error deleting session:', e);
+                    }
+                },
+
+                async copyConversationLink(item = null) {
+                    const targetUuid = (item && (item.uuid || item.id)) || this.activeSessionUuid || this.activeSessionId;
+                    if (!targetUuid) return;
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('c', targetUuid);
+                    url.searchParams.delete('session');
+                    const fullUrl = url.toString();
+
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(fullUrl);
+                        } else {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = fullUrl;
+                            textarea.style.position = 'fixed';
+                            textarea.style.left = '-9999px';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                        }
+
+                        this.linkCopied = true;
+                        setTimeout(() => {
+                            this.linkCopied = false;
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy link:', err);
                     }
                 },
 
@@ -1704,20 +2036,128 @@
                     }
                 },
 
+                associateActionsWithMessages() {
+                    if (!this.messages.length || !this.aiActions.length) return;
+
+                    const assistantMessages = [];
+                    for (let i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].role === 'assistant') {
+                            let prevUserTime = null;
+                            for (let u = i - 1; u >= 0; u--) {
+                                if (this.messages[u].role === 'user' && this.messages[u].createdAt) {
+                                    const parsed = Date.parse(this.messages[u].createdAt);
+                                    if (!isNaN(parsed)) {
+                                        prevUserTime = parsed;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            let nextUserTime = null;
+                            for (let u = i + 1; u < this.messages.length; u++) {
+                                if (this.messages[u].role === 'user' && this.messages[u].createdAt) {
+                                    const parsed = Date.parse(this.messages[u].createdAt);
+                                    if (!isNaN(parsed)) {
+                                        nextUserTime = parsed;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            const rawMsgTime = this.messages[i].createdAt;
+                            const parsedMsgTime = rawMsgTime ? Date.parse(rawMsgTime) : null;
+                            const msgTime = (parsedMsgTime !== null && !isNaN(parsedMsgTime)) ? parsedMsgTime : null;
+
+                            assistantMessages.push({
+                                msg: this.messages[i],
+                                index: i,
+                                msgTime: msgTime,
+                                startTime: prevUserTime ?? (msgTime ? msgTime - 60000 : null),
+                                endTime: nextUserTime ?? Infinity,
+                            });
+                        }
+                    }
+
+                    if (!assistantMessages.length) return;
+
+                    assistantMessages.forEach(am => {
+                        am.msg.actionIds = am.msg.actionIds || [];
+                    });
+
+                    const assignedActionIds = new Set();
+                    this.messages.forEach(m => {
+                        if (m.actionIds) {
+                            m.actionIds.forEach(id => assignedActionIds.add(id));
+                        }
+                    });
+
+                    this.aiActions.forEach(action => {
+                        if (assignedActionIds.has(action.id)) return;
+
+                        const rawActionTime = action.createdAt;
+                        const parsedActionTime = rawActionTime ? Date.parse(rawActionTime) : null;
+                        const actionTime = (parsedActionTime !== null && !isNaN(parsedActionTime)) ? parsedActionTime : null;
+                        let matched = null;
+
+                        if (actionTime !== null) {
+                            matched = assistantMessages.find(am => {
+                                const start = am.startTime ?? 0;
+                                const end = am.endTime ?? Infinity;
+                                return actionTime >= (start - 10000) && actionTime < end;
+                            });
+                        }
+
+                        if (!matched && actionTime !== null) {
+                            let closest = null;
+                            let minDiff = Infinity;
+                            assistantMessages.forEach(am => {
+                                if (am.msgTime !== null) {
+                                    const diff = Math.abs(actionTime - am.msgTime);
+                                    if (diff < minDiff) {
+                                        minDiff = diff;
+                                        closest = am;
+                                    }
+                                }
+                            });
+                            matched = closest;
+                        }
+
+                        if (!matched) {
+                            matched = assistantMessages[assistantMessages.length - 1];
+                        }
+
+                        if (matched) {
+                            if (!matched.msg.actionIds) {
+                                matched.msg.actionIds = [];
+                            }
+                            if (!matched.msg.actionIds.includes(action.id)) {
+                                matched.msg.actionIds.push(action.id);
+                            }
+                            assignedActionIds.add(action.id);
+                        }
+                    });
+                },
+
                 getActionsForMessage(msg, index) {
                     if (msg.role !== 'assistant') return [];
                     if (msg.action) return [msg.action];
 
-                    let lastAssistantIdx = -1;
-                    for (let i = this.messages.length - 1; i >= 0; i--) {
-                        if (this.messages[i].role === 'assistant') {
-                            lastAssistantIdx = i;
-                            break;
-                        }
+                    if (msg.actionIds && msg.actionIds.length > 0) {
+                        return this.aiActions.filter(a => msg.actionIds.includes(a.id));
                     }
-                    if (index === lastAssistantIdx && this.aiActions.length > 0) {
-                        return this.aiActions;
+
+                    // Fallback: If this is the last assistant message and there are actions not claimed by any message
+                    const isLastAssistant = !this.messages.slice(index + 1).some(m => m.role === 'assistant');
+                    if (isLastAssistant && this.aiActions.length > 0) {
+                        const assignedIds = new Set();
+                        this.messages.forEach(m => {
+                            if (m.actionIds) {
+                                m.actionIds.forEach(id => assignedIds.add(id));
+                            }
+                        });
+                        return this.aiActions.filter(a => !assignedIds.has(a.id));
                     }
+
                     return [];
                 },
 
@@ -1933,7 +2373,18 @@
                         if (target.activity) {
                             target.activity.status = 'needs_approval';
                         }
-                        this.loadAiActions(sessionId);
+                        const beforeActionIds = new Set((this.aiActions || []).map(a => a.id));
+                        this.loadAiActions(sessionId).then(() => {
+                            (this.aiActions || []).forEach(a => {
+                                if (!beforeActionIds.has(a.id)) {
+                                    target.actionIds = target.actionIds || [];
+                                    if (!target.actionIds.includes(a.id)) {
+                                        target.actionIds.push(a.id);
+                                    }
+                                }
+                            });
+                            this.associateActionsWithMessages();
+                        });
                     }
                 },
 
@@ -2113,11 +2564,15 @@
                         this.$refs.welcomeComposerInput.style.height = 'auto';
                     }
 
+                    this.stopSpeaking();
+                    this.stopVoice();
+
                     // Append user message
                     this.messages.push({
                         role: 'user',
                         content: text,
-                        typing: false
+                        typing: false,
+                        createdAt: new Date().toISOString()
                     });
 
                     // Update session title locally if new
@@ -2137,6 +2592,8 @@
                         thinkingMs: null,
                         elapsedSeconds: 0,
                         typing: true,
+                        createdAt: new Date().toISOString(),
+                        actionIds: [],
                         activity: hasLikelyTask ? {
                             title: this.deriveTaskTitle(text),
                             status: 'running',
@@ -2193,6 +2650,7 @@
                     });
 
                     this.abortController = new AbortController();
+                    const existingActionIds = new Set((this.aiActions || []).map(a => a.id));
 
                     try {
                         const response = await fetch(`/api/chats/${sessionId}/stream`, {
@@ -2294,24 +2752,39 @@
                                         }
                                     }
                                 });
-                                if (this.aiActions.length > 0) {
-                                    target.activity.status = 'needs_approval';
-                                } else {
-                                    target.activity.status = 'completed';
-                                    if (!target.activity.hasToolCalls && this.aiActions.length === 0) {
-                                        target.activity = null;
-                                    }
-                                }
                             }
                         }
                         this.isStreaming = false;
                         this.abortController = null;
                         await this.loadAiActions(sessionId);
+                        if (target) {
+                            (this.aiActions || []).forEach(a => {
+                                if (!existingActionIds.has(a.id)) {
+                                    target.actionIds = target.actionIds || [];
+                                    if (!target.actionIds.includes(a.id)) {
+                                        target.actionIds.push(a.id);
+                                    }
+                                }
+                            });
+                        }
+                        this.associateActionsWithMessages();
+                        if (target && target.activity) {
+                            const targetActions = this.getActionsForMessage(target, assistantIndex);
+                            if (targetActions.length > 0) {
+                                target.activity.status = 'needs_approval';
+                            } else {
+                                target.activity.status = 'completed';
+                                if (!target.activity.hasToolCalls && targetActions.length === 0) {
+                                    target.activity = null;
+                                }
+                            }
+                        }
                         this.scrollToBottom();
                     }
                 },
 
                 stopStreaming() {
+                    this.stopSpeaking();
                     if (this.streamingTimer) {
                         clearInterval(this.streamingTimer);
                         this.streamingTimer = null;
@@ -2364,6 +2837,167 @@
                 copyText(text) {
                     if (navigator.clipboard) {
                         navigator.clipboard.writeText(text);
+                    }
+                },
+
+                toggleVoice() {
+                    if (this.isStreaming) return;
+
+                    const SpeechRecognition = typeof window !== 'undefined'
+                        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+                        : null;
+
+                    if (!SpeechRecognition) {
+                        this.voiceError = 'Voice dictation requires Google Chrome, Microsoft Edge, Safari, or Opera with Web Speech support.';
+                        return;
+                    }
+
+                    if (this.isListening) {
+                        this.stopVoice();
+                        return;
+                    }
+
+                    this.startVoice();
+                },
+
+                startVoice() {
+                    this.voiceError = null;
+                    const SpeechRecognition = typeof window !== 'undefined'
+                        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+                        : null;
+
+                    if (!SpeechRecognition) {
+                        this.voiceError = 'Voice dictation is not supported in this browser.';
+                        return;
+                    }
+
+                    try {
+                        const rec = new SpeechRecognition();
+                        rec.continuous = false;
+                        rec.interimResults = true;
+                        rec.lang = 'en-US';
+
+                        let baseText = (this.inputMessage || '').trim();
+
+                        rec.onstart = () => {
+                            this.isListening = true;
+                            this.voiceError = null;
+                            baseText = (this.inputMessage || '').trim();
+                        };
+
+                        rec.onresult = (event) => {
+                            let interim = '';
+                            let finalTranscript = '';
+
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                                if (event.results[i].isFinal) {
+                                    finalTranscript += event.results[i][0].transcript;
+                                } else {
+                                    interim += event.results[i][0].transcript;
+                                }
+                            }
+
+                            const spoken = (finalTranscript || interim).trim();
+                            if (spoken) {
+                                this.inputMessage = baseText ? (baseText + ' ' + spoken) : spoken;
+                                this.$nextTick(() => {
+                                    if (this.$refs.composerInput) {
+                                        this.autoGrowTextarea({ target: this.$refs.composerInput });
+                                    }
+                                    if (this.$refs.welcomeComposerInput) {
+                                        this.autoGrowTextarea({ target: this.$refs.welcomeComposerInput });
+                                    }
+                                });
+                            }
+                        };
+
+                        rec.onerror = (event) => {
+                            console.warn('Speech recognition error:', event.error);
+                            if (event.error === 'no-speech') {
+                                this.isListening = false;
+                                return;
+                            }
+
+                            if (event.error === 'not-allowed') {
+                                this.voiceError = 'Microphone dictation was blocked. In Edge/Chrome InPrivate (Incognito) mode, browser policy disables cloud speech dictation. Please open in a regular browser window to dictate for free with 0 tokens!';
+                            } else if (event.error === 'network') {
+                                this.voiceError = 'Speech service network error. Please verify your internet connection.';
+                            } else if (event.error === 'audio-capture') {
+                                this.voiceError = 'No audio captured. Check Windows sound settings to ensure your default microphone is active.';
+                            } else {
+                                this.voiceError = 'Dictation error: ' + event.error;
+                            }
+
+                            setTimeout(() => { this.voiceError = null; }, 8000);
+                            this.isListening = false;
+                        };
+
+                        rec.onend = () => {
+                            this.isListening = false;
+                        };
+
+                        this.voiceRecognition = rec;
+                        rec.start();
+                    } catch (e) {
+                        console.error('Speech recognition start failed:', e);
+                        this.voiceError = 'Could not start microphone dictation.';
+                        this.isListening = false;
+                    }
+                },
+
+                stopVoice() {
+                    if (this.voiceRecognition) {
+                        try {
+                            this.voiceRecognition.stop();
+                        } catch (e) {}
+                    }
+                    this.isListening = false;
+                },
+
+                speakText(text) {
+                    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+                    if (this.isSpeaking) {
+                        window.speechSynthesis.cancel();
+                        this.isSpeaking = false;
+                        return;
+                    }
+
+                    const clean = (text || '')
+                        .replace(/```[\s\S]*?```/g, 'Code block omitted.')
+                        .replace(/`([^`]+)`/g, '$1')
+                        .replace(/\*\*([^*]+)\*\*/g, '$1')
+                        .replace(/\*([^*]+)\*/g, '$1')
+                        .replace(/#+\s+/g, '')
+                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                        .replace(/[|>\-_~]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                    if (!clean) return;
+
+                    const utterance = new SpeechSynthesisUtterance(clean);
+                    utterance.rate = 1.05;
+                    utterance.pitch = 1.0;
+
+                    utterance.onstart = () => {
+                        this.isSpeaking = true;
+                    };
+                    utterance.onend = () => {
+                        this.isSpeaking = false;
+                    };
+                    utterance.onerror = () => {
+                        this.isSpeaking = false;
+                    };
+
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                },
+
+                stopSpeaking() {
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                        window.speechSynthesis.cancel();
+                        this.isSpeaking = false;
                     }
                 },
 
