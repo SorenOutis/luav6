@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Merches\Schemas;
 
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -101,6 +102,37 @@ class MerchForm
                             ->integer()
                             ->default(0)
                             ->helperText('Items with lower numbers display first on the welcome page.'),
+                    ]),
+
+                Section::make('Product Variants & Editions')
+                    ->description('Configure selectable editions (e.g. Obsidian Black, Alabaster White) with variant-specific imagery.')
+                    ->schema([
+                        Repeater::make('variants')
+                            ->label('Variants')
+                            ->defaultItems(0)
+                            ->schema([
+                                TextInput::make('name')
+                                    ->label('Variant Name')
+                                    ->placeholder('e.g. Obsidian')
+                                    ->required()
+                                    ->maxLength(100),
+
+                                FileUpload::make('image_path')
+                                    ->label('Variant Image')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('merch')
+                                    ->visibility('public')
+                                    ->maxSize(10240)
+                                    ->required()
+                                    ->helperText('Product image for this specific variant / edition.'),
+                            ])
+                            ->columns(2)
+                            ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
+                            ->addActionLabel('Add Variant')
+                            ->helperText('Each added variant requires both a name and an image so variants are never hardcoded.')
+                            ->columnSpanFull(),
                     ]),
             ]);
     }

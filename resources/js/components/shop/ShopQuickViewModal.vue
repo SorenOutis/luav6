@@ -53,13 +53,35 @@ const handleMouseLeave = () => {
     zoomOrigin.value = '50% 50%';
 };
 
+const selectedVariantIndex = ref(0);
+
 watch(
     () => props.merch?.id,
     () => {
         isZooming.value = false;
         zoomOrigin.value = '50% 50%';
+        selectedVariantIndex.value = 0;
     },
 );
+
+const modalDisplayImage = computed(() => {
+    if (props.merch?.variants && props.merch.variants.length > 0) {
+        const v = props.merch.variants[selectedVariantIndex.value];
+        if (v?.image_url) return v.image_url;
+    }
+    return props.merch?.image_url || null;
+});
+
+const modalDisplayName = computed(() => {
+    if (!props.merch) return '';
+    if (props.merch.variants && props.merch.variants.length > 0) {
+        const v = props.merch.variants[selectedVariantIndex.value];
+        if (v?.name && !props.merch.name.toLowerCase().includes(v.name.toLowerCase())) {
+            return `${props.merch.name} (${v.name})`;
+        }
+    }
+    return props.merch.name;
+});
 
 const handlePrevious = () => {
     if (!props.items || props.items.length <= 1 || currentIndex.value === -1)
@@ -204,8 +226,8 @@ onUnmounted(() => {
                         >
                             <!-- Atmospheric Ambient Glow from image colors (stable backdrop) -->
                             <img
-                                v-if="merch.image_url"
-                                :src="merch.image_url"
+                                v-if="modalDisplayImage"
+                                :src="modalDisplayImage"
                                 aria-hidden="true"
                                 alt=""
                                 class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-25 blur-3xl filter"
@@ -213,7 +235,7 @@ onUnmounted(() => {
 
                             <!-- Interactive Zoom Viewport -->
                             <div
-                                v-if="merch.image_url"
+                                v-if="modalDisplayImage"
                                 class="relative z-10 flex max-h-[50vh] w-auto max-w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-xl sm:max-h-[60vh]"
                                 @mousemove="handleMouseMove"
                                 @mouseenter="handleMouseEnter"
@@ -221,8 +243,8 @@ onUnmounted(() => {
                             >
                                 <!-- Sharp merchandise image with mouse-following zoom -->
                                 <img
-                                    :src="merch.image_url"
-                                    :alt="merch.name"
+                                    :src="modalDisplayImage"
+                                    :alt="modalDisplayName"
                                     class="pointer-events-none max-h-[50vh] w-auto max-w-full rounded-xl object-contain drop-shadow-2xl will-change-transform sm:max-h-[60vh]"
                                     :style="{
                                         transformOrigin: zoomOrigin,
@@ -274,7 +296,7 @@ onUnmounted(() => {
                                     <h3
                                         class="mt-1 font-sans text-xl font-bold tracking-tight text-foreground sm:text-2xl"
                                     >
-                                        {{ merch.name }}
+                                        {{ modalDisplayName }}
                                     </h3>
                                 </div>
 
@@ -324,6 +346,38 @@ onUnmounted(() => {
                                             ></span>
                                             {{ merch.stock }} available
                                         </span>
+                                    </div>
+                                </div>
+
+                                <!-- Variant / Edition Selector -->
+                                <div
+                                    v-if="merch.variants && merch.variants.length > 0"
+                                    class="space-y-2 border-t border-border/50 pt-4"
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <h4
+                                            class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                                        >
+                                            Edition / Colorway
+                                        </h4>
+                                        <span
+                                            v-if="merch.variants[selectedVariantIndex]"
+                                            class="text-xs font-semibold text-primary"
+                                        >
+                                            {{ merch.variants[selectedVariantIndex]?.name }}
+                                        </span>
+                                    </div>
+                                    <div v-if="merch.variants.length > 1" class="flex flex-wrap gap-2">
+                                        <button
+                                            v-for="(variant, idx) in merch.variants"
+                                            :key="variant.name"
+                                            type="button"
+                                            @click="selectedVariantIndex = idx"
+                                            class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                                            :class="selectedVariantIndex === idx ? 'bg-primary text-primary-foreground font-semibold shadow-xs' : 'border border-border/70 bg-card hover:bg-muted/50 text-foreground'"
+                                        >
+                                            {{ variant.name }}
+                                        </button>
                                     </div>
                                 </div>
 

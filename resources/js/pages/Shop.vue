@@ -26,7 +26,7 @@ import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import { dashboard, login, register } from '@/routes';
-import type { MerchItem } from '@/types/merch';
+import type { MerchItem, MerchVariant } from '@/types/merch';
 
 const props = withDefaults(
     defineProps<{
@@ -48,6 +48,109 @@ const isManuallyPaused = ref(false);
 const isHovered = ref(false);
 const selectedQuickViewMerch = ref<MerchItem | null>(null);
 const isQuickViewOpen = ref(false);
+
+interface HeroTab {
+    key: string;
+    name: string;
+    imageUrl: string;
+    merch: MerchItem;
+}
+
+const heroTabs = computed<HeroTab[]>(() => {
+    const list = props.merches || [];
+    if (list.length === 0) return [];
+
+    // 1. If any merch has multiple variants (e.g. Hoodie with [Obsidian, Alabaster]), use its variants
+    const multiVariantMerch = list.find((m) => m.variants && m.variants.length > 1);
+    if (multiVariantMerch && multiVariantMerch.variants) {
+        return multiVariantMerch.variants.map((v, idx) => ({
+            key: `${multiVariantMerch.id}-variant-${idx}`,
+            name: v.name,
+            imageUrl: v.image_url || multiVariantMerch.image_url || '/images/merch/techwear-hoodie-black.jpg',
+            merch: {
+                ...multiVariantMerch,
+                name: `${multiVariantMerch.name} (${v.name})`,
+                image_url: v.image_url || multiVariantMerch.image_url,
+            },
+        }));
+    }
+
+    // 2. If merches each have 1 or more variants (e.g. 1 variant uploaded in each merch), aggregate them
+    const merchesWithVariants = list.filter((m) => m.variants && m.variants.length > 0);
+    if (merchesWithVariants.length > 0) {
+        const tabs: HeroTab[] = [];
+        for (const m of merchesWithVariants) {
+            for (let idx = 0; idx < (m.variants?.length || 0); idx++) {
+                const v = m.variants![idx];
+                tabs.push({
+                    key: `${m.id}-variant-${idx}`,
+                    name: v.name,
+                    imageUrl: v.image_url || m.image_url || '/images/merch/techwear-hoodie-black.jpg',
+                    merch: {
+                        ...m,
+                        name: `${m.name} (${v.name})`,
+                        image_url: v.image_url || m.image_url,
+                    },
+                });
+            }
+        }
+        return tabs;
+    }
+
+    return [];
+});
+
+const selectedTabIndex = ref(0);
+
+const setTabIndex = (index: number) => {
+    selectedTabIndex.value = index;
+};
+
+watch(
+    heroTabs,
+    (tabs) => {
+        if (selectedTabIndex.value >= tabs.length) {
+            selectedTabIndex.value = 0;
+        }
+    },
+    { immediate: true },
+);
+
+const activeHeroTab = computed<HeroTab | null>(() => {
+    if (!heroTabs.value.length) return null;
+    return heroTabs.value[selectedTabIndex.value] || heroTabs.value[0];
+});
+
+const currentHeroMerch = computed<MerchItem>(() => {
+    if (activeHeroTab.value) {
+        return activeHeroTab.value.merch;
+    }
+    const list = props.merches || [];
+    const hoodie = list.find((m) => m.name.toLowerCase().includes('hoodie'));
+    if (hoodie) return hoodie;
+    if (list[0]) return list[0];
+    return {
+        id: 2,
+        name: 'KOAMISHIN BSIT Techwear Hoodie',
+        description:
+            '380 GSM heavyweight technical fleece with topographic contour sleeves, weatherproof angular pocket, and BSIT signature insignia.',
+        price: 1650,
+        currency: 'PHP',
+        formatted_price: '₱1,650.00',
+        image_url: '/images/merch/techwear-hoodie-black.jpg',
+        stock: 12,
+        is_out_of_stock: false,
+        stock_label: '12 in stock',
+        url: 'https://koamishin.com/',
+    };
+});
+
+const currentHeroImageUrl = computed<string>(() => {
+    if (activeHeroTab.value?.imageUrl) {
+        return activeHeroTab.value.imageUrl;
+    }
+    return currentHeroMerch.value.image_url || '/images/merch/techwear-hoodie-black.jpg';
+});
 
 const openQuickView = (merch: MerchItem) => {
     selectedQuickViewMerch.value = merch;
@@ -160,10 +263,23 @@ watch(
 );
 
 onMounted(async () => {
-    await nextTick();
-    setupMarquee();
-
     if (typeof window !== 'undefined') {
+        const isDark =
+            document.documentElement.classList.contains('dark') ||
+            window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+
+        if (heroTabs.value.length > 0) {
+            const preferredMatch = heroTabs.value.findIndex((tab) => {
+                const lower = tab.name.toLowerCase();
+                return isDark
+                    ? lower.includes('obsidian') || lower.includes('black') || lower.includes('dark')
+                    : lower.includes('alabaster') || lower.includes('white') || lower.includes('light');
+            });
+            if (preferredMatch !== -1) {
+                selectedTabIndex.value = preferredMatch;
+            }
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const qvParam = urlParams.get('quickview');
         if (qvParam && props.merches && props.merches.length > 0) {
@@ -173,6 +289,9 @@ onMounted(async () => {
             openQuickView(target);
         }
     }
+
+    await nextTick();
+    setupMarquee();
 });
 
 onBeforeUnmount(() => {
@@ -209,90 +328,74 @@ onUnmounted(() => {
         <main
             class="mx-auto flex max-w-[1440px] flex-col px-4 pt-4 pb-16 sm:px-6 sm:pt-10 sm:pb-24 lg:px-16 lg:pt-12 lg:pb-32"
         >
-            <!-- Breadcrumbs -->
-            <nav
-                aria-label="Breadcrumb"
-                class="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm"
-            >
-                <Link
-                    href="/"
-                    class="transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <!-- Breadcrumbs & Variant Switcher -->
+            <div class="flex items-center justify-between gap-4">
+                <nav
+                    aria-label="Breadcrumb"
+                    class="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm"
                 >
-                    Home
-                </Link>
-                <span class="text-muted-foreground/40" aria-hidden="true"
-                    >/</span
+                    <Link
+                        href="/"
+                        class="transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        Home
+                    </Link>
+                    <span class="text-muted-foreground/40" aria-hidden="true"
+                        >/</span
+                    >
+                    <span class="font-medium text-foreground" aria-current="page"
+                        >Shop</span
+                    >
+                </nav>
+
+                <!-- Dynamic Variant Switcher (e.g. Obsidian / Alabaster) -->
+                <div
+                    v-if="heroTabs.length > 0"
+                    class="inline-flex rounded-xl border border-border/80 bg-card/80 p-1 shadow-xs backdrop-blur-md"
                 >
-                <span class="font-medium text-foreground" aria-current="page"
-                    >Shop</span
-                >
-            </nav>
-
-            <!-- Hero Section -->
-            <section
-                class="mt-4 border-b border-border/70 pb-8 sm:mt-8 sm:pb-16"
-                aria-labelledby="shop-heading"
-            >
-                <div class="mx-auto max-w-3xl text-center">
-                    <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-1 text-xs font-semibold text-[#D97757]"
+                    <button
+                        v-for="(tab, idx) in heroTabs"
+                        :key="tab.key"
+                        type="button"
+                        @click="setTabIndex(idx)"
+                        class="rounded-lg px-2.5 py-1 text-xs transition-all"
+                        :class="selectedTabIndex === idx ? 'bg-primary text-primary-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground font-medium'"
                     >
-                        <ShoppingBag class="h-3.5 w-3.5" aria-hidden="true" />
-                        Official Merchandise & Goods
-                    </span>
-
-                    <h1
-                        id="shop-heading"
-                        class="mt-3 font-sans text-2xl font-semibold tracking-tight text-foreground sm:mt-4 sm:text-4xl lg:text-5xl"
-                    >
-                        Wear the mission.
-                    </h1>
-
-                    <p
-                        class="mx-auto mt-3 max-w-2xl text-xs leading-relaxed font-normal text-muted-foreground sm:mt-4 sm:text-base"
-                    >
-                        Original KOAMISHIN apparel, accessories, and classroom
-                        essentials crafted for educators, learners, and
-                        builders. Every purchase directly powers community
-                        projects and learning tools, fulfilled via
-                        koamishin.com.
-                    </p>
-
-                    <!-- Trust Pill Badges -->
-                    <div
-                        class="mt-4 flex flex-wrap items-center justify-center gap-2.5 text-xs text-muted-foreground sm:mt-8 sm:gap-6"
-                    >
-                        <div class="inline-flex items-center gap-1.5">
-                            <CheckCircle2
-                                class="h-4 w-4 text-emerald-600 dark:text-emerald-400"
-                                aria-hidden="true"
-                            />
-                            <span>Premium heavyweight materials</span>
-                        </div>
-                        <div class="inline-flex items-center gap-1.5">
-                            <Package
-                                class="h-4 w-4 text-primary"
-                                aria-hidden="true"
-                            />
-                            <span>Authentic KOAMISHIN drops</span>
-                        </div>
-                        <div class="inline-flex items-center gap-1.5">
-                            <ShieldCheck
-                                class="h-4 w-4 text-sky-600 dark:text-sky-400"
-                                aria-hidden="true"
-                            />
-                            <span>Secure checkout on koamishin.com</span>
-                        </div>
-                    </div>
+                        {{ tab.name }}
+                    </button>
                 </div>
+            </div>
+
+            <!-- Hero Showcase Graphic (Clean, unencumbered presentation) -->
+            <section
+                class="relative mt-3 sm:mt-5 overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl transition-all"
+                :aria-label="`${currentHeroMerch.name} Showcase`"
+            >
+                <button
+                    type="button"
+                    @click="openQuickView(currentHeroMerch)"
+                    class="group/hero block w-full cursor-zoom-in text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    :aria-label="`Quick view ${currentHeroMerch.name}`"
+                >
+                    <img
+                        :src="currentHeroImageUrl"
+                        :alt="`${currentHeroMerch.name} (Showcase View)`"
+                        class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
+                        loading="eager"
+                    />
+                </button>
             </section>
 
-            <!-- Store Inventory & Action Bar -->
+            <!-- Store Inventory & Action Bar (Directly Above Carousel) -->
             <div
-                class="mt-6 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:mt-8 sm:text-sm"
+                class="mt-12 sm:mt-16 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:text-sm"
             >
-                <!-- Left: Inventory Count -->
-                <div class="flex items-center gap-2">
+                <!-- Left: Catalog Heading & Inventory Count -->
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span class="font-sans text-sm sm:text-base font-bold tracking-tight text-foreground">
+                        Merchandise Catalog
+                    </span>
+                    <span class="text-muted-foreground/40">·</span>
                     <span class="font-semibold text-foreground">
                         {{ merches.length }}
                         {{ merches.length === 1 ? 'Item' : 'Items' }}
@@ -719,6 +822,18 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.shop-root {
+    background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(0, 168, 135, 0.07) 0%, transparent 65%),
+        repeating-linear-gradient(
+            -45deg,
+            rgba(0, 168, 135, 0.025) 0px,
+            rgba(0, 168, 135, 0.025) 1px,
+            transparent 1px,
+            transparent 48px
+        );
+}
+
 .merch-carousel-track {
     will-change: transform;
 }
@@ -735,9 +850,9 @@ onUnmounted(() => {
 .merch-card:hover {
     transform: scale(1.05) translateY(-8px) !important;
     z-index: 50 !important;
-    border-color: rgba(217, 119, 87, 0.6) !important;
+    border-color: rgba(0, 168, 135, 0.6) !important;
     box-shadow:
         0 25px 50px -12px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(217, 119, 87, 0.25) !important;
+        0 0 0 1px rgba(0, 168, 135, 0.25) !important;
 }
 </style>
