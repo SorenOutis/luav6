@@ -23,7 +23,11 @@ class ChatSession extends Model
     public static function hasUuidColumn(): bool
     {
         if (static::$hasUuidColumn === null) {
-            static::$hasUuidColumn = Schema::hasTable('chat_sessions') && Schema::hasColumn('chat_sessions', 'uuid');
+            try {
+                static::$hasUuidColumn = Schema::hasTable('chat_sessions') && Schema::hasColumn('chat_sessions', 'uuid');
+            } catch (\Throwable) {
+                static::$hasUuidColumn = true;
+            }
         }
 
         return static::$hasUuidColumn;
@@ -45,7 +49,7 @@ class ChatSession extends Model
 
     public function getRouteKeyName(): string
     {
-        return static::hasUuidColumn() ? 'uuid' : 'id';
+        return 'uuid';
     }
 
     /**
