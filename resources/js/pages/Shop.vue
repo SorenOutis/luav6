@@ -4,9 +4,11 @@ import gsap from 'gsap';
 import {
     ExternalLink,
     Eye,
+    LayoutGrid,
     Pause,
     Play,
     ShoppingBag,
+    SlidersHorizontal,
     Sparkles,
 } from 'lucide-vue-next';
 import {
@@ -53,39 +55,30 @@ interface HeroTab {
     merch: MerchItem;
 }
 
+const activeViewMode = ref<'stream' | 'bento'>('stream');
+const bentoActiveVariantImages = ref<Record<number, string>>({});
+
+const setBentoVariant = (merchId: number, imageUrl: string) => {
+    bentoActiveVariantImages.value[merchId] = imageUrl;
+};
+
+const getBentoImageUrl = (merch: MerchItem): string => {
+    return (
+        bentoActiveVariantImages.value[merch.id] ||
+        merch.image_url ||
+        '/images/merch/techwear-hoodie-black.jpg'
+    );
+};
+
 const heroTabs = computed<HeroTab[]>(() => {
     const list = props.merches || [];
     if (list.length === 0) return [];
 
-    // 1. If any merch has multiple variants (e.g. Hoodie with [Obsidian, Alabaster]), use its variants
-    const multiVariantMerch = list.find(
-        (m) => m.variants && m.variants.length > 1,
-    );
-    if (multiVariantMerch && multiVariantMerch.variants) {
-        return multiVariantMerch.variants.map((v, idx) => ({
-            key: `${multiVariantMerch.id}-variant-${idx}`,
-            name: v.name,
-            imageUrl:
-                v.image_url ||
-                multiVariantMerch.image_url ||
-                '/images/merch/techwear-hoodie-black.jpg',
-            merch: {
-                ...multiVariantMerch,
-                name: `${multiVariantMerch.name} (${v.name})`,
-                image_url: v.image_url || multiVariantMerch.image_url,
-            },
-        }));
-    }
-
-    // 2. If merches each have 1 or more variants (e.g. 1 variant uploaded in each merch), aggregate them
-    const merchesWithVariants = list.filter(
-        (m) => m.variants && m.variants.length > 0,
-    );
-    if (merchesWithVariants.length > 0) {
-        const tabs: HeroTab[] = [];
-        for (const m of merchesWithVariants) {
-            for (let idx = 0; idx < (m.variants?.length || 0); idx++) {
-                const v = m.variants![idx];
+    const tabs: HeroTab[] = [];
+    for (const m of list) {
+        if (m.variants && m.variants.length > 0) {
+            for (let idx = 0; idx < m.variants.length; idx++) {
+                const v = m.variants[idx];
                 tabs.push({
                     key: `${m.id}-variant-${idx}`,
                     name: v.name,
@@ -101,16 +94,30 @@ const heroTabs = computed<HeroTab[]>(() => {
                 });
             }
         }
-        return tabs;
     }
 
-    return [];
+    return tabs;
 });
 
 const selectedTabIndex = ref(0);
 
+const preloadTabImages = () => {
+    if (typeof window === 'undefined') return;
+    heroTabs.value.forEach((tab) => {
+        if (tab.imageUrl) {
+            const img = new Image();
+            img.src = tab.imageUrl;
+        }
+    });
+};
+
 const setTabIndex = (index: number) => {
     selectedTabIndex.value = index;
+    const target = heroTabs.value[index];
+    if (target?.imageUrl && typeof window !== 'undefined') {
+        const img = new Image();
+        img.src = target.imageUrl;
+    }
 };
 
 watch(
@@ -119,6 +126,7 @@ watch(
         if (selectedTabIndex.value >= tabs.length) {
             selectedTabIndex.value = 0;
         }
+        preloadTabImages();
     },
     { immediate: true },
 );
@@ -200,8 +208,24 @@ const normalizedMerches = computed(() => {
     return repeated;
 });
 
+const setViewMode = async (mode: 'stream' | 'bento') => {
+    activeViewMode.value = mode;
+    if (mode === 'stream') {
+        await nextTick();
+        setupMarquee();
+    } else {
+        if (marqueeTween) {
+            marqueeTween.pause();
+        }
+    }
+};
+
 const setupMarquee = () => {
-    if (!trackRef.value || normalizedMerches.value.length === 0) {
+    if (
+        activeViewMode.value !== 'stream' ||
+        !trackRef.value ||
+        normalizedMerches.value.length === 0
+    ) {
         return;
     }
 
@@ -266,13 +290,16 @@ const togglePause = () => {
 watch(
     () => props.merches,
     async () => {
-        await nextTick();
-        setupMarquee();
+        if (activeViewMode.value === 'stream') {
+            await nextTick();
+            setupMarquee();
+        }
     },
     { deep: true },
 );
 
 onMounted(async () => {
+    preloadTabImages();
     if (typeof window !== 'undefined') {
         const isDark =
             document.documentElement.classList.contains('dark') ||
@@ -388,13 +415,13 @@ onUnmounted(() => {
 
             <!-- Hero Showcase Graphic (Clean, unencumbered presentation) -->
             <section
-                class="relative mt-3 overflow-hidden rounded-2xl shadow-xl transition-all sm:mt-5 sm:rounded-3xl"
+                class="relative mt-3 overflow-hidden rounded-2xl bg-muted/10 shadow-xl transition-all sm:mt-5 sm:rounded-3xl"
                 :aria-label="`${currentHeroMerch.name} Showcase`"
             >
                 <button
                     type="button"
                     @click="openQuickView(currentHeroMerch)"
-                    class="group/hero block w-full cursor-zoom-in text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    class="group/hero relative block min-h-[260px] w-full cursor-zoom-in text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-[380px] md:min-h-[460px]"
                     :aria-label="`Quick view ${currentHeroMerch.name}`"
                 >
                     <img
@@ -402,6 +429,7 @@ onUnmounted(() => {
                         :alt="`${currentHeroMerch.name} (Showcase View)`"
                         class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
                         loading="eager"
+                        decoding="sync"
                     />
                 </button>
             </section>
@@ -428,8 +456,49 @@ onUnmounted(() => {
                     </span>
                 </div>
 
-                <!-- Desktop Right: Clean external link only (controls removed per request) -->
+                <!-- Desktop Right: View Mode Toggle & Clean external link -->
                 <div class="hidden items-center gap-4 sm:flex">
+                    <div
+                        class="inline-flex items-center rounded-xl border border-border/80 bg-card/80 p-0.5 shadow-xs backdrop-blur-md"
+                        role="group"
+                        aria-label="Layout view mode"
+                    >
+                        <button
+                            type="button"
+                            @click="setViewMode('stream')"
+                            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all"
+                            :class="
+                                activeViewMode === 'stream'
+                                    ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
+                                    : 'font-medium text-muted-foreground hover:text-foreground'
+                            "
+                            aria-label="Switch to stream carousel view"
+                        >
+                            <SlidersHorizontal
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                            <span>Stream</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="setViewMode('bento')"
+                            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all"
+                            :class="
+                                activeViewMode === 'bento'
+                                    ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
+                                    : 'font-medium text-muted-foreground hover:text-foreground'
+                            "
+                            aria-label="Switch to bento grid view"
+                        >
+                            <LayoutGrid
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                            <span>Bento Grid</span>
+                        </button>
+                    </div>
+
                     <a
                         href="https://koamishin.com/"
                         target="_blank"
@@ -441,8 +510,8 @@ onUnmounted(() => {
                     </a>
                 </div>
 
-                <!-- Mobile Right: Simplified single-line control row -->
-                <div class="flex items-center gap-2.5 sm:hidden">
+                <!-- Mobile Right: Pause control and view switcher -->
+                <div class="flex items-center gap-2 sm:hidden">
                     <button
                         v-if="merches.length > 0"
                         @click="togglePause"
@@ -457,6 +526,45 @@ onUnmounted(() => {
                         />
                         <span>{{ isManuallyPaused ? 'Play' : 'Pause' }}</span>
                     </button>
+
+                    <div
+                        class="inline-flex items-center rounded-xl border border-border/80 bg-card/80 p-0.5 shadow-xs"
+                        role="group"
+                        aria-label="Layout view mode"
+                    >
+                        <button
+                            type="button"
+                            @click="setViewMode('stream')"
+                            class="rounded-lg p-1 text-xs transition-all"
+                            :class="
+                                activeViewMode === 'stream'
+                                    ? 'bg-primary text-primary-foreground shadow-xs'
+                                    : 'text-muted-foreground'
+                            "
+                            aria-label="Switch to stream carousel view"
+                        >
+                            <SlidersHorizontal
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                        </button>
+                        <button
+                            type="button"
+                            @click="setViewMode('bento')"
+                            class="rounded-lg p-1 text-xs transition-all"
+                            :class="
+                                activeViewMode === 'bento'
+                                    ? 'bg-primary text-primary-foreground shadow-xs'
+                                    : 'text-muted-foreground'
+                            "
+                            aria-label="Switch to bento grid view"
+                        >
+                            <LayoutGrid
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </div>
 
                     <a
                         href="https://koamishin.com/"
@@ -478,6 +586,7 @@ onUnmounted(() => {
             >
                 <template v-if="merches && merches.length > 0">
                     <div
+                        v-show="activeViewMode === 'stream'"
                         ref="marqueeWrapperRef"
                         class="merch-carousel-wrapper relative overflow-hidden py-6 sm:py-12"
                         @mouseenter="handleMouseEnter"
@@ -791,6 +900,457 @@ onUnmounted(() => {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Mode 2: Bento Grid Layout -->
+                    <div
+                        v-if="activeViewMode === 'bento'"
+                        class="merch-bento-grid py-6 sm:py-10"
+                        aria-label="Bento grid catalog"
+                    >
+                        <div
+                            class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        >
+                            <!-- Card 0: Spotlight Flagship Tile -->
+                            <article
+                                v-if="merches.length > 0"
+                                :key="`bento-spotlight-${merches[0].id}`"
+                                class="bento-card group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:shadow-xl sm:rounded-3xl md:col-span-2 md:row-span-2 lg:col-span-2"
+                            >
+                                <div class="relative flex flex-col">
+                                    <!-- Large Image Container -->
+                                    <button
+                                        type="button"
+                                        @click="openQuickView(merches[0])"
+                                        class="group/img relative aspect-[16/10] w-full cursor-zoom-in overflow-hidden bg-muted/20 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:aspect-[16/9] md:aspect-[16/11]"
+                                        :aria-label="`Quick view ${merches[0].name}`"
+                                    >
+                                        <!-- Ambient color aura -->
+                                        <img
+                                            v-if="getBentoImageUrl(merches[0])"
+                                            :src="getBentoImageUrl(merches[0])"
+                                            aria-hidden="true"
+                                            alt=""
+                                            class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-25 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-40"
+                                        />
+
+                                        <!-- Main Image -->
+                                        <img
+                                            :src="getBentoImageUrl(merches[0])"
+                                            :alt="merches[0].name"
+                                            loading="eager"
+                                            decoding="async"
+                                            class="relative z-10 h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-6"
+                                        />
+
+                                        <!-- Top Left Badge -->
+                                        <div
+                                            class="absolute top-3 left-3 z-20 sm:top-4 sm:left-4"
+                                        >
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary backdrop-blur-md"
+                                            >
+                                                <Sparkles class="h-3 w-3" />
+                                                <span>Flagship Drop</span>
+                                            </span>
+                                        </div>
+
+                                        <!-- Top Right Stock Badge -->
+                                        <div
+                                            class="absolute top-3 right-3 z-20 sm:top-4 sm:right-4"
+                                        >
+                                            <span
+                                                v-if="
+                                                    merches[0].is_out_of_stock
+                                                "
+                                                class="inline-flex items-center rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-500 backdrop-blur-md"
+                                            >
+                                                Out of stock
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    merches[0].stock <= 5
+                                                "
+                                                class="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-500 backdrop-blur-md"
+                                            >
+                                                Only
+                                                {{ merches[0].stock }} left
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-500 backdrop-blur-md"
+                                            >
+                                                {{ merches[0].stock }} in stock
+                                            </span>
+                                        </div>
+
+                                        <!-- Quick View Overlay -->
+                                        <div
+                                            class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
+                                        >
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md"
+                                            >
+                                                <Eye
+                                                    class="h-3.5 w-3.5 text-primary"
+                                                />
+                                                <span>Quick View</span>
+                                            </span>
+                                        </div>
+                                    </button>
+
+                                    <!-- Details -->
+                                    <div class="p-5 sm:p-6">
+                                        <h2
+                                            class="font-sans text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-2xl"
+                                        >
+                                            {{ merches[0].name }}
+                                        </h2>
+                                        <p
+                                            class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                                        >
+                                            {{
+                                                merches[0].description ||
+                                                'Official KOAMISHIN gear with signature styling and premium technical quality.'
+                                            }}
+                                        </p>
+
+                                        <!-- Interactive variant switcher on spotlight card -->
+                                        <div
+                                            v-if="
+                                                merches[0].variants &&
+                                                merches[0].variants.length > 1
+                                            "
+                                            class="mt-4 flex flex-wrap items-center gap-2"
+                                        >
+                                            <span
+                                                class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+                                            >
+                                                Colorway:
+                                            </span>
+                                            <button
+                                                v-for="v in merches[0].variants"
+                                                :key="v.name"
+                                                type="button"
+                                                @click="
+                                                    v.image_url &&
+                                                    setBentoVariant(
+                                                        merches[0].id,
+                                                        v.image_url,
+                                                    )
+                                                "
+                                                class="rounded-lg border px-2.5 py-1 text-xs font-medium transition-all"
+                                                :class="
+                                                    (bentoActiveVariantImages[
+                                                        merches[0].id
+                                                    ] ||
+                                                        merches[0]
+                                                            .image_url) ===
+                                                    v.image_url
+                                                        ? 'border-primary bg-primary font-semibold text-primary-foreground shadow-xs'
+                                                        : 'border-border/70 bg-card/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                                                "
+                                            >
+                                                {{ v.name }}
+                                            </button>
+                                        </div>
+
+                                        <!-- Price Row -->
+                                        <div
+                                            class="mt-4 flex items-baseline justify-between border-t border-border/50 pt-3"
+                                        >
+                                            <div
+                                                class="flex items-baseline gap-2"
+                                            >
+                                                <span
+                                                    class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase sm:text-xs"
+                                                >
+                                                    Price
+                                                </span>
+                                                <span
+                                                    class="font-sans text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                                                >
+                                                    {{
+                                                        merches[0]
+                                                            .formatted_price
+                                                    }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Spotlight Card CTA -->
+                                <div class="p-5 pt-0 sm:p-6 sm:pt-0">
+                                    <a
+                                        :href="
+                                            merches[0].url ||
+                                            'https://koamishin.com/'
+                                        "
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                    >
+                                        <span>Coming Soon...</span>
+                                        <ExternalLink
+                                            class="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                    </a>
+                                </div>
+                            </article>
+
+                            <!-- Remaining Merch Cards (Index 1+) -->
+                            <article
+                                v-for="(merch, index) in merches.slice(1)"
+                                :key="`bento-${merch.id}`"
+                                class="bento-card group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:shadow-xl sm:rounded-3xl"
+                                :class="[
+                                    index === 0
+                                        ? 'col-span-1 md:col-span-2 lg:col-span-2'
+                                        : 'col-span-1',
+                                ]"
+                            >
+                                <div class="flex flex-col">
+                                    <!-- Image Container -->
+                                    <button
+                                        type="button"
+                                        @click="openQuickView(merch)"
+                                        class="group/img relative aspect-video w-full cursor-zoom-in overflow-hidden bg-muted/20 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                        :aria-label="`Quick view ${merch.name}`"
+                                    >
+                                        <!-- Ambient color aura -->
+                                        <img
+                                            v-if="getBentoImageUrl(merch)"
+                                            :src="getBentoImageUrl(merch)"
+                                            aria-hidden="true"
+                                            alt=""
+                                            class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-20 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-35"
+                                        />
+
+                                        <!-- Main image -->
+                                        <img
+                                            :src="getBentoImageUrl(merch)"
+                                            :alt="merch.name"
+                                            loading="lazy"
+                                            decoding="async"
+                                            class="relative z-10 h-full w-full object-contain p-3 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-4"
+                                        />
+
+                                        <!-- Stock Badge -->
+                                        <div
+                                            class="absolute top-3 right-3 z-20"
+                                        >
+                                            <span
+                                                v-if="merch.is_out_of_stock"
+                                                class="inline-flex items-center rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-rose-500 backdrop-blur-md"
+                                            >
+                                                Out of stock
+                                            </span>
+                                            <span
+                                                v-else-if="merch.stock <= 5"
+                                                class="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-500 backdrop-blur-md"
+                                            >
+                                                Only
+                                                {{ merch.stock }} left
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 backdrop-blur-md"
+                                            >
+                                                {{ merch.stock }} in stock
+                                            </span>
+                                        </div>
+
+                                        <!-- Quick View Overlay -->
+                                        <div
+                                            class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
+                                        >
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3 py-1 text-xs font-semibold text-white shadow-xl backdrop-blur-md"
+                                            >
+                                                <Eye
+                                                    class="h-3.5 w-3.5 text-primary"
+                                                />
+                                                <span>Quick View</span>
+                                            </span>
+                                        </div>
+                                    </button>
+
+                                    <!-- Details -->
+                                    <div class="p-4 sm:p-5">
+                                        <h3
+                                            class="line-clamp-1 font-sans text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
+                                        >
+                                            {{ merch.name }}
+                                        </h3>
+                                        <p
+                                            class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                                        >
+                                            {{
+                                                merch.description ||
+                                                'Official KOAMISHIN gear with signature styling and premium quality.'
+                                            }}
+                                        </p>
+
+                                        <!-- Interactive variant switcher if variants exist -->
+                                        <div
+                                            v-if="
+                                                merch.variants &&
+                                                merch.variants.length > 1
+                                            "
+                                            class="mt-2.5 flex flex-wrap items-center gap-1.5"
+                                        >
+                                            <button
+                                                v-for="v in merch.variants"
+                                                :key="v.name"
+                                                type="button"
+                                                @click="
+                                                    v.image_url &&
+                                                    setBentoVariant(
+                                                        merch.id,
+                                                        v.image_url,
+                                                    )
+                                                "
+                                                class="rounded-md border px-2 py-0.5 text-[10px] font-medium transition-all"
+                                                :class="
+                                                    (bentoActiveVariantImages[
+                                                        merch.id
+                                                    ] || merch.image_url) ===
+                                                    v.image_url
+                                                        ? 'border-primary bg-primary font-semibold text-primary-foreground shadow-2xs'
+                                                        : 'border-border/70 bg-card/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                                                "
+                                            >
+                                                {{ v.name }}
+                                            </button>
+                                        </div>
+
+                                        <!-- Price Row -->
+                                        <div
+                                            class="mt-3 flex items-baseline justify-between border-t border-border/50 pt-2.5"
+                                        >
+                                            <div
+                                                class="flex items-baseline gap-2"
+                                            >
+                                                <span
+                                                    class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+                                                >
+                                                    Price
+                                                </span>
+                                                <span
+                                                    class="font-sans text-lg font-bold tracking-tight text-foreground"
+                                                >
+                                                    {{ merch.formatted_price }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CTA Button -->
+                                <div class="p-4 pt-0 sm:p-5 sm:pt-0">
+                                    <a
+                                        :href="
+                                            merch.url ||
+                                            'https://koamishin.com/'
+                                        "
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98]"
+                                    >
+                                        <span>Coming Soon...</span>
+                                        <ExternalLink
+                                            class="h-4 w-4 text-muted-foreground"
+                                            aria-hidden="true"
+                                        />
+                                    </a>
+                                </div>
+                            </article>
+
+                            <!-- Studio Spec Bento Card (Editorial Accent Tile) -->
+                            <article
+                                class="bento-spec-card relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card/95 to-primary/5 p-5 shadow-md backdrop-blur-md transition-all duration-300 hover:border-primary/40 sm:rounded-3xl sm:p-6"
+                            >
+                                <div>
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-primary uppercase"
+                                        >
+                                            <Sparkles class="h-3 w-3" />
+                                            <span>KOAMISHIN // IT</span>
+                                        </span>
+                                        <span
+                                            class="font-mono text-[11px] text-muted-foreground"
+                                        >
+                                            2026 DROP
+                                        </span>
+                                    </div>
+
+                                    <h3
+                                        class="mt-4 font-sans text-base font-bold tracking-tight text-foreground sm:text-lg"
+                                    >
+                                        Technical Apparel & Gear
+                                    </h3>
+                                    <p
+                                        class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                                    >
+                                        Crafted for creators, programmers, and
+                                        campus life. Heavyweight textiles
+                                        engineered with ergonomic contour
+                                        panelling and high-density embroidery.
+                                    </p>
+
+                                    <ul
+                                        class="mt-4 space-y-2 text-xs text-muted-foreground"
+                                    >
+                                        <li class="flex items-center gap-2">
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-primary"
+                                            ></span>
+                                            <span
+                                                >Heavyweight 240–380 GSM fleece
+                                                & cotton</span
+                                            >
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-primary"
+                                            ></span>
+                                            <span
+                                                >Engineered weather-resistant
+                                                details</span
+                                            >
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-primary"
+                                            ></span>
+                                            <span
+                                                >Official distribution via
+                                                koamishin.com</span
+                                            >
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div
+                                    class="mt-6 border-t border-border/40 pt-4"
+                                >
+                                    <a
+                                        href="https://koamishin.com/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground active:scale-[0.98]"
+                                    >
+                                        <span>Visit Official Store</span>
+                                        <ExternalLink class="h-3.5 w-3.5" />
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
                 </template>
 
                 <!-- Empty State -->
@@ -880,5 +1440,33 @@ onUnmounted(() => {
     box-shadow:
         0 25px 50px -12px rgba(0, 0, 0, 0.35),
         0 0 0 1px rgba(0, 168, 135, 0.25) !important;
+}
+
+/* Smooth hero variant transition */
+.hero-fade-enter-active,
+.hero-fade-leave-active {
+    transition:
+        opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hero-fade-enter-from {
+    opacity: 0;
+    transform: scale(0.995);
+}
+.hero-fade-leave-to {
+    opacity: 0;
+    transform: scale(1.005);
+}
+
+.bento-card {
+    will-change: transform, box-shadow;
+    transition:
+        transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.3s ease;
+}
+
+.bento-card:hover {
+    transform: translateY(-4px);
 }
 </style>
