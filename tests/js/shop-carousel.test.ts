@@ -109,20 +109,18 @@ const mountShop = () => {
     });
 };
 
-describe('Shop.vue Infinite Marquee Carousel', () => {
-    it('renders the infinite carousel track with duplicate sets for right-to-left loop', () => {
+describe('Shop.vue Bento Grid Collection', () => {
+    it('renders the Bento Grid layout with merchandise cards and brand spec tile', () => {
         const wrapper = mountShop();
 
-        const track = wrapper.find('.merch-carousel-track');
-        expect(track.exists()).toBe(true);
-        expect(track.classes()).toContain('merch-carousel-track');
+        const grid = wrapper.find('.merch-bento-grid');
+        expect(grid.exists()).toBe(true);
 
-        // Contains cards in the track
-        const cards = wrapper.findAll('.merch-carousel-track .merch-card');
-        // Normalized repeat expands 4 items to at least 8 items * 2 sets = 16 cards
-        expect(cards.length).toBeGreaterThanOrEqual(16);
+        // Contains product cards in the bento grid
+        const cards = wrapper.findAll('.merch-bento-grid .merch-card');
+        expect(cards.length).toBe(sampleMerches.length);
 
-        // First card has title and Shop Now button pointing to koamishin.com
+        // First card (Flagship) has title and Shop Now button pointing to koamishin.com
         const firstCard = cards[0];
         expect(firstCard.text()).toContain(
             'KOAMISHIN Signature Heavyweight Tee',
@@ -133,45 +131,21 @@ describe('Shop.vue Infinite Marquee Carousel', () => {
         const shopNowLink = firstCard.find('a[href^="https://koamishin.com"]');
         expect(shopNowLink.exists()).toBe(true);
         expect(shopNowLink.text()).toContain('Coming Soon...');
+
+        // Contains Atelier brand spec tile
+        expect(wrapper.text()).toContain('KOAMISHIN × BSIT Department');
     });
 
-    it('has clean desktop header with external link and no bulky toggle buttons', () => {
+    it('has clean catalog header with inventory count and external store link', () => {
         const wrapper = mountShop();
 
-        // Desktop controls wrapper has no Carousel/Grid toggle
-        expect(wrapper.find('button[title="Grid view"]').exists()).toBe(false);
-        expect(
-            wrapper.find('button[title="Infinite Carousel view"]').exists(),
-        ).toBe(false);
+        // Catalog header contains item count and clean external link
+        expect(wrapper.text()).toContain('Merchandise Catalog');
+        expect(wrapper.text()).toContain('4 Items');
 
-        // Desktop header contains the clean external link
-        const desktopLink = wrapper.find(
-            '.hidden.sm\\:flex a[href^="https://koamishin.com"]',
-        );
-        expect(desktopLink.exists()).toBe(true);
-        expect(desktopLink.text()).toContain('Visit main store');
-    });
-
-    it('has simplified mobile action bar with single-line pause button', async () => {
-        const wrapper = mountShop();
-
-        const track = wrapper.find('.merch-carousel-track');
-        expect(track.classes()).not.toContain('is-paused');
-
-        // Mobile simplified pause button
-        const mobilePauseBtn = wrapper.find('.sm\\:hidden button');
-        expect(mobilePauseBtn.exists()).toBe(true);
-        expect(mobilePauseBtn.text()).toContain('Pause');
-
-        // Click to pause
-        await mobilePauseBtn.trigger('click');
-        expect(track.classes()).toContain('is-paused');
-        expect(mobilePauseBtn.text()).toContain('Play');
-
-        // Click again to resume
-        await mobilePauseBtn.trigger('click');
-        expect(track.classes()).not.toContain('is-paused');
-        expect(mobilePauseBtn.text()).toContain('Pause');
+        const storeLink = wrapper.find('a[href^="https://koamishin.com"]');
+        expect(storeLink.exists()).toBe(true);
+        expect(wrapper.text()).toContain('Visit main store');
     });
 
     it('opens the Quick-View Lightbox modal when a merchandise card image is clicked', async () => {
@@ -182,7 +156,7 @@ describe('Shop.vue Infinite Marquee Carousel', () => {
 
         // Find the first card's image button trigger
         const firstCardImageBtn = wrapper.find(
-            '.merch-carousel-track .merch-card button.group\\/img',
+            '.merch-bento-grid .merch-card button.group\\/img',
         );
         expect(firstCardImageBtn.exists()).toBe(true);
 
@@ -313,42 +287,5 @@ describe('Shop.vue Infinite Marquee Carousel', () => {
                 .find('section[aria-label*="Showcase"] img')
                 .attributes('src'),
         ).toBe('https://placehold.co/800x800/alabaster-lone.jpg');
-    });
-
-    it('switches between Stream carousel and Bento Grid view modes', async () => {
-        const wrapper = mountShop();
-
-        // Stream mode is active initially
-        expect(wrapper.find('.merch-carousel-wrapper').isVisible()).toBe(true);
-        expect(wrapper.find('.merch-bento-grid').exists()).toBe(false);
-
-        // Find Bento Grid view toggle button
-        const bentoBtn = wrapper.find(
-            'button[aria-label="Switch to bento grid view"]',
-        );
-        expect(bentoBtn.exists()).toBe(true);
-
-        // Click to switch to Bento Grid
-        await bentoBtn.trigger('click');
-
-        // Bento Grid is now rendered
-        expect(wrapper.find('.merch-bento-grid').exists()).toBe(true);
-        const bentoCards = wrapper.findAll('.bento-card');
-        expect(bentoCards.length).toBeGreaterThanOrEqual(sampleMerches.length);
-
-        // First bento card is spotlight piece with title
-        expect(bentoCards[0].text()).toContain(
-            'KOAMISHIN Signature Heavyweight Tee',
-        );
-
-        // Spec card is rendered
-        expect(wrapper.find('.bento-spec-card').exists()).toBe(true);
-
-        // Switch back to Stream
-        const streamBtn = wrapper.find(
-            'button[aria-label="Switch to stream carousel view"]',
-        );
-        await streamBtn.trigger('click');
-        expect(wrapper.find('.merch-bento-grid').exists()).toBe(false);
     });
 });
