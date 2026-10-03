@@ -68,8 +68,48 @@
             }
         </style>
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
-        <meta name="description" content="{{ config('seo.description', '') }}">
+        {{--
+            Link-preview crawlers (Facebook, X, Slack, WhatsApp, LinkedIn,
+            iMessage) never run JavaScript, so the og:/twitter: tags SeoHead
+            writes client-side are invisible to them. Render the same metadata
+            (and the real <title>) from the Inertia page payload server-side so
+            the first HTML response already carries the social card.
+        --}}
+        @php
+            $socialMeta = \App\Support\Seo::forPage($page ?? [], request());
+        @endphp
+
+        @if ($socialMeta !== null)
+            <title inertia>{{ $socialMeta['title'] }} - {{ config('app.name') }}</title>
+            <meta name="description" content="{{ $socialMeta['description'] }}">
+
+            <link rel="canonical" href="{{ $socialMeta['canonical'] }}">
+            <meta name="robots" content="{{ $socialMeta['robots'] }}">
+
+            <meta property="og:type" content="{{ $socialMeta['type'] }}">
+            <meta property="og:site_name" content="{{ $socialMeta['siteName'] }}">
+            <meta property="og:title" content="{{ $socialMeta['title'] }}">
+            <meta property="og:description" content="{{ $socialMeta['description'] }}">
+            <meta property="og:url" content="{{ $socialMeta['canonical'] }}">
+            @if ($socialMeta['image'] !== '')
+                <meta property="og:image" content="{{ $socialMeta['image'] }}">
+                <meta property="og:image:width" content="{{ $socialMeta['imageWidth'] }}">
+                <meta property="og:image:height" content="{{ $socialMeta['imageHeight'] }}">
+                <meta property="og:image:alt" content="{{ $socialMeta['imageAlt'] }}">
+            @endif
+            <meta property="og:locale" content="{{ $socialMeta['locale'] }}">
+
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:title" content="{{ $socialMeta['title'] }}">
+            <meta name="twitter:description" content="{{ $socialMeta['description'] }}">
+            @if ($socialMeta['image'] !== '')
+                <meta name="twitter:image" content="{{ $socialMeta['image'] }}">
+            @endif
+        @else
+            {{-- Private/authenticated page: no social card, fallback title. --}}
+            <title inertia>{{ config('app.name', 'Laravel') }}</title>
+            <meta name="description" content="{{ config('seo.description', '') }}">
+        @endif
 
         {{--
             When a school logo is uploaded (admin → AiSettings → School Branding),
