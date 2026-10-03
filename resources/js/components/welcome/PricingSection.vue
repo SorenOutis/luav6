@@ -115,7 +115,7 @@ const tiers = [
                     {{ tier.audience }}
                 </p>
                 <p
-                    class="mt-6 font-sans text-3xl font-semibold tracking-[-0.035em] tabular-nums text-foreground"
+                    class="mt-6 font-sans text-3xl font-semibold tracking-[-0.035em] text-foreground tabular-nums"
                 >
                     {{ tier.price }}
                 </p>

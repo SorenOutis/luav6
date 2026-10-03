@@ -361,7 +361,7 @@ const webSiteJsonLd = [
                     >
                         <h2
                             id="specifications-heading"
-                            class="font-mono text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                            class="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase"
                         >
                             System Architecture & Specifications
                         </h2>
@@ -387,7 +387,10 @@ const webSiteJsonLd = [
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                Zero-latency auto-grading engine for objective multiple-choice, true/false, and identification items. Instant gradebook tally upon student submission.
+                                Zero-latency auto-grading engine for objective
+                                multiple-choice, true/false, and identification
+                                items. Instant gradebook tally upon student
+                                submission.
                             </dd>
                         </div>
                         <div
@@ -401,7 +404,10 @@ const webSiteJsonLd = [
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                Echo AI only drafts: essay feedback and remediation notes land in a mandatory teacher review queue. Nonce-protected endpoints prevent autonomous writes.
+                                Echo AI only drafts: essay feedback and
+                                remediation notes land in a mandatory teacher
+                                review queue. Nonce-protected endpoints prevent
+                                autonomous writes.
                             </dd>
                         </div>
                         <div
@@ -415,7 +421,10 @@ const webSiteJsonLd = [
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                Section-level competency heatmaps surface understanding gaps before quarterly exams, automatically highlighting targeted reteaching priorities.
+                                Section-level competency heatmaps surface
+                                understanding gaps before quarterly exams,
+                                automatically highlighting targeted reteaching
+                                priorities.
                             </dd>
                         </div>
                         <div
@@ -429,7 +438,10 @@ const webSiteJsonLd = [
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                School-isolated multi-tenant workspaces with strict scoping. Encrypted student records, zero advertising profiling, and complete export authority.
+                                School-isolated multi-tenant workspaces with
+                                strict scoping. Encrypted student records, zero
+                                advertising profiling, and complete export
+                                authority.
                             </dd>
                         </div>
                         <div
@@ -443,7 +455,9 @@ const webSiteJsonLd = [
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                Aligned with DepEd MATATAG formative assessment guidelines, print-ready reviewer generation, and 1-click Form 137 / SF9 grade exports.
+                                Aligned with DepEd MATATAG formative assessment
+                                guidelines, print-ready reviewer generation, and
+                                1-click Form 137 / SF9 grade exports.
                             </dd>
                         </div>
                     </dl>

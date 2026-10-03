@@ -12,7 +12,15 @@ import {
     ShoppingBag,
     Sparkles,
 } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    onUnmounted,
+    ref,
+    watch,
+} from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -32,7 +40,8 @@ const props = withDefaults(
 );
 
 const totalInStock = computed(() => {
-    return props.merches.filter((m) => !m.is_out_of_stock && m.stock > 0).length;
+    return props.merches.filter((m) => !m.is_out_of_stock && m.stock > 0)
+        .length;
 });
 
 const isManuallyPaused = ref(false);
@@ -211,8 +220,12 @@ onUnmounted(() => {
                 >
                     Home
                 </Link>
-                <span class="text-muted-foreground/40" aria-hidden="true">/</span>
-                <span class="font-medium text-foreground" aria-current="page">Shop</span>
+                <span class="text-muted-foreground/40" aria-hidden="true"
+                    >/</span
+                >
+                <span class="font-medium text-foreground" aria-current="page"
+                    >Shop</span
+                >
             </nav>
 
             <!-- Hero Section -->
@@ -239,9 +252,10 @@ onUnmounted(() => {
                         class="mx-auto mt-3 max-w-2xl text-xs leading-relaxed font-normal text-muted-foreground sm:mt-4 sm:text-base"
                     >
                         Original KOAMISHIN apparel, accessories, and classroom
-                        essentials crafted for educators, learners, and builders.
-                        Every purchase directly powers community projects and
-                        learning tools, fulfilled via koamishin.com.
+                        essentials crafted for educators, learners, and
+                        builders. Every purchase directly powers community
+                        projects and learning tools, fulfilled via
+                        koamishin.com.
                     </p>
 
                     <!-- Trust Pill Badges -->
@@ -280,7 +294,8 @@ onUnmounted(() => {
                 <!-- Left: Inventory Count -->
                 <div class="flex items-center gap-2">
                     <span class="font-semibold text-foreground">
-                        {{ merches.length }} {{ merches.length === 1 ? 'Item' : 'Items' }}
+                        {{ merches.length }}
+                        {{ merches.length === 1 ? 'Item' : 'Items' }}
                     </span>
                     <span class="text-muted-foreground/50">·</span>
                     <span class="text-emerald-600 dark:text-emerald-400">
@@ -354,15 +369,17 @@ onUnmounted(() => {
                         <!-- Continuous Hardware-Accelerated GSAP Marquee Track -->
                         <div
                             ref="trackRef"
-                            class="merch-carousel-track flex flex-nowrap w-max"
+                            class="merch-carousel-track flex w-max flex-nowrap"
                             :class="{ 'is-paused': isManuallyPaused }"
                         >
                             <!-- Set 1 (Base set of normalized cards) -->
-                            <div class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6">
+                            <div
+                                class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6"
+                            >
                                 <article
                                     v-for="(merch, index) in normalizedMerches"
                                     :key="`track-1-${merch.id}-${index}`"
-                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] md:w-[420px] lg:w-[440px] sm:rounded-3xl"
+                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] sm:rounded-3xl md:w-[420px] lg:w-[440px]"
                                 >
                                     <!-- Landscape Image Container (16:9 widescreen) -->
                                     <button
@@ -411,7 +428,9 @@ onUnmounted(() => {
                                             <span
                                                 class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
                                             >
-                                                <Eye class="h-3.5 w-3.5 text-primary" />
+                                                <Eye
+                                                    class="h-3.5 w-3.5 text-primary"
+                                                />
                                                 <span>Quick View</span>
                                             </span>
                                         </div>
@@ -441,7 +460,9 @@ onUnmounted(() => {
                                         <div
                                             class="mt-3 flex items-baseline justify-between border-t border-border/50 pt-2.5 sm:mt-4 sm:pt-3"
                                         >
-                                            <div class="flex items-baseline gap-2">
+                                            <div
+                                                class="flex items-baseline gap-2"
+                                            >
                                                 <span
                                                     class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase sm:text-xs"
                                                 >
@@ -479,24 +500,33 @@ onUnmounted(() => {
                                     <!-- Coming Soon CTA Button -->
                                     <div class="p-4 pt-0 sm:p-6 sm:pt-0">
                                         <a
-                                            :href="merch.url || 'https://koamishin.com/'"
+                                            :href="
+                                                merch.url ||
+                                                'https://koamishin.com/'
+                                            "
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:min-h-11 sm:py-2.5"
                                         >
                                             <span>Coming Soon...</span>
-                                            <ExternalLink class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                            <ExternalLink
+                                                class="h-4 w-4 text-muted-foreground"
+                                                aria-hidden="true"
+                                            />
                                         </a>
                                     </div>
                                 </article>
                             </div>
 
                             <!-- Set 2 (Identical duplicate for seamless 50% infinite loop) -->
-                            <div class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6" aria-hidden="true">
+                            <div
+                                class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6"
+                                aria-hidden="true"
+                            >
                                 <article
                                     v-for="(merch, index) in normalizedMerches"
                                     :key="`track-2-${merch.id}-${index}`"
-                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] md:w-[420px] lg:w-[440px] sm:rounded-3xl"
+                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] sm:rounded-3xl md:w-[420px] lg:w-[440px]"
                                 >
                                     <!-- Landscape Image Container (16:9 widescreen) -->
                                     <button
@@ -545,7 +575,9 @@ onUnmounted(() => {
                                             <span
                                                 class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
                                             >
-                                                <Eye class="h-3.5 w-3.5 text-primary" />
+                                                <Eye
+                                                    class="h-3.5 w-3.5 text-primary"
+                                                />
                                                 <span>Quick View</span>
                                             </span>
                                         </div>
@@ -575,7 +607,9 @@ onUnmounted(() => {
                                         <div
                                             class="mt-3 flex items-baseline justify-between border-t border-border/50 pt-2.5 sm:mt-4 sm:pt-3"
                                         >
-                                            <div class="flex items-baseline gap-2">
+                                            <div
+                                                class="flex items-baseline gap-2"
+                                            >
                                                 <span
                                                     class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase sm:text-xs"
                                                 >
@@ -613,13 +647,19 @@ onUnmounted(() => {
                                     <!-- Coming Soon CTA Button -->
                                     <div class="p-4 pt-0 sm:p-6 sm:pt-0">
                                         <a
-                                            :href="merch.url || 'https://koamishin.com/'"
+                                            :href="
+                                                merch.url ||
+                                                'https://koamishin.com/'
+                                            "
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:min-h-11 sm:py-2.5"
                                         >
                                             <span>Coming Soon...</span>
-                                            <ExternalLink class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                            <ExternalLink
+                                                class="h-4 w-4 text-muted-foreground"
+                                                aria-hidden="true"
+                                            />
                                         </a>
                                     </div>
                                 </article>
@@ -686,16 +726,18 @@ onUnmounted(() => {
 /* Card hover zoom and elevate effect */
 .merch-card {
     will-change: transform, box-shadow;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.3s ease;
+    transition:
+        transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.3s ease;
 }
 
 .merch-card:hover {
     transform: scale(1.05) translateY(-8px) !important;
     z-index: 50 !important;
     border-color: rgba(217, 119, 87, 0.6) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35),
-                0 0 0 1px rgba(217, 119, 87, 0.25) !important;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(217, 119, 87, 0.25) !important;
 }
 </style>

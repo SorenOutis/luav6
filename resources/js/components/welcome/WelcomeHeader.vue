@@ -160,7 +160,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <Link
                 href="/shop"
                 class="text-sm font-medium transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                :class="$page.url === '/shop' ? 'font-semibold text-foreground' : 'text-muted-foreground'"
+                :class="
+                    $page.url === '/shop'
+                        ? 'font-semibold text-foreground'
+                        : 'text-muted-foreground'
+                "
             >
                 Shop
             </Link>
@@ -168,7 +172,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <Link
                 href="/about"
                 class="text-sm font-medium transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                :class="$page.url === '/about' ? 'font-semibold text-foreground' : 'text-muted-foreground'"
+                :class="
+                    $page.url === '/about'
+                        ? 'font-semibold text-foreground'
+                        : 'text-muted-foreground'
+                "
             >
                 About
             </Link>
@@ -255,12 +263,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 href="/shop"
                                 @click="closeMobileMenu"
                                 class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/40 hover:text-foreground"
-                                :class="$page.url === '/shop' ? 'bg-muted/40 font-semibold text-foreground' : 'text-muted-foreground'"
+                                :class="
+                                    $page.url === '/shop'
+                                        ? 'bg-muted/40 font-semibold text-foreground'
+                                        : 'text-muted-foreground'
+                                "
                             >
                                 <span>Shop</span>
                                 <span
                                     class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70"
-                                    >Official merchandise, apparel, and goods</span
+                                    >Official merchandise, apparel, and
+                                    goods</span
                                 >
                             </Link>
 
@@ -268,7 +281,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 href="/about"
                                 @click="closeMobileMenu"
                                 class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/40 hover:text-foreground"
-                                :class="$page.url === '/about' ? 'bg-muted/40 font-semibold text-foreground' : 'text-muted-foreground'"
+                                :class="
+                                    $page.url === '/about'
+                                        ? 'bg-muted/40 font-semibold text-foreground'
+                                        : 'text-muted-foreground'
+                                "
                             >
                                 <span>About</span>
                                 <span
