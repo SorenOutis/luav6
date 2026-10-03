@@ -23,6 +23,7 @@ class ShopController extends Controller
                 'currency' => $merch->currency ?? 'PHP',
                 'formatted_price' => $merch->formatted_price,
                 'image_url' => $merch->image_url,
+                'variants' => $merch->formatted_variants,
                 'stock' => (int) $merch->stock,
                 'is_out_of_stock' => $merch->effective_out_of_stock,
                 'stock_label' => $merch->stock_status_label,

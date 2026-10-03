@@ -21,6 +21,7 @@ class Merch extends Model
         'stock',
         'is_out_of_stock',
         'image_path',
+        'variants',
         'button_url',
         'is_active',
         'sort_order',
@@ -37,6 +38,7 @@ class Merch extends Model
             'is_out_of_stock' => 'boolean',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'variants' => 'array',
         ];
     }
 
@@ -46,7 +48,54 @@ class Merch extends Model
     protected function imageUrl(): Attribute
     {
         return Attribute::make(
-            get: fn (): ?string => PublicFileUrl::resolve($this->image_path),
+            get: function (): ?string {
+                if (! empty($this->image_path)) {
+                    return PublicFileUrl::resolve($this->image_path);
+                }
+
+                $variants = $this->formatted_variants;
+                if (! empty($variants[0]['image_url'])) {
+                    return $variants[0]['image_url'];
+                }
+
+                return null;
+            },
+        );
+    }
+
+    /**
+     * @return Attribute<array<int, array{name: string, image_path: string|null, image_url: string|null}>, never>
+     */
+    protected function formattedVariants(): Attribute
+    {
+        return Attribute::make(
+            get: function (): array {
+                if (empty($this->variants) || ! is_array($this->variants)) {
+                    return [];
+                }
+
+                $formatted = [];
+                foreach ($this->variants as $variant) {
+                    if (! is_array($variant)) {
+                        continue;
+                    }
+
+                    $name = trim((string) ($variant['name'] ?? ''));
+                    if ($name === '') {
+                        continue;
+                    }
+
+                    $path = $variant['image_path'] ?? $variant['image_url'] ?? null;
+
+                    $formatted[] = [
+                        'name' => $name,
+                        'image_path' => $path,
+                        'image_url' => PublicFileUrl::resolve($path),
+                    ];
+                }
+
+                return $formatted;
+            },
         );
     }
 

@@ -5,6 +5,7 @@ use App\Filament\Resources\Merches\Pages\EditMerch;
 use App\Filament\Resources\Merches\Pages\ListMerches;
 use App\Models\Merch;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 test('guests can visit the dedicated shop page and see active merches', function () {
@@ -149,4 +150,88 @@ test('admins can edit an existing merch in filament', function () {
 
     expect($merch->refresh()->name)->toBe('Updated Name')
         ->and((float) $merch->price)->toBe(599.00);
+});
+
+test('shop merches return formatted variants with resolved public urls', function () {
+    $this->withoutVite();
+
+    $hoodie = Merch::factory()->create([
+        'name' => 'Techwear Hoodie with Variants',
+        'is_active' => true,
+        'variants' => [
+            [
+                'name' => 'Obsidian',
+                'image_path' => 'images/merch/techwear-hoodie-black.jpg',
+            ],
+            [
+                'name' => 'Alabaster',
+                'image_path' => 'images/merch/techwear-hoodie-white.jpg',
+            ],
+        ],
+    ]);
+
+    $response = $this->get(route('shop'))
+        ->assertOk();
+
+    $merches = collect($response->viewData('page')['props']['merches']);
+    $item = $merches->firstWhere('id', $hoodie->id);
+
+    expect($item)->not->toBeNull()
+        ->and($item['variants'])->toHaveCount(2)
+        ->and($item['variants'][0]['name'])->toBe('Obsidian')
+        ->and($item['variants'][0]['image_url'])->toContain('techwear-hoodie-black.jpg')
+        ->and($item['variants'][1]['name'])->toBe('Alabaster')
+        ->and($item['variants'][1]['image_url'])->toContain('techwear-hoodie-white.jpg');
+});
+
+test('admins can view and edit merch with variants in filament', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('merch/techwear-hoodie-black.jpg', 'content');
+    Storage::disk('public')->put('merch/techwear-hoodie-white.jpg', 'content');
+
+    $admin = User::factory()->superAdmin()->create();
+    $this->actingAs($admin);
+
+    $merch = Merch::factory()->create([
+        'name' => 'KOAMISHIN Variable Jacket',
+        'price' => 2100.00,
+        'variants' => [
+            [
+                'name' => 'Obsidian',
+                'image_path' => 'merch/techwear-hoodie-black.jpg',
+            ],
+            [
+                'name' => 'Alabaster',
+                'image_path' => 'merch/techwear-hoodie-white.jpg',
+            ],
+        ],
+    ]);
+
+    Livewire::test(EditMerch::class, ['record' => $merch->getRouteKey()])
+        ->assertSuccessful()
+        ->assertSchemaExists('form')
+        ->fillForm([
+            'name' => 'Updated Variable Jacket',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($merch->refresh()->name)->toBe('Updated Variable Jacket')
+        ->and($merch->formatted_variants)->toHaveCount(2)
+        ->and($merch->formatted_variants[0]['name'])->toBe('Obsidian')
+        ->and($merch->formatted_variants[1]['name'])->toBe('Alabaster');
+});
+
+test('merch image url falls back to first variant when image_path is null', function () {
+    $merch = Merch::factory()->create([
+        'image_path' => null,
+        'variants' => [
+            [
+                'name' => 'Obsidian',
+                'image_path' => 'images/merch/techwear-hoodie-black.jpg',
+            ],
+        ],
+    ]);
+
+    expect($merch->image_url)->toContain('techwear-hoodie-black.jpg');
 });

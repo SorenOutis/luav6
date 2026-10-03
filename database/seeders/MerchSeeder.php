@@ -4,11 +4,23 @@ namespace Database\Seeders;
 
 use App\Models\Merch;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class MerchSeeder extends Seeder
 {
     public function run(): void
     {
+        $sourceBlack = public_path('images/merch/techwear-hoodie-black.jpg');
+        $sourceWhite = public_path('images/merch/techwear-hoodie-white.jpg');
+
+        if (file_exists($sourceBlack) && ! Storage::disk('public')->exists('merch/techwear-hoodie-black.jpg')) {
+            Storage::disk('public')->put('merch/techwear-hoodie-black.jpg', file_get_contents($sourceBlack));
+        }
+
+        if (file_exists($sourceWhite) && ! Storage::disk('public')->exists('merch/techwear-hoodie-white.jpg')) {
+            Storage::disk('public')->put('merch/techwear-hoodie-white.jpg', file_get_contents($sourceWhite));
+        }
+
         $items = [
             [
                 'name' => 'KOAMISHIN Signature Heavyweight Tee',
@@ -23,13 +35,23 @@ class MerchSeeder extends Seeder
                 'sort_order' => 1,
             ],
             [
-                'name' => 'LSI Developer Minimalist Hoodie',
-                'description' => 'Ultra-soft fleece with double-lined hood, hidden phone pouch, and tonal matte eyelets. Warm and durable.',
-                'price' => 1450.00,
+                'name' => 'KOAMISHIN BSIT Techwear Hoodie',
+                'description' => '380 GSM heavyweight technical fleece with topographic contour sleeves, weatherproof angular pocket, and BSIT signature insignia.',
+                'price' => 1650.00,
                 'currency' => 'PHP',
                 'stock' => 12,
                 'is_out_of_stock' => false,
-                'image_path' => null,
+                'image_path' => 'merch/techwear-hoodie-black.jpg',
+                'variants' => [
+                    [
+                        'name' => 'Obsidian',
+                        'image_path' => 'merch/techwear-hoodie-black.jpg',
+                    ],
+                    [
+                        'name' => 'Alabaster',
+                        'image_path' => 'merch/techwear-hoodie-white.jpg',
+                    ],
+                ],
                 'button_url' => 'https://koamishin.com/',
                 'is_active' => true,
                 'sort_order' => 2,
