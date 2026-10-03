@@ -1619,10 +1619,9 @@
     </style>
 
     <script>
-        const registerAdminAiChat = () => {
-            if (window.Alpine && !window.Alpine._adminAiChatRegistered) {
-                window.Alpine._adminAiChatRegistered = true;
-                window.Alpine.data('adminAiChat', (config) => ({
+        function registerAdminAiChat() {
+            if (!window.Alpine) return;
+            window.Alpine.data('adminAiChat', (config) => ({
                 csrfToken: config.csrfToken,
                 provider: config.provider,
                 providerLabel: config.providerLabel,
@@ -3087,12 +3086,14 @@
                     return text;
                 }
             }));
-        };
+        }
 
         if (window.Alpine) {
             registerAdminAiChat();
         } else {
             document.addEventListener('alpine:init', registerAdminAiChat);
         }
+        document.addEventListener('livewire:init', registerAdminAiChat);
+        document.addEventListener('livewire:navigated', registerAdminAiChat);
     </script>
 </div>
