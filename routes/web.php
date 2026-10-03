@@ -43,6 +43,7 @@ use App\Http\Controllers\ProfileMusicStreamController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TermsController;
@@ -56,6 +57,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
+Route::get('/shop', ShopController::class)->name('shop');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
 Route::get('/privacy', PrivacyPolicyController::class)->name('privacy');
 Route::get('/terms', TermsController::class)->name('terms');

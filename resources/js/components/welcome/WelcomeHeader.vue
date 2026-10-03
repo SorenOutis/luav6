@@ -158,8 +158,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                 {{ item.label }}
             </a>
             <Link
+                href="/shop"
+                class="text-sm font-medium transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                :class="$page.url === '/shop' ? 'font-semibold text-foreground' : 'text-muted-foreground'"
+            >
+                Shop
+            </Link>
+
+            <Link
                 href="/about"
-                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                class="text-sm font-medium transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                :class="$page.url === '/about' ? 'font-semibold text-foreground' : 'text-muted-foreground'"
             >
                 About
             </Link>
@@ -243,9 +252,23 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 >
                             </a>
                             <Link
+                                href="/shop"
+                                @click="closeMobileMenu"
+                                class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/40 hover:text-foreground"
+                                :class="$page.url === '/shop' ? 'bg-muted/40 font-semibold text-foreground' : 'text-muted-foreground'"
+                            >
+                                <span>Shop</span>
+                                <span
+                                    class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70"
+                                    >Official merchandise, apparel, and goods</span
+                                >
+                            </Link>
+
+                            <Link
                                 href="/about"
                                 @click="closeMobileMenu"
-                                class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                                class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/40 hover:text-foreground"
+                                :class="$page.url === '/about' ? 'bg-muted/40 font-semibold text-foreground' : 'text-muted-foreground'"
                             >
                                 <span>About</span>
                                 <span
@@ -293,7 +316,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-if="auth.user">
                 <Link
                     :href="dashboard()"
-                    class="hidden items-center gap-2 rounded-lg bg-foreground/5 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary lg:inline-flex"
+                    class="hidden items-center gap-2 rounded-full border border-border/80 bg-card px-4 py-1.5 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98] lg:inline-flex"
                 >
                     Dashboard
                 </Link>
@@ -301,16 +324,16 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-else>
                 <Link
                     :href="login()"
-                    class="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
+                    class="hidden text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
                 >
                     Login
                 </Link>
                 <Link
                     v-if="canRegister"
                     :href="register()"
-                    class="hidden rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-primary lg:inline-flex"
+                    class="hidden rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] lg:inline-flex"
                 >
-                    Create a free account
+                    Create free account
                 </Link>
             </template>
         </Motion>

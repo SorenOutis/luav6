@@ -59,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
                 'Learning',
                 'Community',
                 'Gamification',
+                'Shop',
                 'Administration',
                 'Settings',
                 'Games',

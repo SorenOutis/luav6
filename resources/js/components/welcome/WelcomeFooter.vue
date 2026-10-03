@@ -82,6 +82,13 @@ const scrollTop = () => {
                     >
                         About LSI
                     </Link>
+                    <Link
+                        href="/shop"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        KOAMISHIN Shop
+                    </Link>
+
                     <a
                         href="mailto:poweredbyrazer022@dccp.edu.ph"
                         class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

@@ -1936,7 +1936,14 @@ html.theme-fade {
    detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
    The attribute is stamped by an inline boot script in app.blade.php so the
    first paint already skips these effects — not only after the JS bundle loads. */
-html[data-low-end] *:not(.wolf-persona, .wolf-persona *) {
+html[data-low-end] *:not(
+    .wolf-persona,
+    .wolf-persona *,
+    .merch-carousel-track,
+    .merch-carousel-track *,
+    .merch-card,
+    .merch-card *
+) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -1946,9 +1953,14 @@ html[data-low-end] *:not(.wolf-persona, .wolf-persona *) {
 }
 
 html[data-low-end] .wolf-persona,
-html[data-low-end] .wolf-persona * {
+html[data-low-end] .wolf-persona *,
+html[data-low-end] .merch-carousel-track,
+html[data-low-end] .merch-carousel-track *,
+html[data-low-end] .merch-card,
+html[data-low-end] .merch-card * {
     animation-duration: revert !important;
     animation-iteration-count: revert !important;
+    transition-duration: revert !important;
 }
 
 html[data-low-end] .backdrop-blur-sm,
