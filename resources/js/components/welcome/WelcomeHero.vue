@@ -87,8 +87,8 @@ const isHeroApproved = ref(true);
             <p
                 class="mt-4 max-w-[42ch] text-base leading-relaxed font-normal text-balance text-muted-foreground sm:text-lg md:text-xl"
             >
-                The fluid formative assessment platform for DepEd classrooms —
-                where student practice directly informs tomorrow’s lesson.
+                The fluid formative assessment platform by KOAMISHIN — where
+                student practice directly informs tomorrow’s lesson.
             </p>
 
             <!-- Bendy Signature Action Row -->
