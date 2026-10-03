@@ -1511,3 +1511,76 @@ it('allows super admin to stage and execute enabling maintenance mode with custo
 
     PlatformMaintenance::disable();
 });
+
+it('safely handles non-existent, numeric, or invalid UUID session query params without 500 errors', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create(['title' => 'Sample Session']);
+
+    $this->actingAs($admin);
+
+    // Deep link with integer ID
+    $this->get("/admin/ai-chat?c={$session->id}")
+        ->assertOk()
+        ->assertSee('Sample Session');
+
+    // Deep link with legacy ?session= integer ID
+    $this->get("/admin/ai-chat?session={$session->id}")
+        ->assertOk()
+        ->assertSee('Sample Session');
+
+    // Deep link with string 'undefined' (common JS error) should not 500
+    $this->get('/admin/ai-chat?c=undefined')
+        ->assertOk();
+
+    // Deep link with string 'null' should not 500
+    $this->get('/admin/ai-chat?c=null')
+        ->assertOk();
+
+    // Deep link with arbitrary non-uuid string should not 500
+    $this->get('/admin/ai-chat?c=non-existent-session')
+        ->assertOk();
+
+    // Deep link with non-existent numeric id should not 500
+    $this->get('/admin/ai-chat?c=99999999')
+        ->assertOk();
+});
+
+it('safely binds route model without Postgres syntax error on invalid or numeric identifiers', function () {
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create(['title' => 'Bind Test']);
+
+    $this->actingAs($admin);
+
+    // Resolves by integer ID cleanly
+    $this->getJson("/api/chats/{$session->id}/messages")
+        ->assertOk()
+        ->assertJsonPath('session.id', $session->id);
+
+    // Non-UUID string returns 404 instead of 500 SQL syntax error
+    $this->getJson('/api/chats/undefined/messages')
+        ->assertNotFound();
+
+    $this->getJson('/api/chats/null/messages')
+        ->assertNotFound();
+
+    $this->getJson('/api/chats/non-existent-uuid-like-string/messages')
+        ->assertNotFound();
+});
+
+it('verifies ChatSession uuid column detection and query compilation', function () {
+    expect(ChatSession::hasUuidColumn())->toBeTrue();
+
+    // Model route key name matches column availability
+    $session = new ChatSession;
+    expect($session->getRouteKeyName())->toBe('uuid');
+
+    // Query builder logic for resolveRouteBindingQuery
+    $query = $session->resolveRouteBindingQuery(ChatSession::query(), 'undefined');
+    // whereRaw('1 = 0') causes 0 results safely
+    expect($query->count())->toBe(0);
+
+    $numericQuery = $session->resolveRouteBindingQuery(ChatSession::query(), '12345');
+    // Should filter on id only, not orWhere uuid
+    expect($numericQuery->toSql())->toContain('"id" = ?')
+        ->and($numericQuery->toSql())->not->toContain('"uuid" = ?');
+});

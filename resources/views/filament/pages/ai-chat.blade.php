@@ -1619,8 +1619,10 @@
     </style>
 
     <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('adminAiChat', (config) => ({
+        const registerAdminAiChat = () => {
+            if (window.Alpine && !window.Alpine._adminAiChatRegistered) {
+                window.Alpine._adminAiChatRegistered = true;
+                window.Alpine.data('adminAiChat', (config) => ({
                 csrfToken: config.csrfToken,
                 provider: config.provider,
                 providerLabel: config.providerLabel,
@@ -1702,7 +1704,7 @@
 
                     if (this.initialActiveSession) {
                         this.selectSession(this.initialActiveSession, false);
-                    } else if (requestedParam) {
+                    } else if (requestedParam && requestedParam !== 'undefined' && requestedParam !== 'null') {
                         this.selectSession(requestedParam, false);
                     }
 
@@ -1711,7 +1713,7 @@
                         const currentParams = new URLSearchParams(window.location.search);
                         const targetUuid = currentParams.get('c') || currentParams.get('session');
 
-                        if (targetUuid) {
+                        if (targetUuid && targetUuid !== 'undefined' && targetUuid !== 'null') {
                             if (this.activeSessionUuid !== targetUuid && String(this.activeSessionId) !== String(targetUuid)) {
                                 this.selectSession(targetUuid, false);
                             }
@@ -1808,6 +1810,7 @@
 
                 async selectSession(target, updateUrl = true) {
                     if (this.isStreaming) return;
+                    if (!target || target === 'undefined' || target === 'null') return;
 
                     let session = null;
                     let identifier = target;
@@ -1819,6 +1822,8 @@
                         session = this.sessions.find(s => s.uuid === target || String(s.id) === String(target));
                         identifier = target;
                     }
+
+                    if (!identifier || identifier === 'undefined' || identifier === 'null') return;
 
                     if (session) {
                         this.activeSessionId = session.id;
@@ -1833,9 +1838,9 @@
                         }
                     }
 
-                    if (updateUrl) {
+                    const urlParam = this.activeSessionUuid || (this.activeSessionId ? String(this.activeSessionId) : null) || (identifier ? String(identifier) : null);
+                    if (updateUrl && urlParam && urlParam !== 'undefined' && urlParam !== 'null') {
                         const url = new URL(window.location.href);
-                        const urlParam = this.activeSessionUuid || this.activeSessionId || identifier;
                         url.searchParams.set('c', urlParam);
                         url.searchParams.delete('session');
                         window.history.pushState({ sessionUuid: urlParam }, '', url.toString());
@@ -3082,6 +3087,12 @@
                     return text;
                 }
             }));
-        });
+        };
+
+        if (window.Alpine) {
+            registerAdminAiChat();
+        } else {
+            document.addEventListener('alpine:init', registerAdminAiChat);
+        }
     </script>
 </div>

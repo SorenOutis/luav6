@@ -32,7 +32,13 @@ return new class extends Migration
             });
 
         if (DB::connection()->getDriverName() === 'pgsql') {
-            DB::statement('CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS chat_sessions_uuid_unique ON chat_sessions (uuid)');
+            try {
+                DB::statement('CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS chat_sessions_uuid_unique ON chat_sessions (uuid)');
+            } catch (Throwable) {
+                if (! $this->indexExists('chat_sessions_uuid_unique')) {
+                    DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS chat_sessions_uuid_unique ON chat_sessions (uuid)');
+                }
+            }
         } elseif (! $this->indexExists('chat_sessions_uuid_unique')) {
             Schema::table('chat_sessions', fn (Blueprint $table) => $table->unique('uuid'));
         }
@@ -41,7 +47,11 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::connection()->getDriverName() === 'pgsql') {
-            DB::statement('DROP INDEX CONCURRENTLY IF EXISTS chat_sessions_uuid_unique');
+            try {
+                DB::statement('DROP INDEX CONCURRENTLY IF EXISTS chat_sessions_uuid_unique');
+            } catch (Throwable) {
+                DB::statement('DROP INDEX IF EXISTS chat_sessions_uuid_unique');
+            }
         } elseif ($this->indexExists('chat_sessions_uuid_unique')) {
             Schema::table('chat_sessions', fn (Blueprint $table) => $table->dropUnique('chat_sessions_uuid_unique'));
         }
@@ -55,7 +65,11 @@ return new class extends Migration
 
     private function indexExists(string $name): bool
     {
-        return collect(Schema::getIndexes('chat_sessions'))
-            ->contains(fn (array $index): bool => strcasecmp((string) ($index['name'] ?? ''), $name) === 0);
+        try {
+            return collect(Schema::getIndexes('chat_sessions'))
+                ->contains(fn (array $index): bool => strcasecmp((string) ($index['name'] ?? ''), $name) === 0);
+        } catch (Throwable) {
+            return false;
+        }
     }
 };
