@@ -9,6 +9,7 @@ use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationItem;
 use Filament\Pages\Page;
+use Illuminate\Support\Str;
 
 class AdminAiChat extends Page
 {
@@ -81,18 +82,25 @@ class AdminAiChat extends Page
             ->get();
 
         if ($requestedParam && $user) {
-            $matchedSession = $sessionsQuery->first(function (ChatSession $s) use ($requestedParam): bool {
-                return $s->uuid === $requestedParam || (string) $s->id === (string) $requestedParam;
+            $hasUuidCol = ChatSession::hasUuidColumn();
+            $isParamUuid = is_string($requestedParam) && Str::isUuid($requestedParam);
+            $isParamNumeric = is_numeric($requestedParam);
+
+            $matchedSession = $sessionsQuery->first(function (ChatSession $s) use ($requestedParam, $hasUuidCol): bool {
+                return (string) $s->id === (string) $requestedParam
+                    || ($hasUuidCol && $s->uuid && $s->uuid === $requestedParam);
             });
 
-            if (! $matchedSession) {
+            if (! $matchedSession && ($isParamNumeric || ($hasUuidCol && $isParamUuid))) {
                 $matchedSession = ChatSession::query()
                     ->where('user_id', $user->id)
-                    ->where(function ($q) use ($requestedParam): void {
-                        if (is_numeric($requestedParam)) {
-                            $q->where('id', (int) $requestedParam)->orWhere('uuid', $requestedParam);
-                        } else {
+                    ->where(function ($q) use ($requestedParam, $isParamNumeric, $hasUuidCol, $isParamUuid): void {
+                        if ($isParamNumeric) {
+                            $q->where('id', (int) $requestedParam);
+                        } elseif ($hasUuidCol && $isParamUuid) {
                             $q->where('uuid', $requestedParam);
+                        } else {
+                            $q->whereRaw('1 = 0');
                         }
                     })
                     ->first();
@@ -108,7 +116,7 @@ class AdminAiChat extends Page
         $initialSessions = $sessionsQuery
             ->map(fn (ChatSession $session) => [
                 'id' => $session->id,
-                'uuid' => $session->uuid,
+                'uuid' => $session->uuid ?? null,
                 'title' => $session->title ?: 'New chat',
                 'updated_at' => $session->updated_at?->toISOString(),
                 'updated_at_human' => $session->updated_at?->diffForHumans(),

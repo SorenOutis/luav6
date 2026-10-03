@@ -6,10 +6,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ChatSession extends Model
 {
+    protected static ?bool $hasUuidColumn = null;
+
     protected $fillable = [
         'uuid',
         'user_id',
@@ -17,10 +20,28 @@ class ChatSession extends Model
         'source',
     ];
 
+    public static function hasUuidColumn(): bool
+    {
+        if (static::$hasUuidColumn === null) {
+            try {
+                static::$hasUuidColumn = Schema::hasTable('chat_sessions') && Schema::hasColumn('chat_sessions', 'uuid');
+            } catch (\Throwable) {
+                static::$hasUuidColumn = true;
+            }
+        }
+
+        return static::$hasUuidColumn;
+    }
+
+    public static function flushUuidColumnCache(): void
+    {
+        static::$hasUuidColumn = null;
+    }
+
     protected static function booted(): void
     {
         static::creating(function (ChatSession $session): void {
-            if (! $session->uuid) {
+            if (static::hasUuidColumn() && ! $session->uuid) {
                 $session->uuid = (string) Str::uuid7();
             }
         });
@@ -45,17 +66,15 @@ class ChatSession extends Model
             return parent::resolveRouteBindingQuery($query, $value, $field);
         }
 
-        if (is_string($value) && Str::isUuid($value)) {
+        if (is_numeric($value)) {
+            return $query->where('id', (int) $value);
+        }
+
+        if (static::hasUuidColumn() && is_string($value) && Str::isUuid($value)) {
             return $query->where('uuid', $value);
         }
 
-        if (is_numeric($value)) {
-            return $query->where(function (Builder $subQuery) use ($value): void {
-                $subQuery->where('id', $value)->orWhere('uuid', $value);
-            });
-        }
-
-        return $query->where('uuid', $value);
+        return $query->whereRaw('1 = 0');
     }
 
     public function user(): BelongsTo

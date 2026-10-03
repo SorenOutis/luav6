@@ -25,7 +25,7 @@ class PendingAiActionController extends Controller
             $raw = (string) $validated['session_id'];
             if (is_numeric($raw)) {
                 $chatSessionId = (int) $raw;
-            } elseif (Str::isUuid($raw)) {
+            } elseif (ChatSession::hasUuidColumn() && Str::isUuid($raw)) {
                 $chatSessionId = ChatSession::where('uuid', $raw)->value('id');
             }
         }
