@@ -132,7 +132,7 @@ const tabs = [
                             <span
                                 class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-0.5 font-mono text-[11px] font-semibold text-[#D97757]"
                             >
-                                DepEd Competency · M8AL-IIa-1
+                                Competency · M8AL-IIa-1
                             </span>
                             <h3
                                 class="mt-2.5 font-sans text-xl font-semibold text-foreground sm:text-2xl"
@@ -368,7 +368,7 @@ const tabs = [
                             <span
                                 class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-0.5 text-[11px] font-semibold text-[#D97757]"
                             >
-                                Davao Central College · Section Diamond
+                                Section Diamond
                             </span>
                             <h3
                                 class="mt-2.5 font-sans text-xl font-semibold text-foreground sm:text-2xl"
@@ -439,7 +439,7 @@ const tabs = [
                             <FileSpreadsheet
                                 class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
                             />
-                            1-Click DepEd Quarterly Form 137 / SF9 grade export
+                            1-Click quarterly grade export
                         </span>
                         <span class="font-semibold text-[#D97757]">
                             Library Hub Reviewer Ready →

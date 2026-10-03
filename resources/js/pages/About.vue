@@ -63,7 +63,7 @@ const faqs = [
     },
     {
         question: 'Who is LSI for?',
-        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. As DepEd emphasizes formative assessment as part of learning, LSI aligns by making the post-assessment workflow — not just the test — the core product.',
+        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. Built for formative assessment as part of learning, LSI makes the post-assessment workflow — not just the test — the core product.',
     },
     {
         question: 'Do teachers stay in control?',
@@ -106,7 +106,6 @@ const seoJsonLd = computed(() => [
         sameAs: [
             'https://github.com/SorenOutis/luav6',
             'https://koamishin.com',
-            'https://dccp.edu.ph',
         ],
         aggregateRating: {
             '@type': 'AggregateRating',
@@ -215,10 +214,6 @@ const revealTransition = (delay = 0) =>
                         class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-muted-foreground"
                     >
                         <span>Founded by Soren Outis</span>
-                        <span class="text-border">·</span>
-                        <span class="font-semibold text-foreground"
-                            >Partnered with Davao Central College (DCCP)</span
-                        >
                     </div>
                 </Motion>
 
@@ -356,7 +351,7 @@ const revealTransition = (delay = 0) =>
                                 }}
                             </p>
                             <p class="text-xs text-muted-foreground">
-                                Section-targeted & DepEd aligned
+                                Section-targeted assessments
                             </p>
                         </div>
 
@@ -600,7 +595,7 @@ const revealTransition = (delay = 0) =>
                 </section>
             </Motion>
 
-            <!-- DCCP Origin Story -->
+            <!-- Origin Story -->
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
                 :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
@@ -624,17 +619,15 @@ const revealTransition = (delay = 0) =>
                                 id="origin-heading"
                                 class="font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
                             >
-                                Born from real classroom observation at Davao
-                                Central College.
+                                Born from real classroom observation.
                             </h2>
                             <p
                                 class="text-sm leading-relaxed text-muted-foreground sm:text-base"
                             >
                                 LSI was not designed in an isolated vacuum. It
-                                was forged directly alongside teachers at Davao
-                                Central College (DCCP) who were drowning in
-                                paper reviewers, manual multiple-choice
-                                tallying, and weekend grading.
+                                was forged directly alongside teachers who were
+                                drowning in paper reviewers, manual
+                                multiple-choice tallying, and weekend grading.
                             </p>
                             <p
                                 class="text-sm leading-relaxed text-muted-foreground sm:text-base"
@@ -684,8 +677,7 @@ const revealTransition = (delay = 0) =>
                                         <p
                                             class="text-xs text-muted-foreground"
                                         >
-                                            Grade 8 Mathematics · Davao Central
-                                            College
+                                            Grade 8 Mathematics
                                         </p>
                                     </div>
                                 </div>
@@ -820,6 +812,51 @@ const revealTransition = (delay = 0) =>
                                 Contact sales
                             </a>
                         </div>
+                    </div>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    aria-label="Built by KOAMISHIN collective"
+                    class="mt-16 text-center sm:mt-20"
+                >
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1 font-mono text-[11px] font-medium text-muted-foreground"
+                    >
+                        Open Source · Laravel 12 · AGPL-3.0
+                    </span>
+                    <p
+                        class="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+                    >
+                        Built by the KOAMISHIN collective — crafted in the open,
+                        free to fork.
+                    </p>
+                    <div
+                        class="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row"
+                    >
+                        <a
+                            href="https://koamishin.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-[0.98]"
+                        >
+                            Explore koamishin.com
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </a>
+                        <a
+                            href="https://github.com/koamishin"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/80 bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60"
+                        >
+                            GitHub collective
+                        </a>
                     </div>
                 </section>
             </Motion>

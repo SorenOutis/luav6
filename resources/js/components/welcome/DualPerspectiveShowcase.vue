@@ -55,7 +55,7 @@ const perspectives = [
         metrics: [
             { label: 'Section data isolation', value: '100%' },
             { label: 'Quarterly grade export', value: '1-click' },
-            { label: 'DepEd compliance', value: 'Formative' },
+            { label: 'Assessment alignment', value: 'Formative' },
         ],
     },
 ];
@@ -367,7 +367,7 @@ const perspectives = [
                                         Maria Santos
                                     </p>
                                     <p class="text-xs text-muted-foreground">
-                                        Section Diamond · Davao Central College
+                                        Section Diamond
                                     </p>
                                 </div>
                             </div>
@@ -555,13 +555,12 @@ const perspectives = [
                                     <p
                                         class="text-xs font-bold text-foreground"
                                     >
-                                        Davao Central College Workspace
+                                        School Workspace
                                     </p>
                                     <p
                                         class="text-[11px] text-muted-foreground"
                                     >
-                                        14 Sections · 520 Enrolled Learners ·
-                                        DepEd Aligned
+                                        14 Sections · 520 Enrolled Learners
                                     </p>
                                 </div>
                             </div>

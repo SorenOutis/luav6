@@ -52,7 +52,7 @@ function toggleApproval() {
                             </span>
                         </div>
                         <p class="text-[11px] text-muted-foreground">
-                            Davao Central College · DepEd K-12 Curriculum
+                            KOAMISHIN
                         </p>
                     </div>
                 </div>
@@ -275,7 +275,7 @@ function toggleApproval() {
                         <span
                             class="rounded-full bg-[#D97757]/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-[#D97757]"
                         >
-                            DepEd M8AL-IIa-1
+                            M8AL-IIa-1
                         </span>
                         <h4
                             class="mt-1.5 text-sm font-semibold text-foreground sm:text-base"

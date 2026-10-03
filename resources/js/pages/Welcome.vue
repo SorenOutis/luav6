@@ -40,7 +40,7 @@ const faqs = [
     },
     {
         question: 'Who is LSI for?',
-        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. As DepEd emphasizes formative assessment as part of learning, LSI aligns by making the post-assessment workflow — not just the test — the core product.',
+        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. Built for formative assessment as part of learning, LSI makes the post-assessment workflow — not just the test — the core product.',
     },
     {
         question: 'Do teachers stay in control?',
@@ -75,7 +75,6 @@ const webSiteJsonLd = [
         sameAs: [
             'https://github.com/SorenOutis/luav6',
             'https://koamishin.com',
-            'https://dccp.edu.ph',
         ],
         aggregateRating: {
             '@type': 'AggregateRating',
@@ -90,7 +89,7 @@ const webSiteJsonLd = [
         reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
         author: {
             '@type': 'Person',
-            name: 'Maria Santos, Grade 8 Math — DCCP',
+            name: 'Maria Santos, Grade 8 Math',
         },
         reviewBody:
             'LSI cut our grading time by half and students finally get feedback while the lesson is still fresh. The Library Hub alone saved us hours of printing reviewers.',
@@ -295,8 +294,7 @@ const webSiteJsonLd = [
                                         Maria Santos
                                     </p>
                                     <p class="text-xs text-muted-foreground">
-                                        Grade 8 Mathematics Head · Davao Central
-                                        College (DCCP)
+                                        Grade 8 Mathematics Head
                                     </p>
                                 </div>
                             </div>
@@ -371,7 +369,7 @@ const webSiteJsonLd = [
                             <span
                                 class="h-1.5 w-1.5 rounded-full bg-emerald-500"
                             ></span>
-                            Production Grade · DepEd Ready
+                            Production Grade · Classroom Ready
                         </span>
                     </div>
 
@@ -450,14 +448,14 @@ const webSiteJsonLd = [
                             <dt
                                 class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
                             >
-                                DepEd Interoperability
+                                School Interoperability
                             </dt>
                             <dd
                                 class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                             >
-                                Aligned with DepEd MATATAG formative assessment
-                                guidelines, print-ready reviewer generation, and
-                                1-click Form 137 / SF9 grade exports.
+                                Aligned with formative assessment best
+                                practices, with print-ready reviewer generation
+                                and 1-click grade exports.
                             </dd>
                         </div>
                     </dl>
@@ -600,6 +598,55 @@ const webSiteJsonLd = [
                                 Sign in
                             </Link>
                         </div>
+                    </div>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="
+                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                "
+                :in-view="
+                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                "
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition(0.28)"
+            >
+                <section
+                    aria-label="Built by KOAMISHIN collective"
+                    class="mt-16 text-center sm:mt-20"
+                >
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1 font-mono text-[11px] font-medium text-muted-foreground"
+                    >
+                        Open Source · Laravel 12 · AGPL-3.0
+                    </span>
+                    <p
+                        class="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+                    >
+                        Built by the KOAMISHIN collective — crafted in the open,
+                        free to fork.
+                    </p>
+                    <div
+                        class="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row"
+                    >
+                        <a
+                            href="https://koamishin.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98]"
+                        >
+                            Explore koamishin.com
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </a>
+                        <a
+                            href="https://github.com/koamishin"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center rounded-full border border-border/80 bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
+                        >
+                            GitHub collective
+                        </a>
                     </div>
                 </section>
             </Motion>
