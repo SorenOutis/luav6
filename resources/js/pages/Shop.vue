@@ -2,13 +2,10 @@
 import { Head, Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import {
-    CheckCircle2,
     ExternalLink,
     Eye,
-    Package,
     Pause,
     Play,
-    ShieldCheck,
     ShoppingBag,
     Sparkles,
 } from 'lucide-vue-next';
@@ -26,7 +23,7 @@ import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import { dashboard, login, register } from '@/routes';
-import type { MerchItem, MerchVariant } from '@/types/merch';
+import type { MerchItem } from '@/types/merch';
 
 const props = withDefaults(
     defineProps<{
@@ -61,12 +58,17 @@ const heroTabs = computed<HeroTab[]>(() => {
     if (list.length === 0) return [];
 
     // 1. If any merch has multiple variants (e.g. Hoodie with [Obsidian, Alabaster]), use its variants
-    const multiVariantMerch = list.find((m) => m.variants && m.variants.length > 1);
+    const multiVariantMerch = list.find(
+        (m) => m.variants && m.variants.length > 1,
+    );
     if (multiVariantMerch && multiVariantMerch.variants) {
         return multiVariantMerch.variants.map((v, idx) => ({
             key: `${multiVariantMerch.id}-variant-${idx}`,
             name: v.name,
-            imageUrl: v.image_url || multiVariantMerch.image_url || '/images/merch/techwear-hoodie-black.jpg',
+            imageUrl:
+                v.image_url ||
+                multiVariantMerch.image_url ||
+                '/images/merch/techwear-hoodie-black.jpg',
             merch: {
                 ...multiVariantMerch,
                 name: `${multiVariantMerch.name} (${v.name})`,
@@ -76,7 +78,9 @@ const heroTabs = computed<HeroTab[]>(() => {
     }
 
     // 2. If merches each have 1 or more variants (e.g. 1 variant uploaded in each merch), aggregate them
-    const merchesWithVariants = list.filter((m) => m.variants && m.variants.length > 0);
+    const merchesWithVariants = list.filter(
+        (m) => m.variants && m.variants.length > 0,
+    );
     if (merchesWithVariants.length > 0) {
         const tabs: HeroTab[] = [];
         for (const m of merchesWithVariants) {
@@ -85,7 +89,10 @@ const heroTabs = computed<HeroTab[]>(() => {
                 tabs.push({
                     key: `${m.id}-variant-${idx}`,
                     name: v.name,
-                    imageUrl: v.image_url || m.image_url || '/images/merch/techwear-hoodie-black.jpg',
+                    imageUrl:
+                        v.image_url ||
+                        m.image_url ||
+                        '/images/merch/techwear-hoodie-black.jpg',
                     merch: {
                         ...m,
                         name: `${m.name} (${v.name})`,
@@ -149,7 +156,10 @@ const currentHeroImageUrl = computed<string>(() => {
     if (activeHeroTab.value?.imageUrl) {
         return activeHeroTab.value.imageUrl;
     }
-    return currentHeroMerch.value.image_url || '/images/merch/techwear-hoodie-black.jpg';
+    return (
+        currentHeroMerch.value.image_url ||
+        '/images/merch/techwear-hoodie-black.jpg'
+    );
 });
 
 const openQuickView = (merch: MerchItem) => {
@@ -272,8 +282,12 @@ onMounted(async () => {
             const preferredMatch = heroTabs.value.findIndex((tab) => {
                 const lower = tab.name.toLowerCase();
                 return isDark
-                    ? lower.includes('obsidian') || lower.includes('black') || lower.includes('dark')
-                    : lower.includes('alabaster') || lower.includes('white') || lower.includes('light');
+                    ? lower.includes('obsidian') ||
+                          lower.includes('black') ||
+                          lower.includes('dark')
+                    : lower.includes('alabaster') ||
+                          lower.includes('white') ||
+                          lower.includes('light');
             });
             if (preferredMatch !== -1) {
                 selectedTabIndex.value = preferredMatch;
@@ -343,7 +357,9 @@ onUnmounted(() => {
                     <span class="text-muted-foreground/40" aria-hidden="true"
                         >/</span
                     >
-                    <span class="font-medium text-foreground" aria-current="page"
+                    <span
+                        class="font-medium text-foreground"
+                        aria-current="page"
                         >Shop</span
                     >
                 </nav>
@@ -359,7 +375,11 @@ onUnmounted(() => {
                         type="button"
                         @click="setTabIndex(idx)"
                         class="rounded-lg px-2.5 py-1 text-xs transition-all"
-                        :class="selectedTabIndex === idx ? 'bg-primary text-primary-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground font-medium'"
+                        :class="
+                            selectedTabIndex === idx
+                                ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
+                                : 'font-medium text-muted-foreground hover:text-foreground'
+                        "
                     >
                         {{ tab.name }}
                     </button>
@@ -368,7 +388,7 @@ onUnmounted(() => {
 
             <!-- Hero Showcase Graphic (Clean, unencumbered presentation) -->
             <section
-                class="relative mt-3 sm:mt-5 overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl transition-all"
+                class="relative mt-3 overflow-hidden rounded-2xl shadow-xl transition-all sm:mt-5 sm:rounded-3xl"
                 :aria-label="`${currentHeroMerch.name} Showcase`"
             >
                 <button
@@ -388,11 +408,13 @@ onUnmounted(() => {
 
             <!-- Store Inventory & Action Bar (Directly Above Carousel) -->
             <div
-                class="mt-12 sm:mt-16 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:text-sm"
+                class="mt-12 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:mt-16 sm:text-sm"
             >
                 <!-- Left: Catalog Heading & Inventory Count -->
                 <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span class="font-sans text-sm sm:text-base font-bold tracking-tight text-foreground">
+                    <span
+                        class="font-sans text-sm font-bold tracking-tight text-foreground sm:text-base"
+                    >
                         Merchandise Catalog
                     </span>
                     <span class="text-muted-foreground/40">·</span>
@@ -824,7 +846,11 @@ onUnmounted(() => {
 <style scoped>
 .shop-root {
     background-image:
-        radial-gradient(ellipse at 50% 0%, rgba(0, 168, 135, 0.07) 0%, transparent 65%),
+        radial-gradient(
+            ellipse at 50% 0%,
+            rgba(0, 168, 135, 0.07) 0%,
+            transparent 65%
+        ),
         repeating-linear-gradient(
             -45deg,
             rgba(0, 168, 135, 0.025) 0px,

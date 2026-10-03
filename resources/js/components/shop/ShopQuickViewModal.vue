@@ -76,7 +76,10 @@ const modalDisplayName = computed(() => {
     if (!props.merch) return '';
     if (props.merch.variants && props.merch.variants.length > 0) {
         const v = props.merch.variants[selectedVariantIndex.value];
-        if (v?.name && !props.merch.name.toLowerCase().includes(v.name.toLowerCase())) {
+        if (
+            v?.name &&
+            !props.merch.name.toLowerCase().includes(v.name.toLowerCase())
+        ) {
             return `${props.merch.name} (${v.name})`;
         }
     }
@@ -351,30 +354,52 @@ onUnmounted(() => {
 
                                 <!-- Variant / Edition Selector -->
                                 <div
-                                    v-if="merch.variants && merch.variants.length > 0"
+                                    v-if="
+                                        merch.variants &&
+                                        merch.variants.length > 0
+                                    "
                                     class="space-y-2 border-t border-border/50 pt-4"
                                 >
-                                    <div class="flex items-center justify-between">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
                                         <h4
                                             class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
                                         >
                                             Edition / Colorway
                                         </h4>
                                         <span
-                                            v-if="merch.variants[selectedVariantIndex]"
+                                            v-if="
+                                                merch.variants[
+                                                    selectedVariantIndex
+                                                ]
+                                            "
                                             class="text-xs font-semibold text-primary"
                                         >
-                                            {{ merch.variants[selectedVariantIndex]?.name }}
+                                            {{
+                                                merch.variants[
+                                                    selectedVariantIndex
+                                                ]?.name
+                                            }}
                                         </span>
                                     </div>
-                                    <div v-if="merch.variants.length > 1" class="flex flex-wrap gap-2">
+                                    <div
+                                        v-if="merch.variants.length > 1"
+                                        class="flex flex-wrap gap-2"
+                                    >
                                         <button
-                                            v-for="(variant, idx) in merch.variants"
+                                            v-for="(
+                                                variant, idx
+                                            ) in merch.variants"
                                             :key="variant.name"
                                             type="button"
                                             @click="selectedVariantIndex = idx"
                                             class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
-                                            :class="selectedVariantIndex === idx ? 'bg-primary text-primary-foreground font-semibold shadow-xs' : 'border border-border/70 bg-card hover:bg-muted/50 text-foreground'"
+                                            :class="
+                                                selectedVariantIndex === idx
+                                                    ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
+                                                    : 'border border-border/70 bg-card text-foreground hover:bg-muted/50'
+                                            "
                                         >
                                             {{ variant.name }}
                                         </button>
