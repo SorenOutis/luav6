@@ -107,7 +107,7 @@ const tiers = [
                     >
                 </div>
                 <h3
-                    class="mt-8 font-serif text-2xl tracking-[-0.03em] text-foreground"
+                    class="mt-8 font-sans text-2xl font-medium tracking-[-0.03em] text-foreground"
                 >
                     {{ tier.name }}
                 </h3>
@@ -115,23 +115,23 @@ const tiers = [
                     {{ tier.audience }}
                 </p>
                 <p
-                    class="mt-7 font-serif text-3xl tracking-[-0.03em] text-foreground"
+                    class="mt-6 font-sans text-3xl font-semibold tracking-[-0.035em] text-foreground tabular-nums"
                 >
                     {{ tier.price }}
                 </p>
                 <p
-                    class="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground"
+                    class="mt-3 max-w-xs text-xs leading-relaxed text-muted-foreground"
                 >
                     {{ tier.description }}
                 </p>
-                <ul class="mt-6 space-y-2 text-sm text-muted-foreground">
+                <ul class="mt-6 space-y-2.5 text-xs text-muted-foreground">
                     <li
                         v-for="feature in tier.features"
                         :key="feature"
                         class="flex items-start gap-2"
                     >
                         <span
-                            class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97757]"
+                            class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97757]"
                         ></span>
                         <span>{{ feature }}</span>
                     </li>
@@ -140,31 +140,31 @@ const tiers = [
                     <Link
                         v-if="tier.price === 'Free' && !auth.user"
                         :href="props.register()"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-4 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
                     >
-                        Create a free account
-                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        Create free account
+                        <ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
                     </Link>
                     <Link
                         v-else-if="tier.price === 'Free'"
                         :href="props.dashboard()"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-4 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
                     >
                         Open dashboard
-                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        <ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
                     </Link>
                     <a
                         v-else
                         href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full px-4 text-xs font-medium shadow-xs transition-all active:scale-[0.98]"
                         :class="
                             tier.featured
-                                ? 'bg-[#D97757] text-white shadow-sm hover:bg-[#D97757]/90'
-                                : 'border border-border text-foreground hover:border-primary hover:bg-primary/5'
+                                ? 'bg-foreground text-background hover:opacity-90'
+                                : 'border border-border/80 bg-card text-foreground hover:border-foreground/30'
                         "
                     >
                         Contact sales
-                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        <ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
                     </a>
                 </div>
             </article>

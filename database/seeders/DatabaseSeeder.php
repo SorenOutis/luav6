@@ -47,5 +47,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CourseSeeder::class);
         $this->call(CourseUserPivotSeeder::class);
         $this->call(LessonProgressSeeder::class);
+        $this->call(MerchSeeder::class);
     }
 }

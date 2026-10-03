@@ -98,7 +98,9 @@ const visibleSessions = computed(() => props.sessions);
                                 <Link
                                     :data-testid="`chat-session-${session.id}`"
                                     :href="
-                                        chatsShow({ session: session.id }).url
+                                        chatsShow({
+                                            session: String(session.id),
+                                        }).url
                                     "
                                 >
                                     <MessageSquareText />

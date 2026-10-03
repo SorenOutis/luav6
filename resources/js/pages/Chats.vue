@@ -732,7 +732,7 @@ const sendMessageNonStreaming = async (userMessage: string) => {
 
     try {
         const response = await axios.post(
-            chatsMessage({ session: activeSession.value!.id }).url,
+            chatsMessage({ session: String(activeSession.value!.id) }).url,
             {
                 message: userMessage,
             },
@@ -797,7 +797,7 @@ const sendMessageNonStreaming = async (userMessage: string) => {
 
 const streamMessage = async (
     userMessage: string,
-    sessionIdValue: number,
+    sessionIdValue: number | string,
     userAttachments: ChatAttachment[],
 ) => {
     // Show Echo's bubble (with typing dots) up front so the reply streams into
@@ -831,7 +831,7 @@ const streamMessage = async (
         if (xsrf) headers['X-XSRF-TOKEN'] = xsrf;
 
         const response = await fetch(
-            chatsStream({ session: sessionIdValue }).url,
+            chatsStream({ session: String(sessionIdValue) }).url,
             {
                 method: 'POST',
                 headers,
@@ -1065,7 +1065,7 @@ const createNewChat = async () => {
     try {
         const response = await axios.post(chatsStore().url);
         const sessionId = (response.data.session as { id: number }).id;
-        router.visit(chatsShow({ session: sessionId }).url, {
+        router.visit(chatsShow({ session: String(sessionId) }).url, {
             preserveScroll: true,
         });
     } catch (error) {
@@ -1087,7 +1087,7 @@ const confirmDelete = async () => {
     isDeletingSession.value = true;
 
     try {
-        await axios.delete(chatsDestroy({ session: target.id }).url);
+        await axios.delete(chatsDestroy({ session: String(target.id) }).url);
 
         sessions.value = sessions.value.filter((s) => s.id !== target.id);
         sessionToDelete.value = null;
@@ -1884,7 +1884,7 @@ onBeforeUnmount(() => {
                     class="sheet-item flex items-center gap-1"
                 >
                     <Link
-                        :href="chatsShow({ session: session.id }).url"
+                        :href="chatsShow({ session: String(session.id) }).url"
                         class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
                         :class="
                             activeSession?.id === session.id

@@ -341,6 +341,129 @@ const webSiteJsonLd = [
                 </section>
             </Motion>
 
+            <!-- Bendy-Style Architecture & Workflow Specifications -->
+            <Motion
+                :initial="
+                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                "
+                :in-view="
+                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                "
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition(0.145)"
+            >
+                <section
+                    class="surface-card my-12 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 shadow-xs sm:my-16 sm:p-8 lg:p-10"
+                    aria-labelledby="specifications-heading"
+                >
+                    <div
+                        class="mb-6 flex items-center justify-between border-b border-border/60 pb-4"
+                    >
+                        <h2
+                            id="specifications-heading"
+                            class="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                        >
+                            System Architecture & Specifications
+                        </h2>
+                        <span
+                            class="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
+                        >
+                            <span
+                                class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                            ></span>
+                            Production Grade · DepEd Ready
+                        </span>
+                    </div>
+
+                    <dl class="divide-y divide-border/60 font-sans">
+                        <div
+                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                            >
+                                Instant Scoring
+                            </dt>
+                            <dd
+                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                Zero-latency auto-grading engine for objective
+                                multiple-choice, true/false, and identification
+                                items. Instant gradebook tally upon student
+                                submission.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                            >
+                                Teacher Review Boundary
+                            </dt>
+                            <dd
+                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                Echo AI only drafts: essay feedback and
+                                remediation notes land in a mandatory teacher
+                                review queue. Nonce-protected endpoints prevent
+                                autonomous writes.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                            >
+                                Mastery Analytics
+                            </dt>
+                            <dd
+                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                Section-level competency heatmaps surface
+                                understanding gaps before quarterly exams,
+                                automatically highlighting targeted reteaching
+                                priorities.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                            >
+                                Data Sovereignty
+                            </dt>
+                            <dd
+                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                School-isolated multi-tenant workspaces with
+                                strict scoping. Encrypted student records, zero
+                                advertising profiling, and complete export
+                                authority.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                            >
+                                DepEd Interoperability
+                            </dt>
+                            <dd
+                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                Aligned with DepEd MATATAG formative assessment
+                                guidelines, print-ready reviewer generation, and
+                                1-click Form 137 / SF9 grade exports.
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </Motion>
+
             <Motion
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
