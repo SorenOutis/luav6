@@ -48,6 +48,16 @@
                     </button>
                 </div>
 
+                @if (\Filament\Facades\Filament::auth()->user()?->isSuperAdmin())
+                    <div class="mb-2.5 rounded-xl border border-zinc-200/90 bg-white p-3 text-xs shadow-2xs dark:border-zinc-800 dark:bg-zinc-900" data-ai-app-install>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Standalone App</span>
+                            <button type="button" data-ai-app-install-button class="rounded-md bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400">Install AI Assistant</button>
+                        </div>
+                        <p data-ai-app-install-help class="mt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400" role="status" hidden></p>
+                    </div>
+                @endif
+
                 {{-- Search Filter --}}
                 <div class="relative mb-2.5">
                     <input
