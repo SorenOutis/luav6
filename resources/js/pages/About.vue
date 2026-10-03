@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { ArrowRight, BarChart3, CheckCircle2 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { ArrowRight } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
@@ -28,6 +28,26 @@ const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const reduceMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
+
+const now = ref('');
+let clock: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    const tick = () => {
+        now.value = new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+    };
+    tick();
+    clock = setInterval(tick, 30000);
+});
+
+onUnmounted(() => {
+    if (clock !== undefined) {
+        clearInterval(clock);
+    }
+});
 
 const commitments = [
     {
@@ -178,130 +198,74 @@ const revealTransition = (delay = 0) =>
         />
 
         <main
-            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
+            class="mx-auto flex max-w-[680px] flex-col px-6 pt-16 pb-24 sm:pt-24 sm:pb-32"
         >
-            <!-- Hero Manifesto -->
-            <section
-                class="grid items-center gap-12 border-b border-border/70 pb-16 sm:gap-16 sm:pb-24 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
-                aria-labelledby="about-heading"
+            <!-- Headline + buy -->
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 20 }"
+                :animate="{ opacity: 1, y: 0 }"
+                :transition="revealTransition()"
             >
-                <Motion
-                    :initial="reduceMotion ? false : { opacity: 0, y: 20 }"
-                    :animate="{ opacity: 1, y: 0 }"
-                    :transition="revealTransition()"
-                    class="max-w-2xl"
+                <section
+                    class="pb-14 text-center sm:pb-20"
+                    aria-labelledby="about-heading"
                 >
                     <p
-                        class="mb-6 text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+                        v-if="now"
+                        class="inline-flex items-center gap-2 text-sm text-muted-foreground"
                     >
-                        The Koamishin Manifesto
+                        <span
+                            class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                            aria-hidden="true"
+                        ></span>
+                        {{ now }} — feedback going out in classrooms right now.
                     </p>
                     <h1
                         id="about-heading"
-                        class="font-serif text-4xl leading-[0.98] tracking-[-0.05em] text-foreground sm:text-6xl lg:text-[5.2rem]"
+                        class="mx-auto mt-5 max-w-2xl text-5xl leading-[1.05] font-semibold tracking-[-0.03em] text-balance text-foreground sm:text-6xl"
                     >
                         We build for the day after the test.
                     </h1>
                     <p
-                        class="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+                        class="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-balance text-muted-foreground"
                     >
-                        Most educational software stops when a grade is
-                        recorded. LSI was built to solve what happens next:
-                        surfacing patterns of student understanding and making
-                        tomorrow's lesson immediately clear.
+                        Grades look backward. LSI looks at tomorrow — every
+                        assessment becomes the next lesson.
                     </p>
                     <div
-                        class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-muted-foreground"
+                        class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
                     >
-                        <span>Founded by Soren Outis</span>
-                    </div>
-                </Motion>
-
-                <!-- Living Artifact: The Core Purpose -->
-                <Motion
-                    :initial="reduceMotion ? false : { opacity: 0, y: 20 }"
-                    :animate="{ opacity: 1, y: 0 }"
-                    :transition="revealTransition(0.08)"
-                    class="flex justify-center lg:justify-end"
-                >
-                    <div
-                        class="surface-card relative w-full max-w-[460px] rounded-2xl border border-border/80 bg-card p-6 shadow-xl sm:p-8"
-                    >
-                        <div
-                            class="flex items-center justify-between border-b border-border/60 pb-4"
+                        <Link
+                            v-if="$page.props.auth?.user"
+                            :href="dashboard().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-[15px] font-medium text-background transition-all hover:opacity-90 active:scale-[0.98]"
                         >
-                            <span
-                                class="text-xs font-bold tracking-wider text-[#D97757] uppercase"
-                            >
-                                Two Questions That Matter
-                            </span>
-                            <span
-                                class="rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase"
-                            >
-                                Purpose
-                            </span>
-                        </div>
-
-                        <div class="mt-6 space-y-6">
-                            <div class="flex gap-4">
-                                <div
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#D97757]/10 text-[#D97757]"
-                                >
-                                    <BarChart3 class="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p
-                                        class="font-serif text-lg font-semibold text-foreground"
-                                    >
-                                        What did learners actually understand?
-                                    </p>
-                                    <p
-                                        class="mt-1 text-xs leading-relaxed text-muted-foreground"
-                                    >
-                                        Not just who passed or failed, but which
-                                        exact concepts stuck and where the
-                                        breakdown occurred.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-4">
-                                <div
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                >
-                                    <CheckCircle2 class="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p
-                                        class="font-serif text-lg font-semibold text-foreground"
-                                    >
-                                        What should we teach tomorrow?
-                                    </p>
-                                    <p
-                                        class="mt-1 text-xs leading-relaxed text-muted-foreground"
-                                    >
-                                        Translating assessment evidence into
-                                        targeted exercises, warm-up reteaches,
-                                        and actionable practice.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            class="mt-8 rounded-xl border border-border/60 bg-secondary/30 p-3.5 text-xs text-muted-foreground"
+                            Open dashboard
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            v-else-if="props.canRegister"
+                            :href="register().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-[15px] font-medium text-background transition-all hover:opacity-90 active:scale-[0.98]"
                         >
-                            <p>
-                                <strong>Assessment is not the verdict.</strong>
-                                It is simply the diagnostic starting point of
-                                the learning conversation.
-                            </p>
-                        </div>
+                            Get LSI free
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            v-if="!$page.props.auth?.user"
+                            :href="login().url"
+                            class="text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                            Log in
+                        </Link>
                     </div>
-                </Motion>
-            </section>
+                    <p class="mt-4 text-sm text-muted-foreground">
+                        Free for a classroom. No credit card, no setup call.
+                    </p>
+                </section>
+            </Motion>
 
-            <!-- Real Platform Metrics (Using backend props) -->
+            <!-- Before LSI -->
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
                 :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
@@ -309,20 +273,120 @@ const revealTransition = (delay = 0) =>
                 :transition="revealTransition()"
             >
                 <section
-                    class="border-b border-border/70 py-14 sm:py-18"
-                    aria-label="Platform impact metrics"
+                    id="page-problem"
+                    class="scroll-mt-24 border-t border-border/60 py-12"
+                    aria-labelledby="paradigm-heading"
                 >
-                    <div
-                        class="grid grid-cols-2 gap-8 lg:grid-cols-4 lg:gap-12"
+                    <h2
+                        id="paradigm-heading"
+                        class="text-xl font-semibold tracking-tight text-foreground"
                     >
-                        <div class="space-y-1">
-                            <p
-                                class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                        Before LSI.
+                    </h2>
+                    <div
+                        class="mt-4 space-y-3 text-[15px] text-muted-foreground"
+                    >
+                        <p>Papers graded weeks after the class moved on.</p>
+                        <p>A letter grade. No map for getting better.</p>
+                        <p>
+                            Weekends lost to the same remarks, hundreds of
+                            times.
+                        </p>
+                    </div>
+                    <p class="mt-6 text-[17px] font-medium text-foreground">
+                        The grade was the end of the story. We thought it should
+                        be the start of the next one.
+                    </p>
+                </section>
+            </Motion>
+
+            <!-- How it works -->
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    id="page-compass"
+                    class="scroll-mt-24 border-t border-border/60 py-12"
+                    aria-labelledby="compass-heading"
+                >
+                    <h2
+                        id="compass-heading"
+                        class="text-xl font-semibold tracking-tight text-foreground"
+                    >
+                        How it works.
+                    </h2>
+                    <dl
+                        class="mt-6 divide-y divide-border/60 border-y border-border/60"
+                    >
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
                             >
-                                Submissions Evaluated
-                            </p>
+                                Assess
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                Students respond. Objective items grade
+                                themselves in seconds.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                Review
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                AI drafts essay feedback. Teachers approve every
+                                word in one click. Nothing reaches a learner
+                                unreviewed, ever.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                Reteach
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                Class-wide patterns queue tomorrow's review
+                                before the next bell rings.
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </Motion>
+
+            <!-- Numbers -->
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    id="page-figures"
+                    class="scroll-mt-24 border-t border-border/60 py-12"
+                    aria-label="LSI in numbers"
+                >
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-8">
+                        <div>
                             <p
-                                class="font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
+                                class="text-4xl font-semibold tracking-tight text-foreground"
                             >
                                 {{
                                     props.totalSubmissions
@@ -330,19 +394,13 @@ const revealTransition = (delay = 0) =>
                                         : '14,200+'
                                 }}
                             </p>
-                            <p class="text-xs text-muted-foreground">
-                                Across formative exams & assignments
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                submissions graded, and counting.
                             </p>
                         </div>
-
-                        <div class="space-y-1">
+                        <div>
                             <p
-                                class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                            >
-                                Published Assessments
-                            </p>
-                            <p
-                                class="font-serif text-3xl font-bold tracking-tight text-[#D97757] sm:text-4xl"
+                                class="text-4xl font-semibold tracking-tight text-foreground"
                             >
                                 {{
                                     props.totalExams
@@ -350,19 +408,13 @@ const revealTransition = (delay = 0) =>
                                         : '180+'
                                 }}
                             </p>
-                            <p class="text-xs text-muted-foreground">
-                                Section-targeted assessments
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                assessments published.
                             </p>
                         </div>
-
-                        <div class="space-y-1">
+                        <div>
                             <p
-                                class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                            >
-                                Active Learners & Teachers
-                            </p>
-                            <p
-                                class="font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
+                                class="text-4xl font-semibold tracking-tight text-foreground"
                             >
                                 {{
                                     props.totalUsers
@@ -370,31 +422,25 @@ const revealTransition = (delay = 0) =>
                                         : '520+'
                                 }}
                             </p>
-                            <p class="text-xs text-muted-foreground">
-                                Daily active in tenant workspaces
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                learners & teachers active daily.
                             </p>
                         </div>
-
-                        <div class="space-y-1">
+                        <div>
                             <p
-                                class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                            >
-                                Grading Time Reduced
-                            </p>
-                            <p
-                                class="font-serif text-3xl font-bold tracking-tight text-emerald-600 sm:text-4xl dark:text-emerald-400"
+                                class="text-4xl font-semibold tracking-tight text-foreground"
                             >
                                 50%+
                             </p>
-                            <p class="text-xs text-muted-foreground">
-                                Same-day feedback turnaround
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                grading time gone. Same-day feedback.
                             </p>
                         </div>
                     </div>
                 </section>
             </Motion>
 
-            <!-- The Paradigm Shift: Audit vs. Compass -->
+            <!-- Origin -->
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
                 :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
@@ -402,292 +448,158 @@ const revealTransition = (delay = 0) =>
                 :transition="revealTransition()"
             >
                 <section
-                    class="border-b border-border/70 py-16 sm:py-24"
-                    aria-labelledby="paradigm-heading"
-                >
-                    <div class="text-center">
-                        <p
-                            class="text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
-                        >
-                            The Paradigm Shift
-                        </p>
-                        <h2
-                            id="paradigm-heading"
-                            class="mt-3 font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl lg:text-5xl"
-                        >
-                            The gap between testing and teaching.
-                        </h2>
-                        <p
-                            class="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base"
-                        >
-                            For decades, school software treated assessments
-                            like an autopsy. LSI redesigns the experience around
-                            the human loop.
-                        </p>
-                    </div>
-
-                    <div class="mt-12 grid gap-6 md:grid-cols-2 lg:gap-10">
-                        <!-- Old Way Card -->
-                        <div
-                            class="rounded-2xl border border-border/70 bg-secondary/20 p-6 sm:p-8"
-                        >
-                            <span
-                                class="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-                            >
-                                The Traditional Model (The Audit)
-                            </span>
-                            <h3
-                                class="mt-4 font-serif text-2xl font-semibold text-foreground"
-                            >
-                                Stale grades and disconnected teaching.
-                            </h3>
-                            <ul
-                                class="mt-6 space-y-4 text-sm text-muted-foreground"
-                            >
-                                <li class="flex items-start gap-3">
-                                    <span class="mt-1 font-bold text-red-500"
-                                        >✕</span
-                                    >
-                                    <span
-                                        >Papers are graded weeks later, after
-                                        the class has already moved on.</span
-                                    >
-                                </li>
-                                <li class="flex items-start gap-3">
-                                    <span class="mt-1 font-bold text-red-500"
-                                        >✕</span
-                                    >
-                                    <span
-                                        >Students receive only a cold letter
-                                        grade with no actionable guidance on how
-                                        to improve.</span
-                                    >
-                                </li>
-                                <li class="flex items-start gap-3">
-                                    <span class="mt-1 font-bold text-red-500"
-                                        >✕</span
-                                    >
-                                    <span
-                                        >Teachers spend weekends manually
-                                        writing repetitive remarks on hundreds
-                                        of sheets.</span
-                                    >
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- LSI Way Card -->
-                        <div
-                            class="surface-card rounded-2xl border border-[#D97757]/40 bg-card p-6 shadow-md sm:p-8"
-                        >
-                            <span
-                                class="text-xs font-bold tracking-wider text-[#D97757] uppercase"
-                            >
-                                The LSI Model (The Compass)
-                            </span>
-                            <h3
-                                class="mt-4 font-serif text-2xl font-semibold text-foreground"
-                            >
-                                Immediate insight and purposeful follow-up.
-                            </h3>
-                            <ul class="mt-6 space-y-4 text-sm text-foreground">
-                                <li class="flex items-start gap-3">
-                                    <CheckCircle2
-                                        class="mt-1 h-4 w-4 shrink-0 text-[#D97757]"
-                                    />
-                                    <span
-                                        >AI auto-grades objective items and
-                                        drafts feedback for essay responses in
-                                        seconds.</span
-                                    >
-                                </li>
-                                <li class="flex items-start gap-3">
-                                    <CheckCircle2
-                                        class="mt-1 h-4 w-4 shrink-0 text-[#D97757]"
-                                    />
-                                    <span
-                                        >Teachers approve or adjust every
-                                        suggestion in a single click, keeping
-                                        full instructional control.</span
-                                    >
-                                </li>
-                                <li class="flex items-start gap-3">
-                                    <CheckCircle2
-                                        class="mt-1 h-4 w-4 shrink-0 text-[#D97757]"
-                                    />
-                                    <span
-                                        >Class-wide patterns automatically queue
-                                        tomorrow's targeted review before the
-                                        next bell rings.</span
-                                    >
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-            </Motion>
-
-            <!-- Engineering Commitments -->
-            <Motion
-                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition()"
-            >
-                <section
-                    class="border-b border-border/70 py-16 sm:py-24"
-                    aria-labelledby="commitments-heading"
-                >
-                    <div class="text-center">
-                        <p
-                            class="text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
-                        >
-                            Architectural Ethics
-                        </p>
-                        <h2
-                            id="commitments-heading"
-                            class="mt-3 font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
-                        >
-                            Three non-negotiable engineering principles.
-                        </h2>
-                    </div>
-
-                    <div
-                        class="mt-12 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
-                    >
-                        <article
-                            v-for="c in commitments"
-                            :key="c.number"
-                            class="flex flex-col justify-between p-6 transition-colors hover:bg-secondary/15 sm:p-8 lg:p-10"
-                        >
-                            <div>
-                                <div class="flex items-center justify-between">
-                                    <span
-                                        class="font-mono text-sm font-semibold text-[#D97757]"
-                                    >
-                                        {{ c.number }}
-                                    </span>
-                                    <span
-                                        class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
-                                    >
-                                        {{ c.tag }}
-                                    </span>
-                                </div>
-
-                                <h3
-                                    class="mt-6 font-serif text-2xl font-semibold text-foreground"
-                                >
-                                    {{ c.title }}
-                                </h3>
-                                <p
-                                    class="mt-1 text-xs font-medium text-[#D97757]"
-                                >
-                                    {{ c.subtitle }}
-                                </p>
-                                <p
-                                    class="mt-4 text-sm leading-relaxed text-muted-foreground"
-                                >
-                                    {{ c.description }}
-                                </p>
-                            </div>
-                        </article>
-                    </div>
-                </section>
-            </Motion>
-
-            <!-- Origin Story -->
-            <Motion
-                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition()"
-            >
-                <section
-                    class="border-b border-border/70 py-16 sm:py-24"
+                    id="page-classroom"
+                    class="scroll-mt-24 border-t border-border/60 py-12"
                     aria-labelledby="origin-heading"
                 >
-                    <div
-                        class="grid items-center gap-10 lg:grid-cols-12 lg:gap-14"
+                    <h2
+                        id="origin-heading"
+                        class="text-xl font-semibold tracking-tight text-foreground"
                     >
-                        <div class="space-y-5 lg:col-span-7">
-                            <p
-                                class="text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
-                            >
-                                Grounded in Practice
-                            </p>
-                            <h2
-                                id="origin-heading"
-                                class="font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
-                            >
-                                Born from real classroom observation.
-                            </h2>
-                            <p
-                                class="text-sm leading-relaxed text-muted-foreground sm:text-base"
-                            >
-                                LSI was not designed in an isolated vacuum. It
-                                was forged directly alongside teachers who were
-                                drowning in paper reviewers, manual
-                                multiple-choice tallying, and weekend grading.
-                            </p>
-                            <p
-                                class="text-sm leading-relaxed text-muted-foreground sm:text-base"
-                            >
-                                When we replaced static paper printing with the
-                                digital <strong>Library Hub</strong> and
-                                introduced
-                                <strong>teacher-supervised feedback</strong>,
-                                teachers regained over 10 hours every week. More
-                                importantly, students began asking for their
-                                next quiz because feedback arrived while their
-                                curiosity was still alive.
-                            </p>
-                        </div>
-
-                        <div class="lg:col-span-5">
-                            <div
-                                class="surface-card rounded-2xl border border-border/80 bg-card p-6 shadow-md sm:p-8"
-                            >
-                                <p
-                                    class="text-xs font-bold tracking-wider text-[#D97757] uppercase"
-                                >
-                                    Teacher Perspective
-                                </p>
-                                <blockquote
-                                    class="mt-4 font-serif text-lg leading-relaxed text-foreground italic"
-                                >
-                                    “LSI cut our grading time by half and
-                                    students finally get feedback while the
-                                    lesson is still fresh. The Library Hub alone
-                                    saved us hours of printing reviewers.”
-                                </blockquote>
-                                <div
-                                    class="mt-6 flex items-center gap-3 border-t border-border/60 pt-4"
-                                >
-                                    <div
-                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-[#D97757]/15 font-bold text-[#D97757]"
-                                    >
-                                        MS
-                                    </div>
-                                    <div>
-                                        <p
-                                            class="text-sm font-semibold text-foreground"
-                                        >
-                                            Maria Santos
-                                        </p>
-                                        <p
-                                            class="text-xs text-muted-foreground"
-                                        >
-                                            Grade 8 Mathematics
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        Made in classrooms, not meeting rooms.
+                    </h2>
+                    <div
+                        class="mt-4 space-y-4 text-[15px] leading-relaxed text-muted-foreground"
+                    >
+                        <p>
+                            LSI was forged alongside teachers drowning in paper
+                            reviewers, manual tallying, and weekend grading. We
+                            watched where the hours went — then built the thing
+                            that gave them back.
+                        </p>
+                        <p>
+                            Teachers regained 10+ hours a week. Students started
+                            asking for their next quiz.
+                        </p>
                     </div>
+                    <figure class="mt-10 text-center">
+                        <blockquote
+                            class="text-2xl leading-snug font-medium tracking-[-0.01em] text-balance text-foreground"
+                        >
+                            “LSI cut our grading time by half and students
+                            finally get feedback while the lesson is still
+                            fresh.”
+                        </blockquote>
+                        <figcaption class="mt-3 text-sm text-muted-foreground">
+                            Maria Santos · Grade 8 Mathematics
+                        </figcaption>
+                    </figure>
                 </section>
             </Motion>
 
-            <!-- FAQ Accordion -->
+            <!-- Who it's for -->
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    class="border-t border-border/60 py-12"
+                    aria-label="Requirements"
+                >
+                    <h2
+                        class="text-xl font-semibold tracking-tight text-foreground"
+                    >
+                        Requirements.
+                    </h2>
+                    <dl
+                        class="mt-6 divide-y divide-border/60 border-y border-border/60"
+                    >
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                Teachers
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                A class and five minutes. Exams, auto-grading,
+                                and a review queue included.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                Learners
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                A browser. Feedback in hours, streaks and XP
+                                included.
+                            </dd>
+                        </div>
+                        <div
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                Schools
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                One workspace per school. Isolated, audited,
+                                exportable.
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </Motion>
+
+            <!-- Private by design -->
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    id="page-editorial"
+                    class="scroll-mt-24 border-t border-border/60 py-12"
+                    aria-labelledby="commitments-heading"
+                >
+                    <h2
+                        id="commitments-heading"
+                        class="text-xl font-semibold tracking-tight text-foreground"
+                    >
+                        Private by design.
+                    </h2>
+                    <dl
+                        class="mt-6 divide-y divide-border/60 border-y border-border/60"
+                    >
+                        <div
+                            v-for="c in commitments"
+                            :key="c.number"
+                            class="grid gap-1 py-5 sm:grid-cols-[140px_1fr] sm:gap-6"
+                        >
+                            <dt
+                                class="text-[15px] font-semibold text-foreground"
+                            >
+                                {{ c.tag }}
+                            </dt>
+                            <dd
+                                class="text-[15px] leading-relaxed text-muted-foreground"
+                            >
+                                <span class="font-medium text-foreground">{{
+                                    c.subtitle
+                                }}</span>
+                                {{ c.description }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </Motion>
+
+            <!-- FAQ -->
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
                 :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
@@ -696,25 +608,18 @@ const revealTransition = (delay = 0) =>
             >
                 <section
                     id="faq"
-                    class="scroll-mt-32 border-b border-border/70 py-16 sm:py-24"
+                    class="scroll-mt-32 border-t border-border/60 py-12"
                     aria-labelledby="faq-heading"
                 >
-                    <div class="text-center">
-                        <p
-                            class="text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
-                        >
-                            Institutional Transparency
-                        </p>
-                        <h2
-                            id="faq-heading"
-                            class="mt-3 font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
-                        >
-                            Questions, answered.
-                        </h2>
-                    </div>
+                    <h2
+                        id="faq-heading"
+                        class="text-xl font-semibold tracking-tight text-foreground"
+                    >
+                        Questions, answered.
+                    </h2>
 
                     <div
-                        class="mx-auto mt-10 max-w-3xl divide-y divide-border/70 border-y border-border/70"
+                        class="mt-6 divide-y divide-border/60 border-y border-border/60"
                     >
                         <details
                             v-for="faq in faqs"
@@ -722,7 +627,7 @@ const revealTransition = (delay = 0) =>
                             class="group py-5"
                         >
                             <summary
-                                class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                                class="flex cursor-pointer list-none items-center justify-between gap-6 text-[15px] font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                             >
                                 {{ faq.question }}
                                 <span
@@ -732,7 +637,7 @@ const revealTransition = (delay = 0) =>
                                 >
                             </summary>
                             <p
-                                class="max-w-2xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                                class="pt-3 pr-10 text-[15px] leading-relaxed text-muted-foreground"
                             >
                                 {{ faq.answer }}
                             </p>
@@ -741,7 +646,7 @@ const revealTransition = (delay = 0) =>
                 </section>
             </Motion>
 
-            <!-- Final CTA Banner -->
+            <!-- Get LSI -->
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
                 :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
@@ -750,68 +655,43 @@ const revealTransition = (delay = 0) =>
             >
                 <section
                     id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-xl sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
+                    class="welcome-cta border-t border-border/60 py-14 text-center sm:py-20"
                     aria-labelledby="contact-heading"
                 >
-                    <!-- Background ambient terracotta glow -->
-                    <div
-                        class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-[#D97757]/20 blur-3xl"
-                        aria-hidden="true"
-                    ></div>
-
-                    <div
-                        class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                    <h2
+                        id="contact-heading"
+                        class="mx-auto max-w-xl text-3xl font-semibold tracking-[-0.02em] text-balance text-foreground sm:text-4xl"
                     >
-                        <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-[#D97757] uppercase"
-                            >
-                                Start with the next lesson
-                            </p>
-                            <h2
-                                id="contact-heading"
-                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
-                            >
-                                If assessment matters to your school, let’s
-                                talk.
-                            </h2>
-                            <p
-                                class="mt-4 text-sm text-primary-foreground/70 sm:text-base"
-                            >
-                                Deploy LSI across a single classroom or your
-                                entire school district.
-                            </p>
-                        </div>
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            <Link
-                                v-if="$page.props.auth?.user"
-                                :href="dashboard().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
-                            >
-                                Open dashboard
-                                <ArrowRight
-                                    class="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                            <Link
-                                v-else-if="props.canRegister"
-                                :href="register().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
-                            >
-                                Create a free account
-                                <ArrowRight
-                                    class="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                            <a
-                                href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
-                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-primary-foreground/45 px-5 text-sm font-medium text-primary-foreground transition-colors hover:border-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-                            >
-                                Contact sales
-                            </a>
-                        </div>
+                        Tomorrow's lesson starts today.
+                    </h2>
+                    <p class="mt-3 text-[17px] text-muted-foreground">
+                        One teacher, one class, or the whole school.
+                    </p>
+                    <div
+                        class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+                    >
+                        <Link
+                            v-if="$page.props.auth?.user"
+                            :href="dashboard().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-[15px] font-medium text-background transition-all hover:opacity-90 active:scale-[0.98]"
+                        >
+                            Open dashboard
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            v-else-if="props.canRegister"
+                            :href="register().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-[15px] font-medium text-background transition-all hover:opacity-90 active:scale-[0.98]"
+                        >
+                            Get LSI free
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <a
+                            href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
+                            class="text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                            Talk to us →
+                        </a>
                     </div>
                 </section>
             </Motion>
@@ -824,38 +704,28 @@ const revealTransition = (delay = 0) =>
             >
                 <section
                     aria-label="Built by KOAMISHIN collective"
-                    class="mt-16 text-center sm:mt-20"
+                    class="border-t border-border/60 py-12 text-center"
                 >
-                    <span
-                        class="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1 font-mono text-[11px] font-medium text-muted-foreground"
-                    >
-                        Open Source · Laravel 12 · AGPL-3.0
-                    </span>
-                    <p
-                        class="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
-                    >
+                    <p class="text-sm text-muted-foreground">
                         Built by the KOAMISHIN collective — crafted in the open,
                         free to fork.
                     </p>
-                    <div
-                        class="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row"
-                    >
+                    <div class="mt-4 flex items-center justify-center gap-6">
                         <a
                             href="https://koamishin.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-[0.98]"
+                            class="text-sm font-medium text-foreground transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
-                            Explore koamishin.com
-                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                            koamishin.com →
                         </a>
                         <a
                             href="https://github.com/koamishin"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/80 bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60"
+                            class="text-sm font-medium text-foreground transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
-                            GitHub collective
+                            GitHub →
                         </a>
                     </div>
                 </section>
