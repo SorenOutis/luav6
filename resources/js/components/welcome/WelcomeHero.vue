@@ -124,13 +124,6 @@ const isHeroApproved = ref(true);
                 >
                     Log in
                 </Link>
-                <a
-                    href="#interactive-echo"
-                    class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border/80 bg-card px-5 text-xs font-medium text-muted-foreground shadow-xs transition-all hover:border-foreground/30 hover:text-foreground active:scale-[0.98] sm:w-auto"
-                >
-                    <span>Interactive Demo</span>
-                    <ArrowRight class="h-3.5 w-3.5 text-[#D97757]" />
-                </a>
             </div>
 
             <!-- Bendy Centerpiece Application Frame (.figure) -->

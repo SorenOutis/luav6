@@ -48,6 +48,7 @@ describe('welcome mobile performance', () => {
         expect(hero).toContain('Make every assessment count.');
         expect(hero).toContain('ChatAiOrb');
         expect(hero).toContain('href="#interactive-echo"');
+        expect(hero).not.toContain('Interactive Demo');
         expect(hero).not.toContain('<AssessmentArtifact');
         expect(page).not.toContain('walkthroughUnlocked');
         expect(page).not.toContain('how-it-works.mp4');

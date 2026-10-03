@@ -1,23 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import gsap from 'gsap';
-import {
-    ExternalLink,
-    Eye,
-    Pause,
-    Play,
-    ShoppingBag,
-    Sparkles,
-} from 'lucide-vue-next';
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    onUnmounted,
-    ref,
-    watch,
-} from 'vue';
+import { ExternalLink, Eye, ShoppingBag, Sparkles } from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -41,8 +25,6 @@ const totalInStock = computed(() => {
         .length;
 });
 
-const isManuallyPaused = ref(false);
-const isHovered = ref(false);
 const selectedQuickViewMerch = ref<MerchItem | null>(null);
 const isQuickViewOpen = ref(false);
 
@@ -165,115 +147,50 @@ const currentHeroImageUrl = computed<string>(() => {
 const openQuickView = (merch: MerchItem) => {
     selectedQuickViewMerch.value = merch;
     isQuickViewOpen.value = true;
-    if (marqueeTween) {
-        marqueeTween.pause();
-    }
 };
 
 const closeQuickView = () => {
     isQuickViewOpen.value = false;
     selectedQuickViewMerch.value = null;
-    if (marqueeTween && !isManuallyPaused.value && !isHovered.value) {
-        marqueeTween.resume();
-    }
 };
 
 const handleQuickViewSelect = (merch: MerchItem) => {
     selectedQuickViewMerch.value = merch;
 };
 
-const carouselContainerRef = ref<HTMLElement | null>(null);
-const marqueeWrapperRef = ref<HTMLElement | null>(null);
-const trackRef = ref<HTMLElement | null>(null);
+// Eagerly preload and decode all variant graphics in memory so tab clicks swap instantaneously
+const preloadedImages = new Set<string>();
 
-let marqueeTween: gsap.core.Tween | null = null;
-let gsapCtx: gsap.Context | null = null;
+const preloadHeroImages = () => {
+    if (typeof window === 'undefined') return;
 
-// Normalize merches so that a single copy has at least 8 items for a continuous, seamless loop across any screen size
-const normalizedMerches = computed(() => {
-    const list = props.merches || [];
-    if (list.length === 0) return [];
-    let repeated = [...list];
-    while (repeated.length < 8) {
-        repeated = [...repeated, ...list];
-    }
-    return repeated;
-});
-
-const setupMarquee = () => {
-    if (!trackRef.value || normalizedMerches.value.length === 0) {
-        return;
-    }
-
-    if (marqueeTween) {
-        marqueeTween.kill();
-        marqueeTween = null;
-    }
-
-    gsapCtx?.revert();
-
-    gsapCtx = gsap.context(() => {
-        if (!trackRef.value) return;
-
-        // Reset to initial coordinate
-        gsap.set(trackRef.value, { xPercent: 0, x: 0 });
-
-        // Calculate a comfortable, natural scroll duration (approx 4.2s per card)
-        const duration = Math.max(22, normalizedMerches.value.length * 4.2);
-
-        // Infinite loop moving towards negative X (right to left)
-        // -50% translates exactly one identical copy of the duplicated cards
-        marqueeTween = gsap.to(trackRef.value, {
-            xPercent: -50,
-            duration,
-            ease: 'none',
-            repeat: -1,
-        });
-
-        if (isManuallyPaused.value || isHovered.value) {
-            marqueeTween.pause();
+    heroTabs.value.forEach((tab) => {
+        if (tab.imageUrl && !preloadedImages.has(tab.imageUrl)) {
+            const img = new window.Image();
+            img.src = tab.imageUrl;
+            if ('decode' in img) {
+                img.decode().catch(() => {});
+            }
+            preloadedImages.add(tab.imageUrl);
         }
-    }, carouselContainerRef.value ?? undefined);
+    });
 };
 
-const handleMouseEnter = () => {
-    isHovered.value = true;
-    if (marqueeTween && !isManuallyPaused.value) {
-        marqueeTween.pause();
+watch(heroTabs, preloadHeroImages, { immediate: true });
+
+const getBentoColSpan = (index: number, total: number): string => {
+    if (index === 0) {
+        return total === 1
+            ? 'md:col-span-2 lg:col-span-8'
+            : 'md:col-span-2 lg:col-span-8';
     }
+    return 'md:col-span-1 lg:col-span-4';
 };
 
-const handleMouseLeave = () => {
-    isHovered.value = false;
-    if (marqueeTween && !isManuallyPaused.value) {
-        marqueeTween.resume();
-    }
-};
-
-const togglePause = () => {
-    isManuallyPaused.value = !isManuallyPaused.value;
-    if (!marqueeTween) return;
-
-    if (isManuallyPaused.value) {
-        marqueeTween.pause();
-    } else {
-        if (!isHovered.value) {
-            marqueeTween.resume();
-        }
-    }
-};
-
-watch(
-    () => props.merches,
-    async () => {
-        await nextTick();
-        setupMarquee();
-    },
-    { deep: true },
-);
-
-onMounted(async () => {
+onMounted(() => {
     if (typeof window !== 'undefined') {
+        preloadHeroImages();
+
         const isDark =
             document.documentElement.classList.contains('dark') ||
             window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
@@ -303,18 +220,6 @@ onMounted(async () => {
             openQuickView(target);
         }
     }
-
-    await nextTick();
-    setupMarquee();
-});
-
-onBeforeUnmount(() => {
-    marqueeTween?.kill();
-    marqueeTween = null;
-});
-
-onUnmounted(() => {
-    gsapCtx?.revert();
 });
 </script>
 
@@ -402,11 +307,12 @@ onUnmounted(() => {
                         :alt="`${currentHeroMerch.name} (Showcase View)`"
                         class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
                         loading="eager"
+                        decoding="sync"
                     />
                 </button>
             </section>
 
-            <!-- Store Inventory & Action Bar (Directly Above Carousel) -->
+            <!-- Store Inventory & Action Bar (Directly Above Bento Grid) -->
             <div
                 class="mt-12 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:mt-16 sm:text-sm"
             >
@@ -428,370 +334,280 @@ onUnmounted(() => {
                     </span>
                 </div>
 
-                <!-- Desktop Right: Clean external link only (controls removed per request) -->
-                <div class="hidden items-center gap-4 sm:flex">
+                <!-- Right: Visit Main Store Link -->
+                <div>
                     <a
                         href="https://koamishin.com/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                        class="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
                     >
                         <span>Visit main store</span>
                         <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />
                     </a>
                 </div>
-
-                <!-- Mobile Right: Simplified single-line control row -->
-                <div class="flex items-center gap-2.5 sm:hidden">
-                    <button
-                        v-if="merches.length > 0"
-                        @click="togglePause"
-                        type="button"
-                        class="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all active:scale-95"
-                        :title="isManuallyPaused ? 'Play' : 'Pause'"
-                    >
-                        <component
-                            :is="isManuallyPaused ? Play : Pause"
-                            class="h-3 w-3 text-primary"
-                            aria-hidden="true"
-                        />
-                        <span>{{ isManuallyPaused ? 'Play' : 'Pause' }}</span>
-                    </button>
-
-                    <a
-                        href="https://koamishin.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1 text-xs transition-colors hover:text-foreground"
-                    >
-                        <span>Store</span>
-                        <ExternalLink class="h-3 w-3" aria-hidden="true" />
-                    </a>
-                </div>
             </div>
 
-            <!-- Merch Showcase Section -->
+            <!-- Merch Bento Grid Section -->
             <section
-                ref="carouselContainerRef"
-                class="relative mt-4 sm:mt-6"
+                class="relative mt-6 sm:mt-8"
                 aria-label="Merchandise collection"
             >
-                <template v-if="merches && merches.length > 0">
-                    <div
-                        ref="marqueeWrapperRef"
-                        class="merch-carousel-wrapper relative overflow-hidden py-6 sm:py-12"
-                        @mouseenter="handleMouseEnter"
-                        @mouseleave="handleMouseLeave"
+                <div
+                    v-if="merches && merches.length > 0"
+                    class="merch-bento-grid grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-12"
+                >
+                    <article
+                        v-for="(merch, index) in merches"
+                        :key="`bento-${merch.id}`"
+                        class="merch-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-xl sm:rounded-3xl"
+                        :class="getBentoColSpan(index, merches.length)"
                     >
-                        <!-- Edge Fade Masks (desktop) -->
+                        <!-- Spec Header Badge -->
                         <div
-                            class="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-gradient-to-r from-background via-background/80 to-transparent sm:w-28"
-                        ></div>
-                        <div
-                            class="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-gradient-to-l from-background via-background/80 to-transparent sm:w-28"
-                        ></div>
-
-                        <!-- Continuous Hardware-Accelerated GSAP Marquee Track -->
-                        <div
-                            ref="trackRef"
-                            class="merch-carousel-track flex w-max flex-nowrap"
-                            :class="{ 'is-paused': isManuallyPaused }"
+                            class="flex items-center justify-between border-b border-border/50 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-3.5"
                         >
-                            <!-- Set 1 (Base set of normalized cards) -->
-                            <div
-                                class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6"
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
                             >
-                                <article
-                                    v-for="(merch, index) in normalizedMerches"
-                                    :key="`track-1-${merch.id}-${index}`"
-                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] sm:rounded-3xl md:w-[420px] lg:w-[440px]"
+                                <Sparkles
+                                    v-if="index === 0"
+                                    class="h-3 w-3 text-primary"
+                                />
+                                {{
+                                    index === 0
+                                        ? 'SPEC [01] // FLAGSHIP'
+                                        : `SPEC [0${index + 1}] // DROP`
+                                }}
+                            </span>
+
+                            <!-- Stock Indicator -->
+                            <span
+                                v-if="merch.is_out_of_stock"
+                                class="text-xs font-medium text-rose-500"
+                            >
+                                Out of stock
+                            </span>
+                            <span
+                                v-else-if="merch.stock <= 5"
+                                class="text-xs font-medium text-amber-600 dark:text-amber-400"
+                            >
+                                Only {{ merch.stock }} left
+                            </span>
+                            <span
+                                v-else
+                                class="text-xs font-medium text-muted-foreground"
+                            >
+                                {{ merch.stock }} in stock
+                            </span>
+                        </div>
+
+                        <!-- Image Container with Hover Quick View -->
+                        <button
+                            type="button"
+                            @click="openQuickView(merch)"
+                            class="group/img relative w-full cursor-zoom-in overflow-hidden bg-muted/20 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            :class="
+                                index === 0
+                                    ? 'aspect-video sm:aspect-[21/10]'
+                                    : 'aspect-video sm:aspect-[4/3]'
+                            "
+                            :aria-label="`Quick view ${merch.name}`"
+                        >
+                            <!-- Ambient Glow Aura -->
+                            <img
+                                v-if="merch.image_url"
+                                :src="merch.image_url"
+                                aria-hidden="true"
+                                alt=""
+                                class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-25 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-45 dark:opacity-20"
+                            />
+
+                            <!-- Sharp Product Image -->
+                            <img
+                                v-if="merch.image_url"
+                                :src="merch.image_url"
+                                :alt="merch.name"
+                                loading="lazy"
+                                class="relative z-10 h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-6"
+                            />
+                            <div
+                                v-else
+                                class="flex h-full w-full flex-col items-center justify-center p-6 text-center"
+                            >
+                                <div
+                                    class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"
                                 >
-                                    <!-- Landscape Image Container (16:9 widescreen) -->
-                                    <button
-                                        type="button"
-                                        @click="openQuickView(merch)"
-                                        class="group/img relative aspect-video w-full cursor-zoom-in overflow-hidden bg-muted/30 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                        :aria-label="`Quick view ${merch.name}`"
-                                    >
-                                        <!-- Ambient color aura (blurred background for landscape images) -->
-                                        <img
-                                            v-if="merch.image_url"
-                                            :src="merch.image_url"
-                                            aria-hidden="true"
-                                            alt=""
-                                            class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-30 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-45 dark:opacity-20"
-                                        />
-
-                                        <!-- Sharp, uncropped merchandise image -->
-                                        <img
-                                            v-if="merch.image_url"
-                                            :src="merch.image_url"
-                                            :alt="merch.name"
-                                            loading="lazy"
-                                            class="relative z-10 h-full w-full object-contain p-2.5 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-3"
-                                        />
-                                        <div
-                                            v-else
-                                            class="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-muted/60 via-muted/30 to-background p-6 text-center"
-                                        >
-                                            <div
-                                                class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110"
-                                            >
-                                                <ShoppingBag class="h-8 w-8" />
-                                            </div>
-                                            <span
-                                                class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                                            >
-                                                KOAMISHIN
-                                            </span>
-                                        </div>
-
-                                        <!-- Quick View Hover Overlay Pill -->
-                                        <div
-                                            class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
-                                            >
-                                                <Eye
-                                                    class="h-3.5 w-3.5 text-primary"
-                                                />
-                                                <span>Quick View</span>
-                                            </span>
-                                        </div>
-                                    </button>
-
-                                    <!-- Details and Price -->
-                                    <div
-                                        class="flex flex-1 flex-col justify-between p-4 sm:p-6"
-                                    >
-                                        <div>
-                                            <h2
-                                                class="line-clamp-1 font-sans text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
-                                            >
-                                                {{ merch.name }}
-                                            </h2>
-                                            <p
-                                                class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:mt-2 sm:text-sm"
-                                            >
-                                                {{
-                                                    merch.description ||
-                                                    'Official KOAMISHIN gear with signature styling and premium quality.'
-                                                }}
-                                            </p>
-                                        </div>
-
-                                        <!-- Price and Stock Row -->
-                                        <div
-                                            class="mt-3 flex items-baseline justify-between border-t border-border/50 pt-2.5 sm:mt-4 sm:pt-3"
-                                        >
-                                            <div
-                                                class="flex items-baseline gap-2"
-                                            >
-                                                <span
-                                                    class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase sm:text-xs"
-                                                >
-                                                    Price
-                                                </span>
-                                                <span
-                                                    class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-2xl"
-                                                >
-                                                    {{ merch.formatted_price }}
-                                                </span>
-                                            </div>
-
-                                            <!-- Clean Stock Indicator (non-vibecoded) -->
-                                            <span
-                                                v-if="merch.is_out_of_stock"
-                                                class="text-xs font-medium text-rose-500"
-                                            >
-                                                Out of stock
-                                            </span>
-                                            <span
-                                                v-else-if="merch.stock <= 5"
-                                                class="text-xs font-medium text-amber-600 dark:text-amber-400"
-                                            >
-                                                Only {{ merch.stock }} left
-                                            </span>
-                                            <span
-                                                v-else
-                                                class="text-xs font-medium text-muted-foreground"
-                                            >
-                                                {{ merch.stock }} in stock
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Coming Soon CTA Button -->
-                                    <div class="p-4 pt-0 sm:p-6 sm:pt-0">
-                                        <a
-                                            :href="
-                                                merch.url ||
-                                                'https://koamishin.com/'
-                                            "
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:min-h-11 sm:py-2.5"
-                                        >
-                                            <span>Coming Soon...</span>
-                                            <ExternalLink
-                                                class="h-4 w-4 text-muted-foreground"
-                                                aria-hidden="true"
-                                            />
-                                        </a>
-                                    </div>
-                                </article>
+                                    <ShoppingBag class="h-8 w-8" />
+                                </div>
+                                <span
+                                    class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                                >
+                                    KOAMISHIN
+                                </span>
                             </div>
 
-                            <!-- Set 2 (Identical duplicate for seamless 50% infinite loop) -->
+                            <!-- Quick View Hover Overlay Pill -->
                             <div
-                                class="flex shrink-0 flex-nowrap gap-5 pr-5 sm:gap-6 sm:pr-6"
-                                aria-hidden="true"
+                                class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
                             >
-                                <article
-                                    v-for="(merch, index) in normalizedMerches"
-                                    :key="`track-2-${merch.id}-${index}`"
-                                    class="merch-card group relative flex h-full w-[290px] shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out sm:w-[380px] sm:rounded-3xl md:w-[420px] lg:w-[440px]"
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
                                 >
-                                    <!-- Landscape Image Container (16:9 widescreen) -->
-                                    <button
-                                        type="button"
-                                        @click="openQuickView(merch)"
-                                        class="group/img relative aspect-video w-full cursor-zoom-in overflow-hidden bg-muted/30 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                        :aria-label="`Quick view ${merch.name}`"
+                                    <Eye class="h-3.5 w-3.5 text-primary" />
+                                    <span>Quick View</span>
+                                </span>
+                            </div>
+                        </button>
+
+                        <!-- Card Content -->
+                        <div
+                            class="flex flex-1 flex-col justify-between p-5 sm:p-6"
+                        >
+                            <div>
+                                <h2
+                                    class="line-clamp-1 font-sans text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
+                                >
+                                    {{ merch.name }}
+                                </h2>
+                                <p
+                                    class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:mt-2 sm:text-sm"
+                                >
+                                    {{
+                                        merch.description ||
+                                        'Official KOAMISHIN gear with signature styling and premium quality.'
+                                    }}
+                                </p>
+
+                                <!-- Variant Pills -->
+                                <div
+                                    v-if="
+                                        merch.variants &&
+                                        merch.variants.length > 0
+                                    "
+                                    class="mt-3 flex flex-wrap items-center gap-1.5"
+                                >
+                                    <span
+                                        class="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase"
                                     >
-                                        <!-- Ambient color aura (blurred background for landscape images) -->
-                                        <img
-                                            v-if="merch.image_url"
-                                            :src="merch.image_url"
-                                            aria-hidden="true"
-                                            alt=""
-                                            class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-30 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-45 dark:opacity-20"
-                                        />
-
-                                        <!-- Sharp, uncropped merchandise image -->
-                                        <img
-                                            v-if="merch.image_url"
-                                            :src="merch.image_url"
-                                            :alt="merch.name"
-                                            loading="lazy"
-                                            class="relative z-10 h-full w-full object-contain p-2.5 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-3"
-                                        />
-                                        <div
-                                            v-else
-                                            class="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-muted/60 via-muted/30 to-background p-6 text-center"
-                                        >
-                                            <div
-                                                class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110"
-                                            >
-                                                <ShoppingBag class="h-8 w-8" />
-                                            </div>
-                                            <span
-                                                class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                                            >
-                                                KOAMISHIN
-                                            </span>
-                                        </div>
-
-                                        <!-- Quick View Hover Overlay Pill -->
-                                        <div
-                                            class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
-                                        >
-                                            <span
-                                                class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
-                                            >
-                                                <Eye
-                                                    class="h-3.5 w-3.5 text-primary"
-                                                />
-                                                <span>Quick View</span>
-                                            </span>
-                                        </div>
-                                    </button>
-
-                                    <!-- Details and Price -->
-                                    <div
-                                        class="flex flex-1 flex-col justify-between p-4 sm:p-6"
+                                        Editions:
+                                    </span>
+                                    <span
+                                        v-for="v in merch.variants"
+                                        :key="v.name"
+                                        class="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground"
                                     >
-                                        <div>
-                                            <h2
-                                                class="line-clamp-1 font-sans text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
-                                            >
-                                                {{ merch.name }}
-                                            </h2>
-                                            <p
-                                                class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:mt-2 sm:text-sm"
-                                            >
-                                                {{
-                                                    merch.description ||
-                                                    'Official KOAMISHIN gear with signature styling and premium quality.'
-                                                }}
-                                            </p>
-                                        </div>
+                                        {{ v.name }}
+                                    </span>
+                                </div>
+                            </div>
 
-                                        <!-- Price and Stock Row -->
-                                        <div
-                                            class="mt-3 flex items-baseline justify-between border-t border-border/50 pt-2.5 sm:mt-4 sm:pt-3"
-                                        >
-                                            <div
-                                                class="flex items-baseline gap-2"
-                                            >
-                                                <span
-                                                    class="text-[11px] font-medium tracking-wider text-muted-foreground uppercase sm:text-xs"
-                                                >
-                                                    Price
-                                                </span>
-                                                <span
-                                                    class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-2xl"
-                                                >
-                                                    {{ merch.formatted_price }}
-                                                </span>
-                                            </div>
+                            <!-- Price & CTA -->
+                            <div
+                                class="mt-5 flex items-center justify-between border-t border-border/50 pt-4"
+                            >
+                                <div>
+                                    <span
+                                        class="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                    >
+                                        Price
+                                    </span>
+                                    <span
+                                        class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                                    >
+                                        {{ merch.formatted_price }}
+                                    </span>
+                                </div>
 
-                                            <!-- Clean Stock Indicator (non-vibecoded) -->
-                                            <span
-                                                v-if="merch.is_out_of_stock"
-                                                class="text-xs font-medium text-rose-500"
-                                            >
-                                                Out of stock
-                                            </span>
-                                            <span
-                                                v-else-if="merch.stock <= 5"
-                                                class="text-xs font-medium text-amber-600 dark:text-amber-400"
-                                            >
-                                                Only {{ merch.stock }} left
-                                            </span>
-                                            <span
-                                                v-else
-                                                class="text-xs font-medium text-muted-foreground"
-                                            >
-                                                {{ merch.stock }} in stock
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Coming Soon CTA Button -->
-                                    <div class="p-4 pt-0 sm:p-6 sm:pt-0">
-                                        <a
-                                            :href="
-                                                merch.url ||
-                                                'https://koamishin.com/'
-                                            "
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:min-h-11 sm:py-2.5"
-                                        >
-                                            <span>Coming Soon...</span>
-                                            <ExternalLink
-                                                class="h-4 w-4 text-muted-foreground"
-                                                aria-hidden="true"
-                                            />
-                                        </a>
-                                    </div>
-                                </article>
+                                <a
+                                    :href="
+                                        merch.url || 'https://koamishin.com/'
+                                    "
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:text-sm"
+                                >
+                                    <span>Coming Soon...</span>
+                                    <ExternalLink
+                                        class="h-3.5 w-3.5 text-muted-foreground"
+                                        aria-hidden="true"
+                                    />
+                                </a>
                             </div>
                         </div>
-                    </div>
-                </template>
+                    </article>
+
+                    <!-- Atelier / Department Brand Spec Bento Tile -->
+                    <article
+                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-6 shadow-md backdrop-blur-md transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-xl sm:rounded-3xl sm:p-8 md:col-span-2 lg:col-span-4"
+                    >
+                        <div>
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-primary uppercase"
+                            >
+                                SPEC // ATELIER
+                            </span>
+
+                            <h3
+                                class="mt-4 font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                            >
+                                KOAMISHIN × BSIT Department
+                            </h3>
+
+                            <p
+                                class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                            >
+                                Official student merchandise and technical gear
+                                engineered exclusively for the BSIT student body
+                                and innovators.
+                            </p>
+
+                            <ul
+                                class="mt-4 space-y-2 text-xs text-muted-foreground"
+                            >
+                                <li class="flex items-center gap-2">
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full bg-primary"
+                                    ></span>
+                                    <span
+                                        >240–380 GSM Heavyweight Technical
+                                        Fleece</span
+                                    >
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full bg-primary"
+                                    ></span>
+                                    <span>High-Density Contrast Insignia</span>
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full bg-primary"
+                                    ></span>
+                                    <span
+                                        >Campus Pickup & Nationwide
+                                        Fulfillment</span
+                                    >
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="mt-6 border-t border-border/50 pt-4">
+                            <a
+                                href="https://koamishin.com/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:opacity-90 active:scale-[0.98] sm:text-sm"
+                            >
+                                <span>Explore Official Store</span>
+                                <ExternalLink
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                            </a>
+                        </div>
+                    </article>
+                </div>
 
                 <!-- Empty State -->
                 <div
@@ -830,6 +646,18 @@ onUnmounted(() => {
             </section>
         </main>
 
+        <!-- Hidden variant preloader so the browser fetches & caches all variant graphics immediately -->
+        <div class="hidden" aria-hidden="true">
+            <img
+                v-for="tab in heroTabs"
+                :key="`preload-${tab.key}`"
+                :src="tab.imageUrl"
+                loading="eager"
+                decoding="sync"
+                alt=""
+            />
+        </div>
+
         <!-- Quick View Lightbox Modal for Uncropped Viewing -->
         <ShopQuickViewModal
             :open="isQuickViewOpen"
@@ -860,25 +688,20 @@ onUnmounted(() => {
         );
 }
 
-.merch-carousel-track {
-    will-change: transform;
-}
-
-/* Card hover zoom and elevate effect */
+/* Card hover elevate effect */
 .merch-card {
     will-change: transform, box-shadow;
     transition:
-        transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         border-color 0.3s ease;
 }
 
 .merch-card:hover {
-    transform: scale(1.05) translateY(-8px) !important;
-    z-index: 50 !important;
-    border-color: rgba(0, 168, 135, 0.6) !important;
+    transform: translateY(-4px);
+    border-color: rgba(0, 168, 135, 0.5);
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(0, 168, 135, 0.25) !important;
+        0 20px 25px -5px rgba(0, 0, 0, 0.15),
+        0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 </style>
