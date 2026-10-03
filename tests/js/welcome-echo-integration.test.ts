@@ -38,6 +38,7 @@ describe('Welcome page Echo AI integration', () => {
         });
 
         expect(wrapper.find('a[href="#interactive-echo"]').exists()).toBe(true);
+        expect(wrapper.text()).not.toContain('Interactive Demo');
         expect(wrapper.text()).toContain(
             'Meet Echo · Intelligent Study Companion',
         );
