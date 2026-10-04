@@ -52,7 +52,7 @@
                     <div class="mb-2.5 rounded-xl border border-zinc-200/90 bg-white p-3 text-xs shadow-2xs dark:border-zinc-800 dark:bg-zinc-900" data-ai-app-install>
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Standalone App</span>
-                            <button type="button" data-ai-app-install-button class="rounded-md bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400">Install AI Assistant</button>
+                            <button type="button" data-ai-app-install-button class="rounded-md bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400">Install {{ $assistantName ?? 'Echo' }}</button>
                         </div>
                         <p data-ai-app-install-help class="mt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400" role="status" hidden></p>
                     </div>
@@ -104,11 +104,11 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
                                         <button
                                             type="button"
                                             @click.stop="copyConversationLink(item)"
-                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
                                             title="Copy link"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -118,7 +118,7 @@
                                         <button
                                             type="button"
                                             @click.stop="confirmDeleteSession(item.id)"
-                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
                                             title="Delete chat"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,11 +147,11 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
                                         <button
                                             type="button"
                                             @click.stop="copyConversationLink(item)"
-                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
                                             title="Copy link"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -161,7 +161,7 @@
                                         <button
                                             type="button"
                                             @click.stop="confirmDeleteSession(item.id)"
-                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
                                             title="Delete chat"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -190,11 +190,11 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
                                         <button
                                             type="button"
                                             @click.stop="copyConversationLink(item)"
-                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
                                             title="Copy link"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -204,7 +204,7 @@
                                         <button
                                             type="button"
                                             @click.stop="confirmDeleteSession(item.id)"
-                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
                                             title="Delete chat"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -233,11 +233,11 @@
                                         </svg>
                                         <span class="truncate" x-text="item.title"></span>
                                     </div>
-                                    <div class="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
                                         <button
                                             type="button"
                                             @click.stop="copyConversationLink(item)"
-                                            class="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
                                             title="Copy link"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -247,7 +247,7 @@
                                         <button
                                             type="button"
                                             @click.stop="confirmDeleteSession(item.id)"
-                                            class="p-0.5 text-zinc-400 hover:text-red-500"
+                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
                                             title="Delete chat"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -305,9 +305,12 @@
                         </svg>
                     </button>
 
-                    {{-- Fox / AI Mascot Presence --}}
+                    {{-- Echo brand mark — follows Platform Settings school logo, falls back to fox mark --}}
                     <div class="flex items-center gap-2">
-                        <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-amber-500 dark:bg-zinc-800 dark:text-amber-400">
+                        <div class="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 text-amber-500 dark:bg-zinc-800 dark:text-amber-400">
+                            @if (! empty($assistantLogoUrl ?? null))
+                                <img src="{{ $assistantLogoUrl }}" alt="{{ ($schoolName ?? 'School') }} logo" class="h-7 w-7 object-contain" />
+                            @else
                             <div class="wolf-persona relative h-4.5 w-4.5" :data-motion="isStreaming ? 'thinking' : 'welcome'">
                                 <svg class="h-full w-full" viewBox="0 0 120 120" fill="none" focusable="false" data-wolf-mark>
                                     <circle class="wolf-circle" cx="60" cy="60" r="30" fill="currentColor"/>
@@ -336,9 +339,10 @@
                                     </g>
                                 </svg>
                             </div>
+                            @endif
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Echo</span>
+                            <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ $assistantName ?? 'Echo' }}</span>
                             <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                         </div>
                     </div>
@@ -416,9 +420,12 @@
                 <template x-if="messages.length === 0">
                     <div class="relative flex min-h-full flex-col items-center justify-center px-4 py-8 text-center sm:py-12">
                         <div class="relative z-10 m-auto flex w-full max-w-xl flex-col items-center">
-                            {{-- Geometric Fox Mark --}}
+                            {{-- Brand mark — school logo when uploaded, fox mark otherwise --}}
                             <div class="welcome-logo mb-5 flex flex-col items-center">
-                                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 sm:h-14 sm:w-14">
+                                <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 sm:h-14 sm:w-14">
+                                    @if (! empty($assistantLogoUrl ?? null))
+                                        <img src="{{ $assistantLogoUrl }}" alt="{{ ($schoolName ?? 'School') }} logo" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
+                                    @else
                                     <div
                                         class="wolf-persona relative h-7 w-7 text-amber-500 dark:text-amber-400 sm:h-8 sm:w-8"
                                         :data-motion="isStreaming ? 'thinking' : (isListening ? 'listening' : 'welcome')"
@@ -499,6 +506,7 @@
                                             </g>
                                         </svg>
                                     </div>
+                                    @endif
                                 </div>
                                 <img :src="foxWelcomeUrl" alt="Fox Mascot" class="hidden" />
                             </div>
@@ -642,7 +650,10 @@
                             {{-- Assistant Message --}}
                             <template x-if="msg.role === 'assistant'">
                                 <div class="flex items-start gap-2.5">
-                                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-amber-500 dark:bg-zinc-800 dark:text-amber-400">
+                                    <div class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 text-amber-500 dark:bg-zinc-800 dark:text-amber-400">
+                                        @if (! empty($assistantLogoUrl ?? null))
+                                            <img src="{{ $assistantLogoUrl }}" alt="{{ ($schoolName ?? 'School') }} logo" class="h-7 w-7 object-contain" />
+                                        @else
                                         <div class="wolf-persona relative h-4.5 w-4.5" :data-motion="msg.typing ? 'thinking' : 'speaking'">
                                             <svg class="h-full w-full" viewBox="0 0 120 120" fill="none" focusable="false" data-wolf-mark>
                                                 <circle class="wolf-circle" cx="60" cy="60" r="30" fill="currentColor"/>
@@ -671,6 +682,7 @@
                                                 </g>
                                             </svg>
                                         </div>
+                                        @endif
                                     </div>
 
                                     <div class="min-w-0 flex-1 space-y-2.5">
