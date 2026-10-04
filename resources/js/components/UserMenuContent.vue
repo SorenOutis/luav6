@@ -5,6 +5,7 @@ import {
     Check,
     LifeBuoy,
     LogOut,
+    Newspaper,
     Settings,
     XCircle,
 } from 'lucide-vue-next';
@@ -16,6 +17,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
+import { useWhatsNew } from '@/composables/useWhatsNew';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
@@ -27,6 +29,8 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
     logout: [];
 }>();
+
+const { open: openWhatsNew, currentVersion } = useWhatsNew();
 
 const page = usePage();
 const workspaceState = computed(
@@ -114,6 +118,13 @@ const stopInspecting = () => {
                 <LifeBuoy class="mr-2 h-4 w-4" />
                 Support
             </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem class="cursor-pointer" @select="openWhatsNew">
+            <Newspaper class="mr-2 h-4 w-4 text-amber-500" />
+            <span class="flex-1">What's New</span>
+            <span class="font-mono text-[10px] text-muted-foreground"
+                >v{{ currentVersion }}</span
+            >
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />

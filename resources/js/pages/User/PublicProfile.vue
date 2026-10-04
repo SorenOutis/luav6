@@ -123,6 +123,7 @@ const props = defineProps<{
         followingCount: number;
     };
     badges: Badge[];
+    currentBadge?: Badge | null;
     sectionRanks?: SectionRank[];
     courses: Course[];
     history: HistoryItem[];
@@ -261,6 +262,20 @@ const ringStyle = computed(() => ({
 const earnedBadgesCount = computed(
     () => props.badges.filter((b) => b.earned).length,
 );
+
+// Current (highest) badge, visible to every visitor with achievement access.
+// Falls back to the highest earned badge from `badges` for cached responses
+// that predate the dedicated `currentBadge` prop.
+const currentBadge = computed<Badge | null>(() => {
+    if (props.currentBadge) return props.currentBadge;
+
+    const earned = props.badges.filter((b) => b.earned);
+    if (earned.length === 0) return null;
+
+    return [...earned].sort(
+        (a, b) => (b.requiredLevel ?? -1) - (a.requiredLevel ?? -1),
+    )[0];
+});
 
 const kudoLabel: Record<string, string> = {
     'great-work': '🎉 Great work',
@@ -800,6 +815,23 @@ onBeforeUnmount(() => {
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
+                                <!-- Current badge medallion, visible to every visitor -->
+                                <div
+                                    v-if="showAchievements && currentBadge"
+                                    class="absolute -right-1 -bottom-1 flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-card shadow-md sm:size-12"
+                                    :title="`Current badge: ${currentBadge.name}`"
+                                >
+                                    <img
+                                        v-if="currentBadge.image"
+                                        :src="currentBadge.image"
+                                        :alt="currentBadge.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <Medal
+                                        v-else
+                                        class="size-5 text-[#D97757]"
+                                    />
+                                </div>
                             </div>
 
                             <div class="min-w-0 pb-1">
@@ -1193,6 +1225,68 @@ onBeforeUnmount(() => {
                             >
                                 <Trophy class="h-3.5 w-3.5" />
                                 Rank #{{ stats.rank }}
+                            </span>
+                        </div>
+
+                        <!-- ════════════ Current badge (visible to every visitor) ════════════ -->
+                        <div
+                            v-if="showAchievements && currentBadge"
+                            class="profile-card mt-3 flex max-w-xl items-center gap-3 bg-card px-4 py-3"
+                        >
+                            <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted"
+                            >
+                                <img
+                                    v-if="currentBadge.image"
+                                    :src="currentBadge.image"
+                                    :alt="currentBadge.name"
+                                    class="h-full w-full object-cover"
+                                />
+                                <Medal
+                                    v-else
+                                    class="h-5 w-5 text-muted-foreground"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                >
+                                    Current Badge
+                                </p>
+                                <p
+                                    class="truncate text-[15px] font-semibold text-foreground"
+                                >
+                                    {{ currentBadge.name }}
+                                </p>
+                                <p
+                                    v-if="
+                                        currentBadge.earnedAt ||
+                                        currentBadge.earnedSeason
+                                    "
+                                    class="truncate text-[12px] text-muted-foreground"
+                                >
+                                    <span v-if="currentBadge.earnedAt"
+                                        >Unlocked
+                                        {{ currentBadge.earnedAt }}</span
+                                    >
+                                    <span
+                                        v-if="
+                                            currentBadge.earnedAt &&
+                                            currentBadge.earnedSeason
+                                        "
+                                    >
+                                        ·
+                                    </span>
+                                    <span v-if="currentBadge.earnedSeason">{{
+                                        currentBadge.earnedSeason
+                                    }}</span>
+                                </p>
+                            </div>
+                            <span
+                                v-if="currentBadge.requiredLevel"
+                                class="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-muted-foreground"
+                            >
+                                Level {{ currentBadge.requiredLevel }}
                             </span>
                         </div>
                     </div>
