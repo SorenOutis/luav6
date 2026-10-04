@@ -22,9 +22,9 @@ class AdminAiChat extends Page
 
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $title = 'Echo';
+    protected static ?string $title = 'Echo AI';
 
-    protected static ?string $navigationLabel = 'Echo';
+    protected static ?string $navigationLabel = 'Echo AI';
 
     protected static ?string $slug = 'ai-chat';
 
@@ -129,7 +129,7 @@ class AdminAiChat extends Page
             'provider' => $provider,
             'providerLabel' => $providerLabel,
             'modelName' => $model,
-            'assistantName' => 'Echo',
+            'assistantName' => 'Echo AI',
             'schoolName' => Setting::get('school_name', 'LSI Engine'),
             'assistantLogoUrl' => PublicFileUrl::resolve(Setting::get('school_logo_path')),
             'workspace' => [

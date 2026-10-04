@@ -12,7 +12,7 @@ it('lets superadmins open the installable assistant', function () {
         ->assertOk()
         ->assertSee('ai-assistant.webmanifest')
         ->assertSee('ai-app-install.js')
-        ->assertSee('Install Echo');
+        ->assertSee('Install Echo AI');
 });
 
 it('denies other users access to the app entry', function (string $role) {
@@ -33,7 +33,7 @@ it('keeps ordinary admin chat without install controls', function () {
         ->get(AdminAiChat::getUrl())
         ->assertOk()
         ->assertDontSee('ai-assistant.webmanifest')
-        ->assertDontSee('Install Echo');
+        ->assertDontSee('Install Echo AI');
 });
 
 it('offers installation on the existing superadmin chat page', function () {
@@ -41,7 +41,7 @@ it('offers installation on the existing superadmin chat page', function () {
         ->get(AdminAiChat::getUrl())
         ->assertOk()
         ->assertSee('ai-assistant.webmanifest')
-        ->assertSee('Install Echo');
+        ->assertSee('Install Echo AI');
 });
 
 it('ships a standalone manifest with correctly sized icons', function () {
@@ -50,8 +50,8 @@ it('ships a standalone manifest with correctly sized icons', function () {
     expect($manifest['start_url'])->toBe('/admin/ai-assistant-app')
         ->and($manifest['scope'])->toBe('/admin/ai-assistant-app')
         ->and($manifest['display'])->toBe('standalone')
-        ->and($manifest['name'])->toBe('Echo')
-        ->and($manifest['short_name'])->toBe('Echo');
+        ->and($manifest['name'])->toBe('Echo AI')
+        ->and($manifest['short_name'])->toBe('Echo AI');
 
     // First icons follow the school logo via /favicon.png (FaviconController serves
     // the uploaded school_logo_path); bundled PNGs remain as installable fallback.
@@ -69,8 +69,8 @@ it('ships a standalone manifest with correctly sized icons', function () {
     }
 });
 
-it('labels the assistant Echo in navigation', function () {
-    expect(AdminAiChat::getNavigationLabel())->toBe('Echo');
+it('labels the assistant Echo AI in navigation', function () {
+    expect(AdminAiChat::getNavigationLabel())->toBe('Echo AI');
 });
 
 it('uses the school logo when uploaded and falls back otherwise', function () {
