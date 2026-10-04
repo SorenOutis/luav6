@@ -1596,3 +1596,14 @@ it('requests microphone permission before starting voice dictation', function ()
         ->assertSee('getUserMedia')
         ->assertSee('Microphone access was denied');
 });
+
+it('starts with the sidebar closed on phones and in the installed app', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin);
+
+    Livewire::test(AdminAiChat::class)
+        ->assertOk()
+        ->assertSee('display-mode: standalone', escape: false)
+        ->assertSee('window.innerWidth >=', escape: false);
+});
