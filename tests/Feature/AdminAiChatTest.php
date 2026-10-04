@@ -1584,3 +1584,15 @@ it('verifies ChatSession uuid column detection and query compilation', function 
     expect($numericQuery->toSql())->toContain('"id" = ?')
         ->and($numericQuery->toSql())->not->toContain('"uuid" = ?');
 });
+
+it('requests microphone permission before starting voice dictation', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin);
+
+    Livewire::test(AdminAiChat::class)
+        ->assertOk()
+        ->assertSee('navigator.mediaDevices')
+        ->assertSee('getUserMedia')
+        ->assertSee('Microphone access was denied');
+});
