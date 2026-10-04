@@ -12,7 +12,10 @@ class QuickActionsWidget extends Widget
 {
     protected static ?int $sort = 2;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'xl' => 'full',
+    ];
 
     protected string $view = 'filament.widgets.quick-actions';
 

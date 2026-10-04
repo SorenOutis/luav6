@@ -52,3 +52,33 @@ test('super admin can view the admin dashboard', function () {
         ->get('/admin')
         ->assertOk();
 });
+
+test('admin dashboard theme enforces single column stacking below xl', function () {
+    $theme = file_get_contents(resource_path('css/filament/admin/theme.css'));
+
+    expect($theme)->toContain('@media (max-width: 79.98rem)')
+        ->and($theme)->toContain('.admin-dashboard-grid .fi-grid')
+        ->and($theme)->toContain('grid-template-columns: 1fr !important')
+        ->and($theme)->toContain('.admin-dashboard-grid .fi-grid-col')
+        ->and($theme)->toContain('grid-column: 1 / -1 !important')
+        ->and($theme)->toContain('.quick-actions__grid')
+        ->and($theme)->toContain('grid-template-columns: 1fr');
+});
+
+test('every admin dashboard widget spans full width on default mobile breakpoint', function () {
+    $widgets = app(AdminDashboard::class)->getWidgets();
+
+    foreach ($widgets as $widgetClass) {
+        $widget = new $widgetClass;
+        $span = $widget->getColumnSpan();
+
+        // Either string 'full' or an array with 'default' => 'full'.
+        // Must never have a legacy default of 12 or missing default that collapses to a narrow column.
+        if (is_array($span)) {
+            expect($span['default'] ?? null)->toBe('full');
+            expect($span['default'] ?? null)->not->toBe(12);
+        } else {
+            expect($span)->toBe('full');
+        }
+    }
+});

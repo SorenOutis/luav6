@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import {
-    Bell,
-    Moon,
-    Newspaper,
-    Shield,
-    Sun,
-    TrendingUp,
-    Zap,
-} from 'lucide-vue-next';
+import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import HeaderSoundtrackPlayer from '@/components/HeaderSoundtrackPlayer.vue';
@@ -24,7 +16,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useAppearance } from '@/composables/useAppearance';
 import { getInitials } from '@/composables/useInitials';
-import { useWhatsNew } from '@/composables/useWhatsNew';
 import type { BreadcrumbItem, User } from '@/types';
 
 withDefaults(
@@ -37,7 +28,6 @@ withDefaults(
 );
 
 const { appearance, toggleTheme } = useAppearance();
-const { open: openWhatsNew, hasUnread: hasUnreadWhatsNew } = useWhatsNew();
 const page = usePage();
 const user = computed<User>(() => page.props.auth.user);
 const showLogoutDialog = ref(false);
@@ -149,28 +139,6 @@ const markAllNotificationsAsRead = () => {
         <div class="flex items-center gap-2 sm:gap-4">
             <!-- Background soundtrack player beside notification bell -->
             <HeaderSoundtrackPlayer />
-
-            <!-- What's New / Changelog trigger -->
-            <button
-                type="button"
-                class="relative inline-flex items-center justify-center rounded-md p-1.5 text-sm font-medium transition-colors hover:bg-neutral-100 sm:p-2 dark:hover:bg-neutral-800"
-                aria-label="View What's New release notes"
-                title="What's New"
-                @click="openWhatsNew"
-            >
-                <Newspaper class="h-4 w-4 text-amber-500 sm:h-5 sm:w-5" />
-                <span
-                    v-if="hasUnreadWhatsNew"
-                    class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5"
-                >
-                    <span
-                        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"
-                    />
-                    <span
-                        class="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background"
-                    />
-                </span>
-            </button>
 
             <DropdownMenu>
                 <DropdownMenuTrigger :as-child="true">

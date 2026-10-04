@@ -17,7 +17,10 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
 
     protected static ?int $sort = 1;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'xl' => 'full',
+    ];
 
     protected ?string $heading = 'Operational Pulse';
 

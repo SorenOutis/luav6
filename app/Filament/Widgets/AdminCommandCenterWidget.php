@@ -20,7 +20,10 @@ class AdminCommandCenterWidget extends Widget
     // so the dashboard never flashes a placeholder or shifts layout.
     protected static bool $isLazy = false;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'xl' => 'full',
+    ];
 
     protected string $view = 'filament.widgets.admin-command-center';
 

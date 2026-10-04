@@ -15,8 +15,8 @@ class RecentSupportTicketsWidget extends BaseWidget
     protected static ?int $sort = 13;
 
     protected int|string|array $columnSpan = [
-        'default' => 12,
-        'lg' => 6,
+        'default' => 'full',
+        'xl' => 'full',
     ];
 
     protected static ?string $heading = 'Recent Support Tickets';

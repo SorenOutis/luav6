@@ -15,7 +15,10 @@ class SeasonProgressWidget extends BaseWidget
 
     protected static ?int $sort = 3;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'xl' => 'full',
+    ];
 
     protected ?string $heading = 'Season Progress';
 
