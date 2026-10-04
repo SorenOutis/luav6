@@ -88,7 +88,6 @@ actual grid items (not direct children) to let them shrink. */
     }
 }
 
-
 /* Below the xl breakpoint (80rem / 1280px), enforce strict single-column stacking
    for the dashboard grid and all contained widgets. This prevents mobile/tablet viewports
    from squeezing widgets into side-by-side columns or overlapping horizontal slices. */
