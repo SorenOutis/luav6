@@ -137,3 +137,44 @@ it('keeps pages outside the public registry out of link previews', function () {
         ->not->toContain('rel="canonical"')
         ->toContain('<title inertia>'.e((string) config('app.name')).'</title>');
 });
+
+it('renders social preview tags and og:image for public student profiles', function () {
+    $origin = rtrim((string) config('seo.site_url'), '/');
+    $profileData = [
+        'component' => 'User/PublicProfile',
+        'props' => [
+            'profileUser' => [
+                'id' => '01923456-7890-7123-8456-789012345678',
+                'name' => 'Alex Rivera',
+                'avatar' => '/storage/avatars/alex.png',
+                'cover_photo' => '/storage/covers/alex-cover.jpg',
+                'streak' => 14,
+            ],
+            'stats' => [
+                'level' => 5,
+                'xp' => 480,
+                'rank' => 1,
+            ],
+        ],
+    ];
+
+    $meta = Seo::forPage($profileData, request());
+
+    expect($meta)->not->toBeNull()
+        ->and($meta['title'])->toBe('Alex Rivera - Profile')
+        ->and($meta['type'])->toBe('profile')
+        ->and($meta['description'])->toContain('Level 5')
+        ->and($meta['description'])->toContain('14-day streak')
+        ->and($meta['description'])->toContain('480 Total XP')
+        ->and($meta['image'])->toBe($origin.'/storage/covers/alex-cover.jpg');
+
+    // Also test fallback to avatar when cover photo is absent
+    $profileData['props']['profileUser']['cover_photo'] = null;
+    $metaWithoutCover = Seo::forPage($profileData, request());
+    expect($metaWithoutCover['image'])->toBe($origin.'/storage/avatars/alex.png');
+
+    // Fallback to platform brand image if both are absent
+    $profileData['props']['profileUser']['avatar'] = null;
+    $metaWithoutAnyImage = Seo::forPage($profileData, request());
+    expect($metaWithoutAnyImage['image'])->toBe($origin.'/'.ltrim((string) config('seo.og_image'), '/'));
+});

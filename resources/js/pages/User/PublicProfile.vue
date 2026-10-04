@@ -7,10 +7,12 @@ import {
     Check,
     Copy,
     Disc3,
+    Download,
     ExternalLink,
     Flame,
     Info,
     LayoutGrid,
+    Loader2,
     Lock,
     Medal,
     Music,
@@ -379,6 +381,9 @@ const triggerKudoBurst = (type: string) => {
 // ── Shareable Profile Snapshot Card ─────────────────────────────────
 const showShareCardModal = ref(false);
 const cardCopied = ref(false);
+const cardElementRef = ref<HTMLElement | null>(null);
+const isGeneratingImage = ref(false);
+const imageDownloaded = ref(false);
 
 const copyCardSummary = async () => {
     const text = `🌟 Student: ${props.profileUser.name} (${handle.value})\n⚡ Level: ${props.stats.level} • ${props.stats.xp} XP\n🔥 Streak: ${props.profileUser.streak} Days\n🏆 Rank: #${props.stats.rank} on LSI\n🔗 ${window.location.origin}/u/${props.profileUser.id}`;
@@ -388,6 +393,39 @@ const copyCardSummary = async () => {
         setTimeout(() => (cardCopied.value = false), 2500);
     } catch {
         // clipboard unavailable
+    }
+};
+
+const renderCardCanvas = async () => {
+    if (!cardElementRef.value) return null;
+    const html2canvas = (await import('html2canvas')).default;
+    return await html2canvas(cardElementRef.value, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+    });
+};
+
+const downloadCardImage = async () => {
+    if (isGeneratingImage.value || !cardElementRef.value) return;
+    try {
+        isGeneratingImage.value = true;
+        const canvas = await renderCardCanvas();
+        if (!canvas) return;
+
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `${props.profileUser.name.toLowerCase().replace(/\s+/g, '-')}-lsi-card.png`;
+        link.href = dataUrl;
+        link.click();
+        imageDownloaded.value = true;
+        setTimeout(() => (imageDownloaded.value = false), 2500);
+    } catch {
+        // Fallback to copying text summary if canvas export fails
+        await copyCardSummary();
+    } finally {
+        isGeneratingImage.value = false;
     }
 };
 
@@ -2312,6 +2350,7 @@ onBeforeUnmount(() => {
                 <div class="p-5">
                     <!-- The Visual Snapshot Card -->
                     <div
+                        ref="cardElementRef"
                         class="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-muted/40 to-muted/80 p-5 shadow-lg"
                     >
                         <!-- Top Accent Banner -->
@@ -2407,7 +2446,30 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="mt-4 flex gap-2">
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            :disabled="isGeneratingImage"
+                            class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 py-2.5 text-xs font-semibold text-primary transition-all hover:bg-primary/20 disabled:opacity-60"
+                            @click="downloadCardImage"
+                        >
+                            <Loader2
+                                v-if="isGeneratingImage"
+                                class="size-3.5 animate-spin"
+                            />
+                            <component
+                                :is="imageDownloaded ? Check : Download"
+                                v-else
+                                class="size-3.5"
+                            />
+                            {{
+                                isGeneratingImage
+                                    ? 'Generating...'
+                                    : imageDownloaded
+                                      ? 'Card Saved!'
+                                      : 'Save Card Image'
+                            }}
+                        </button>
                         <button
                             type="button"
                             class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-muted/60 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
