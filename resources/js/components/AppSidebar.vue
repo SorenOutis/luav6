@@ -24,12 +24,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useWhatsNew } from '@/composables/useWhatsNew';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const page = usePage();
-const { open: openWhatsNew, currentVersion } = useWhatsNew();
 const slots = useSlots();
 const hasChatNavigation = computed(() => Boolean(slots['chat-navigation']));
 
@@ -137,25 +135,6 @@ const mainNavItems = computed<NavItem[]>(() =>
 
         <SidebarFooter>
             <NavUser />
-            <div
-                class="px-2 py-1 text-center group-data-[collapsible=icon]:hidden"
-            >
-                <button
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    title="View What's New & Release Notes"
-                    @click="openWhatsNew"
-                >
-                    <span
-                        class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"
-                    ></span>
-                    <span>v{{ currentVersion }}</span>
-                    <span>·</span>
-                    <span class="underline decoration-dotted underline-offset-2"
-                        >What's New</span
-                    >
-                </button>
-            </div>
         </SidebarFooter>
     </Sidebar>
 </template>

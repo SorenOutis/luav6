@@ -16,8 +16,8 @@ class NeuronUsageWidget extends StatsOverviewWidget
     protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = [
-        'default' => 12,
-        'xl' => 4,
+        'default' => 'full',
+        'xl' => 'full',
     ];
 
     protected ?string $heading = 'Workspace AI Usage & Budget';
