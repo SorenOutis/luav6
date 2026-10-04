@@ -1655,7 +1655,12 @@
                 foxChatUrl: config.foxChatUrl,
                 foxWelcomeUrl: config.foxWelcomeUrl,
 
-                sidebarOpen: true,
+                // Start with the history sidebar closed on phones and in the
+                // installed app — it covers the whole chat there. Desktop
+                // browsers keep it open.
+                sidebarOpen: typeof window !== 'undefined'
+                    ? window.innerWidth >= 768 && ! window.matchMedia('(display-mode: standalone)').matches
+                    : true,
                 searchQuery: '',
                 activeSessionId: config.initialActiveSession ? config.initialActiveSession.id : null,
                 activeSessionUuid: config.initialActiveSession ? config.initialActiveSession.uuid : null,
