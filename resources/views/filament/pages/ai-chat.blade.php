@@ -2886,7 +2886,7 @@
                     this.startVoice();
                 },
 
-                startVoice() {
+                async startVoice() {
                     this.voiceError = null;
                     const SpeechRecognition = typeof window !== 'undefined'
                         ? (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -2895,6 +2895,39 @@
                     if (!SpeechRecognition) {
                         this.voiceError = 'Voice dictation is not supported in this browser.';
                         return;
+                    }
+
+                    // Microphone access is only grantable on secure origins.
+                    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+                        this.voiceError = 'Microphone access needs a secure (HTTPS) page. Please open the site over HTTPS, then tap the mic again.';
+                        return;
+                    }
+
+                    // Ask the browser for microphone permission first. This shows the
+                    // permission prompt (and confirms a mic exists) before speech
+                    // recognition starts — without it, browsers just fire a
+                    // confusing `not-allowed` error and dictation never begins.
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        try {
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            stream.getTracks().forEach((track) => track.stop());
+                        } catch (err) {
+                            const name = err && err.name ? err.name : '';
+
+                            if (name === 'NotAllowedError' || name === 'SecurityError') {
+                                this.voiceError = 'Microphone access was denied. Tap the lock/tune icon in the address bar → Permissions → Microphone → Allow (on Android, also allow microphone access for the browser in system settings), then tap the mic again.';
+                            } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+                                this.voiceError = 'No microphone was found on this device. Connect or enable a microphone, then try again.';
+                            } else if (name === 'NotReadableError' || name === 'AbortError') {
+                                this.voiceError = 'Your microphone is busy in another app or tab. Close it and try again.';
+                            } else {
+                                this.voiceError = 'Could not access the microphone. Check your browser and system microphone permissions, then try again.';
+                            }
+
+                            setTimeout(() => { this.voiceError = null; }, 10000);
+                            this.isListening = false;
+                            return;
+                        }
                     }
 
                     try {
@@ -2944,12 +2977,12 @@
                                 return;
                             }
 
-                            if (event.error === 'not-allowed') {
-                                this.voiceError = 'Microphone dictation was blocked. In Edge/Chrome InPrivate (Incognito) mode, browser policy disables cloud speech dictation. Please open in a regular browser window to dictate for free with 0 tokens!';
+                            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                                this.voiceError = 'Microphone access was denied or is unavailable (private/incognito windows can disable dictation). Allow microphone access for this site — address bar lock icon → Permissions → Microphone → Allow — then tap the mic again.';
                             } else if (event.error === 'network') {
                                 this.voiceError = 'Speech service network error. Please verify your internet connection.';
                             } else if (event.error === 'audio-capture') {
-                                this.voiceError = 'No audio captured. Check Windows sound settings to ensure your default microphone is active.';
+                                this.voiceError = 'No audio captured. Make sure a working microphone is connected and enabled on this device, then try again.';
                             } else {
                                 this.voiceError = 'Dictation error: ' + event.error;
                             }
