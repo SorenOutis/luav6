@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Skills\AdminAssistantSkill;
 use App\Ai\Tools\ActivityTasksAdminTool;
 use App\Ai\Tools\AdminGradesTool;
 use App\Ai\Tools\AnnouncementsAdminTool;
@@ -180,6 +181,8 @@ GENERAL RULES:
         if ($this->userContext) {
             $instructions .= "\n\n{$this->userContext}";
         }
+
+        $instructions .= "\n\nRUNTIME SKILL:\n".AdminAssistantSkill::instructions();
 
         return $instructions;
     }
