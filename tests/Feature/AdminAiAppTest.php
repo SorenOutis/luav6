@@ -2,7 +2,9 @@
 
 use App\Filament\Pages\AdminAiApp;
 use App\Filament\Pages\AdminAiChat;
+use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 it('lets superadmins open the installable assistant', function () {
     $this->actingAs(User::factory()->superAdmin()->create())
@@ -10,7 +12,7 @@ it('lets superadmins open the installable assistant', function () {
         ->assertOk()
         ->assertSee('ai-assistant.webmanifest')
         ->assertSee('ai-app-install.js')
-        ->assertSee('Install AI Assistant');
+        ->assertSee('Install Echo');
 });
 
 it('denies other users access to the app entry', function (string $role) {
@@ -31,7 +33,7 @@ it('keeps ordinary admin chat without install controls', function () {
         ->get(AdminAiChat::getUrl())
         ->assertOk()
         ->assertDontSee('ai-assistant.webmanifest')
-        ->assertDontSee('Install AI Assistant');
+        ->assertDontSee('Install Echo');
 });
 
 it('offers installation on the existing superadmin chat page', function () {
@@ -39,7 +41,7 @@ it('offers installation on the existing superadmin chat page', function () {
         ->get(AdminAiChat::getUrl())
         ->assertOk()
         ->assertSee('ai-assistant.webmanifest')
-        ->assertSee('Install AI Assistant');
+        ->assertSee('Install Echo');
 });
 
 it('ships a standalone manifest with correctly sized icons', function () {
@@ -47,10 +49,46 @@ it('ships a standalone manifest with correctly sized icons', function () {
 
     expect($manifest['start_url'])->toBe('/admin/ai-assistant-app')
         ->and($manifest['scope'])->toBe('/admin/ai-assistant-app')
-        ->and($manifest['display'])->toBe('standalone');
+        ->and($manifest['display'])->toBe('standalone')
+        ->and($manifest['name'])->toBe('Echo')
+        ->and($manifest['short_name'])->toBe('Echo');
+
+    // First icons follow the school logo via /favicon.png (FaviconController serves
+    // the uploaded school_logo_path); bundled PNGs remain as installable fallback.
+    expect(collect($manifest['icons'])->pluck('src'))
+        ->toContain('/favicon.png?size=192')
+        ->toContain('/images/ai-app-192.png');
 
     foreach ($manifest['icons'] as $icon) {
-        $size = getimagesize(public_path(ltrim($icon['src'], '/')));
+        if (str_starts_with($icon['src'], '/favicon.png')) {
+            continue;
+        }
+
+        $size = getimagesize(public_path(ltrim(explode('?', $icon['src'])[0], '/')));
         expect("{$size[0]}x{$size[1]}")->toBe($icon['sizes']);
     }
+});
+
+it('labels the assistant Echo in navigation', function () {
+    expect(AdminAiChat::getNavigationLabel())->toBe('Echo');
+});
+
+it('uses the school logo when uploaded and falls back otherwise', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('branding/logo.png', file_get_contents(public_path('images/ai-app-192.png')));
+    Setting::setGlobal('school_logo_path', 'branding/logo.png');
+    Setting::setGlobal('school_name', 'Test Academy');
+
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->get(AdminAiChat::getUrl())
+        ->assertOk()
+        ->assertSee('/storage/branding/logo.png', escape: false)
+        ->assertSee('Test Academy logo', escape: false);
+
+    Setting::setGlobal('school_logo_path', null);
+
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->get(AdminAiChat::getUrl())
+        ->assertOk()
+        ->assertSee('wolf-persona');
 });
