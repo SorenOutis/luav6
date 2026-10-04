@@ -396,14 +396,69 @@ const copyCardSummary = async () => {
     }
 };
 
-const renderCardCanvas = async () => {
+const triggerDownload = (blobOrDataUrl: Blob | string, filename: string) => {
+    const link = document.createElement('a');
+    link.download = filename;
+    const url =
+        typeof blobOrDataUrl === 'string'
+            ? blobOrDataUrl
+            : URL.createObjectURL(blobOrDataUrl);
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (typeof blobOrDataUrl !== 'string') {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+};
+
+const exportCanvas = (
+    canvas: HTMLCanvasElement,
+    filename: string,
+): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        try {
+            if (canvas.toBlob) {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        triggerDownload(blob, filename);
+                        resolve();
+                    } else {
+                        try {
+                            const dataUrl = canvas.toDataURL('image/png');
+                            triggerDownload(dataUrl, filename);
+                            resolve();
+                        } catch (err) {
+                            reject(err);
+                        }
+                    }
+                }, 'image/png');
+            } else {
+                const dataUrl = canvas.toDataURL('image/png');
+                triggerDownload(dataUrl, filename);
+                resolve();
+            }
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
+const renderCardCanvas = async (retryWithoutImages = false) => {
     if (!cardElementRef.value) return null;
     const html2canvas = (await import('html2canvas')).default;
     return await html2canvas(cardElementRef.value, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: null,
+        logging: false,
+        onclone: (_clonedDoc, clonedElement) => {
+            if (retryWithoutImages) {
+                const imgs = clonedElement.querySelectorAll('img');
+                imgs.forEach((img) => img.remove());
+            }
+        },
     });
 };
 
@@ -411,17 +466,40 @@ const downloadCardImage = async () => {
     if (isGeneratingImage.value || !cardElementRef.value) return;
     try {
         isGeneratingImage.value = true;
-        const canvas = await renderCardCanvas();
-        if (!canvas) return;
+        const filename = `${props.profileUser.name.toLowerCase().replace(/\s+/g, '-')}-lsi-card.png`;
 
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `${props.profileUser.name.toLowerCase().replace(/\s+/g, '-')}-lsi-card.png`;
-        link.href = dataUrl;
-        link.click();
-        imageDownloaded.value = true;
-        setTimeout(() => (imageDownloaded.value = false), 2500);
-    } catch {
+        let canvas: HTMLCanvasElement | null = null;
+        let exported = false;
+
+        try {
+            canvas = await renderCardCanvas(false);
+            if (canvas) {
+                await exportCanvas(canvas, filename);
+                exported = true;
+            }
+        } catch (e) {
+            console.warn(
+                'Primary card export failed, attempting fallback without cross-origin images:',
+                e,
+            );
+        }
+
+        if (!exported) {
+            canvas = await renderCardCanvas(true);
+            if (canvas) {
+                await exportCanvas(canvas, filename);
+                exported = true;
+            }
+        }
+
+        if (exported) {
+            imageDownloaded.value = true;
+            setTimeout(() => (imageDownloaded.value = false), 2500);
+        } else {
+            throw new Error('Could not export canvas');
+        }
+    } catch (err) {
+        console.error('Failed to export card image:', err);
         // Fallback to copying text summary if canvas export fails
         await copyCardSummary();
     } finally {
@@ -2136,6 +2214,7 @@ onBeforeUnmount(() => {
             "
         >
             <DialogContent
+                :show-close-button="false"
                 class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[420px]"
             >
                 <div
@@ -2320,6 +2399,7 @@ onBeforeUnmount(() => {
             @update:open="(val) => (showShareCardModal = val)"
         >
             <DialogContent
+                :show-close-button="false"
                 class="overflow-hidden border-border/60 bg-card p-0 sm:max-w-[420px]"
             >
                 <div
@@ -2366,6 +2446,7 @@ onBeforeUnmount(() => {
                                     v-if="profileUser.avatar"
                                     :src="profileUser.avatar"
                                     :alt="profileUser.name"
+                                    crossorigin="anonymous"
                                     class="object-cover"
                                 />
                                 <AvatarFallback
