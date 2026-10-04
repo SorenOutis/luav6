@@ -27,6 +27,7 @@ declare module '@inertiajs/core' {
             studentPageControls: StudentPageControls;
             onboarding: OnboardingProps;
             sidebarOpen: boolean;
+            appVersion: string;
             [key: string]: unknown;
         };
     }

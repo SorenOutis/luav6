@@ -9,6 +9,7 @@ import CookieConsentBanner from '@/components/CookieConsentBanner.vue';
 import FloatingWidget from '@/components/FloatingWidget.vue';
 import MobileNav from '@/components/MobileNav.vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
+import WhatsNewModal from '@/components/WhatsNewModal.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -89,6 +90,7 @@ const contentClass = computed(() =>
             <MobileNav v-if="!props.hideSidebar" />
             <FloatingWidget />
             <CookieConsentBanner />
+            <WhatsNewModal />
         </AppContent>
     </AppShell>
 </template>

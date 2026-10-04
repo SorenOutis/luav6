@@ -138,6 +138,7 @@ class PublicProfileController extends Controller
 
         $canViewAchievements = $canViewPrivateProgress || $user->profile_show_achievements;
         $badges = [];
+        $currentBadge = null;
         if ($canViewAchievements) {
             $earnedByBadge = $user->badges->keyBy('id');
             $badgeSeasonNames = Season::query()
@@ -168,6 +169,35 @@ class PublicProfileController extends Controller
                             : null,
                     ];
                 })->values()->all();
+
+            if ($user->badges->isNotEmpty()) {
+                $topEarned = $user->badges
+                    ->sortByDesc(fn ($earnedBadge): array => [
+                        $earnedBadge->required_level ?? -1,
+                        $earnedBadge->pivot?->created_at?->timestamp ?? 0,
+                    ])
+                    ->first();
+
+                if ($topEarned) {
+                    $topPivot = $topEarned->pivot;
+
+                    $currentBadge = [
+                        'id' => $topEarned->id,
+                        'name' => $topEarned->name,
+                        'description' => $topEarned->description,
+                        'requiredLevel' => $topEarned->required_level,
+                        'image' => PublicFileUrl::resolve($topEarned->image_path),
+                        'iconUrl' => $topEarned->icon_url,
+                        'earned' => true,
+                        'earnedSeason' => $topPivot?->season_id
+                            ? ($badgeSeasonNames[$topPivot->season_id] ?? 'Unknown Season')
+                            : null,
+                        'earnedAt' => $topPivot?->created_at
+                            ? $topPivot->created_at->format('M d, Y')
+                            : null,
+                    ];
+                }
+            }
         }
 
         $canViewSocial = $canViewPrivateProgress || ($user->profile_show_social ?? true);
@@ -285,6 +315,7 @@ class PublicProfileController extends Controller
             ],
             'history' => $history,
             'badges' => $badges,
+            'currentBadge' => $currentBadge,
             'sectionRanks' => $sectionRanks,
             'courses' => $courses,
             'isSameSection' => $isSameSection,

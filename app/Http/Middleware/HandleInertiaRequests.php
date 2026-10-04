@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'appVersion' => (string) config('app.version', '6.2.0'),
             'auth' => [
                 'user' => AuthUserData::from($request->user()),
                 'soundtrack' => function () use ($request): ?array {
