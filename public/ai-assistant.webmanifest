@@ -1,8 +1,8 @@
 {
     "id": "/admin/ai-assistant-app",
-    "name": "Echo",
-    "short_name": "Echo",
-    "description": "Echo — Superadmin AI assistant. Requires sign-in and an internet connection.",
+    "name": "Echo AI",
+    "short_name": "Echo AI",
+    "description": "Echo AI — Superadmin AI assistant. Requires sign-in and an internet connection.",
     "start_url": "/admin/ai-assistant-app",
     "scope": "/admin/ai-assistant-app",
     "display": "standalone",
