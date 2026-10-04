@@ -444,59 +444,356 @@ const exportCanvas = (
     });
 };
 
-const renderCardCanvas = async (retryWithoutImages = false) => {
-    if (!cardElementRef.value) return null;
-    const html2canvas = (await import('html2canvas')).default;
-    return await html2canvas(cardElementRef.value, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: null,
-        logging: false,
-        onclone: (_clonedDoc, clonedElement) => {
-            if (retryWithoutImages) {
-                const imgs = clonedElement.querySelectorAll('img');
-                imgs.forEach((img) => img.remove());
-            }
-        },
+const drawRoundRect = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, w, h, r);
+    } else {
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+};
+
+const loadAvatarImage = (url: string): Promise<HTMLImageElement | null> => {
+    return new Promise((resolve) => {
+        if (!url) {
+            resolve(null);
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
     });
 };
 
+const generateCardCanvas = async (
+    includeAvatar = true,
+): Promise<HTMLCanvasElement> => {
+    const scale = 2;
+    const width = 500;
+    const height = 300;
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2D context');
+
+    ctx.scale(scale, scale);
+
+    const isDark =
+        typeof document !== 'undefined' &&
+        document.documentElement.classList.contains('dark');
+
+    const colors = isDark
+        ? {
+              cardBg1: '#1c1b22',
+              cardBg2: '#131217',
+              border: '#2e2d36',
+              textPrimary: '#f4f4f5',
+              textSecondary: '#a1a1aa',
+              statsBg: 'rgba(255, 255, 255, 0.04)',
+              statsBorder: 'rgba(255, 255, 255, 0.08)',
+              pillBg: '#27272a',
+              pillText: '#a1a1aa',
+              divider: '#27272a',
+              brandText: '#d4d4d8',
+              avatarFallbackBg: '#27272a',
+              avatarFallbackText: '#f4f4f5',
+          }
+        : {
+              cardBg1: '#faf7f2',
+              cardBg2: '#efeae1',
+              border: '#dcd5c9',
+              textPrimary: '#1a1a1e',
+              textSecondary: '#78716c',
+              statsBg: 'rgba(255, 255, 255, 0.75)',
+              statsBorder: 'rgba(220, 213, 201, 0.7)',
+              pillBg: '#ede7de',
+              pillText: '#78716c',
+              divider: '#e4ddd2',
+              brandText: '#57534e',
+              avatarFallbackBg: '#ebe5dc',
+              avatarFallbackText: '#1a1a1e',
+          };
+
+    // 1. Draw outer Card Background with rounded corners
+    const cardX = 10;
+    const cardY = 10;
+    const cardW = width - 20;
+    const cardH = height - 20;
+    const cardRadius = 18;
+
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.clip();
+
+    // Background Gradient
+    const bgGrad = ctx.createLinearGradient(
+        cardX,
+        cardY,
+        cardX + cardW,
+        cardY + cardH,
+    );
+    bgGrad.addColorStop(0, colors.cardBg1);
+    bgGrad.addColorStop(1, colors.cardBg2);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+
+    // Accent Glow in top right corner
+    const glowGrad = ctx.createRadialGradient(
+        cardX + cardW - 30,
+        cardY + 30,
+        0,
+        cardX + cardW - 30,
+        cardY + 30,
+        160,
+    );
+    glowGrad.addColorStop(0, 'rgba(217, 119, 87, 0.25)');
+    glowGrad.addColorStop(1, 'rgba(217, 119, 87, 0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(cardX + cardW - 30, cardY + 30, 160, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Card border
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.strokeStyle = colors.border;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Load & Draw Avatar
+    const avatarX = 32;
+    const avatarY = 30;
+    const avatarSize = 64;
+    const avatarImg =
+        includeAvatar && props.profileUser.avatar
+            ? await loadAvatarImage(props.profileUser.avatar)
+            : null;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2,
+    );
+    ctx.closePath();
+
+    if (avatarImg) {
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
+        ctx.restore();
+    } else {
+        ctx.fillStyle = colors.avatarFallbackBg;
+        ctx.fill();
+        ctx.fillStyle = colors.avatarFallbackText;
+        ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            getInitials(props.profileUser.name),
+            avatarX + avatarSize / 2,
+            avatarY + avatarSize / 2,
+        );
+    }
+
+    // Avatar ring border
+    ctx.beginPath();
+    ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2,
+    );
+    ctx.strokeStyle = colors.border;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. User Details
+    const textStartX = avatarX + avatarSize + 14;
+
+    // Name
+    ctx.save();
+    ctx.font = 'bold 19px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.textBaseline = 'top';
+    const maxNameW = width - textStartX - 32;
+    let displayName = props.profileUser.name;
+    while (
+        ctx.measureText(displayName).width > maxNameW &&
+        displayName.length > 4
+    ) {
+        displayName = displayName.slice(0, -1);
+    }
+    if (displayName !== props.profileUser.name) {
+        displayName += '…';
+    }
+    ctx.fillText(displayName, textStartX, avatarY + 2);
+
+    // Subtitle (Handle • LSI Student)
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText(`${handle.value} • LSI Student`, textStartX, avatarY + 26);
+
+    // Badges Row
+    const pillY = avatarY + 45;
+    const pillH = 20;
+
+    // Level Pill
+    const levelText = `Level ${props.stats.level}`;
+    ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+    const levelTextW = ctx.measureText(levelText).width;
+    const levelPillW = levelTextW + 16;
+
+    ctx.beginPath();
+    drawRoundRect(ctx, textStartX, pillY, levelPillW, pillH, 10);
+    ctx.fillStyle = 'rgba(217, 119, 87, 0.16)';
+    ctx.fill();
+
+    ctx.fillStyle = '#D97757';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText(levelText, textStartX + levelPillW / 2, pillY + pillH / 2);
+
+    // Rank Pill
+    const rankStartX = textStartX + levelPillW + 8;
+    const rankText = `Rank #${props.stats.rank}`;
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    const rankTextW = ctx.measureText(rankText).width;
+    const rankPillW = rankTextW + 16;
+
+    ctx.beginPath();
+    drawRoundRect(ctx, rankStartX, pillY, rankPillW, pillH, 10);
+    ctx.fillStyle = colors.pillBg;
+    ctx.fill();
+
+    ctx.fillStyle = colors.pillText;
+    ctx.fillText(rankText, rankStartX + rankPillW / 2, pillY + pillH / 2);
+    ctx.restore();
+
+    // 4. Metrics Grid (3 columns)
+    const metricsX = 32;
+    const metricsY = 114;
+    const metricsW = width - 64;
+    const metricsH = 72;
+
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, metricsX, metricsY, metricsW, metricsH, 12);
+    ctx.fillStyle = colors.statsBg;
+    ctx.fill();
+    ctx.strokeStyle = colors.statsBorder;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const colW = metricsW / 3;
+
+    // Stat 1: Streak
+    const c1CenterX = metricsX + colW * 0.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('STREAK', c1CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`🔥 ${props.profileUser.streak}d`, c1CenterX, metricsY + 34);
+
+    // Stat 2: Total XP
+    const c2CenterX = metricsX + colW * 1.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText('TOTAL XP', c2CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.fillText(formatCount(props.stats.xp), c2CenterX, metricsY + 34);
+
+    // Stat 3: Badges
+    const c3CenterX = metricsX + colW * 2.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText('BADGES', c3CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.fillText(String(earnedBadgesCount.value), c3CenterX, metricsY + 34);
+    ctx.restore();
+
+    // 5. Card Footer
+    const footerY = 222;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(32, footerY);
+    ctx.lineTo(width - 32, footerY);
+    ctx.strokeStyle = colors.divider;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.brandText;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LSI LEARNING PLATFORM', 32, footerY + 28);
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.textAlign = 'right';
+    ctx.fillText(props.profileUser.joinedAt, width - 32, footerY + 28);
+    ctx.restore();
+
+    return canvas;
+};
+
 const downloadCardImage = async () => {
-    if (isGeneratingImage.value || !cardElementRef.value) return;
+    if (isGeneratingImage.value) return;
     try {
         isGeneratingImage.value = true;
         const filename = `${props.profileUser.name.toLowerCase().replace(/\s+/g, '-')}-lsi-card.png`;
 
-        let canvas: HTMLCanvasElement | null = null;
         let exported = false;
-
         try {
-            canvas = await renderCardCanvas(false);
-            if (canvas) {
-                await exportCanvas(canvas, filename);
-                exported = true;
-            }
+            const canvas = await generateCardCanvas(true);
+            await exportCanvas(canvas, filename);
+            exported = true;
         } catch (e) {
             console.warn(
-                'Primary card export failed, attempting fallback without cross-origin images:',
+                'Initial card generation failed, retrying without external avatar image:',
                 e,
             );
-        }
-
-        if (!exported) {
-            canvas = await renderCardCanvas(true);
-            if (canvas) {
-                await exportCanvas(canvas, filename);
-                exported = true;
-            }
+            const fallbackCanvas = await generateCardCanvas(false);
+            await exportCanvas(fallbackCanvas, filename);
+            exported = true;
         }
 
         if (exported) {
             imageDownloaded.value = true;
             setTimeout(() => (imageDownloaded.value = false), 2500);
-        } else {
-            throw new Error('Could not export canvas');
         }
     } catch (err) {
         console.error('Failed to export card image:', err);
