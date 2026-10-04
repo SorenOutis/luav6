@@ -106,11 +106,31 @@ class Seo
         $component = is_string($page['component'] ?? null) ? $page['component'] : null;
         $entry = $component === null ? null : (self::PAGES[$component] ?? null);
 
+        $props = is_array($page['props'] ?? null) ? $page['props'] : [];
+
+        // Special handling for public student profile
+        if ($entry === null && $component === 'User/PublicProfile' && isset($props['profileUser'])) {
+            $user = is_array($props['profileUser']) ? $props['profileUser'] : [];
+            $stats = is_array($props['stats'] ?? null) ? $props['stats'] : [];
+            $userName = self::firstString($user['name'] ?? null) ?? 'Student';
+            $level = (int) ($stats['level'] ?? 1);
+            $xp = (int) ($stats['xp'] ?? 0);
+            $streak = (int) ($user['streak'] ?? 0);
+
+            $entry = [
+                'title' => "{$userName} - Profile",
+                'description' => "Level {$level} • {$streak}-day streak • {$xp} Total XP. Explore {$userName}'s learning journey on LSI.",
+                'type' => 'profile',
+            ];
+
+            // Prioritize user cover photo or avatar as the social preview card image, falling back to brand cover
+            $ogImage = self::firstString($user['cover_photo'] ?? null, $user['avatar'] ?? null, config('seo.og_image'));
+            $props['og_image'] = $ogImage;
+        }
+
         if ($entry === null) {
             return null;
         }
-
-        $props = is_array($page['props'] ?? null) ? $page['props'] : [];
 
         $siteName = (string) config('seo.site_name', config('app.name', 'LSI'));
         $origin = self::origin($request);

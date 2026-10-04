@@ -4,16 +4,22 @@ import {
     BookOpen,
     Calendar,
     Camera,
+    Check,
+    Copy,
+    Disc3,
+    Download,
     ExternalLink,
     Flame,
     Info,
     LayoutGrid,
+    Loader2,
     Lock,
     Medal,
     Music,
     Pencil,
     Share2,
     Shield,
+    Sparkle,
     Sparkles,
     Trophy,
     UserCheck,
@@ -180,6 +186,7 @@ const sendKudo = (type: 'great-work' | 'on-fire' | 'keep-going') => {
     if (kudoPending.value || props.viewerKudo === type) return;
 
     kudoPending.value = true;
+    triggerKudoBurst(type);
     router.post(
         `/u/${props.profileUser.id}/kudos`,
         { type },
@@ -249,12 +256,17 @@ const countStats = computed(() => {
     return items;
 });
 
-// XP progress toward the next level, used to draw the ring around the avatar.
-const levelProgress = computed(() => {
+// XP progress toward the next level, used to draw the ring around the avatar and milestone bar.
+const currentLevelXp = computed(() => {
     const xp = props.stats.xp || 0;
-    const inLevel = xp % 100;
-    return Math.min(100, Math.max(0, (inLevel / 100) * 100));
+    return xp % 100;
 });
+const levelProgress = computed(() => {
+    return Math.min(100, Math.max(0, currentLevelXp.value));
+});
+const xpRemaining = computed(() => 100 - currentLevelXp.value);
+const nextLevel = computed(() => props.stats.level + 1);
+
 const ringStyle = computed(() => ({
     background: `conic-gradient(#D97757 ${levelProgress.value}%, rgba(217,119,87,0.18) ${levelProgress.value}%)`,
 }));
@@ -262,6 +274,14 @@ const ringStyle = computed(() => ({
 const earnedBadgesCount = computed(
     () => props.badges.filter((b) => b.earned).length,
 );
+
+// Top 3 featured earned badges for the trophy showcase on the hero card
+const topEarnedBadges = computed(() => {
+    const earned = props.badges.filter((b) => b.earned);
+    return [...earned]
+        .sort((a, b) => (b.requiredLevel ?? -1) - (a.requiredLevel ?? -1))
+        .slice(0, 3);
+});
 
 // Current (highest) badge, visible to every visitor with achievement access.
 // Falls back to the highest earned badge from `badges` for cached responses
@@ -276,6 +296,513 @@ const currentBadge = computed<Badge | null>(() => {
         (a, b) => (b.requiredLevel ?? -1) - (a.requiredLevel ?? -1),
     )[0];
 });
+
+// ── 30-Day Activity Heatmap Grid ────────────────────────────────────
+interface HeatmapDay {
+    dateKey: string;
+    dayLabel: string;
+    count: number;
+    xp: number;
+    hasActivity: boolean;
+    level: 0 | 1 | 2 | 3;
+}
+
+const activityHeatmap = computed<HeatmapDay[]>(() => {
+    const days: HeatmapDay[] = [];
+    const today = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    // Group history items by ISO date (YYYY-MM-DD)
+    const xpByDate: Record<string, { count: number; xp: number }> = {};
+    for (const item of props.history) {
+        if (!item.full_date && !item.date) continue;
+        // Parse date from full_date or fallback
+        const parsed = new Date(item.full_date || item.date);
+        if (!isNaN(parsed.getTime())) {
+            const dateStr = parsed.toISOString().split('T')[0];
+            if (!xpByDate[dateStr]) {
+                xpByDate[dateStr] = { count: 0, xp: 0 };
+            }
+            xpByDate[dateStr].count += 1;
+            xpByDate[dateStr].xp += Math.max(0, item.amount_xp || 0);
+        }
+    }
+
+    // Build the trailing 28 days (4 full 7-day weeks)
+    for (let i = 27; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * dayMs);
+        const dateKey = d.toISOString().split('T')[0];
+        const dayLabel = d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
+        const activity = xpByDate[dateKey] || { count: 0, xp: 0 };
+
+        let level: 0 | 1 | 2 | 3 = 0;
+        if (activity.xp >= 100 || activity.count >= 4) {
+            level = 3;
+        } else if (activity.xp >= 40 || activity.count >= 2) {
+            level = 2;
+        } else if (activity.count >= 1 || activity.xp > 0) {
+            level = 1;
+        }
+
+        days.push({
+            dateKey,
+            dayLabel,
+            count: activity.count,
+            xp: activity.xp,
+            hasActivity: level > 0,
+            level,
+        });
+    }
+
+    return days;
+});
+
+const activeDaysCount = computed(
+    () => activityHeatmap.value.filter((d) => d.hasActivity).length,
+);
+
+// ── Interactive Kudos Animation ─────────────────────────────────────
+const kudoCelebrationEmoji = ref<string | null>(null);
+const showKudoBurst = ref(false);
+
+const triggerKudoBurst = (type: string) => {
+    kudoCelebrationEmoji.value =
+        type === 'on-fire' ? '🔥' : type === 'great-work' ? '🎉' : '💪';
+    showKudoBurst.value = true;
+    setTimeout(() => {
+        showKudoBurst.value = false;
+        kudoCelebrationEmoji.value = null;
+    }, 1200);
+};
+
+// ── Shareable Profile Snapshot Card ─────────────────────────────────
+const showShareCardModal = ref(false);
+const cardCopied = ref(false);
+const cardElementRef = ref<HTMLElement | null>(null);
+const isGeneratingImage = ref(false);
+const imageDownloaded = ref(false);
+
+const copyCardSummary = async () => {
+    const text = `🌟 Student: ${props.profileUser.name} (${handle.value})\n⚡ Level: ${props.stats.level} • ${props.stats.xp} XP\n🔥 Streak: ${props.profileUser.streak} Days\n🏆 Rank: #${props.stats.rank} on LSI\n🔗 ${window.location.origin}/u/${props.profileUser.id}`;
+    try {
+        await navigator.clipboard.writeText(text);
+        cardCopied.value = true;
+        setTimeout(() => (cardCopied.value = false), 2500);
+    } catch {
+        // clipboard unavailable
+    }
+};
+
+const triggerDownload = (blobOrDataUrl: Blob | string, filename: string) => {
+    const link = document.createElement('a');
+    link.download = filename;
+    const url =
+        typeof blobOrDataUrl === 'string'
+            ? blobOrDataUrl
+            : URL.createObjectURL(blobOrDataUrl);
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (typeof blobOrDataUrl !== 'string') {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+};
+
+const exportCanvas = (
+    canvas: HTMLCanvasElement,
+    filename: string,
+): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        try {
+            if (canvas.toBlob) {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        triggerDownload(blob, filename);
+                        resolve();
+                    } else {
+                        try {
+                            const dataUrl = canvas.toDataURL('image/png');
+                            triggerDownload(dataUrl, filename);
+                            resolve();
+                        } catch (err) {
+                            reject(err);
+                        }
+                    }
+                }, 'image/png');
+            } else {
+                const dataUrl = canvas.toDataURL('image/png');
+                triggerDownload(dataUrl, filename);
+                resolve();
+            }
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
+const drawRoundRect = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+) => {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, w, h, r);
+    } else {
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+};
+
+const loadAvatarImage = (url: string): Promise<HTMLImageElement | null> => {
+    return new Promise((resolve) => {
+        if (!url) {
+            resolve(null);
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+    });
+};
+
+const generateCardCanvas = async (
+    includeAvatar = true,
+): Promise<HTMLCanvasElement> => {
+    const scale = 2;
+    const width = 500;
+    const height = 300;
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2D context');
+
+    ctx.scale(scale, scale);
+
+    const isDark =
+        typeof document !== 'undefined' &&
+        document.documentElement.classList.contains('dark');
+
+    const colors = isDark
+        ? {
+              cardBg1: '#1c1b22',
+              cardBg2: '#131217',
+              border: '#2e2d36',
+              textPrimary: '#f4f4f5',
+              textSecondary: '#a1a1aa',
+              statsBg: 'rgba(255, 255, 255, 0.04)',
+              statsBorder: 'rgba(255, 255, 255, 0.08)',
+              pillBg: '#27272a',
+              pillText: '#a1a1aa',
+              divider: '#27272a',
+              brandText: '#d4d4d8',
+              avatarFallbackBg: '#27272a',
+              avatarFallbackText: '#f4f4f5',
+          }
+        : {
+              cardBg1: '#faf7f2',
+              cardBg2: '#efeae1',
+              border: '#dcd5c9',
+              textPrimary: '#1a1a1e',
+              textSecondary: '#78716c',
+              statsBg: 'rgba(255, 255, 255, 0.75)',
+              statsBorder: 'rgba(220, 213, 201, 0.7)',
+              pillBg: '#ede7de',
+              pillText: '#78716c',
+              divider: '#e4ddd2',
+              brandText: '#57534e',
+              avatarFallbackBg: '#ebe5dc',
+              avatarFallbackText: '#1a1a1e',
+          };
+
+    // 1. Draw outer Card Background with rounded corners
+    const cardX = 10;
+    const cardY = 10;
+    const cardW = width - 20;
+    const cardH = height - 20;
+    const cardRadius = 18;
+
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.clip();
+
+    // Background Gradient
+    const bgGrad = ctx.createLinearGradient(
+        cardX,
+        cardY,
+        cardX + cardW,
+        cardY + cardH,
+    );
+    bgGrad.addColorStop(0, colors.cardBg1);
+    bgGrad.addColorStop(1, colors.cardBg2);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+
+    // Accent Glow in top right corner
+    const glowGrad = ctx.createRadialGradient(
+        cardX + cardW - 30,
+        cardY + 30,
+        0,
+        cardX + cardW - 30,
+        cardY + 30,
+        160,
+    );
+    glowGrad.addColorStop(0, 'rgba(217, 119, 87, 0.25)');
+    glowGrad.addColorStop(1, 'rgba(217, 119, 87, 0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(cardX + cardW - 30, cardY + 30, 160, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Card border
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.strokeStyle = colors.border;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Load & Draw Avatar
+    const avatarX = 32;
+    const avatarY = 30;
+    const avatarSize = 64;
+    const avatarImg =
+        includeAvatar && props.profileUser.avatar
+            ? await loadAvatarImage(props.profileUser.avatar)
+            : null;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2,
+    );
+    ctx.closePath();
+
+    if (avatarImg) {
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
+        ctx.restore();
+    } else {
+        ctx.fillStyle = colors.avatarFallbackBg;
+        ctx.fill();
+        ctx.fillStyle = colors.avatarFallbackText;
+        ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            getInitials(props.profileUser.name),
+            avatarX + avatarSize / 2,
+            avatarY + avatarSize / 2,
+        );
+    }
+
+    // Avatar ring border
+    ctx.beginPath();
+    ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2,
+    );
+    ctx.strokeStyle = colors.border;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. User Details
+    const textStartX = avatarX + avatarSize + 14;
+
+    // Name
+    ctx.save();
+    ctx.font = 'bold 19px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.textBaseline = 'top';
+    const maxNameW = width - textStartX - 32;
+    let displayName = props.profileUser.name;
+    while (
+        ctx.measureText(displayName).width > maxNameW &&
+        displayName.length > 4
+    ) {
+        displayName = displayName.slice(0, -1);
+    }
+    if (displayName !== props.profileUser.name) {
+        displayName += '…';
+    }
+    ctx.fillText(displayName, textStartX, avatarY + 2);
+
+    // Subtitle (Handle • LSI Student)
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText(`${handle.value} • LSI Student`, textStartX, avatarY + 26);
+
+    // Badges Row
+    const pillY = avatarY + 45;
+    const pillH = 20;
+
+    // Level Pill
+    const levelText = `Level ${props.stats.level}`;
+    ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+    const levelTextW = ctx.measureText(levelText).width;
+    const levelPillW = levelTextW + 16;
+
+    ctx.beginPath();
+    drawRoundRect(ctx, textStartX, pillY, levelPillW, pillH, 10);
+    ctx.fillStyle = 'rgba(217, 119, 87, 0.16)';
+    ctx.fill();
+
+    ctx.fillStyle = '#D97757';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText(levelText, textStartX + levelPillW / 2, pillY + pillH / 2);
+
+    // Rank Pill
+    const rankStartX = textStartX + levelPillW + 8;
+    const rankText = `Rank #${props.stats.rank}`;
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    const rankTextW = ctx.measureText(rankText).width;
+    const rankPillW = rankTextW + 16;
+
+    ctx.beginPath();
+    drawRoundRect(ctx, rankStartX, pillY, rankPillW, pillH, 10);
+    ctx.fillStyle = colors.pillBg;
+    ctx.fill();
+
+    ctx.fillStyle = colors.pillText;
+    ctx.fillText(rankText, rankStartX + rankPillW / 2, pillY + pillH / 2);
+    ctx.restore();
+
+    // 4. Metrics Grid (3 columns)
+    const metricsX = 32;
+    const metricsY = 114;
+    const metricsW = width - 64;
+    const metricsH = 72;
+
+    ctx.save();
+    ctx.beginPath();
+    drawRoundRect(ctx, metricsX, metricsY, metricsW, metricsH, 12);
+    ctx.fillStyle = colors.statsBg;
+    ctx.fill();
+    ctx.strokeStyle = colors.statsBorder;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const colW = metricsW / 3;
+
+    // Stat 1: Streak
+    const c1CenterX = metricsX + colW * 0.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('STREAK', c1CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`🔥 ${props.profileUser.streak}d`, c1CenterX, metricsY + 34);
+
+    // Stat 2: Total XP
+    const c2CenterX = metricsX + colW * 1.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText('TOTAL XP', c2CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.fillText(formatCount(props.stats.xp), c2CenterX, metricsY + 34);
+
+    // Stat 3: Badges
+    const c3CenterX = metricsX + colW * 2.5;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.fillText('BADGES', c3CenterX, metricsY + 14);
+
+    ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textPrimary;
+    ctx.fillText(String(earnedBadgesCount.value), c3CenterX, metricsY + 34);
+    ctx.restore();
+
+    // 5. Card Footer
+    const footerY = 222;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(32, footerY);
+    ctx.lineTo(width - 32, footerY);
+    ctx.strokeStyle = colors.divider;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.brandText;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LSI LEARNING PLATFORM', 32, footerY + 28);
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = colors.textSecondary;
+    ctx.textAlign = 'right';
+    ctx.fillText(props.profileUser.joinedAt, width - 32, footerY + 28);
+    ctx.restore();
+
+    return canvas;
+};
+
+const downloadCardImage = async () => {
+    if (isGeneratingImage.value) return;
+    try {
+        isGeneratingImage.value = true;
+        const filename = `${props.profileUser.name.toLowerCase().replace(/\s+/g, '-')}-lsi-card.png`;
+
+        let exported = false;
+        try {
+            const canvas = await generateCardCanvas(true);
+            await exportCanvas(canvas, filename);
+            exported = true;
+        } catch (e) {
+            console.warn(
+                'Initial card generation failed, retrying without external avatar image:',
+                e,
+            );
+            const fallbackCanvas = await generateCardCanvas(false);
+            await exportCanvas(fallbackCanvas, filename);
+            exported = true;
+        }
+
+        if (exported) {
+            imageDownloaded.value = true;
+            setTimeout(() => (imageDownloaded.value = false), 2500);
+        }
+    } catch (err) {
+        console.error('Failed to export card image:', err);
+        // Fallback to copying text summary if canvas export fails
+        await copyCardSummary();
+    } finally {
+        isGeneratingImage.value = false;
+    }
+};
 
 const kudoLabel: Record<string, string> = {
     'great-work': '🎉 Great work',
@@ -847,12 +1374,12 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
-                            <!-- Mobile Music Widget (placed directly to the right of the avatar circle) -->
+                            <!-- Mobile Music Widget (compact glassmorphism pill with spinning vinyl disc) -->
                             <div
                                 v-if="profileMusic"
-                                class="z-10 flex min-w-0 flex-1 flex-col justify-end gap-1.5 pb-1 sm:hidden"
+                                class="z-10 flex min-w-0 flex-1 flex-col justify-end gap-1.5 rounded-2xl border border-border/70 bg-card/85 p-2 pb-1.5 shadow-xs backdrop-blur-md sm:hidden"
                             >
-                                <!-- Top row: Music track title + equalizer / icon + info button -->
+                                <!-- Top row: Spinning vinyl disc + track title + info button -->
                                 <div class="flex min-w-0 items-center gap-1.5">
                                     <button
                                         type="button"
@@ -860,43 +1387,36 @@ onBeforeUnmount(() => {
                                         :title="`${profileMusic.title} by ${profileMusic.artist} (Click to toggle playback)`"
                                         @click="toggleAudio"
                                     >
+                                        <!-- Mini vinyl disc -->
                                         <div
-                                            v-if="isPlaying && !isMuted"
-                                            class="flex h-3 shrink-0 items-end gap-0.5 px-0.5"
-                                            aria-hidden="true"
+                                            class="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 shadow-xs ring-1 ring-border/50 transition-transform"
+                                            :class="
+                                                isPlaying && !isMuted
+                                                    ? 'animate-spin [animation-duration:4s]'
+                                                    : ''
+                                            "
                                         >
+                                            <img
+                                                v-if="
+                                                    profileMusic.coverImageUrl
+                                                "
+                                                :src="
+                                                    profileMusic.coverImageUrl
+                                                "
+                                                alt=""
+                                                class="size-3 rounded-full object-cover"
+                                            />
+                                            <Disc3
+                                                v-else
+                                                class="size-3 text-[#D97757]"
+                                            />
                                             <span
-                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
-                                                :style="{
-                                                    height: `${eqBars[0]}px`,
-                                                }"
-                                            ></span>
-                                            <span
-                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
-                                                :style="{
-                                                    height: `${eqBars[1]}px`,
-                                                }"
-                                            ></span>
-                                            <span
-                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
-                                                :style="{
-                                                    height: `${eqBars[2]}px`,
-                                                }"
-                                            ></span>
-                                            <span
-                                                class="w-0.5 rounded-full bg-primary transition-[height] duration-75"
-                                                :style="{
-                                                    height: `${eqBars[3]}px`,
-                                                }"
+                                                class="absolute size-1 rounded-full bg-background"
                                             ></span>
                                         </div>
-                                        <Music
-                                            v-else
-                                            class="size-3.5 shrink-0 text-primary"
-                                        />
 
                                         <span
-                                            class="max-w-[130px] truncate text-xs leading-tight font-bold"
+                                            class="max-w-[110px] truncate text-xs leading-tight font-bold"
                                         >
                                             {{ profileMusic.title }}
                                         </span>
@@ -1011,6 +1531,15 @@ onBeforeUnmount(() => {
                             </button>
                             <button
                                 type="button"
+                                class="profile-btn inline-flex items-center gap-1.5 border border-border/60 bg-card px-3 text-[14px] text-foreground transition-colors hover:bg-muted"
+                                title="Generate Shareable Profile Card"
+                                @click="showShareCardModal = true"
+                            >
+                                <Sparkles class="h-3.5 w-3.5 text-[#D97757]" />
+                                Card
+                            </button>
+                            <button
+                                type="button"
                                 class="profile-btn inline-flex items-center gap-1.5 border border-border/60 bg-card px-4 text-[14px] text-foreground transition-colors hover:bg-muted"
                                 @click="shareProfile"
                             >
@@ -1117,8 +1646,32 @@ onBeforeUnmount(() => {
                                     :title="`${profileMusic.title} by ${profileMusic.artist} (Click to toggle playback)`"
                                     @click="toggleAudio"
                                 >
+                                    <!-- Mini spinning vinyl disc -->
                                     <div
-                                        v-if="isPlaying"
+                                        class="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 shadow-xs ring-1 ring-border/50 transition-transform"
+                                        :class="
+                                            isPlaying && !isMuted
+                                                ? 'animate-spin [animation-duration:4s]'
+                                                : ''
+                                        "
+                                    >
+                                        <img
+                                            v-if="profileMusic.coverImageUrl"
+                                            :src="profileMusic.coverImageUrl"
+                                            alt=""
+                                            class="size-3 rounded-full object-cover"
+                                        />
+                                        <Disc3
+                                            v-else
+                                            class="size-3 text-[#D97757]"
+                                        />
+                                        <span
+                                            class="absolute size-1 rounded-full bg-background"
+                                        ></span>
+                                    </div>
+
+                                    <div
+                                        v-if="isPlaying && !isMuted"
                                         class="flex h-3 items-end gap-0.5 px-0.5"
                                         aria-hidden="true"
                                     >
@@ -1147,10 +1700,6 @@ onBeforeUnmount(() => {
                                             }"
                                         ></span>
                                     </div>
-                                    <Music
-                                        v-else
-                                        class="size-3 text-muted-foreground"
-                                    />
 
                                     <span
                                         class="max-w-[130px] truncate font-medium text-foreground sm:max-w-[200px]"
@@ -1228,9 +1777,123 @@ onBeforeUnmount(() => {
                             </span>
                         </div>
 
+                        <!-- ════════════ Level & Milestone Progress Bar ════════════ -->
+                        <div class="profile-card mt-3 max-w-xl bg-card p-3.5">
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center gap-1 text-[13px] font-bold text-foreground"
+                                    >
+                                        <Zap class="size-4 text-[#D97757]" />
+                                        Level {{ stats.level }}
+                                    </span>
+                                    <span
+                                        class="text-[12px] text-muted-foreground"
+                                    >
+                                        • {{ stats.xp }} Total XP
+                                    </span>
+                                </div>
+                                <span
+                                    class="font-mono text-[12px] font-semibold text-muted-foreground"
+                                >
+                                    {{ currentLevelXp }} / 100 XP
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-muted"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-gradient-to-r from-[#D97757] to-amber-500 transition-all duration-500"
+                                    :style="{ width: `${levelProgress}%` }"
+                                ></div>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center justify-between text-[11px] text-muted-foreground"
+                            >
+                                <span
+                                    class="inline-flex items-center gap-1 font-medium"
+                                >
+                                    <Sparkle class="size-3 text-amber-500" />
+                                    {{ xpRemaining }} XP to Level
+                                    {{ nextLevel }}
+                                </span>
+                                <span class="font-medium text-foreground/80">
+                                    Rank #{{ stats.rank }} of
+                                    {{ stats.totalPlayers }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- ════════════ Featured Badges Showcase (Top 3) ════════════ -->
+                        <div
+                            v-if="
+                                showAchievements && topEarnedBadges.length > 0
+                            "
+                            class="profile-card mt-3 max-w-xl bg-card p-3.5"
+                        >
+                            <div
+                                class="mb-2.5 flex items-center justify-between"
+                            >
+                                <span
+                                    class="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                >
+                                    Featured Badges (Trophy Case)
+                                </span>
+                                <button
+                                    type="button"
+                                    class="text-[11px] font-medium text-primary hover:underline"
+                                    @click="activeTab = 'achievements'"
+                                >
+                                    View all {{ earnedBadgesCount }}
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2.5">
+                                <div
+                                    v-for="badge in topEarnedBadges"
+                                    :key="badge.id"
+                                    class="group flex flex-col items-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-center transition-all hover:border-[#D97757]/40 hover:bg-muted/40"
+                                    :title="`${badge.name}: ${badge.description}`"
+                                >
+                                    <div
+                                        class="relative flex size-10 items-center justify-center overflow-hidden rounded-full bg-muted shadow-xs transition-transform group-hover:scale-105"
+                                    >
+                                        <img
+                                            v-if="badge.image"
+                                            :src="badge.image"
+                                            :alt="badge.name"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <Medal
+                                            v-else
+                                            class="size-5 text-[#D97757]"
+                                        />
+                                    </div>
+                                    <p
+                                        class="max-w-full truncate text-[12px] font-semibold text-foreground"
+                                    >
+                                        {{ badge.name }}
+                                    </p>
+                                    <span
+                                        v-if="badge.requiredLevel"
+                                        class="rounded-full bg-background px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground"
+                                    >
+                                        Lvl {{ badge.requiredLevel }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- ════════════ Current badge (visible to every visitor) ════════════ -->
                         <div
-                            v-if="showAchievements && currentBadge"
+                            v-if="
+                                showAchievements &&
+                                currentBadge &&
+                                topEarnedBadges.length === 0
+                            "
                             class="profile-card mt-3 flex max-w-xl items-center gap-3 bg-card px-4 py-3"
                         >
                             <div
@@ -1374,8 +2037,18 @@ onBeforeUnmount(() => {
                     <!-- ════════════ Positive kudos ════════════ -->
                     <div
                         v-if="!profileUser.isCurrentUser && canInteract"
-                        class="mt-4 flex flex-col gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        class="relative mt-4 flex flex-col gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
+                        <!-- Kudo celebration burst overlay -->
+                        <div
+                            v-if="showKudoBurst"
+                            class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-xs transition-opacity"
+                        >
+                            <span class="animate-bounce text-3xl sm:text-4xl">
+                                {{ kudoCelebrationEmoji }}
+                            </span>
+                        </div>
+
                         <div>
                             <p class="text-sm font-semibold">Send a kudo</p>
                             <p class="text-xs text-muted-foreground">
@@ -1390,7 +2063,7 @@ onBeforeUnmount(() => {
                                 :disabled="
                                     kudoPending || viewerKudo === kudo.key
                                 "
-                                class="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-default"
+                                class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:scale-105 active:scale-95 disabled:cursor-default"
                                 :class="
                                     viewerKudo === kudo.key
                                         ? 'border-foreground bg-foreground text-background'
@@ -1484,6 +2157,79 @@ onBeforeUnmount(() => {
                             class="space-y-3"
                             role="tabpanel"
                         >
+                            <!-- 28-Day Study Rhythm Heatmap Card -->
+                            <div class="profile-card bg-card p-4">
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Calendar
+                                            class="size-4 text-[#D97757]"
+                                        />
+                                        <span
+                                            class="text-[13px] font-semibold text-foreground"
+                                        >
+                                            Study Rhythm & Activity (Last 4
+                                            Weeks)
+                                        </span>
+                                    </div>
+                                    <span
+                                        class="text-[12px] font-medium text-muted-foreground"
+                                    >
+                                        {{ activeDaysCount }} of 28 active days
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="mt-3 grid grid-cols-7 gap-1.5 sm:gap-2"
+                                >
+                                    <div
+                                        v-for="day in activityHeatmap"
+                                        :key="day.dateKey"
+                                        class="group relative flex aspect-square flex-col items-center justify-center rounded-lg border border-border/40 transition-transform hover:scale-110"
+                                        :class="
+                                            day.level === 3
+                                                ? 'border-[#D97757] bg-[#D97757] text-white shadow-xs'
+                                                : day.level === 2
+                                                  ? 'border-[#D97757]/60 bg-[#D97757]/50 text-foreground'
+                                                  : day.level === 1
+                                                    ? 'border-[#D97757]/30 bg-[#D97757]/20 text-foreground'
+                                                    : 'border-border/30 bg-muted/30 text-muted-foreground/40'
+                                        "
+                                        :title="`${day.dayLabel}: ${day.count} activities, ${day.xp} XP`"
+                                    >
+                                        <span
+                                            class="font-mono text-[10px] leading-none font-medium"
+                                        >
+                                            {{ day.dayLabel.split(' ')[1] }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="mt-3 flex items-center justify-between text-[11px] text-muted-foreground"
+                                >
+                                    <span>28 days ago</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[10px]">Less</span>
+                                        <span
+                                            class="size-2.5 rounded-sm border border-border/30 bg-muted/40"
+                                        ></span>
+                                        <span
+                                            class="size-2.5 rounded-sm border border-[#D97757]/30 bg-[#D97757]/25"
+                                        ></span>
+                                        <span
+                                            class="size-2.5 rounded-sm border border-[#D97757]/60 bg-[#D97757]/55"
+                                        ></span>
+                                        <span
+                                            class="size-2.5 rounded-sm border border-[#D97757] bg-[#D97757]"
+                                        ></span>
+                                        <span class="text-[10px]">More</span>
+                                    </div>
+                                    <span>Today</span>
+                                </div>
+                            </div>
+
                             <template v-if="history.length > 0">
                                 <article
                                     v-for="item in history"
@@ -1765,6 +2511,7 @@ onBeforeUnmount(() => {
             "
         >
             <DialogContent
+                :show-close-button="false"
                 class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[420px]"
             >
                 <div
@@ -1938,6 +2685,190 @@ onBeforeUnmount(() => {
                             <span>Official Release / Stream</span>
                             <ExternalLink class="size-3.5" />
                         </a>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ════════════ Shareable Profile Card Modal ════════════ -->
+        <Dialog
+            :open="showShareCardModal"
+            @update:open="(val) => (showShareCardModal = val)"
+        >
+            <DialogContent
+                :show-close-button="false"
+                class="overflow-hidden border-border/60 bg-card p-0 sm:max-w-[420px]"
+            >
+                <div
+                    class="flex items-center justify-between border-b border-border/20 px-5 py-4"
+                >
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex size-8 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                        >
+                            <Sparkles class="size-4" />
+                        </div>
+                        <DialogTitle
+                            class="text-[16px] font-semibold tracking-tight"
+                        >
+                            Student Profile Card
+                        </DialogTitle>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted"
+                        aria-label="Close"
+                        @click="showShareCardModal = false"
+                    >
+                        <X class="size-4" />
+                    </button>
+                </div>
+
+                <div class="p-5">
+                    <!-- The Visual Snapshot Card -->
+                    <div
+                        ref="cardElementRef"
+                        class="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-muted/40 to-muted/80 p-5 shadow-lg"
+                    >
+                        <!-- Top Accent Banner -->
+                        <div
+                            class="absolute -top-12 -right-12 size-36 rounded-full bg-[#D97757]/15 blur-2xl"
+                        ></div>
+
+                        <div class="relative flex items-center gap-3.5">
+                            <Avatar
+                                class="size-16 border-2 border-background shadow-md"
+                            >
+                                <AvatarImage
+                                    v-if="profileUser.avatar"
+                                    :src="profileUser.avatar"
+                                    :alt="profileUser.name"
+                                    crossorigin="anonymous"
+                                    class="object-cover"
+                                />
+                                <AvatarFallback
+                                    class="bg-muted text-xl font-bold"
+                                >
+                                    {{ getInitials(profileUser.name) }}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div class="min-w-0 flex-1">
+                                <h3
+                                    class="truncate text-lg font-bold text-foreground"
+                                >
+                                    {{ profileUser.name }}
+                                </h3>
+                                <p class="text-xs text-muted-foreground">
+                                    {{ handle }} • LSI Student
+                                </p>
+                                <div class="mt-1 flex items-center gap-1.5">
+                                    <span
+                                        class="rounded-full bg-[#D97757]/15 px-2 py-0.5 text-[10px] font-bold text-[#D97757]"
+                                    >
+                                        Level {{ stats.level }}
+                                    </span>
+                                    <span
+                                        class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
+                                    >
+                                        Rank #{{ stats.rank }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Metrics Grid -->
+                        <div
+                            class="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-border/40 bg-background/60 p-2.5 text-center backdrop-blur-xs"
+                        >
+                            <div>
+                                <span
+                                    class="block text-[10px] text-muted-foreground uppercase"
+                                    >Streak</span
+                                >
+                                <span class="text-sm font-bold text-amber-500"
+                                    >🔥 {{ profileUser.streak }}d</span
+                                >
+                            </div>
+                            <div>
+                                <span
+                                    class="block text-[10px] text-muted-foreground uppercase"
+                                    >Total XP</span
+                                >
+                                <span
+                                    class="text-sm font-bold text-foreground"
+                                    >{{ formatCount(stats.xp) }}</span
+                                >
+                            </div>
+                            <div>
+                                <span
+                                    class="block text-[10px] text-muted-foreground uppercase"
+                                    >Badges</span
+                                >
+                                <span
+                                    class="text-sm font-bold text-foreground"
+                                    >{{ earnedBadgesCount }}</span
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Bottom Card Brand Footer -->
+                        <div
+                            class="mt-3.5 flex items-center justify-between border-t border-border/40 pt-2.5 text-[10px] text-muted-foreground"
+                        >
+                            <span
+                                class="font-semibold tracking-wider text-foreground/80 uppercase"
+                                >LSI LEARNING PLATFORM</span
+                            >
+                            <span>{{ profileUser.joinedAt }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            :disabled="isGeneratingImage"
+                            class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 py-2.5 text-xs font-semibold text-primary transition-all hover:bg-primary/20 disabled:opacity-60"
+                            @click="downloadCardImage"
+                        >
+                            <Loader2
+                                v-if="isGeneratingImage"
+                                class="size-3.5 animate-spin"
+                            />
+                            <component
+                                :is="imageDownloaded ? Check : Download"
+                                v-else
+                                class="size-3.5"
+                            />
+                            {{
+                                isGeneratingImage
+                                    ? 'Generating...'
+                                    : imageDownloaded
+                                      ? 'Card Saved!'
+                                      : 'Save Card Image'
+                            }}
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-muted/60 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                            @click="copyCardSummary"
+                        >
+                            <component
+                                :is="cardCopied ? Check : Copy"
+                                class="size-3.5"
+                            />
+                            {{
+                                cardCopied ? 'Summary Copied!' : 'Copy Summary'
+                            }}
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground py-2.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+                            @click="shareProfile"
+                        >
+                            <Share2 class="size-3.5" />
+                            Share Link
+                        </button>
                     </div>
                 </div>
             </DialogContent>
