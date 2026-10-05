@@ -12,7 +12,7 @@
                 initialActiveSession: config.initialActiveSession || null,
 
                 // Start with the history sidebar closed on phones and in the
-                // installed app â€” it covers the whole chat there. Desktop
+                // installed app — it covers the whole chat there. Desktop
                 // browsers keep it open.
                 sidebarOpen: typeof window !== 'undefined'
                     ? window.innerWidth >= 768 && ! window.matchMedia('(display-mode: standalone)').matches
@@ -687,7 +687,7 @@
 
                     if (toolName === 'research_topic') {
                         step.label = 'Researching topic & curriculum';
-                        step.target = args.topic ? ('Wikipedia Â· ' + args.topic) : 'Wikipedia / Knowledge Base';
+                        step.target = args.topic ? ('Wikipedia · ' + args.topic) : 'Wikipedia / Knowledge Base';
                         target.activity.title = args.topic ? ('Autonomous research: ' + args.topic) : 'Autonomous research & analysis';
                     } else if (toolName === 'generate_exam_questions') {
                         step.label = 'Generating exam questions & answer key';
@@ -1282,7 +1282,7 @@
 
                     // Ask the browser for microphone permission first. This shows the
                     // permission prompt (and confirms a mic exists) before speech
-                    // recognition starts â€” without it, browsers just fire a
+                    // recognition starts — without it, browsers just fire a
                     // confusing `not-allowed` error and dictation never begins.
                     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                         try {
@@ -1292,7 +1292,7 @@
                             const name = err && err.name ? err.name : '';
 
                             if (name === 'NotAllowedError' || name === 'SecurityError') {
-                                this.voiceError = 'Microphone access was denied. Tap the lock/tune icon in the address bar Ã¢â€ â€™ Permissions Ã¢â€ â€™ Microphone Ã¢â€ â€™ Allow (on Android, also allow microphone access for the browser in system settings), then tap the mic again.';
+                                this.voiceError = 'Microphone access was denied. Tap the lock/tune icon in the address bar → Permissions → Microphone → Allow (on Android, also allow microphone access for the browser in system settings), then tap the mic again.';
                             } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
                                 this.voiceError = 'No microphone was found on this device. Connect or enable a microphone, then try again.';
                             } else if (name === 'NotReadableError' || name === 'AbortError') {
@@ -1355,7 +1355,7 @@
                             }
 
                             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                                this.voiceError = 'Microphone access was denied or is unavailable (private/incognito windows can disable dictation). Allow microphone access for this site â€” address bar lock icon Ã¢â€ â€™ Permissions Ã¢â€ â€™ Microphone Ã¢â€ â€™ Allow â€” then tap the mic again.';
+                                this.voiceError = 'Microphone access was denied or is unavailable (private/incognito windows can disable dictation). Allow microphone access for this site — address bar lock icon → Permissions → Microphone → Allow — then tap the mic again.';
                             } else if (event.error === 'network') {
                                 this.voiceError = 'Speech service network error. Please verify your internet connection.';
                             } else if (event.error === 'audio-capture') {

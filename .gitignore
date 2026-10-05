@@ -54,3 +54,4 @@ bun.lock
 # Local tool directories
 /.freebuff
 /.opencode
+.impeccable/

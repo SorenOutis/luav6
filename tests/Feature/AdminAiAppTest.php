@@ -53,20 +53,10 @@ it('ships a standalone manifest with correctly sized icons', function () {
         ->and($manifest['name'])->toBe('Echo AI')
         ->and($manifest['short_name'])->toBe('Echo AI');
 
-    // First icons follow the school logo via /favicon.png (FaviconController serves
-    // the uploaded school_logo_path); bundled PNGs remain as installable fallback.
-    expect(collect($manifest['icons'])->pluck('src'))
-        ->toContain('/favicon.png?size=192')
-        ->toContain('/images/ai-app-192.png');
-
-    foreach ($manifest['icons'] as $icon) {
-        if (str_starts_with($icon['src'], '/favicon.png')) {
-            continue;
-        }
-
-        $size = getimagesize(public_path(ltrim(explode('?', $icon['src'])[0], '/')));
-        expect("{$size[0]}x{$size[1]}")->toBe($icon['sizes']);
-    }
+    // Every manifest icon follows the uploaded school logo via /favicon.png
+    // (FaviconController serves school_logo_path and grants exact sizing).
+    expect(collect($manifest['icons'])->pluck('src')->all())
+        ->toBe(['/favicon.png?size=192', '/favicon.png?size=512']);
 });
 
 it('labels the assistant Echo AI in navigation', function () {
