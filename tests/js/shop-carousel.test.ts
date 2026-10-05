@@ -193,15 +193,21 @@ describe('Shop.vue Bento Grid Collection', () => {
 
         // Click Alabaster
         await alabasterBtn?.trigger('click');
-        expect(heroImg.attributes('src')).toBe(
-            'https://placehold.co/800x800/alabaster.jpg',
-        );
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/alabaster.jpg');
 
         // Click Obsidian
         await obsidianBtn?.trigger('click');
-        expect(heroImg.attributes('src')).toBe(
-            'https://placehold.co/800x800/obsidian.jpg',
-        );
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/obsidian.jpg');
     });
 
     it('renders tabs when 1 variant is uploaded per merch item across different merches', async () => {
@@ -275,6 +281,7 @@ describe('Shop.vue Bento Grid Collection', () => {
         expect(obsidianBtn?.exists()).toBe(true);
 
         await obsidianBtn?.trigger('click');
+        await new Promise((r) => setTimeout(r, 300));
         expect(
             wrapper
                 .find('section[aria-label*="Showcase"] img')
@@ -282,6 +289,7 @@ describe('Shop.vue Bento Grid Collection', () => {
         ).toBe('https://placehold.co/800x800/obsidian-lone.jpg');
 
         await alabasterBtn?.trigger('click');
+        await new Promise((r) => setTimeout(r, 300));
         expect(
             wrapper
                 .find('section[aria-label*="Showcase"] img')
@@ -294,8 +302,12 @@ describe('Shop.vue Bento Grid Collection', () => {
 
         // Check variant buttons rendered
         const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const obsidianBtn = variantButtons.find((btn) => btn.text() === 'Obsidian');
-        const alabasterBtn = variantButtons.find((btn) => btn.text() === 'Alabaster');
+        const obsidianBtn = variantButtons.find(
+            (btn) => btn.text() === 'Obsidian',
+        );
+        const alabasterBtn = variantButtons.find(
+            (btn) => btn.text() === 'Alabaster',
+        );
 
         expect(obsidianBtn?.exists()).toBe(true);
         expect(alabasterBtn?.exists()).toBe(true);
@@ -306,11 +318,21 @@ describe('Shop.vue Bento Grid Collection', () => {
 
         // Click Alabaster
         await alabasterBtn?.trigger('click');
-        expect(heroImg.attributes('src')).toBe('https://placehold.co/800x800/alabaster.jpg');
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/alabaster.jpg');
 
         // Click Obsidian
         await obsidianBtn?.trigger('click');
-        expect(heroImg.attributes('src')).toBe('https://placehold.co/800x800/obsidian.jpg');
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/obsidian.jpg');
     });
 
     it('renders tabs when 1 variant is uploaded per merch item across different merches', async () => {
@@ -326,7 +348,8 @@ describe('Shop.vue Bento Grid Collection', () => {
                 variants: [
                     {
                         name: 'Alabaster',
-                        image_url: 'https://placehold.co/800x800/alabaster-lone.jpg',
+                        image_url:
+                            'https://placehold.co/800x800/alabaster-lone.jpg',
                     },
                 ],
                 stock: 10,
@@ -345,7 +368,8 @@ describe('Shop.vue Bento Grid Collection', () => {
                 variants: [
                     {
                         name: 'Obsidian',
-                        image_url: 'https://placehold.co/800x800/obsidian-lone.jpg',
+                        image_url:
+                            'https://placehold.co/800x800/obsidian-lone.jpg',
                     },
                 ],
                 stock: 8,
@@ -371,20 +395,30 @@ describe('Shop.vue Bento Grid Collection', () => {
         });
 
         const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const alabasterBtn = variantButtons.find((btn) => btn.text() === 'Alabaster');
-        const obsidianBtn = variantButtons.find((btn) => btn.text() === 'Obsidian');
+        const alabasterBtn = variantButtons.find(
+            (btn) => btn.text() === 'Alabaster',
+        );
+        const obsidianBtn = variantButtons.find(
+            (btn) => btn.text() === 'Obsidian',
+        );
 
         expect(alabasterBtn?.exists()).toBe(true);
         expect(obsidianBtn?.exists()).toBe(true);
 
         await obsidianBtn?.trigger('click');
-        expect(wrapper.find('section[aria-label*="Showcase"] img').attributes('src')).toBe(
-            'https://placehold.co/800x800/obsidian-lone.jpg',
-        );
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/obsidian-lone.jpg');
 
         await alabasterBtn?.trigger('click');
-        expect(wrapper.find('section[aria-label*="Showcase"] img').attributes('src')).toBe(
-            'https://placehold.co/800x800/alabaster-lone.jpg',
-        );
+        await new Promise((r) => setTimeout(r, 300));
+        expect(
+            wrapper
+                .find('section[aria-label*="Showcase"] img')
+                .attributes('src'),
+        ).toBe('https://placehold.co/800x800/alabaster-lone.jpg');
     });
 });
