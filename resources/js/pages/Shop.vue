@@ -328,13 +328,16 @@ onMounted(() => {
                     class="group/hero block w-full cursor-zoom-in text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     :aria-label="`Quick view ${currentHeroMerch.name}`"
                 >
-                    <img
-                        :src="currentHeroImageUrl"
-                        :alt="`${currentHeroMerch.name} (Showcase View)`"
-                        class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
-                        loading="eager"
-                        decoding="sync"
-                    />
+                    <Transition name="hero-swap" mode="out-in">
+                        <img
+                            :key="currentHeroImageUrl"
+                            :src="currentHeroImageUrl"
+                            :alt="`${currentHeroMerch.name} (Showcase View)`"
+                            class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
+                            loading="eager"
+                            decoding="sync"
+                        />
+                    </Transition>
                 </button>
             </section>
 
@@ -698,6 +701,25 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.hero-swap-enter-active {
+    transition:
+        opacity 0.35s ease-out,
+        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-swap-leave-active {
+    transition: opacity 0.2s ease-in;
+}
+
+.hero-swap-enter-from {
+    opacity: 0;
+    transform: scale(1.02);
+}
+
+.hero-swap-leave-to {
+    opacity: 0;
+}
+
 .shop-root {
     background-image:
         radial-gradient(
