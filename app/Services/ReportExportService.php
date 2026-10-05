@@ -168,6 +168,7 @@ class ReportExportService
         if (is_bool($value)) {
             return $value ? 'true' : 'false';
         }
+
         return is_scalar($value) ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
@@ -181,6 +182,7 @@ class ReportExportService
         rewind($handle);
         $contents = stream_get_contents($handle);
         fclose($handle);
+
         return (string) $contents;
     }
 
@@ -208,6 +210,7 @@ class ReportExportService
         if (is_file($tmp)) {
             unlink($tmp);
         }
+
         return (string) $contents;
     }
 
@@ -239,6 +242,7 @@ class ReportExportService
         if (is_file($tmp)) {
             unlink($tmp);
         }
+
         return (string) $contents;
     }
 
@@ -250,6 +254,7 @@ class ReportExportService
             $name = chr(65 + $remainder).$name;
             $number = intdiv($number - 1, 26);
         }
+
         return $name;
     }
 
@@ -281,6 +286,7 @@ class ReportExportService
             $objects[$contentObject - 1] = '<< /Length '.strlen($stream).' >>\nstream\n'.$stream.'\nendstream';
         }
         $objects[2] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+
         return $this->assemblePdf($objects);
     }
 
@@ -303,6 +309,7 @@ class ReportExportService
             $pdf .= sprintf('%010d 00000 n \n', $offsets[$i]);
         }
         $pdf .= "trailer\n<< /Size ".(count($objects) + 1).' /Root 1 0 R >>\nstartxref\n'.$xref."\n%%EOF\n";
+
         return $pdf;
     }
 
