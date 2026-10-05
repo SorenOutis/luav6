@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { ExternalLink, Eye, ShoppingBag, Sparkles } from 'lucide-vue-next';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -93,6 +93,15 @@ const selectedTabIndex = ref(0);
 
 const setTabIndex = (index: number) => {
     selectedTabIndex.value = index;
+    if (heroTabTimer) {
+        clearInterval(heroTabTimer);
+        heroTabTimer = setInterval(() => {
+            if (heroTabs.value.length > 1) {
+                selectedTabIndex.value =
+                    (selectedTabIndex.value + 1) % heroTabs.value.length;
+            }
+        }, 8000);
+    }
 };
 
 watch(
@@ -104,6 +113,23 @@ watch(
     },
     { immediate: true },
 );
+
+let heroTabTimer: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    heroTabTimer = setInterval(() => {
+        if (heroTabs.value.length > 1) {
+            selectedTabIndex.value =
+                (selectedTabIndex.value + 1) % heroTabs.value.length;
+        }
+    }, 8000);
+});
+
+onUnmounted(() => {
+    if (heroTabTimer) {
+        clearInterval(heroTabTimer);
+    }
+});
 
 const activeHeroTab = computed<HeroTab | null>(() => {
     if (!heroTabs.value.length) return null;
