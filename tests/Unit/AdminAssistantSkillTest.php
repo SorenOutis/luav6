@@ -20,3 +20,11 @@ it('includes the runtime skill in admin assistant instructions', function () {
         ->toContain('Expected export feature contract')
         ->toContain('Never invent student, section, course, exam, submission, or grade IDs.');
 });
+
+it('exposes the approved report export tool', function () {
+    $toolNames = collect((new AdminAssistantAgent)->tools())
+        ->map(fn ($tool): string => $tool->name())
+        ->all();
+
+    expect($toolNames)->toContain('export_report');
+});

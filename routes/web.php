@@ -37,6 +37,7 @@ use App\Http\Controllers\LibraryHubController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PendingAiActionController;
+use App\Http\Controllers\AiReportDownloadController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\ProfileMusicStreamController;
@@ -251,6 +252,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/ai-actions/{action:public_id}/reject', [PendingAiActionController::class, 'reject'])
         ->middleware('throttle:ai-actions')
         ->name('ai-actions.reject');
+
+    Route::get('ai-reports/{workspace}/{filename}', AiReportDownloadController::class)
+        ->middleware('signed')
+        ->name('ai-reports.download');
 
     // Chats history (persisted conversations from the AI widget)
     Route::get('chats', [ChatHistoryController::class, 'index'])
