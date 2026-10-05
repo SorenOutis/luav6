@@ -205,7 +205,9 @@ class ReportExportService
         $writer = WordIOFactory::createWriter($word, 'Word2007');
         $writer->save($tmp);
         $contents = file_get_contents($tmp);
-        @unlink($tmp);
+        if (is_file($tmp)) {
+            unlink($tmp);
+        }
         return (string) $contents;
     }
 
@@ -234,7 +236,9 @@ class ReportExportService
         $zip->addFromString('xl/worksheets/sheet1.xml', $xml);
         $zip->close();
         $contents = file_get_contents($tmp);
-        @unlink($tmp);
+        if (is_file($tmp)) {
+            unlink($tmp);
+        }
         return (string) $contents;
     }
 
@@ -269,7 +273,7 @@ class ReportExportService
             $pageObject = 4 + ($index * 2);
             $contentObject = $pageObject + 1;
             $objects[$pageObject - 1] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents '.$contentObject.' 0 R >>';
-            $stream = "BT /F1 9 Tf 40 760 Td 12 TL ";
+            $stream = 'BT /F1 9 Tf 40 760 Td 12 TL ';
             foreach ($pageLines as $line) {
                 $stream .= '('.$this->pdfEscape($line).') Tj T* ';
             }
