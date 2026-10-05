@@ -84,7 +84,7 @@ it('opens AI assistant in a new tab via navigation item', function () {
         ->and($items[0]->shouldOpenUrlInNewTab())->toBeTrue();
 });
 
-it('renders the welcome screen with greeting data and fox mascot on initial load', function () {
+it('renders the welcome screen with greeting data and wolf mascot on initial load', function () {
     $admin = User::factory()->admin()->create([
         'name' => 'Professor Albus Dumbledore',
     ]);
@@ -93,11 +93,10 @@ it('renders the welcome screen with greeting data and fox mascot on initial load
 
     Livewire::test(AdminAiChat::class)
         ->assertOk()
-        ->assertSee('fox-welcome.webp')
         ->assertSee('wolf-persona')
         ->assertSee('data-wolf-mark')
         ->assertSee('greetingLine')
-        ->assertSee('claudeTimeGreeting')
+        ->assertSee('timeGreeting')
         ->assertSee('greetingSubtext')
         ->assertSee('filteredPromptStarters')
         ->assertSee('Professor')

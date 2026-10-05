@@ -67,6 +67,24 @@ it('loads chat messages in bounded newest-first pages while rendering chronologi
         ->assertJsonPath('meta.hasMore', false);
 });
 
+it('searches conversations by title and message content', function () {
+    $user = User::factory()->create();
+    $one = $user->chatSessions()->create(['title' => 'Algebra help']);
+    $one->messages()->create(['role' => 'user', 'content' => 'How do I solve quadratic equations?']);
+    $two = $user->chatSessions()->create(['title' => 'Random chat']);
+    $two->messages()->create(['role' => 'assistant', 'content' => 'A quadratic has a squared term']);
+
+    actingAs($user)
+        ->getJson(route('chats.search', ['q' => 'quadratic']))
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+
+    actingAs($user)
+        ->getJson(route('chats.search', ['q' => 'algebra']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.title', 'Algebra help');
+});
 it('caps persisted AI context independently from durable chat history', function () {
     $user = User::factory()->create();
     $session = $user->chatSessions()->create(['title' => 'Provider context']);

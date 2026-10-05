@@ -122,6 +122,53 @@ class ChatHistoryController extends Controller
     }
 
     /**
+     * Search conversations by title and message content.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        if ($message = $this->pageBlockedMessage($request)) {
+            return response()->json(['response' => $message], 423);
+        }
+
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['data' => []]);
+        }
+
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
+        $user = $request->user();
+
+        $sessionIds = ChatMessage::query()
+            ->whereIn('session_id', $user->chatSessions()->select('id'))
+            ->where('content', 'like', '%'.$escaped.'%')
+            ->distinct()
+            ->limit(15)
+            ->pluck('session_id');
+
+        $sessions = ChatSession::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) use ($escaped, $sessionIds) {
+                $query->where('title', 'like', '%'.$escaped.'%');
+                if ($sessionIds->isNotEmpty()) {
+                    $query->orWhereIn('id', $sessionIds);
+                }
+            })
+            ->latest('updated_at')
+            ->limit(15)
+            ->get()
+            ->map(fn (ChatSession $session) => [
+                'id' => $session->id,
+                'uuid' => $session->uuid,
+                'title' => $session->title ?? 'New chat',
+                'updated_at' => $session->updated_at?->toISOString(),
+                'updated_at_human' => $session->updated_at?->diffForHumans(),
+            ])
+            ->values();
+
+        return response()->json(['data' => $sessions]);
+    }
+
+    /**
      * Fetch older messages without ever loading an entire conversation.
      */
     public function messages(Request $request, ChatSession $session): JsonResponse

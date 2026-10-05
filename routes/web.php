@@ -265,6 +265,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/chats', [ChatHistoryController::class, 'store'])
         ->middleware('throttle:chats')
         ->name('chats.store');
+    Route::get('api/chats/search', [ChatHistoryController::class, 'search'])
+        ->middleware(['student.page:chats', 'throttle:chats'])
+        ->name('chats.search');
     Route::get('api/chats/{session}/messages', [ChatHistoryController::class, 'messages'])
         ->middleware(['student.page:chats', 'throttle:chats'])
         ->name('chats.messages');
