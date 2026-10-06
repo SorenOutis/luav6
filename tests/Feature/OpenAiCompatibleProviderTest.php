@@ -184,7 +184,7 @@ it('exposes admin tool names matching the agent instructions', function () {
         'create_assignment', 'update_assignment', 'delete_assignment',
         'create_learning_material', 'delete_learning_material',
         'create_activity_task', 'delete_activity_task',
-        'award_student_xp', 'manage_maintenance',
+        'award_student_xp', 'manage_maintenance', 'export_report',
     ]);
 
     foreach ($names as $name) {

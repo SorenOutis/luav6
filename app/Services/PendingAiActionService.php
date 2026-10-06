@@ -53,6 +53,7 @@ class PendingAiActionService
         'award_student_xp',
         'generate_exam_questions',
         'manage_maintenance',
+        'export_report',
     ];
 
     public function __construct(

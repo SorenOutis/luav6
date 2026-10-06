@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Skills\AdminAssistantSkill;
 use App\Ai\Tools\ActivityTasksAdminTool;
 use App\Ai\Tools\AdminGradesTool;
 use App\Ai\Tools\AnnouncementsAdminTool;
@@ -25,6 +26,7 @@ use App\Ai\Tools\DeleteLearningMaterialTool;
 use App\Ai\Tools\DeleteSectionTool;
 use App\Ai\Tools\DeleteUserTool;
 use App\Ai\Tools\ExamsAdminTool;
+use App\Ai\Tools\ExportReportTool;
 use App\Ai\Tools\GenerateExamQuestionsTool;
 use App\Ai\Tools\GradeSubmissionTool;
 use App\Ai\Tools\LearningMaterialsAdminTool;
@@ -105,6 +107,7 @@ The prompter's active workspace is already identified and pre-filled for this en
 
 AVAILABLE TOOLS:
 - manage_maintenance: inspect, enable, disable, or update platform-wide maintenance mode. STRICTLY EXCLUSIVE to Super Administrators.
+- export_report: stage a real CSV, XLSX, DOCX, or PDF report download for human approval. Never claim a file exists before approval.
 - workspace_overview: workspace counts (students, exams by status, submissions waiting for grading) plus the section and course IDs you need for other tools.
 - students: list/search students (level, streak, sections, recent exam average).
 - exams_admin: exams with IDs, submission counts, and average scores.
@@ -181,6 +184,8 @@ GENERAL RULES:
             $instructions .= "\n\n{$this->userContext}";
         }
 
+        $instructions .= "\n\nRUNTIME SKILL:\n".AdminAssistantSkill::instructions();
+
         return $instructions;
     }
 
@@ -244,6 +249,7 @@ GENERAL RULES:
             new DeleteActivityTaskTool(chatSessionId: $this->chatSessionId),
             new AwardStudentXpTool(chatSessionId: $this->chatSessionId),
             new ManageMaintenanceTool(chatSessionId: $this->chatSessionId),
+            new ExportReportTool(chatSessionId: $this->chatSessionId),
         ];
     }
 }

@@ -71,6 +71,7 @@ class AiActionExecutor
             'award_student_xp' => $this->prepareAwardStudentXp($action),
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
             'manage_maintenance' => $this->prepareManageMaintenance($action),
+            'export_report' => $this->prepareExportReport($action),
             default => throw new PendingAiActionException('This AI action type is no longer supported.'),
         };
     }
@@ -1004,6 +1005,20 @@ class AiActionExecutor
         if ($expectedUpdatedAt !== $actual) {
             throw new PendingAiActionException('This record changed after the preview was created. Ask Echo to prepare a fresh action before approving it.', 409);
         }
+    }
+
+    /** @return Closure(): string */
+    private function prepareExportReport(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+        $actorId = (int) $action->user_id;
+        $workspaceId = (int) $action->workspace_id;
+
+        return function () use ($payload, $actorId, $workspaceId): string {
+            $export = app(ReportExportService::class)->export($payload, $actorId, $workspaceId);
+
+            return 'Report exported successfully: '.$export['filename'].'. Download: '.$export['url'].' (expires '.$export['expires_at'].').';
+        };
     }
 
     /** @return Closure(): string */
