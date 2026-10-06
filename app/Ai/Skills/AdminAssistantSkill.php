@@ -6,7 +6,7 @@ final class AdminAssistantSkill
 {
     public static function instructions(): string
     {
-        $path = base_path('skills/ai-admin-panel/SKILL.md');
+        $path = dirname(__DIR__, 3).'/skills/ai-admin-panel/SKILL.md';
 
         if (! is_file($path)) {
             return 'The AI admin-panel skill is unavailable. Follow the built-in workspace, authorization, approval, privacy, and export-safety rules.';
