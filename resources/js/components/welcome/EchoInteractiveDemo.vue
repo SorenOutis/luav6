@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    ArrowRight,
-    CheckCircle2,
-    MessageSquare,
-    Sparkles,
-} from 'lucide-vue-next';
+import { ArrowRight, CheckCircle2, MessageSquare } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
@@ -70,14 +65,13 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
 <template>
     <section
         id="interactive-echo"
-        class="welcome-echo-demo scroll-mt-32 border-b border-border/60 py-16 sm:py-24"
+        class="welcome-echo-demo scroll-mt-32 border-b border-border/60 py-20 sm:py-28"
         aria-labelledby="echo-demo-heading"
     >
         <div class="text-center">
             <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
+                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
             >
-                <Sparkles class="h-3 w-3" />
                 Live Assistant Preview
             </span>
             <h2
@@ -137,7 +131,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                                     orbState === 'thinking'
                                         ? 'animate-ping bg-amber-500'
                                         : orbState === 'speaking'
-                                          ? 'animate-pulse bg-emerald-500'
+                                          ? 'bg-emerald-500'
                                           : 'bg-[#D97757]'
                                 "
                             />
@@ -225,7 +219,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                                 {{ displayedText }}
                                 <span
                                     v-if="orbState === 'speaking'"
-                                    class="inline-block h-3.5 w-1.5 animate-pulse rounded-xs bg-[#D97757] align-middle"
+                                    class="inline-block h-3.5 w-1.5 rounded-xs bg-[#D97757] align-middle"
                                 />
                             </p>
                         </div>

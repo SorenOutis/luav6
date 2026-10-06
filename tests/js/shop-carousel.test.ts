@@ -130,7 +130,7 @@ describe('Shop.vue Bento Grid Collection', () => {
 
         const shopNowLink = firstCard.find('a[href^="https://koamishin.com"]');
         expect(shopNowLink.exists()).toBe(true);
-        expect(shopNowLink.text()).toContain('Coming Soon...');
+        expect(shopNowLink.text()).toContain('Visit store');
 
         // Contains Atelier brand spec tile
         expect(wrapper.text()).toContain('KOAMISHIN × BSIT Department');

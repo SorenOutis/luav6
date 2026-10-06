@@ -55,7 +55,7 @@ const tiers = [
 <template>
     <section
         id="pricing"
-        class="welcome-pricing scroll-mt-32 border-b border-border/70 py-16 sm:py-20"
+        class="welcome-pricing scroll-mt-32 border-b border-border/70 py-20 sm:py-28"
         aria-labelledby="pricing-heading"
     >
         <div

@@ -30,7 +30,7 @@ const effectiveReducedMotion = computed(
 
 const revealTransition = (delay = 0) =>
     effectiveReducedMotion.value
-        ? { duration: 0 }
+        ? { duration: 0.2, easing: 'ease-out' as const }
         : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
 
 const faqs = [
@@ -204,10 +204,14 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.04)"
@@ -224,10 +228,14 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.06)"
@@ -237,10 +245,14 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.08)"
@@ -250,27 +262,26 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.14)"
             >
                 <section
-                    class="surface-card my-16 overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-20 sm:p-10 lg:p-12"
+                    class="surface-card my-20 overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-24 sm:p-10 lg:p-12"
                     aria-labelledby="field-note-heading"
                 >
                     <div
                         class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
                     >
                         <div class="max-w-2xl">
-                            <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
-                            >
-                                Verified Educator Field Note
-                            </span>
                             <blockquote
                                 id="field-note-heading"
                                 class="mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
@@ -339,135 +350,16 @@ const webSiteJsonLd = [
                 </section>
             </Motion>
 
-            <!-- Bendy-Style Architecture & Workflow Specifications -->
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.145)"
-            >
-                <section
-                    class="surface-card my-12 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 shadow-xs sm:my-16 sm:p-8 lg:p-10"
-                    aria-labelledby="specifications-heading"
-                >
-                    <div
-                        class="mb-6 flex items-center justify-between border-b border-border/60 pb-4"
-                    >
-                        <h2
-                            id="specifications-heading"
-                            class="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase"
-                        >
-                            System Architecture & Specifications
-                        </h2>
-                        <span
-                            class="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
-                        >
-                            <span
-                                class="h-1.5 w-1.5 rounded-full bg-emerald-500"
-                            ></span>
-                            Production Grade · Classroom Ready
-                        </span>
-                    </div>
-
-                    <dl class="divide-y divide-border/60 font-sans">
-                        <div
-                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
-                        >
-                            <dt
-                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
-                            >
-                                Instant Scoring
-                            </dt>
-                            <dd
-                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                Zero-latency auto-grading engine for objective
-                                multiple-choice, true/false, and identification
-                                items. Instant gradebook tally upon student
-                                submission.
-                            </dd>
-                        </div>
-                        <div
-                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
-                        >
-                            <dt
-                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
-                            >
-                                Teacher Review Boundary
-                            </dt>
-                            <dd
-                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                Echo AI only drafts: essay feedback and
-                                remediation notes land in a mandatory teacher
-                                review queue. Nonce-protected endpoints prevent
-                                autonomous writes.
-                            </dd>
-                        </div>
-                        <div
-                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
-                        >
-                            <dt
-                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
-                            >
-                                Mastery Analytics
-                            </dt>
-                            <dd
-                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                Section-level competency heatmaps surface
-                                understanding gaps before quarterly exams,
-                                automatically highlighting targeted reteaching
-                                priorities.
-                            </dd>
-                        </div>
-                        <div
-                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
-                        >
-                            <dt
-                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
-                            >
-                                Data Sovereignty
-                            </dt>
-                            <dd
-                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                School-isolated multi-tenant workspaces with
-                                strict scoping. Encrypted student records, zero
-                                advertising profiling, and complete export
-                                authority.
-                            </dd>
-                        </div>
-                        <div
-                            class="grid grid-cols-1 gap-1.5 py-4 sm:grid-cols-[180px_1fr] sm:gap-6 sm:py-5"
-                        >
-                            <dt
-                                class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
-                            >
-                                School Interoperability
-                            </dt>
-                            <dd
-                                class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                Aligned with formative assessment best
-                                practices, with print-ready reviewer generation
-                                and 1-click grade exports.
-                            </dd>
-                        </div>
-                    </dl>
-                </section>
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.16)"
@@ -483,17 +375,21 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.2)"
             >
                 <section
                     id="faq"
-                    class="welcome-faq scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
+                    class="welcome-faq scroll-mt-32 border-y border-border/70 py-20 sm:py-28"
                     aria-labelledby="faq-heading"
                 >
                     <h2
@@ -532,28 +428,27 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.24)"
             >
                 <section
                     id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-10 text-foreground shadow-xs sm:mt-20 sm:px-10 sm:py-14 lg:px-14"
+                    class="welcome-cta relative mt-16 overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-14 text-foreground shadow-xs sm:mt-24 sm:px-10 sm:py-20 lg:px-14"
                     aria-labelledby="cta-heading"
                 >
                     <div
                         class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                     >
                         <div>
-                            <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
-                            >
-                                Start with the next lesson
-                            </span>
                             <h2
                                 id="cta-heading"
                                 class="mt-4 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
@@ -604,10 +499,14 @@ const webSiteJsonLd = [
 
             <Motion
                 :initial="
-                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                    effectiveReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 24 }
                 "
                 :in-view="
-                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                    effectiveReducedMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition(0.28)"

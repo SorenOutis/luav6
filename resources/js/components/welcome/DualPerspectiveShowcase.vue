@@ -64,12 +64,12 @@ const perspectives = [
 <template>
     <section
         id="perspectives"
-        class="welcome-perspectives scroll-mt-32 border-b border-border/70 py-16 sm:py-24"
+        class="welcome-perspectives scroll-mt-32 border-b border-border/70 py-20 sm:py-28"
         aria-labelledby="perspectives-heading"
     >
         <div class="text-center">
             <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
+                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
             >
                 Institutional Perspectives
             </span>
@@ -130,9 +130,7 @@ const perspectives = [
                 class="grid items-center gap-10 lg:grid-cols-12 lg:gap-12"
             >
                 <div class="space-y-6 lg:col-span-5">
-                    <span
-                        class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/10 px-3 py-0.5 text-xs font-semibold text-[#D97757]"
-                    >
+                    <span class="font-mono text-xs font-medium text-[#D97757]">
                         Teacher Command Center
                     </span>
                     <h3
@@ -203,7 +201,7 @@ const perspectives = [
                                 class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                             >
                                 <span
-                                    class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                                    class="h-1.5 w-1.5 rounded-full bg-emerald-500"
                                 ></span>
                                 24 of 28 Submitted
                             </span>
@@ -382,7 +380,7 @@ const perspectives = [
                                     8-Day Streak
                                 </span>
                                 <span
-                                    class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/10 px-2.5 py-1 text-xs font-semibold text-[#D97757]"
+                                    class="font-mono text-xs font-medium text-[#D97757]"
                                 >
                                     Lv 12 · 1,450 XP
                                 </span>
