@@ -353,7 +353,7 @@ const reasonMeta = (reason: string): ReasonMeta => {
 
 const toneChip: Record<Tone, string> = {
     amber: 'bg-[#E0AF68]/15 text-[#E0AF68] dark:text-[#E0AF68]',
-    sky: 'bg-[#D97757]/15 text-[#D97757] dark:text-[#D97757]',
+    sky: 'bg-brand/15 text-brand dark:text-brand',
     emerald: 'bg-[#4D9375]/15 text-[#4D9375] dark:text-[#4D9375]',
     violet: 'bg-[#9D7CD8]/15 text-[#9D7CD8] dark:text-[#9D7CD8]',
     zinc: 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400',
@@ -374,7 +374,7 @@ function formatWhen(iso: string): string {
 
 <template>
     <div
-        class="surface-card group relative w-full min-w-0 cursor-pointer p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
         tabindex="0"
         role="button"
         aria-label="Open your XP history"
@@ -388,7 +388,7 @@ function formatWhen(iso: string): string {
             <!-- Header: Level -->
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="dash-icon-well bg-[#D97757]/10 text-[#D97757]">
+                    <div class="dash-icon-well bg-brand/10 text-brand">
                         <TrendingUp class="h-5 w-5" />
                     </div>
                     <div>
@@ -413,7 +413,7 @@ function formatWhen(iso: string): string {
                     class="relative h-2 w-full overflow-hidden rounded-full bg-muted"
                 >
                     <div
-                        class="relative h-full rounded-full bg-[#D97757] transition-[width] duration-700 ease-out"
+                        class="relative h-full rounded-full bg-brand transition-[width] duration-700 ease-out"
                         :style="{ width: `${xpPercent}%` }"
                     />
                 </div>
@@ -442,7 +442,7 @@ function formatWhen(iso: string): string {
                     to Level {{ userStats.level + 1 }}
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[13px] font-medium text-[#D97757]"
+                    class="flex items-center gap-1 text-[13px] font-medium text-brand"
                 >
                     History
                 </span>
@@ -459,7 +459,7 @@ function formatWhen(iso: string): string {
         >
             <div class="min-w-0 space-y-4 py-2">
                 <div
-                    class="rounded-2xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-3 py-2.5 sm:px-4"
+                    class="rounded-2xl border border-brand/15 bg-brand/[0.06] px-3 py-2.5 sm:px-4"
                 >
                     <FoxCompanion
                         mascot="welcome"
@@ -563,7 +563,7 @@ function formatWhen(iso: string): string {
                             <button
                                 type="button"
                                 :disabled="dailyClaimState === 'claiming'"
-                                class="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg bg-[#D97757] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#D97757]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                                class="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
                                 @click.stop="handleDailyClaim"
                             >
                                 <span
@@ -808,7 +808,7 @@ function formatWhen(iso: string): string {
                                 {{ entry.count === 1 ? 'entry' : 'entries' }}
                             </p>
                         </div>
-                        <span class="font-semibold text-[#D97757] tabular-nums"
+                        <span class="font-semibold text-brand tabular-nums"
                             >+{{ entry.amount.toLocaleString() }} XP</span
                         >
                     </div>

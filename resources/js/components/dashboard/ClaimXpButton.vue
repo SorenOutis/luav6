@@ -58,7 +58,7 @@ const activeTweens = new Set<gsap.core.Tween>();
 
 const confettiColors = [
     'bg-[#E0AF68]',
-    'bg-[#D97757]',
+    'bg-brand',
     'bg-[#CB7676]',
     'bg-[#9D7CD8]',
     'bg-[#4D9375]',
@@ -480,8 +480,8 @@ onBeforeUnmount(() => {
 
             <!-- Claim prompt -->
             <div v-else class="space-y-5 py-2">
-                <div class="rounded-[1.25rem] bg-[#D97757]/10 p-5 text-center">
-                    <p class="text-[13px] font-medium text-[#D97757]">
+                <div class="rounded-[1.25rem] bg-brand/10 p-5 text-center">
+                    <p class="text-[13px] font-medium text-brand">
                         You can claim
                     </p>
                     <p
@@ -494,9 +494,7 @@ onBeforeUnmount(() => {
                         <span v-if="streakBonus > 0">
                             + {{ streakBonus }} streak bonus</span
                         >
-                        <span class="text-[#D97757]">
-                            · Streak {{ streak }}</span
-                        >
+                        <span class="text-brand"> · Streak {{ streak }}</span>
                     </p>
                 </div>
                 <p class="text-sm leading-relaxed text-muted-foreground">
@@ -514,7 +512,7 @@ onBeforeUnmount(() => {
                     </button>
                     <button
                         type="button"
-                        class="dash-btn inline-flex min-w-[9.5rem] items-center justify-center gap-2 bg-[#D97757] px-4 text-[15px] text-white transition hover:bg-[#D97757]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="dash-btn inline-flex min-w-[9.5rem] items-center justify-center gap-2 bg-brand px-4 text-[15px] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="claimState === 'claiming'"
                         @click="handleClaim"
                     >
@@ -552,7 +550,7 @@ onBeforeUnmount(() => {
                     i % 3 === 0
                         ? 'bg-[#E0AF68]'
                         : i % 3 === 1
-                          ? 'bg-[#D97757]'
+                          ? 'bg-brand'
                           : 'bg-[#CB7676]',
                 ]"
                 :style="{
@@ -569,7 +567,7 @@ onBeforeUnmount(() => {
             class="pointer-events-none absolute inset-x-0 -top-3 z-50 flex justify-center"
         >
             <span
-                class="rounded-full bg-[#D97757] px-3 py-1 text-sm font-semibold text-white"
+                class="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white"
             >
                 +{{ claimedAmount || amount }} XP
             </span>
@@ -581,25 +579,25 @@ onBeforeUnmount(() => {
             ref="buttonRef"
             @click="handleClaim"
             :disabled="claimState === 'claiming'"
-            class="group relative flex min-h-12 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-[#D97757]/10 px-2.5 py-2 text-left transition-colors hover:bg-[#D97757]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
+            class="group relative flex min-h-12 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-brand/10 px-2.5 py-2 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
         >
             <div class="relative z-10 flex items-center gap-2.5">
                 <!-- Icon -->
                 <div
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-[#D97757]/20"
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-brand/20"
                 >
                     <Gift
                         v-if="claimState === 'idle'"
-                        class="h-4 w-4 text-[#D97757]"
+                        class="h-4 w-4 text-brand"
                     />
                     <div
                         v-else
-                        class="h-4 w-4 animate-spin rounded-full border-2 border-[#D97757] border-t-transparent"
+                        class="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"
                     ></div>
                 </div>
 
                 <div class="min-w-0">
-                    <p class="text-[13px] font-medium text-[#D97757]">
+                    <p class="text-[13px] font-medium text-brand">
                         Daily reward
                     </p>
                     <p class="text-[17px] font-semibold text-foreground">
@@ -623,9 +621,9 @@ onBeforeUnmount(() => {
 
             <!-- Arrow indicator -->
             <div
-                class="relative z-10 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#D97757]/20"
+                class="relative z-10 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-brand/20"
             >
-                <Sparkles class="h-3.5 w-3.5 text-[#D97757]" />
+                <Sparkles class="h-3.5 w-3.5 text-brand" />
             </div>
         </button>
 

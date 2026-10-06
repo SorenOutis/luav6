@@ -44,7 +44,7 @@ defineExpose({ openCalendar });
 
 <template>
     <div
-        class="surface-card group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-2.5 p-3 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:gap-4 sm:p-5"
+        class="surface-card group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-2.5 p-3 transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none active:bg-muted/30 sm:gap-4 sm:p-5"
         :class="{ 'mobile-streak-card': compact }"
         tabindex="0"
         role="button"
@@ -55,7 +55,7 @@ defineExpose({ openCalendar });
     >
         <template v-if="compact">
             <div class="mobile-streak-card__icon">
-                <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
+                <div class="dash-icon-well bg-brand/15 text-brand">
                     <Flame class="h-5 w-5" />
                 </div>
             </div>
@@ -75,7 +75,7 @@ defineExpose({ openCalendar });
         <template v-else>
             <div class="relative z-10 flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
-                    <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
+                    <div class="dash-icon-well bg-brand/15 text-brand">
                         <Flame class="h-5 w-5" />
                     </div>
                     <p class="dash-label">Streak</p>
@@ -107,7 +107,7 @@ defineExpose({ openCalendar });
                     >
                 </p>
                 <span
-                    class="hidden items-center gap-1 text-[13px] font-medium text-[#D97757] sm:flex"
+                    class="hidden items-center gap-1 text-[13px] font-medium text-brand sm:flex"
                 >
                     Calendar
                     <ChevronRight class="h-3 w-3" />

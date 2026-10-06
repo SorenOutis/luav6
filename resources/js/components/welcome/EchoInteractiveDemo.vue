@@ -70,7 +70,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
     >
         <div class="text-center">
             <span
-                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
+                class="font-mono text-xs font-medium tracking-wider text-brand uppercase"
             >
                 Live Assistant Preview
             </span>
@@ -103,7 +103,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                         size="md"
                         :state="orbState"
                         :animate-idle="orbState === 'idle'"
-                        color="#D97757"
+                        color="var(--color-brand)"
                     />
                 </div>
                 <div class="flex-1">
@@ -122,7 +122,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                                     : orbState === 'speaking'
                                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                      : 'bg-[#D97757]/10 text-[#D97757]'
+                                      : 'bg-brand/10 text-brand'
                             "
                         >
                             <span
@@ -132,7 +132,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                                         ? 'animate-ping bg-amber-500'
                                         : orbState === 'speaking'
                                           ? 'bg-emerald-500'
-                                          : 'bg-[#D97757]'
+                                          : 'bg-brand'
                                 "
                             />
                             {{
@@ -161,7 +161,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                     class="cursor-pointer rounded-full border px-4 py-2 text-xs font-medium transition-all active:scale-[0.98]"
                     :class="
                         selectedPrompt.id === prompt.id
-                            ? 'border-[#D97757] bg-[#D97757]/10 font-semibold text-[#D97757]'
+                            ? 'border-brand bg-brand/10 font-semibold text-brand'
                             : 'border-border/70 bg-secondary/30 text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground'
                     "
                     @click="selectPrompt(prompt)"
@@ -193,18 +193,18 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                 <div class="border-t border-border/50 pt-3.5">
                     <div class="flex items-start gap-3">
                         <div
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
                         >
                             <ChatAiOrb
                                 size="status"
                                 :state="orbState"
-                                color="#D97757"
+                                color="var(--color-brand)"
                                 class="h-4 w-4"
                             />
                         </div>
                         <div class="flex-1 text-xs">
                             <div class="flex items-center justify-between">
-                                <span class="font-semibold text-[#D97757]">
+                                <span class="font-semibold text-brand">
                                     Echo Response
                                 </span>
                                 <span
@@ -219,7 +219,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                                 {{ displayedText }}
                                 <span
                                     v-if="orbState === 'speaking'"
-                                    class="inline-block h-3.5 w-1.5 rounded-xs bg-[#D97757] align-middle"
+                                    class="inline-block h-3.5 w-1.5 rounded-xs bg-brand align-middle"
                                 />
                             </p>
                         </div>
@@ -241,7 +241,7 @@ async function selectPrompt(prompt: (typeof prompts)[number]) {
                 </span>
                 <Link
                     href="/chats"
-                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#D97757] hover:underline"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
                 >
                     <MessageSquare class="h-3.5 w-3.5" />
                     Open Echo Chats

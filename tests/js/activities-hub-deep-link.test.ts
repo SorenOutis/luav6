@@ -124,7 +124,9 @@ const mountHub = (
 // to Element.prototype.
 const scrollIntoView = vi.fn<(arg?: boolean | ScrollIntoViewOptions) => void>();
 
-const HIGHLIGHT_CLASS = 'outline-[#D97757]';
+// The highlight ring uses the brand accent token (--color-brand), which
+// Tailwind exposes as `outline-brand`.
+const HIGHLIGHT_CLASS = 'outline-brand';
 
 beforeEach(() => {
     scrollIntoView.mockClear();

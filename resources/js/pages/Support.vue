@@ -461,7 +461,7 @@ useIntervalFn(
                             class="w-full rounded-xl p-3 text-left transition-colors"
                             :class="
                                 ticket.id === activeTicketId && !composing
-                                    ? 'bg-[#D97757]/10 hover:bg-[#D97757]/15'
+                                    ? 'bg-brand/10 hover:bg-brand/15'
                                     : 'hover:bg-muted/60'
                             "
                             @click="selectTicket(ticket.id)"
@@ -942,7 +942,7 @@ useIntervalFn(
                                         class="rounded-xl border p-3 transition-colors hover:bg-muted/60"
                                         :class="
                                             statusFilter === 'open'
-                                                ? 'border-[#D97757] bg-[#D97757]/10'
+                                                ? 'border-brand bg-brand/10'
                                                 : 'border-border/60'
                                         "
                                         @click="toggleStatusFilter('open')"
@@ -963,7 +963,7 @@ useIntervalFn(
                                         class="rounded-xl border p-3 transition-colors hover:bg-muted/60"
                                         :class="
                                             statusFilter === 'in_progress'
-                                                ? 'border-[#D97757] bg-[#D97757]/10'
+                                                ? 'border-brand bg-brand/10'
                                                 : 'border-border/60'
                                         "
                                         @click="
@@ -986,7 +986,7 @@ useIntervalFn(
                                         class="rounded-xl border p-3 transition-colors hover:bg-muted/60"
                                         :class="
                                             statusFilter === 'resolved'
-                                                ? 'border-[#D97757] bg-[#D97757]/10'
+                                                ? 'border-brand bg-brand/10'
                                                 : 'border-border/60'
                                         "
                                         @click="toggleStatusFilter('resolved')"

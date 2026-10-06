@@ -69,7 +69,7 @@ const tiers = [
                 </p>
                 <h2
                     id="pricing-heading"
-                    class="mt-4 max-w-2xl font-serif text-3xl leading-tight tracking-[-0.04em] text-foreground sm:text-4xl"
+                    class="mt-4 max-w-2xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
                 >
                     Start small. Grow with your school.
                 </h2>
@@ -102,7 +102,7 @@ const tiers = [
                     </div>
                     <span
                         v-if="tier.featured"
-                        class="rounded-full bg-[#D97757]/15 px-2.5 py-0.5 text-xs font-semibold text-[#D97757]"
+                        class="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand"
                         >Most popular for schools</span
                     >
                 </div>
@@ -131,7 +131,7 @@ const tiers = [
                         class="flex items-start gap-2"
                     >
                         <span
-                            class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97757]"
+                            class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
                         ></span>
                         <span>{{ feature }}</span>
                     </li>

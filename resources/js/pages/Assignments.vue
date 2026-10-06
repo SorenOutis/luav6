@@ -1507,7 +1507,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'all'
-                                        ? 'bg-[#D97757] text-white shadow-xs'
+                                        ? 'bg-brand text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1530,7 +1530,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'pending'
-                                        ? 'bg-[#D97757] text-white shadow-xs'
+                                        ? 'bg-brand text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1553,7 +1553,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'submitted'
-                                        ? 'bg-[#D97757] text-white shadow-xs'
+                                        ? 'bg-brand text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1576,7 +1576,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'graded'
-                                        ? 'bg-[#D97757] text-white shadow-xs'
+                                        ? 'bg-brand text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -2755,7 +2755,7 @@ onMounted(() => {
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90"
+                                    class="dash-btn h-9 gap-1.5 rounded-xl bg-brand px-4 text-xs font-semibold text-white shadow-xs hover:bg-brand/90"
                                     @click="openModalForAssignment(assignment)"
                                 >
                                     <FileUp class="h-3.5 w-3.5" />
@@ -2823,7 +2823,7 @@ onMounted(() => {
             <template #header>
                 <div class="flex items-center justify-between gap-4">
                     <div class="min-w-0 space-y-1">
-                        <span class="text-xs font-medium text-[#D97757]">
+                        <span class="text-xs font-medium text-brand">
                             Assignment submission
                         </span>
                         <h2 class="text-lg font-bold text-foreground">
@@ -2897,7 +2897,7 @@ onMounted(() => {
                         class="group relative flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all"
                         :class="[
                             isDraggingFile
-                                ? 'border-[#D97757] bg-[#D97757]/5'
+                                ? 'border-brand bg-brand/5'
                                 : 'border-border/70 hover:border-primary/50 hover:bg-muted/20',
                             !selectedAssignmentId
                                 ? 'pointer-events-none opacity-50'
@@ -2917,7 +2917,7 @@ onMounted(() => {
                             class="flex flex-col items-center gap-2.5"
                         >
                             <div
-                                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover:scale-105 group-hover:bg-[#D97757]/10 group-hover:text-[#D97757]"
+                                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover:scale-105 group-hover:bg-brand/10 group-hover:text-brand"
                             >
                                 <UploadCloud class="h-6 w-6" />
                             </div>
@@ -2988,7 +2988,7 @@ onMounted(() => {
                     >
                         <span class="flex items-center gap-1.5 font-medium">
                             <Loader2
-                                class="h-3.5 w-3.5 animate-spin text-[#D97757]"
+                                class="h-3.5 w-3.5 animate-spin text-brand"
                             />
                             Uploading assignment...
                         </span>
@@ -2997,7 +2997,7 @@ onMounted(() => {
                     <Progress
                         :value="form.progress?.percentage ?? 60"
                         class="h-1.5 w-full bg-muted"
-                        indicator-class="bg-[#D97757]"
+                        indicator-class="bg-brand"
                     />
                 </div>
             </div>
@@ -3017,7 +3017,7 @@ onMounted(() => {
                     </Button>
                     <Button
                         type="button"
-                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        class="dash-btn w-full rounded-xl bg-brand text-white hover:bg-brand/90 sm:w-auto"
                         :disabled="
                             !form.file ||
                             !selectedAssignmentId ||
@@ -3049,7 +3049,7 @@ onMounted(() => {
         >
             <template #header>
                 <div class="min-w-0 space-y-1">
-                    <span class="text-xs font-medium text-[#D97757]">
+                    <span class="text-xs font-medium text-brand">
                         Assignment instructions
                     </span>
                     <h2
@@ -3166,7 +3166,7 @@ onMounted(() => {
                             !isClosed(instructionsAssignment)
                         "
                         type="button"
-                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        class="dash-btn w-full rounded-xl bg-brand text-white hover:bg-brand/90 sm:w-auto"
                         @click="openUploadFromInstructions"
                     >
                         <FileUp class="h-4 w-4" />
@@ -3185,7 +3185,7 @@ onMounted(() => {
         >
             <template #header>
                 <div class="space-y-1">
-                    <span class="text-xs font-medium text-[#D97757]">
+                    <span class="text-xs font-medium text-brand">
                         Group activity
                     </span>
                     <h2 class="text-lg font-bold text-foreground">
@@ -3290,7 +3290,7 @@ onMounted(() => {
                     v-if="inviteSearching"
                     class="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground"
                 >
-                    <Loader2 class="h-4 w-4 animate-spin text-[#D97757]" />
+                    <Loader2 class="h-4 w-4 animate-spin text-brand" />
                     Searching...
                 </div>
 
@@ -3396,7 +3396,7 @@ onMounted(() => {
                     <Button
                         v-if="inviteStep === 'select'"
                         type="button"
-                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        class="dash-btn w-full rounded-xl bg-brand text-white hover:bg-brand/90 sm:w-auto"
                         :disabled="
                             groupActionLoading || inviteSelection.length === 0
                         "
@@ -3426,7 +3426,7 @@ onMounted(() => {
         >
             <template #header>
                 <div class="space-y-1">
-                    <span class="text-xs font-medium text-[#D97757]">
+                    <span class="text-xs font-medium text-brand">
                         Group activity
                     </span>
                     <h2 class="text-lg font-bold text-foreground">

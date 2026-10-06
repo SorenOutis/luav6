@@ -419,11 +419,11 @@ const rankMeta = [
     {
         label: '1st',
         icon: Crown,
-        ring: 'ring-[#D97757]/50',
-        glow: 'shadow-[#D97757]/20',
-        accent: 'text-[#D97757]',
-        bg: 'from-[#D97757]/15 via-transparent to-transparent',
-        badge: 'bg-[#D97757] text-white',
+        ring: 'ring-brand/50',
+        glow: 'shadow-brand/20',
+        accent: 'text-brand',
+        bg: 'from-brand/15 via-transparent to-transparent',
+        badge: 'bg-brand text-white',
     },
     {
         label: '2nd',
@@ -689,7 +689,7 @@ const changeSeason = async (seasonId: number) => {
             class="mb-1 flex items-center justify-between gap-2"
         >
             <div class="flex min-w-0 items-center gap-2">
-                <Trophy class="h-4 w-4 shrink-0 text-[#D97757]" />
+                <Trophy class="h-4 w-4 shrink-0 text-brand" />
                 <p
                     class="dash-title truncate text-[15px] text-foreground sm:text-base"
                 >
@@ -745,7 +745,7 @@ const changeSeason = async (seasonId: number) => {
         >
             <div>
                 <div class="mb-1 flex items-center gap-2">
-                    <Trophy class="h-4 w-4 text-[#D97757]" />
+                    <Trophy class="h-4 w-4 text-brand" />
                     <span class="text-[13px] font-medium text-muted-foreground">
                         {{
                             sectionName ? `${sectionName} Rankings` : 'Rankings'
@@ -777,7 +777,7 @@ const changeSeason = async (seasonId: number) => {
                         class="flex-1 cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors sm:flex-none"
                         :class="
                             rankMode === 'alltime'
-                                ? 'bg-[#D97757] text-white'
+                                ? 'bg-brand text-white'
                                 : 'text-muted-foreground hover:text-foreground'
                         "
                         @click="rankMode = 'alltime'"
@@ -791,7 +791,7 @@ const changeSeason = async (seasonId: number) => {
                         class="flex-1 cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors sm:flex-none"
                         :class="
                             rankMode === 'weekly'
-                                ? 'bg-[#D97757] text-white'
+                                ? 'bg-brand text-white'
                                 : 'text-muted-foreground hover:text-foreground'
                         "
                         @click="rankMode = 'weekly'"
@@ -820,7 +820,7 @@ const changeSeason = async (seasonId: number) => {
                     <Link
                         v-if="showViewButton"
                         href="/leaderboard"
-                        class="dash-btn flex flex-1 items-center justify-center gap-2 bg-[#D97757]/10 px-4 text-[14px] text-[#D97757] transition hover:bg-[#D97757]/15 sm:flex-none"
+                        class="dash-btn flex flex-1 items-center justify-center gap-2 bg-brand/10 px-4 text-[14px] text-brand transition hover:bg-brand/15 sm:flex-none"
                     >
                         <Trophy class="h-3.5 w-3.5" />
                         View Leaderboard
@@ -860,7 +860,7 @@ const changeSeason = async (seasonId: number) => {
                         v-else
                         class="lb-season-pill flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:flex-none"
                     >
-                        <Terminal class="h-3 w-3 shrink-0 text-[#D97757]" />
+                        <Terminal class="h-3 w-3 shrink-0 text-brand" />
                         <span class="truncate">{{ currentSeasonName }}</span>
                     </div>
 
@@ -899,7 +899,7 @@ const changeSeason = async (seasonId: number) => {
             >
                 <div class="flex min-w-0 items-center gap-3 sm:gap-4">
                     <div
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"
                     >
                         <Trophy class="h-5 w-5" />
                     </div>
@@ -918,7 +918,7 @@ const changeSeason = async (seasonId: number) => {
                                 v-if="tiedWithCount > 0"
                                 type="button"
                                 @click="openCurrentUserTiedModal"
-                                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#D97757]/15 px-2 py-0.5 text-xs font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/25 focus:outline-none"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-brand/15 px-2 py-0.5 text-xs font-semibold text-brand transition-colors hover:bg-brand/25 focus:outline-none"
                                 title="View tied students"
                             >
                                 <Users class="h-3 w-3" />
@@ -966,7 +966,7 @@ const changeSeason = async (seasonId: number) => {
             v-if="isSwitchingSeason"
             class="flex items-center justify-center py-12"
         >
-            <Loader2 class="h-8 w-8 animate-spin text-[#D97757]" />
+            <Loader2 class="h-8 w-8 animate-spin text-brand" />
         </div>
 
         <!-- Empty State -->
@@ -992,7 +992,7 @@ const changeSeason = async (seasonId: number) => {
                 >
                     <button
                         @click="searchQuery = ''"
-                        class="text-[13px] font-medium text-[#D97757] hover:underline"
+                        class="text-[13px] font-medium text-brand hover:underline"
                     >
                         Clear search
                     </button>
@@ -1223,7 +1223,7 @@ const changeSeason = async (seasonId: number) => {
                                     v-if="!group.users[0].blurred"
                                     :href="`/u/${profileIdentifier(group.users[0])}`"
                                     :class="[
-                                        'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-[#D97757]',
+                                        'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-brand',
                                         getNameSize(
                                             group.users[0].name,
                                             origIdx === 0,
@@ -1247,7 +1247,7 @@ const changeSeason = async (seasonId: number) => {
                                 </span>
                                 <span
                                     v-if="group.users[0].isCurrentUser"
-                                    class="mt-1 rounded-full bg-[#D97757] px-2 py-0.5 text-[11px] font-semibold text-white"
+                                    class="mt-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white"
                                     >You</span
                                 >
                             </template>
@@ -1268,7 +1268,7 @@ const changeSeason = async (seasonId: number) => {
                                         <Link
                                             v-if="!u.blurred"
                                             :href="`/u/${profileIdentifier(u)}`"
-                                            class="text-xs font-semibold tracking-tight transition-colors hover:text-[#D97757] sm:text-sm"
+                                            class="text-xs font-semibold tracking-tight transition-colors hover:text-brand sm:text-sm"
                                         >
                                             {{ u.name }}
                                         </Link>
@@ -1280,7 +1280,7 @@ const changeSeason = async (seasonId: number) => {
                                         </span>
                                         <span
                                             v-if="u.isCurrentUser"
-                                            class="py-0.2 rounded-full bg-[#D97757] px-1.5 text-[10px] font-semibold text-white"
+                                            class="py-0.2 rounded-full bg-brand px-1.5 text-[10px] font-semibold text-white"
                                             >YOU</span
                                         >
                                         <span
@@ -1338,14 +1338,14 @@ const changeSeason = async (seasonId: number) => {
                                 class="mt-3 flex items-center gap-3 text-[13px] text-muted-foreground"
                             >
                                 <div class="flex items-center gap-1">
-                                    <Flame class="h-3 w-3 text-[#D97757]" />
+                                    <Flame class="h-3 w-3 text-brand" />
                                     <span class="font-bold"
                                         >{{ group.maxStreak }}d</span
                                     >
                                 </div>
                                 <div class="h-3 w-px bg-border/60"></div>
                                 <div class="flex items-center gap-1">
-                                    <Sparkles class="h-3 w-3 text-[#D97757]" />
+                                    <Sparkles class="h-3 w-3 text-brand" />
                                     <span class="font-bold"
                                         >{{ group.xpProgress }}%</span
                                     >
@@ -1357,7 +1357,7 @@ const changeSeason = async (seasonId: number) => {
                                 class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/30"
                             >
                                 <div
-                                    class="h-full rounded-full bg-[#D97757] transition-all duration-700"
+                                    class="h-full rounded-full bg-brand transition-all duration-700"
                                     :style="{ width: `${group.xpProgress}%` }"
                                 ></div>
                             </div>
@@ -1369,7 +1369,7 @@ const changeSeason = async (seasonId: number) => {
                 <div v-if="showListSection" class="space-y-2">
                     <div class="mb-3 flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">
-                            <Activity class="h-3.5 w-3.5 text-[#D97757]" />
+                            <Activity class="h-3.5 w-3.5 text-brand" />
                             <span
                                 class="text-[13px] font-medium text-muted-foreground"
                                 >Rankings</span
@@ -1451,7 +1451,7 @@ const changeSeason = async (seasonId: number) => {
                                         <Link
                                             v-if="!group.users[0].blurred"
                                             :href="`/u/${profileIdentifier(group.users[0])}`"
-                                            class="text-xs font-bold tracking-tight break-words transition-colors hover:text-[#D97757] sm:text-sm"
+                                            class="text-xs font-bold tracking-tight break-words transition-colors hover:text-brand sm:text-sm"
                                         >
                                             {{ group.users[0].name }}
                                         </Link>
@@ -1464,13 +1464,13 @@ const changeSeason = async (seasonId: number) => {
                                         </span>
                                         <span
                                             v-if="group.users[0].isCurrentUser"
-                                            class="shrink-0 rounded-full bg-[#D97757] px-1.5 py-0.5 text-[11px] font-semibold text-white"
+                                            class="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-[11px] font-semibold text-white"
                                             >YOU</span
                                         >
                                     </div>
                                     <div class="mt-0.5 flex items-center gap-2">
                                         <Flame
-                                            class="h-2.5 w-2.5 text-[#D97757]/70"
+                                            class="h-2.5 w-2.5 text-brand/70"
                                         />
                                         <span
                                             class="text-[13px] font-medium text-muted-foreground"
@@ -1488,7 +1488,7 @@ const changeSeason = async (seasonId: number) => {
                                         <button
                                             type="button"
                                             @click="openTiedModal(group)"
-                                            class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/20 focus:outline-none"
+                                            class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20 focus:outline-none"
                                             title="View all tied students"
                                         >
                                             <Users class="h-3 w-3" />
@@ -1529,7 +1529,7 @@ const changeSeason = async (seasonId: number) => {
                                             <Link
                                                 v-if="!u.blurred"
                                                 :href="`/u/${profileIdentifier(u)}`"
-                                                class="text-xs font-semibold hover:text-[#D97757]"
+                                                class="text-xs font-semibold hover:text-brand"
                                             >
                                                 {{ u.name }}
                                             </Link>
@@ -1541,7 +1541,7 @@ const changeSeason = async (seasonId: number) => {
                                             </span>
                                             <span
                                                 v-if="u.isCurrentUser"
-                                                class="py-0.2 rounded-full bg-[#D97757] px-1 text-[9px] font-bold text-white"
+                                                class="py-0.2 rounded-full bg-brand px-1 text-[9px] font-bold text-white"
                                                 >YOU</span
                                             >
                                             <button
@@ -1564,7 +1564,7 @@ const changeSeason = async (seasonId: number) => {
                                             @click="
                                                 toggleExpandGroup(group.rank)
                                             "
-                                            class="rounded-lg border border-border/40 bg-muted/20 px-3 py-1.5 text-xs font-medium text-[#D97757] transition-colors hover:bg-muted/40"
+                                            class="rounded-lg border border-border/40 bg-muted/20 px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-muted/40"
                                         >
                                             {{
                                                 isGroupExpanded(group.rank)
@@ -1606,9 +1606,7 @@ const changeSeason = async (seasonId: number) => {
                                             trendOf(group.users[0]).iconColor
                                         "
                                     />
-                                    <Sparkles
-                                        class="h-2 w-2 text-[#D97757]/70"
-                                    />
+                                    <Sparkles class="h-2 w-2 text-brand/70" />
                                     <span
                                         class="text-[12px] text-muted-foreground"
                                         >+{{
@@ -1702,9 +1700,9 @@ const changeSeason = async (seasonId: number) => {
                 <div class="border-b border-border/20 p-6 pb-4">
                     <div class="flex items-center gap-4">
                         <div
-                            class="flex h-11 w-11 items-center justify-center rounded-full bg-[#D97757]/10"
+                            class="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10"
                         >
-                            <History class="h-5 w-5 text-[#D97757]" />
+                            <History class="h-5 w-5 text-brand" />
                         </div>
                         <div>
                             <DialogTitle
@@ -1732,7 +1730,7 @@ const changeSeason = async (seasonId: number) => {
                         v-if="isLoadingHistory"
                         class="flex flex-col items-center gap-3 py-16"
                     >
-                        <Loader2 class="h-8 w-8 animate-spin text-[#D97757]" />
+                        <Loader2 class="h-8 w-8 animate-spin text-brand" />
                         <p
                             class="text-[13px] font-medium text-muted-foreground"
                         >
@@ -1839,7 +1837,7 @@ const changeSeason = async (seasonId: number) => {
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                             :class="
                                 selectedTiedGroup?.rank === 1
-                                    ? 'bg-[#D97757]/15 text-[#D97757]'
+                                    ? 'bg-brand/15 text-brand'
                                     : selectedTiedGroup?.rank === 2
                                       ? 'bg-slate-300/15 text-slate-300'
                                       : selectedTiedGroup?.rank === 3
@@ -1915,7 +1913,7 @@ const changeSeason = async (seasonId: number) => {
                                         'lb-avatar h-12 w-12 ring-2 transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14',
                                         getGroupRankMeta(selectedTiedGroup)
                                             ?.ring,
-                                        u.isCurrentUser && 'ring-[#D97757]',
+                                        u.isCurrentUser && 'ring-brand',
                                     ]"
                                 >
                                     <img
@@ -1954,7 +1952,7 @@ const changeSeason = async (seasonId: number) => {
                                 <!-- Current User Badge -->
                                 <span
                                     v-if="u.isCurrentUser"
-                                    class="py-0.2 absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#D97757] px-1.5 text-[8px] font-bold text-white shadow-sm ring-1 ring-background"
+                                    class="py-0.2 absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-brand px-1.5 text-[8px] font-bold text-white shadow-sm ring-1 ring-background"
                                 >
                                     YOU
                                 </span>
@@ -1964,7 +1962,7 @@ const changeSeason = async (seasonId: number) => {
                             <Link
                                 v-if="!u.blurred"
                                 :href="`/u/${profileIdentifier(u)}`"
-                                class="mt-2 line-clamp-2 w-full text-center text-[11px] leading-tight font-semibold break-words transition-colors hover:text-[#D97757] sm:text-xs"
+                                class="mt-2 line-clamp-2 w-full text-center text-[11px] leading-tight font-semibold break-words transition-colors hover:text-brand sm:text-xs"
                                 :title="u.name"
                             >
                                 {{ u.name }}
@@ -1981,7 +1979,7 @@ const changeSeason = async (seasonId: number) => {
                             <div
                                 class="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground"
                             >
-                                <Flame class="h-2.5 w-2.5 text-[#D97757]" />
+                                <Flame class="h-2.5 w-2.5 text-brand" />
                                 <span>{{ u.streak }}d</span>
                             </div>
                         </div>
@@ -2013,13 +2011,13 @@ const changeSeason = async (seasonId: number) => {
     min-height: 44px;
 }
 .lb-tab--active {
-    @apply border-transparent bg-[#D97757] text-white;
+    @apply border-transparent bg-brand text-white;
 }
 .lb-tab-workspace {
     @apply text-[11px] font-normal opacity-70;
 }
 .lb-search {
-    @apply rounded-full border border-border/50 bg-muted/40 text-[15px] font-normal transition-colors focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 focus:outline-none;
+    @apply rounded-full border border-border/50 bg-muted/40 text-[15px] font-normal transition-colors focus:border-brand/40 focus:ring-2 focus:ring-brand/20 focus:outline-none;
     min-height: 44px;
 }
 .lb-season-pill {
@@ -2027,7 +2025,7 @@ const changeSeason = async (seasonId: number) => {
     min-height: 44px;
 }
 .lb-season-select {
-    @apply rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 focus:outline-none;
+    @apply rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors focus:border-brand/40 focus:ring-2 focus:ring-brand/20 focus:outline-none;
     min-height: 44px;
 }
 .lb-empty {
@@ -2081,10 +2079,10 @@ const changeSeason = async (seasonId: number) => {
     @apply bg-muted/30;
 }
 .lb-podium-card--champ {
-    @apply border-[#D97757]/20;
+    @apply border-brand/20;
 }
 .lb-podium-card--you {
-    @apply ring-1 ring-[#D97757]/30;
+    @apply ring-1 ring-brand/30;
 }
 @media (min-width: 640px) {
     .lb-podium-card--champ {
@@ -2158,7 +2156,7 @@ const changeSeason = async (seasonId: number) => {
     @apply flex items-center justify-between rounded-[1.1rem] border border-border/30 bg-card px-3 py-3 transition-colors hover:bg-muted/30 sm:px-4 sm:py-3.5;
 }
 .lb-row--you {
-    @apply border-[#D97757]/20 bg-[#D97757]/[0.04];
+    @apply border-brand/20 bg-brand/[0.04];
 }
 .lb-row-rank {
     @apply flex h-9 w-9 items-center justify-center rounded-full bg-muted/50 sm:h-10 sm:w-10;

@@ -116,8 +116,8 @@ const nextToneClasses = computed(() => {
             };
         case 'soon':
             return {
-                label: 'text-[#D97757]',
-                chip: 'bg-[#D97757]/10 text-[#D97757]',
+                label: 'text-brand',
+                chip: 'bg-brand/10 text-brand',
             };
         default:
             return {
@@ -203,9 +203,9 @@ const accentClasses = (accent: string, active: boolean) => {
             };
         default:
             return {
-                wrap: 'bg-[#D97757]/10',
-                iconWrap: 'bg-[#D97757]/15 text-[#D97757]',
-                value: 'text-[#D97757]',
+                wrap: 'bg-brand/10',
+                iconWrap: 'bg-brand/15 text-brand',
+                value: 'text-brand',
             };
     }
 };
@@ -219,7 +219,7 @@ const accentClasses = (accent: string, active: boolean) => {
     >
         <div class="relative h-1 w-full bg-muted/50" aria-hidden="true">
             <div
-                class="absolute inset-y-0 left-0 rounded-r-full bg-[#D97757] transition-[width] duration-500"
+                class="absolute inset-y-0 left-0 rounded-r-full bg-brand transition-[width] duration-500"
                 :style="{ width: `${dayPercent}%` }"
             />
         </div>

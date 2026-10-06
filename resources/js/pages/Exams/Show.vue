@@ -512,9 +512,9 @@ const burstConfetti = () => {
         '#E0AF68', // [#E0AF68]
         '#9D7CD8', // violet-400
         '#CB7676', // pink-400
-        '#D97757', // [#D97757]
+        'var(--color-brand)',
         '#4D9375', // [#4D9375]
-        '#D97757', // [#D97757]
+        'var(--color-brand)',
     ];
 
     const container = progressBoxRef.value;
@@ -2315,7 +2315,7 @@ const feedbackContent = computed(() => {
                                 class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium"
                             >
                                 <span
-                                    class="rounded-full bg-[#D97757]/10 px-3 py-1 text-[#D97757]"
+                                    class="rounded-full bg-brand/10 px-3 py-1 text-brand"
                                     >Exam</span
                                 >
                                 <span
@@ -2330,7 +2330,7 @@ const feedbackContent = computed(() => {
                                 >
                                 <span
                                     v-if="exam.set?.title"
-                                    class="rounded-full bg-[#D97757]/10 px-3 py-1 text-[#D97757]"
+                                    class="rounded-full bg-brand/10 px-3 py-1 text-brand"
                                     >{{ exam.set.title }}</span
                                 >
                             </div>
@@ -2480,7 +2480,7 @@ const feedbackContent = computed(() => {
                             class="flex items-center justify-between gap-3 text-xs"
                         >
                             <span class="text-muted-foreground">Progress</span
-                            ><span class="font-medium text-[#D97757]"
+                            ><span class="font-medium text-brand"
                                 >{{ Math.round(overallProgress) }}%
                                 complete</span
                             >
@@ -2494,7 +2494,7 @@ const feedbackContent = computed(() => {
                             class="h-2 overflow-hidden rounded-full bg-muted"
                         >
                             <div
-                                class="h-full rounded-full bg-[#D97757]"
+                                class="h-full rounded-full bg-brand"
                                 :style="{ width: overallProgress + '%' }"
                             ></div>
                         </div>
@@ -2546,7 +2546,7 @@ const feedbackContent = computed(() => {
                                           : [
                                                 'exam-part-card-available cursor-pointer',
                                                 nextPartId === part.id
-                                                    ? 'border-[#D97757]/40'
+                                                    ? 'border-brand/40'
                                                     : 'border-border/60',
                                             ]
                                 "
@@ -2589,7 +2589,7 @@ const feedbackContent = computed(() => {
                                         >
                                         <span
                                             v-else-if="nextPartId === part.id"
-                                            class="rounded-full bg-[#D97757]/10 px-2.5 py-1 text-xs font-medium text-[#D97757]"
+                                            class="rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand"
                                             >Next up</span
                                         >
                                     </div>
@@ -2666,7 +2666,7 @@ const feedbackContent = computed(() => {
                                                 ': ' +
                                                 partTitleDisplay(part, index)
                                             "
-                                            class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#D97757] px-4 py-2 text-sm font-medium text-white hover:bg-[#D97757]/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:w-auto"
+                                            class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:w-auto"
                                         >
                                             Start Part<ArrowRight
                                                 class="h-4 w-4"
@@ -4275,7 +4275,7 @@ const feedbackContent = computed(() => {
                                 </div>
 
                                 <div
-                                    class="w-full rounded-xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-4 py-3"
+                                    class="w-full rounded-xl border border-brand/15 bg-brand/[0.06] px-4 py-3"
                                 >
                                     <FoxCompanion
                                         data-test="exam-result-fox"
@@ -4480,7 +4480,7 @@ const feedbackContent = computed(() => {
                                 </div>
 
                                 <div
-                                    class="w-full rounded-xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-4 py-3"
+                                    class="w-full rounded-xl border border-brand/15 bg-brand/[0.06] px-4 py-3"
                                 >
                                     <FoxCompanion
                                         data-test="exam-xp-fox"
@@ -4627,7 +4627,7 @@ const feedbackContent = computed(() => {
                                     >
                                     <span
                                         v-if="exam.set?.title"
-                                        class="mt-0.5 inline-flex items-center gap-1 text-[10px] leading-none font-bold text-[#D97757]"
+                                        class="mt-0.5 inline-flex items-center gap-1 text-[10px] leading-none font-bold text-brand"
                                     >
                                         <Layers class="h-3 w-3" />
                                         {{ exam.set.title }}

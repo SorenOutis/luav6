@@ -188,7 +188,7 @@ watch(pendingHide, (isPending) => {
             aria-hidden="true"
         >
             <div
-                class="h-[380px] w-[380px] rounded-full bg-[#D97757]/[0.06] blur-[90px] sm:h-[480px] sm:w-[480px]"
+                class="h-[380px] w-[380px] rounded-full bg-brand/[0.06] blur-[90px] sm:h-[480px] sm:w-[480px]"
             ></div>
         </div>
 
@@ -215,7 +215,7 @@ watch(pendingHide, (isPending) => {
                 >
                     <!-- Kicker -->
                     <p
-                        class="text-[11px] font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+                        class="text-[11px] font-semibold tracking-[0.2em] text-brand uppercase"
                     >
                         LSI / GETTING READY
                     </p>
@@ -239,7 +239,7 @@ watch(pendingHide, (isPending) => {
 
                     <!-- Headline & Subtitle -->
                     <h1
-                        class="mt-4 font-serif text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl"
+                        class="mt-4 font-sans text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl"
                     >
                         {{
                             isTerminating
@@ -269,7 +269,7 @@ watch(pendingHide, (isPending) => {
                                 {{ message }}
                             </span>
                             <span
-                                class="shrink-0 font-mono text-[11px] font-semibold text-[#D97757] tabular-nums"
+                                class="shrink-0 font-mono text-[11px] font-semibold text-brand tabular-nums"
                             >
                                 {{ progress }}%
                             </span>
@@ -284,7 +284,7 @@ watch(pendingHide, (isPending) => {
                             aria-valuemax="100"
                         >
                             <div
-                                class="h-full rounded-full bg-[#D97757] transition-[width] duration-200 ease-out"
+                                class="h-full rounded-full bg-brand transition-[width] duration-200 ease-out"
                                 :style="{ width: `${progress}%` }"
                             ></div>
                         </div>
@@ -295,7 +295,7 @@ watch(pendingHide, (isPending) => {
                         >
                             <div class="flex items-center gap-1.5">
                                 <span
-                                    class="h-1.5 w-1.5 rounded-full bg-[#D97757]"
+                                    class="h-1.5 w-1.5 rounded-full bg-brand"
                                     :class="{
                                         'animate-pulse': !prefersReducedMotion,
                                     }"

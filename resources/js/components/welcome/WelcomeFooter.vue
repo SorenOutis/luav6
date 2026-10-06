@@ -42,7 +42,7 @@ const scrollTop = () => {
                 <div class="max-w-sm">
                     <Link
                         href="/"
-                        class="font-serif text-2xl tracking-[-0.03em] text-foreground"
+                        class="font-sans text-2xl font-semibold tracking-[-0.03em] text-foreground"
                     >
                         LSI - KOAMISHIN
                     </Link>
@@ -64,7 +64,7 @@ const scrollTop = () => {
                         v-for="link in platformLinks"
                         :key="link.label"
                         :href="link.href"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         {{ link.label }}
                     </a>
@@ -78,20 +78,20 @@ const scrollTop = () => {
                     </p>
                     <Link
                         href="/about"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         About LSI
                     </Link>
                     <Link
                         href="/shop"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         KOAMISHIN Shop
                     </Link>
 
                     <a
                         href="mailto:poweredbyrazer022@dccp.edu.ph"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         poweredbyrazer022@dccp.edu.ph
                     </a>
@@ -107,13 +107,13 @@ const scrollTop = () => {
                         v-for="link in legalLinks"
                         :key="link.label"
                         :href="link.href"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         {{ link.label }}
                     </Link>
                     <button
                         type="button"
-                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         @click="openCookieSettings"
                     >
                         Cookie settings
@@ -128,7 +128,7 @@ const scrollTop = () => {
                 <button
                     type="button"
                     @click="scrollTop"
-                    class="group inline-flex w-fit items-center gap-2 transition-colors hover:text-[#D97757] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="group inline-flex w-fit items-center gap-2 transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Back to top
                     <ArrowUp

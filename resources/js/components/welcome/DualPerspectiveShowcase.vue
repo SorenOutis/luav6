@@ -69,7 +69,7 @@ const perspectives = [
     >
         <div class="text-center">
             <span
-                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
+                class="font-mono text-xs font-medium tracking-wider text-brand uppercase"
             >
                 Institutional Perspectives
             </span>
@@ -130,7 +130,7 @@ const perspectives = [
                 class="grid items-center gap-10 lg:grid-cols-12 lg:gap-12"
             >
                 <div class="space-y-6 lg:col-span-5">
-                    <span class="font-mono text-xs font-medium text-[#D97757]">
+                    <span class="font-mono text-xs font-medium text-brand">
                         Teacher Command Center
                     </span>
                     <h3
@@ -156,7 +156,7 @@ const perspectives = [
                             class="space-y-1"
                         >
                             <p
-                                class="font-serif text-2xl font-bold text-foreground"
+                                class="font-sans text-2xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{ m.value }}
                             </p>
@@ -180,7 +180,7 @@ const perspectives = [
                         >
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#D97757]/15 text-[#D97757]"
+                                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/15 text-brand"
                                 >
                                     <BookOpen class="h-5 w-5" />
                                 </div>
@@ -211,7 +211,7 @@ const perspectives = [
                         <div class="mt-5 space-y-4">
                             <!-- Pending action card -->
                             <div
-                                class="rounded-xl border border-[#D97757]/30 bg-[#D97757]/[0.03] p-4"
+                                class="rounded-xl border border-brand/30 bg-brand/[0.03] p-4"
                             >
                                 <div
                                     class="flex items-center justify-between text-xs"
@@ -220,7 +220,7 @@ const perspectives = [
                                         Question 3: Quadratic Factorization
                                     </span>
                                     <span
-                                        class="rounded-md bg-[#D97757]/15 px-2 py-0.5 text-[11px] font-semibold text-[#D97757]"
+                                        class="rounded-md bg-brand/15 px-2 py-0.5 text-[11px] font-semibold text-brand"
                                     >
                                         Pending Review
                                     </span>
@@ -240,12 +240,12 @@ const perspectives = [
                                     class="mt-3 rounded-lg border border-border/60 bg-background/80 p-3"
                                 >
                                     <div
-                                        class="flex items-center gap-1.5 text-[11px] font-semibold text-[#D97757]"
+                                        class="flex items-center gap-1.5 text-[11px] font-semibold text-brand"
                                     >
                                         <ChatAiOrb
                                             size="status"
                                             animate-idle
-                                            color="#D97757"
+                                            color="var(--color-brand)"
                                             class="h-3.5 w-3.5"
                                         />
                                         Echo AI Feedback (Teacher approval
@@ -267,7 +267,7 @@ const perspectives = [
                                     </button>
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-1 rounded-md bg-[#D97757] px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                                        class="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
                                     >
                                         <CheckCircle2 class="h-3.5 w-3.5" />
                                         Approve & Release (1 click)
@@ -280,14 +280,14 @@ const perspectives = [
                                 class="flex items-center justify-between rounded-xl border border-border/60 bg-secondary/30 px-4 py-3 text-xs"
                             >
                                 <div class="flex items-center gap-2.5">
-                                    <BarChart3 class="h-4 w-4 text-[#D97757]" />
+                                    <BarChart3 class="h-4 w-4 text-brand" />
                                     <span class="text-foreground">
                                         <strong>Pattern spotted:</strong> 6
                                         learners missed negative signs on Item
                                         4.
                                     </span>
                                 </div>
-                                <span class="font-semibold text-[#D97757]">
+                                <span class="font-semibold text-brand">
                                     Added to Next Lesson →
                                 </span>
                             </div>
@@ -330,7 +330,7 @@ const perspectives = [
                             class="space-y-1"
                         >
                             <p
-                                class="font-serif text-2xl font-bold text-foreground"
+                                class="font-sans text-2xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{ m.value }}
                             </p>
@@ -354,7 +354,7 @@ const perspectives = [
                         >
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-[#D97757]/15 font-semibold text-[#D97757]"
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-brand/15 font-semibold text-brand"
                                 >
                                     MS
                                 </div>
@@ -380,7 +380,7 @@ const perspectives = [
                                     8-Day Streak
                                 </span>
                                 <span
-                                    class="font-mono text-xs font-medium text-[#D97757]"
+                                    class="font-mono text-xs font-medium text-brand"
                                 >
                                     Lv 12 · 1,450 XP
                                 </span>
@@ -413,7 +413,7 @@ const perspectives = [
                                 <div
                                     class="mt-3 flex items-center justify-between text-[11px]"
                                 >
-                                    <span class="font-medium text-[#D97757]">
+                                    <span class="font-medium text-brand">
                                         +50 XP Earned
                                     </span>
                                     <span
@@ -434,7 +434,7 @@ const perspectives = [
                                         Class Podium
                                     </span>
                                     <span
-                                        class="text-[10px] font-medium text-[#D97757]"
+                                        class="text-[10px] font-medium text-brand"
                                     >
                                         Rank #3
                                     </span>
@@ -461,7 +461,7 @@ const perspectives = [
                                         >
                                     </div>
                                     <div
-                                        class="flex items-center justify-between rounded-md bg-[#D97757]/10 px-1.5 py-0.5 text-xs font-semibold text-[#D97757]"
+                                        class="flex items-center justify-between rounded-md bg-brand/10 px-1.5 py-0.5 text-xs font-semibold text-brand"
                                     >
                                         <span>3. You (Maria)</span>
                                         <span>1,450 XP</span>
@@ -475,7 +475,7 @@ const perspectives = [
                             class="mt-3 flex items-center justify-between rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-xs"
                         >
                             <div class="flex items-center gap-2">
-                                <Award class="h-4 w-4 text-[#D97757]" />
+                                <Award class="h-4 w-4 text-brand" />
                                 <span class="text-foreground">
                                     Next up: <strong>Web Basics Quiz</strong> —
                                     due in 2 hours
@@ -522,7 +522,7 @@ const perspectives = [
                             class="space-y-1"
                         >
                             <p
-                                class="font-serif text-2xl font-bold text-foreground"
+                                class="font-sans text-2xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{ m.value }}
                             </p>

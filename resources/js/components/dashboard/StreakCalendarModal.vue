@@ -487,11 +487,11 @@ const motivationalMessage = computed(() => {
                         <p
                             class="flex items-center gap-1.5 text-[13px] font-semibold text-foreground"
                         >
-                            <History class="h-3.5 w-3.5 text-[#D97757]" />
+                            <History class="h-3.5 w-3.5 text-brand" />
                             Restore a day
                         </p>
                         <span
-                            class="rounded-full bg-[#D97757]/15 px-2 py-0.5 text-[11px] font-semibold text-[#D97757] tabular-nums"
+                            class="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-semibold text-brand tabular-nums"
                         >
                             {{ localRemaining }} of {{ restoreLimit }} left
                         </span>
@@ -502,7 +502,7 @@ const motivationalMessage = computed(() => {
                     <div
                         class="mb-2 flex items-center gap-1 text-[12px] text-muted-foreground"
                     >
-                        <Zap class="h-3 w-3 text-[#D97757]" />
+                        <Zap class="h-3 w-3 text-brand" />
                         <span class="tabular-nums"
                             >Balance: {{ Math.max(0, localXp) }} XP · next costs
                             {{ nextCost }} XP</span
@@ -512,7 +512,7 @@ const motivationalMessage = computed(() => {
                         v-if="selectedDate"
                         type="button"
                         :disabled="!canRestoreSelected"
-                        class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#D97757] px-3 py-2 text-[13px] font-semibold text-white transition-all hover:bg-[#D97757]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-[13px] font-semibold text-white transition-all hover:bg-brand/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                         @click="handleRestore"
                     >
                         <template v-if="restoreState === 'restoring'">
@@ -603,9 +603,9 @@ const motivationalMessage = computed(() => {
                                 type="button"
                                 :aria-label="`Restore ${cell.dateStr}`"
                                 :aria-pressed="selectedDate === cell.dateStr"
-                                class="relative flex h-full w-full cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:bg-[#D97757]/10"
+                                class="relative flex h-full w-full cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:bg-brand/10"
                                 :class="{
-                                    'bg-[#D97757]/20 ring-2 ring-[#D97757]':
+                                    'bg-brand/20 ring-2 ring-brand':
                                         selectedDate === cell.dateStr,
                                 }"
                                 @click="selectDate(cell.dateStr)"
@@ -620,15 +620,15 @@ const motivationalMessage = computed(() => {
                                 v-else-if="cell.visible"
                                 class="relative flex h-full w-full items-center justify-center rounded-full transition-all duration-200"
                                 :class="{
-                                    'bg-[#D97757]/15':
+                                    'bg-brand/15':
                                         cell.isActive && !cell.isToday,
-                                    'bg-[#D97757]/25 ring-2 ring-[#D97757]/40':
+                                    'bg-brand/25 ring-2 ring-brand/40':
                                         cell.isActive && cell.isToday,
                                     'border-2 border-dashed border-muted-foreground/25':
                                         cell.isToday && !cell.isActive,
                                     'bg-transparent':
                                         !cell.isActive && !cell.isToday,
-                                    'bg-[#D97757]/20 ring-2 ring-[#D97757]':
+                                    'bg-brand/20 ring-2 ring-brand':
                                         selectedDate === cell.dateStr,
                                 }"
                             >
@@ -638,8 +638,8 @@ const motivationalMessage = computed(() => {
                                     class="h-3 w-3"
                                     :class="
                                         cell.isToday
-                                            ? 'text-[#D97757]'
-                                            : 'text-[#D97757]/80'
+                                            ? 'text-brand'
+                                            : 'text-brand/80'
                                     "
                                     :stroke-width="3"
                                 />
@@ -668,10 +668,10 @@ const motivationalMessage = computed(() => {
                 >
                     <span class="flex items-center gap-1.5 text-[12px]">
                         <span
-                            class="flex h-3 w-3 items-center justify-center rounded-full bg-[#D97757]/15"
+                            class="flex h-3 w-3 items-center justify-center rounded-full bg-brand/15"
                         >
                             <Check
-                                class="h-2 w-2 text-[#D97757]"
+                                class="h-2 w-2 text-brand"
                                 :stroke-width="3"
                             />
                         </span>
@@ -689,7 +689,7 @@ const motivationalMessage = computed(() => {
                         class="flex items-center gap-1.5 text-[12px]"
                     >
                         <span
-                            class="flex h-3 w-3 items-center justify-center rounded-full bg-[#D97757]/20 ring-1 ring-[#D97757]"
+                            class="flex h-3 w-3 items-center justify-center rounded-full bg-brand/20 ring-1 ring-brand"
                         >
                         </span>
                         Selected restore

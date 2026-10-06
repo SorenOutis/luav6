@@ -52,7 +52,7 @@ const toggleMessage = (): void => {
         <button
             v-if="showMessage"
             type="button"
-            class="fox-companion__button shrink-0 rounded-full transition-transform duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#D97757] focus-visible:ring-offset-2"
+            class="fox-companion__button shrink-0 rounded-full transition-transform duration-150 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             :aria-label="isMessageVisible ? 'Hide fox message' : label"
             :aria-expanded="isMessageVisible"
             @click="toggleMessage"
@@ -101,7 +101,7 @@ const toggleMessage = (): void => {
         >
             <p
                 v-if="showMessage && isMessageVisible"
-                class="fox-companion__bubble relative rounded-2xl border border-[#D97757]/20 bg-card px-3.5 py-2.5 text-xs leading-relaxed text-foreground shadow-sm sm:text-sm"
+                class="fox-companion__bubble relative rounded-2xl border border-brand/20 bg-card px-3.5 py-2.5 text-xs leading-relaxed text-foreground shadow-sm sm:text-sm"
                 :class="compact ? 'w-[180px]' : 'w-[220px]'"
             >
                 {{ message }}

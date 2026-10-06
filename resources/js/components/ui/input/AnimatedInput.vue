@@ -48,7 +48,7 @@ const chars = computed(() => props.label.split(''))
         :key="index"
         class="inline-block text-sm"
         :class="{
-          '-translate-y-[120%] text-[#D97757] font-semibold': isFocused,
+          '-translate-y-[120%] text-brand font-semibold': isFocused,
           '-translate-y-[120%] text-muted-foreground': !isFocused && showLabel,
           'translate-y-0 text-inherit': !showLabel
         }"
@@ -70,7 +70,7 @@ const chars = computed(() => props.label.split(''))
       @input="onInput"
       v-bind="$attrs"
       class="outline-none border-b-2 py-2 w-full text-base font-medium text-foreground bg-transparent placeholder-transparent transition-colors duration-200"
-      :class="isFocused ? 'border-[#D97757]' : 'border-border/80'"
+      :class="isFocused ? 'border-brand' : 'border-border/80'"
     />
   </div>
 </template>

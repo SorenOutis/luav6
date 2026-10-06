@@ -64,7 +64,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
             <section
                 v-for="item in announcements.slice(0, 3)"
                 :key="item.id"
-                class="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#E8895F] via-[#D97757] to-[#B64A2E] p-3 text-white shadow-md ring-1 shadow-[#D97757]/15 ring-white/15 sm:rounded-2xl sm:p-4 sm:px-5"
+                class="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#E8895F] via-brand to-[#B64A2E] p-3 text-white shadow-md ring-1 shadow-brand/15 ring-white/15 sm:rounded-2xl sm:p-4 sm:px-5"
                 aria-live="polite"
             >
                 <!-- Subtle decorative highlight -->
@@ -162,7 +162,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             <div class="relative">
                                 <div
                                     class="absolute -top-1 -right-1 z-30 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight text-white tabular-nums shadow-sm"
-                                    :class="greetingTheme || 'bg-[#D97757]'"
+                                    :class="greetingTheme || 'bg-brand'"
                                 >
                                     Lvl {{ animatedLevel }}
                                 </div>

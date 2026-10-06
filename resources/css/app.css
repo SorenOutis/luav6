@@ -37,6 +37,14 @@
     --color-input: #e0dbd3;
     --color-ring: #1a1a1e;
 
+    /*
+        Brand accent. Single source of truth for the terracotta used by primary
+        CTAs, focus rings, active chips and progress meters. It was hardcoded as
+        #D97757 in ~300 places, so no theme could ever move it — use bg-brand /
+        text-brand / border-brand / ring-brand instead of an arbitrary hex.
+    */
+    --color-brand: #d97757;
+
     --color-sidebar: #faf7f2;
     --color-sidebar-foreground: #1a1a1e;
     --color-sidebar-primary: #1a1a1e;
@@ -1309,7 +1317,7 @@
 .dashboard-ui,
 .student-ui,
 .profile-ui {
-    --dash-accent: #d97757;
+    --dash-accent: var(--color-brand);
     --dash-green: #4d9375;
     --dash-amber: #e0af68;
     --dash-red: #cb7676;
@@ -3020,8 +3028,8 @@ html[data-low-end] .welcome-defer {
     }
 
     .mobile-dashboard-reward__icon.is-warm {
-        background: color-mix(in srgb, #d97757 18%, transparent);
-        color: #d97757;
+        background: color-mix(in srgb, var(--color-brand) 18%, transparent);
+        color: var(--color-brand);
     }
 
     .mobile-dashboard-reward__value,
@@ -3303,8 +3311,8 @@ html[data-low-end] .welcome-defer {
     }
 
     .mobile-assignment-tabs button.is-active {
-        border-color: #d97757;
-        background: #d97757;
+        border-color: var(--color-brand);
+        background: var(--color-brand);
         color: #fff;
     }
 
@@ -3892,8 +3900,8 @@ html[data-low-end] .welcome-defer {
     }
 
     .mobile-course-filters button.is-active {
-        border-color: #d97757;
-        background: #d97757;
+        border-color: var(--color-brand);
+        background: var(--color-brand);
         color: #fff;
     }
 

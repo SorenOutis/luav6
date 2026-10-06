@@ -473,9 +473,7 @@ onBeforeUnmount(() => {
                         v-if="index > 0"
                         aria-hidden="true"
                         class="rs-connector h-px flex-1 transition-colors duration-500"
-                        :class="
-                            index <= currentStep ? 'bg-[#D97757]' : 'bg-border'
-                        "
+                        :class="index <= currentStep ? 'bg-brand' : 'bg-border'"
                     />
                     <button
                         type="button"
@@ -491,9 +489,9 @@ onBeforeUnmount(() => {
                             class="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-all duration-500"
                             :class="[
                                 index < currentStep &&
-                                    'border-[#D97757] bg-[#D97757] text-white',
+                                    'border-brand bg-brand text-white',
                                 index === currentStep &&
-                                    'border-[#D97757] bg-[#D97757]/10 text-[#D97757]',
+                                    'border-brand bg-brand/10 text-brand',
                                 index > currentStep &&
                                     'border-border text-muted-foreground/50',
                             ]"

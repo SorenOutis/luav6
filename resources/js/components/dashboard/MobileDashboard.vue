@@ -265,7 +265,7 @@ const seasonDateLabel = computed(() => {
                             :alt="`${userName} avatar`"
                         />
                         <AvatarFallback
-                            class="bg-[#D97757]/15 text-sm font-semibold text-[#D97757]"
+                            class="bg-brand/15 text-sm font-semibold text-brand"
                         >
                             {{ initials }}
                         </AvatarFallback>
@@ -278,15 +278,15 @@ const seasonDateLabel = computed(() => {
                             {{ userName }}
                         </h1>
                         <span
-                            class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-semibold text-[#D97757]"
+                            class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2 py-0.5 text-[12px] font-semibold text-brand"
                             :title="`Level ${userStats.level} · ${userStats.currentXP.toLocaleString()} / ${userStats.maxXPForLevel.toLocaleString()} XP`"
                         >
                             Lv {{ userStats.level }}
                             <span
-                                class="h-1 w-16 overflow-hidden rounded-full bg-[#D97757]/20"
+                                class="h-1 w-16 overflow-hidden rounded-full bg-brand/20"
                             >
                                 <span
-                                    class="block h-full rounded-full bg-[#D97757]"
+                                    class="block h-full rounded-full bg-brand"
                                     :style="{ width: `${xpProgress}%` }"
                                 ></span>
                             </span>
@@ -358,7 +358,7 @@ const seasonDateLabel = computed(() => {
                 <template #band-action>
                     <button
                         type="button"
-                        class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[13px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/10"
+                        class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/10"
                         @click="emit('toggleLeaderboard')"
                     >
                         Full rankings

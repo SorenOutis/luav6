@@ -49,10 +49,10 @@ withDefaults(
         />
         <span
             :class="[
-                'tracking-[-0.03em] whitespace-nowrap text-foreground',
-                size === 'mobile' ? 'font-serif text-lg' : '',
-                size === 'header' ? 'font-serif text-xl' : '',
-                size === 'loader' ? 'font-serif text-xl sm:text-2xl' : '',
+                'font-semibold tracking-[-0.03em] whitespace-nowrap text-foreground',
+                size === 'mobile' ? 'text-lg' : '',
+                size === 'header' ? 'text-xl' : '',
+                size === 'loader' ? 'text-xl sm:text-2xl' : '',
             ]"
         >
             KOAMISHIN

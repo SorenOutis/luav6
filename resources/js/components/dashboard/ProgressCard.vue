@@ -141,7 +141,7 @@ const quickAction = computed(() => {
                     class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-semibold transition-colors"
                     :class="
                         activePane === pane.key
-                            ? 'bg-[#D97757] text-white'
+                            ? 'bg-brand text-white'
                             : 'text-muted-foreground hover:text-foreground'
                     "
                     @click="activePane = pane.key"
@@ -155,7 +155,7 @@ const quickAction = computed(() => {
             <button
                 v-if="quickAction"
                 type="button"
-                class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#D97757]/30 bg-[#D97757]/[0.07] px-3 py-1.5 text-[12px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/15"
+                class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] px-3 py-1.5 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/15"
                 :title="`Open ${quickAction.label}`"
                 @click="quickAction.run()"
             >

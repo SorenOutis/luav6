@@ -64,7 +64,7 @@ const tabs = [
         <!-- Section Header: Clean Google Display Sans -->
         <div class="mx-auto max-w-3xl px-4 text-center">
             <span
-                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
+                class="font-mono text-xs font-medium tracking-wider text-brand uppercase"
             >
                 The Classroom Workflow
             </span>
@@ -130,7 +130,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="font-mono text-[11px] font-medium text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-brand"
                             >
                                 Competency · M8AL-IIa-1
                             </span>
@@ -209,7 +209,7 @@ const tabs = [
                         class="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground"
                     >
                         <span class="flex items-center gap-1.5">
-                            <Clock class="h-3.5 w-3.5 text-[#D97757]" />
+                            <Clock class="h-3.5 w-3.5 text-brand" />
                             Objective items scored in real-time on student
                             submit
                         </span>
@@ -226,7 +226,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="font-mono text-[11px] font-medium text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-brand"
                             >
                                 Teacher Review Boundary · Nonce-Protected
                             </span>
@@ -259,7 +259,7 @@ const tabs = [
                         <div class="flex items-center justify-between text-xs">
                             <div class="flex items-center gap-2">
                                 <div
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-[#D97757]/15 text-[10px] font-bold text-[#D97757]"
+                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-[10px] font-bold text-brand"
                                 >
                                     MS
                                 </div>
@@ -285,24 +285,23 @@ const tabs = [
 
                         <!-- Echo draft suggestion -->
                         <div
-                            class="rounded-xl border border-[#D97757]/30 bg-[#D97757]/[0.05] p-4"
+                            class="rounded-xl border border-brand/30 bg-brand/[0.05] p-4"
                         >
                             <div
                                 class="flex items-center justify-between text-xs"
                             >
                                 <span
-                                    class="flex items-center gap-1.5 font-bold text-[#D97757]"
+                                    class="flex items-center gap-1.5 font-bold text-brand"
                                 >
                                     <ChatAiOrb
                                         size="status"
                                         animate-idle
-                                        color="#D97757"
+                                        color="var(--color-brand)"
                                         class="h-3.5 w-3.5"
                                     />
                                     Echo Drafted Feedback
                                 </span>
-                                <span
-                                    class="font-mono text-[11px] text-[#D97757]"
+                                <span class="font-mono text-[11px] text-brand"
                                     >Rubric: 5/5 Points</span
                                 >
                             </div>
@@ -338,7 +337,7 @@ const tabs = [
                                 :class="
                                     isApprovedInReview
                                         ? 'bg-emerald-600 hover:bg-emerald-700'
-                                        : 'bg-[#D97757] hover:bg-[#D97757]/90'
+                                        : 'bg-brand hover:bg-brand/90'
                                 "
                                 @click="
                                     isApprovedInReview = !isApprovedInReview
@@ -366,7 +365,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="font-mono text-[11px] font-medium text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-brand"
                             >
                                 Section Diamond
                             </span>
@@ -397,7 +396,7 @@ const tabs = [
                                 <span class="font-semibold text-foreground"
                                     >Section Factorization Mastery</span
                                 >
-                                <span class="font-bold text-[#D97757]"
+                                <span class="font-bold text-brand"
                                     >88% Class Average</span
                                 >
                             </div>
@@ -405,7 +404,7 @@ const tabs = [
                                 class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-secondary"
                             >
                                 <div
-                                    class="h-full rounded-full bg-[#D97757] transition-all"
+                                    class="h-full rounded-full bg-brand transition-all"
                                     style="width: 88%"
                                 />
                             </div>
@@ -416,7 +415,7 @@ const tabs = [
                             class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4"
                         >
                             <GraduationCap
-                                class="mt-0.5 h-5 w-5 shrink-0 text-[#D97757]"
+                                class="mt-0.5 h-5 w-5 shrink-0 text-brand"
                             />
                             <div class="text-xs sm:text-sm">
                                 <span class="font-semibold text-foreground"
@@ -441,7 +440,7 @@ const tabs = [
                             />
                             1-Click quarterly grade export
                         </span>
-                        <span class="font-semibold text-[#D97757]">
+                        <span class="font-semibold text-brand">
                             Library Hub Reviewer Ready →
                         </span>
                     </div>

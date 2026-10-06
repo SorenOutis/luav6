@@ -132,7 +132,7 @@ const seoJsonLd = [
     >
         <!-- Subtle ambient warmth bloom -->
         <div
-            class="pointer-events-none absolute top-24 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#D97757]/[0.05] blur-[120px]"
+            class="pointer-events-none absolute top-24 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-brand/[0.05] blur-[120px]"
             aria-hidden="true"
         ></div>
 
@@ -151,7 +151,7 @@ const seoJsonLd = [
             <!-- Hero -->
             <section class="text-center">
                 <p
-                    class="mb-4 text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+                    class="mb-4 text-xs font-semibold tracking-[0.2em] text-brand uppercase"
                 >
                     The Learning Journey
                 </p>
@@ -159,7 +159,7 @@ const seoJsonLd = [
                     class="font-serif text-4xl leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl lg:text-6xl"
                 >
                     From enrollment to
-                    <span class="text-[#D97757]">achievement</span>.
+                    <span class="text-brand">achievement</span>.
                 </h1>
                 <p
                     class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
@@ -179,7 +179,7 @@ const seoJsonLd = [
                     <!-- Left Monospace Step Counter & Icon -->
                     <div class="hidden md:flex md:flex-col md:items-center">
                         <div
-                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-[#D97757]/20 bg-[#D97757]/10 text-[#D97757] shadow-xs"
+                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand shadow-xs"
                         >
                             <component
                                 :is="step.icon"
@@ -188,7 +188,7 @@ const seoJsonLd = [
                             />
                         </div>
                         <span
-                            class="mt-4 font-mono text-xs font-bold text-[#D97757]"
+                            class="mt-4 font-mono text-xs font-bold text-brand"
                         >
                             {{ step.number }}
                         </span>
@@ -205,7 +205,7 @@ const seoJsonLd = [
                             class="flex items-center justify-between md:hidden"
                         >
                             <div
-                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#D97757]/20 bg-[#D97757]/10 text-[#D97757]"
+                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand"
                             >
                                 <component
                                     :is="step.icon"
@@ -214,7 +214,7 @@ const seoJsonLd = [
                                 />
                             </div>
                             <span
-                                class="font-mono text-xs font-bold text-[#D97757]"
+                                class="font-mono text-xs font-bold text-brand"
                             >
                                 STEP {{ step.number }}
                             </span>
@@ -248,7 +248,7 @@ const seoJsonLd = [
                                 class="flex items-start gap-2.5 text-xs text-foreground/90 sm:text-sm"
                             >
                                 <span
-                                    class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97757]"
+                                    class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
                                 ></span>
                                 <span>{{ detail }}</span>
                             </li>
@@ -263,7 +263,7 @@ const seoJsonLd = [
                 class="welcome-cta relative mt-24 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-xl sm:mt-32 sm:px-10 sm:py-14"
             >
                 <div
-                    class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-[#D97757]/20 blur-3xl"
+                    class="pointer-events-none absolute -top-20 -right-20 -z-0 h-72 w-72 rounded-full bg-brand/20 blur-3xl"
                     aria-hidden="true"
                 ></div>
 
@@ -272,7 +272,7 @@ const seoJsonLd = [
                 >
                     <div>
                         <p
-                            class="text-xs font-semibold tracking-[0.2em] text-[#D97757] uppercase"
+                            class="text-xs font-semibold tracking-[0.2em] text-brand uppercase"
                         >
                             Ready to Begin
                         </p>
@@ -294,7 +294,7 @@ const seoJsonLd = [
                     >
                         <Link
                             :href="register().url"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#D97757] px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand/90 hover:shadow focus-visible:ring-2 focus-visible:ring-offset-2"
                         >
                             Create a free account
                             <ArrowRight class="h-4 w-4" />
