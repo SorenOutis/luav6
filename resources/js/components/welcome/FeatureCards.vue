@@ -57,14 +57,14 @@ const tabs = [
 <template>
     <section
         id="features"
-        class="welcome-studio scroll-mt-32 border-b border-border/60 py-16 sm:py-24"
+        class="welcome-studio scroll-mt-32 border-b border-border/60 py-20 sm:py-28"
         :class="{ 'lite-motion': prefersReducedMotion }"
         aria-labelledby="studio-heading"
     >
         <!-- Section Header: Clean Google Display Sans -->
         <div class="mx-auto max-w-3xl px-4 text-center">
             <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3.5 py-1 text-xs font-semibold text-[#D97757]"
+                class="font-mono text-xs font-medium tracking-wider text-[#D97757] uppercase"
             >
                 The Classroom Workflow
             </span>
@@ -130,7 +130,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-0.5 font-mono text-[11px] font-semibold text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-[#D97757]"
                             >
                                 Competency · M8AL-IIa-1
                             </span>
@@ -226,7 +226,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-0.5 text-[11px] font-semibold text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-[#D97757]"
                             >
                                 Teacher Review Boundary · Nonce-Protected
                             </span>
@@ -366,7 +366,7 @@ const tabs = [
                     >
                         <div>
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-3 py-0.5 text-[11px] font-semibold text-[#D97757]"
+                                class="font-mono text-[11px] font-medium text-[#D97757]"
                             >
                                 Section Diamond
                             </span>

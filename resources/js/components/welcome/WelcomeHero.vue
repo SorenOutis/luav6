@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { ArrowRight, Check, ShieldCheck, Sparkles } from 'lucide-vue-next';
+import { ArrowRight, Check } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 
@@ -41,11 +41,13 @@ const isHeroApproved = ref(true);
     >
         <!-- Centered Main Content Area -->
         <Motion
-            :initial="prefersReducedMotion ? false : { opacity: 0, y: 16 }"
+            :initial="
+                prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }
+            "
             :animate="{ opacity: 1, y: 0 }"
             :transition="
                 prefersReducedMotion
-                    ? { duration: 0 }
+                    ? { duration: 0.2, easing: 'ease-out' }
                     : { duration: 0.5, easing: [0.23, 1, 0.32, 1] }
             "
             class="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-4"
@@ -128,153 +130,87 @@ const isHeroApproved = ref(true);
 
             <!-- Bendy Centerpiece Application Frame (.figure) -->
             <div class="relative mt-12 w-full max-w-4xl text-left sm:mt-16">
-                <!-- Subtle Ambient Glow -->
                 <div
-                    class="pointer-events-none absolute -inset-4 z-0 rounded-3xl bg-gradient-to-b from-[#D97757]/10 via-transparent to-transparent blur-2xl"
-                    aria-hidden="true"
-                ></div>
-
-                <div
-                    class="relative z-10 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-[0_24px_48px_rgba(0,0,0,0.14),0_2px_6px_rgba(0,0,0,0.08)] backdrop-blur-sm transition-all sm:rounded-3xl"
+                    class="relative z-10 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_24px_48px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.05)] transition-all sm:rounded-3xl"
                 >
-                    <!-- macOS Window Top Bar -->
-                    <div
-                        class="flex items-center justify-between border-b border-border/70 bg-secondary/35 px-4 py-3 sm:px-6"
-                    >
-                        <div class="flex items-center gap-2">
-                            <span
-                                class="h-3 w-3 rounded-full bg-border/90"
-                            ></span>
-                            <span
-                                class="h-3 w-3 rounded-full bg-border/90"
-                            ></span>
-                            <span
-                                class="h-3 w-3 rounded-full bg-border/90"
-                            ></span>
-                            <span
-                                class="ml-3 hidden font-mono text-[11px] text-muted-foreground sm:inline-block"
-                            >
-                                lsi.koamishin.com / grade-8-math / diamond
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span
-                                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
-                            >
-                                <span
-                                    class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
-                                ></span>
-                                Live Assessment · Section Diamond
-                            </span>
-                        </div>
-                    </div>
-
                     <!-- Inner Product Split Canvas -->
                     <div
-                        class="grid grid-cols-1 divide-y divide-border/60 p-4 sm:p-6 lg:grid-cols-2 lg:divide-x lg:divide-y-0"
+                        class="grid grid-cols-1 gap-y-8 p-6 sm:p-10 lg:grid-cols-2 lg:gap-x-12"
                     >
                         <!-- Left: Live Student Response -->
-                        <div class="space-y-3 pb-4 lg:pr-6 lg:pb-0">
-                            <div
-                                class="flex items-center justify-between text-xs text-muted-foreground"
+                        <div class="space-y-4">
+                            <p
+                                class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                             >
-                                <span class="font-mono"
-                                    >Item 3 of 15 · Quadratic Equations</span
-                                >
-                                <span
-                                    class="rounded bg-secondary/80 px-2 py-0.5 font-mono text-[10px]"
-                                >
-                                    Auto-Scored 0s
-                                </span>
-                            </div>
-                            <p class="text-sm font-medium text-foreground">
-                                What are the solutions to
-                                <span class="font-mono">x² - 7x + 12 = 0</span>?
+                                Student Response
                             </p>
-                            <div
-                                class="flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/5 px-3.5 py-2.5 text-xs"
+                            <p
+                                class="text-lg leading-snug font-medium text-foreground sm:text-xl"
                             >
-                                <span
-                                    class="font-medium text-emerald-700 dark:text-emerald-300"
+                                What are the solutions to
+                                <span class="font-mono">x² − 7x + 12 = 0</span>?
+                            </p>
+                            <p
+                                class="text-sm leading-relaxed text-muted-foreground"
+                            >
+                                Submitted answer —
+                                <span class="font-medium text-foreground"
+                                    >x = 3, x = 4</span
                                 >
-                                    ✓ Student submitted: x = 3, x = 4
-                                </span>
-                                <span
-                                    class="font-mono text-[10px] text-emerald-600 dark:text-emerald-400"
-                                >
-                                    100% Correct
-                                </span>
-                            </div>
-                            <p class="text-[11px] text-muted-foreground">
-                                Objective items auto-grade instantaneously with
-                                zero manual cross-referencing.
+                                · auto-scored correct in under a second.
                             </p>
                         </div>
 
                         <!-- Right: Echo Draft with Teacher Approval -->
-                        <div class="space-y-3 pt-4 lg:pt-0 lg:pl-6">
-                            <div
-                                class="flex items-center justify-between text-xs"
-                            >
-                                <span
-                                    class="flex items-center gap-1.5 font-medium text-[#D97757]"
-                                >
-                                    <Sparkles class="h-3.5 w-3.5" />
-                                    Echo Formative Feedback Draft
-                                </span>
-                                <span
-                                    class="font-mono text-[10px] text-muted-foreground"
-                                >
-                                    Rubric: 5/5 Points
-                                </span>
-                            </div>
+                        <div
+                            class="space-y-4 border-t border-border/60 pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-12"
+                        >
                             <p
-                                class="text-xs leading-relaxed text-foreground sm:text-sm"
+                                class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                            >
+                                Echo Feedback Draft
+                            </p>
+                            <p
+                                class="text-lg leading-snug font-medium text-foreground sm:text-xl"
                             >
                                 “Spot-on factorization logic. Clear
                                 identification of roots using the zero-product
                                 property.”
                             </p>
-                            <div class="flex items-center justify-between pt-1">
-                                <div
-                                    class="flex items-center gap-1.5 text-[11px] text-muted-foreground"
-                                >
-                                    <ShieldCheck
-                                        class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
-                                    />
-                                    <span>Teacher-in-the-Loop</span>
-                                </div>
+                            <div class="flex items-center gap-4 pt-1">
                                 <button
                                     type="button"
                                     @click="isHeroApproved = !isHeroApproved"
-                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-medium transition-all active:scale-95"
+                                    class="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium transition-opacity active:scale-[0.98]"
                                     :class="
                                         isHeroApproved
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'border border-border/80 bg-secondary/80 text-foreground hover:bg-secondary'
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-foreground hover:opacity-70'
                                     "
                                 >
                                     <Check
                                         v-if="isHeroApproved"
-                                        class="h-3.5 w-3.5"
+                                        class="h-4 w-4"
                                     />
                                     <span>{{
                                         isHeroApproved
-                                            ? 'Approved by Teacher ✓'
-                                            : 'Click to Approve'
+                                            ? 'Approved by teacher'
+                                            : 'Approve draft'
                                     }}</span>
                                 </button>
+                                <span class="text-xs text-muted-foreground"
+                                    >Teachers approve every AI draft</span
+                                >
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Minimalist Bendy Caption -->
                 <p
                     class="mt-4 text-center font-sans text-xs tracking-[-0.01em] text-muted-foreground"
                 >
-                    Formative assessment meets instant human-in-the-loop review.
-                    Teachers retain 100% approval authority.
+                    Questions, answers, and feedback — reviewed by a teacher
+                    before they reach students.
                 </p>
             </div>
         </Motion>

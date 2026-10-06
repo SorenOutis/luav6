@@ -200,20 +200,19 @@ onBeforeUnmount(() => {
     opacity: 0.55;
 }
 
-/* ── Reduced motion: gentle tri-form crossfade ── */
-.is-reduced [data-motion='welcome'] .wolf-head {
-    animation: wolf-fade-fox 3.6s ease-in-out infinite !important;
-}
-.is-reduced [data-motion='welcome'] .wolf-circle {
-    animation: wolf-fade-circle 3.6s ease-in-out infinite !important;
-}
-.is-reduced [data-motion='welcome'] .wolf-spark {
-    animation: wolf-fade-spark 3.6s ease-in-out infinite !important;
-}
-.is-reduced [data-motion='welcome'] .wolf-ear-left,
-.is-reduced [data-motion='welcome'] .wolf-ear-right,
-.is-reduced [data-motion='welcome'] .wolf-muzzle {
+/* ── Reduced motion: static mark, no looping animation ── */
+.is-reduced .wolf-head,
+.is-reduced .wolf-circle,
+.is-reduced .wolf-spark,
+.is-reduced .wolf-ear-left,
+.is-reduced .wolf-ear-right,
+.is-reduced .wolf-muzzle {
     animation: none !important;
+    opacity: 1;
+}
+.is-reduced .wolf-circle,
+.is-reduced .wolf-spark {
+    opacity: 0;
 }
 
 /* ── Paused when offscreen or in background tab ── */

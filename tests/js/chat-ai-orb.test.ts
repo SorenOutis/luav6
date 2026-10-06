@@ -186,9 +186,8 @@ describe('ChatAiOrb geometric wolf', () => {
         expect(source).toContain('wolf-to-circle 3.6s');
         expect(source).toContain('wolf-circle-reveal 3.6s');
         expect(source).toContain('wolf-spark-reveal 3.6s');
-        expect(source).toContain('wolf-fade-fox 3.6s');
-        expect(source).toContain('wolf-fade-spark 3.6s');
-        expect(source).toContain(".is-reduced [data-motion='welcome']");
+        expect(source).toContain('.is-reduced .wolf-head');
+        expect(source).toContain('animation: none !important');
         expect(source).toContain('.is-paused .wolf-spark');
         expect(render().find('circle.wolf-circle').attributes('r')).toBe('30');
         expect(render().find('g.wolf-spark').exists()).toBe(true);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ExternalLink, Eye, ShoppingBag, Sparkles } from 'lucide-vue-next';
+import { ExternalLink, ShoppingBag, Sparkles } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
@@ -298,7 +298,7 @@ onMounted(() => {
                 <!-- Dynamic Variant Switcher (e.g. Obsidian / Alabaster) -->
                 <div
                     v-if="heroTabs.length > 0"
-                    class="inline-flex rounded-xl border border-border/80 bg-card/80 p-1 shadow-xs backdrop-blur-md"
+                    class="inline-flex rounded-xl border border-border/80 bg-card p-1 shadow-xs"
                 >
                     <button
                         v-for="(tab, idx) in heroTabs"
@@ -389,7 +389,7 @@ onMounted(() => {
                     <article
                         v-for="(merch, index) in merches"
                         :key="`bento-${merch.id}`"
-                        class="merch-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-md backdrop-blur-md transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-xl sm:rounded-3xl"
+                        class="merch-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs transition-all duration-300 ease-out hover:border-foreground/20 sm:rounded-3xl"
                         :class="getBentoColSpan(index, merches.length)"
                     >
                         <!-- Spec Header Badge -->
@@ -397,16 +397,12 @@ onMounted(() => {
                             class="flex items-center justify-between border-b border-border/50 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-3.5"
                         >
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                class="font-mono text-[10px] font-medium tracking-wider text-muted-foreground uppercase"
                             >
-                                <Sparkles
-                                    v-if="index === 0"
-                                    class="h-3 w-3 text-primary"
-                                />
                                 {{
                                     index === 0
-                                        ? 'SPEC [01] // FLAGSHIP'
-                                        : `SPEC [0${index + 1}] // DROP`
+                                        ? 'Featured'
+                                        : `Item 0${index + 1}`
                                 }}
                             </span>
 
@@ -443,15 +439,6 @@ onMounted(() => {
                             "
                             :aria-label="`Quick view ${merch.name}`"
                         >
-                            <!-- Ambient Glow Aura -->
-                            <img
-                                v-if="merch.image_url"
-                                :src="merch.image_url"
-                                aria-hidden="true"
-                                alt=""
-                                class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-25 blur-2xl filter transition-opacity duration-500 group-hover/img:opacity-45 dark:opacity-20"
-                            />
-
                             <!-- Sharp Product Image -->
                             <img
                                 v-if="merch.image_url"
@@ -473,18 +460,6 @@ onMounted(() => {
                                     class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
                                 >
                                     KOAMISHIN
-                                </span>
-                            </div>
-
-                            <!-- Quick View Hover Overlay Pill -->
-                            <div
-                                class="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover/img:opacity-100"
-                            >
-                                <span
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-transform duration-300 group-hover/img:scale-105"
-                                >
-                                    <Eye class="h-3.5 w-3.5 text-primary" />
-                                    <span>Quick View</span>
                                 </span>
                             </div>
                         </button>
@@ -509,44 +484,30 @@ onMounted(() => {
                                 </p>
 
                                 <!-- Variant Pills -->
-                                <div
+                                <p
                                     v-if="
                                         merch.variants &&
                                         merch.variants.length > 0
                                     "
-                                    class="mt-3 flex flex-wrap items-center gap-1.5"
+                                    class="mt-3 text-[11px] font-medium tracking-wide text-muted-foreground"
                                 >
-                                    <span
-                                        class="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase"
-                                    >
-                                        Editions:
-                                    </span>
-                                    <span
-                                        v-for="v in merch.variants"
-                                        :key="v.name"
-                                        class="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground"
-                                    >
-                                        {{ v.name }}
-                                    </span>
-                                </div>
+                                    {{
+                                        merch.variants
+                                            .map((v) => v.name)
+                                            .join(' · ')
+                                    }}
+                                </p>
                             </div>
 
                             <!-- Price & CTA -->
                             <div
                                 class="mt-5 flex items-center justify-between border-t border-border/50 pt-4"
                             >
-                                <div>
-                                    <span
-                                        class="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
-                                    >
-                                        Price
-                                    </span>
-                                    <span
-                                        class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
-                                    >
-                                        {{ merch.formatted_price }}
-                                    </span>
-                                </div>
+                                <span
+                                    class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                                >
+                                    {{ merch.formatted_price }}
+                                </span>
 
                                 <a
                                     :href="
@@ -556,7 +517,7 @@ onMounted(() => {
                                     rel="noopener noreferrer"
                                     class="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:text-sm"
                                 >
-                                    <span>Coming Soon...</span>
+                                    <span>Visit store</span>
                                     <ExternalLink
                                         class="h-3.5 w-3.5 text-muted-foreground"
                                         aria-hidden="true"
@@ -568,13 +529,13 @@ onMounted(() => {
 
                     <!-- Atelier / Department Brand Spec Bento Tile -->
                     <article
-                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-6 shadow-md backdrop-blur-md transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-xl sm:rounded-3xl sm:p-8 md:col-span-2 lg:col-span-4"
+                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-6 shadow-xs transition-all duration-300 ease-out hover:border-foreground/20 sm:rounded-3xl sm:p-8 md:col-span-2 lg:col-span-4"
                     >
                         <div>
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-primary uppercase"
+                                class="font-mono text-[10px] font-medium tracking-wider text-primary uppercase"
                             >
-                                SPEC // ATELIER
+                                Atelier
                             </span>
 
                             <h3
@@ -641,7 +602,7 @@ onMounted(() => {
                 <!-- Empty State -->
                 <div
                     v-else
-                    class="mx-auto max-w-xl rounded-3xl border border-dashed border-border/80 bg-card/40 p-8 text-center sm:p-12"
+                    class="mx-auto max-w-xl rounded-2xl border border-border/80 bg-card p-8 text-center sm:p-12"
                 >
                     <div
                         class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"
