@@ -89,7 +89,7 @@ test('welcome header links to dedicated shop page and landing page has no embedd
 
     expect($headerSource)->toContain('href="/shop"')
         ->and($welcomeSource)->not->toContain('<ShopSection')
-        ->and($shopPageSource)->toContain('Coming Soon...')
+        ->and($shopPageSource)->toContain('Visit store')
         ->and($shopPageSource)->toContain('https://koamishin.com/')
         ->and($footerSource)->toContain('href="/shop"');
 });
