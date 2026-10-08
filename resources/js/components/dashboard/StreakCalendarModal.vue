@@ -30,6 +30,7 @@ interface RestoreResult {
     remaining: number;
     total_xp: number;
     current_streak: number;
+    restored_date: string;
     restored_dates: string[];
 }
 
@@ -322,7 +323,15 @@ async function handleRestore() {
         if (data.restored) {
             localUsed.value = restoreLimit.value - data.remaining;
             localRemaining.value = data.remaining;
-            localRestoredDates.value = [...data.restored_dates];
+            // `restored_dates` is windowed to the calendar's 90-day range, so
+            // merge the echoed date too — otherwise restoring a day older than
+            // that window leaves its cell looking untouched and still restorable.
+            localRestoredDates.value = Array.from(
+                new Set([
+                    ...data.restored_dates,
+                    ...(data.restored_date ? [data.restored_date] : []),
+                ]),
+            );
             localXp.value = data.total_xp;
             localStreak.value = data.current_streak;
             selectedDate.value = null;

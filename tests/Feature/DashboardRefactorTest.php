@@ -62,6 +62,10 @@ it('renders the dashboard with the expected props', function () {
 
 // ─────────────────────────────────────────────
 //  StreakService
+//
+//  The streak is recounted from activity history, so these tests seed
+//  backdated gamification_histories rows rather than relying on the
+//  last_login_at column alone.
 // ─────────────────────────────────────────────
 
 it('starts a streak at one on first activity', function () {
@@ -78,6 +82,15 @@ it('increments the streak on a consecutive day', function () {
         'current_streak' => 4,
         'longest_streak' => 4,
     ]);
+
+    // Four consecutive active days ending yesterday.
+    foreach (range(1, 4) as $daysAgo) {
+        $user->recordGamificationHistory(1, 0, 'Daily Claim', 'test activity');
+        $user->gamificationHistories()->latest('id')->first()->forceFill([
+            'created_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+            'updated_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+        ])->save();
+    }
 
     app(StreakService::class)->touch($user);
 
@@ -107,12 +120,46 @@ it('is idempotent within the same day', function () {
         'current_streak' => 2,
     ]);
 
+    foreach ([1, 2] as $daysAgo) {
+        $user->recordGamificationHistory(1, 0, 'Daily Claim', 'test activity');
+        $user->gamificationHistories()->latest('id')->first()->forceFill([
+            'created_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+            'updated_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+        ])->save();
+    }
+
     $service = app(StreakService::class);
     $service->touch($user);
     $service->touch($user);
     $service->touch($user);
 
     expect($user->fresh()->current_streak)->toBe(3);
+});
+
+/**
+ * Regression: the streak used to be derived from last_login_at deltas, so a
+ * repaired streak was reset to 1 on the next dashboard load whenever the last
+ * recorded login was older than yesterday.
+ */
+it('counts the whole run across days the student never opened the dashboard', function () {
+    $user = User::factory()->create([
+        // Stale login stamp, but six days of real activity.
+        'last_login_at' => now()->subDays(6),
+        'current_streak' => 1,
+        'longest_streak' => 1,
+    ]);
+
+    foreach (range(0, 5) as $daysAgo) {
+        $user->recordGamificationHistory(1, 0, 'Daily Claim', 'test activity');
+        $user->gamificationHistories()->latest('id')->first()->forceFill([
+            'created_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+            'updated_at' => now()->subDays($daysAgo)->toDateString().' 12:00:00',
+        ])->save();
+    }
+
+    app(StreakService::class)->touch($user);
+
+    expect($user->fresh()->current_streak)->toBe(6);
 });
 
 // ─────────────────────────────────────────────

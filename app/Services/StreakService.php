@@ -5,28 +5,35 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * Phase 3.2 — Move streak logic out of the GET request.
+ * Streak bookkeeping.
  *
- * Previously the dashboard closure mutated the user's streak on every render,
- * with up to 3 UPDATEs and a race between concurrent loads.
- *
- * This service collapses the update to a single atomic query and makes the
- * operation idempotent.
+ * This service only records *that* the student showed up today; the day-count
+ * itself is delegated to {@see StreakRestoreService::repairStreak()}, which is
+ * the single writer of `current_streak`.
  *
  * ⚠️ Streaks currently advance on *dashboard visit*, not login. With Fortify +
  * "remember me", a returning user may not fire a Login event for weeks. For now
  * this is called from the dashboard render path (DashboardController). A future
  * change should switch the trigger to a login/session listener.
+ *
+ * ⚠️ Do not reintroduce day-delta arithmetic here (increment on yesterday,
+ * reset on a gap). That algorithm only looked at `users.last_login_at`, so it
+ * disagreed with the activity-based recount and silently reset a restored
+ * streak back to 1 on the next dashboard load. Streaks have to be derived from
+ * activity history or not at all.
  */
 class StreakService
 {
+    public function __construct(
+        protected StreakRestoreService $streakRestoreService,
+    ) {}
+
     /**
-     * Advance the user's streak if they visited today for the first time.
+     * Stamp today's visit and recount the streak from activity history.
      *
-     * - First-ever visit: sets streak to 1.
-     * - Consecutive-day visit: increments streak.
-     * - Gap >1 day: resets streak to 1.
-     * - Same-day visit: no-op (idempotent).
+     * - Already stamped today: no-op (idempotent).
+     * - Otherwise: records the visit, then recomputes the consecutive run of
+     *   active days ending today (or yesterday, if today has no activity yet).
      */
     public function touch(User $user): void
     {
@@ -34,34 +41,14 @@ class StreakService
             return;
         }
 
-        $now = now();
-        $lastLogin = $user->last_login_at;
-
-        if (! $lastLogin) {
-            $user->update([
-                'current_streak' => 1,
-                'longest_streak' => max(1, (int) ($user->longest_streak ?? 0)),
-                'last_login_at' => $now,
-            ]);
-
+        if ($user->last_login_at && $user->last_login_at->isToday()) {
             return;
         }
 
-        if ($lastLogin->isToday()) {
-            // Already touched today; no-op.
-            return;
-        }
+        // Stamp first: repairStreak() reads last_login_at to decide whether
+        // today counts as active.
+        $user->forceFill(['last_login_at' => now()])->save();
 
-        if ($lastLogin->isYesterday()) {
-            $user->increment('current_streak');
-        } else {
-            $user->update(['current_streak' => 1]);
-        }
-
-        $user->update(['last_login_at' => $now]);
-
-        if (($user->current_streak ?? 0) > ($user->longest_streak ?? 0)) {
-            $user->update(['longest_streak' => $user->current_streak]);
-        }
+        $this->streakRestoreService->repairStreak($user);
     }
 }

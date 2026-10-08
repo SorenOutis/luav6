@@ -23,6 +23,26 @@ use Illuminate\Support\Facades\DB;
  */
 class StreakRestoreService
 {
+    /**
+     * How far back a streak may be counted. Beyond this, restores would have
+     * no effect on the streak, so they are refused rather than silently
+     * accepted for XP the student cannot see the value of.
+     */
+    public const LOOKBACK_DAYS = 370;
+
+    /**
+     * How far back the streak calendar / heatmap renders. Shorter than the
+     * lookback on purpose: the calendar is a visual, the streak is arithmetic.
+     */
+    public const CALENDAR_WINDOW_DAYS = 90;
+
+    /**
+     * The audit row written for an XP debit. It records a *purchase*, not
+     * activity, so it must never count as an active day — otherwise every
+     * restore would silently mark today (the row's created_at) as active.
+     */
+    public const RESTORE_AUDIT_REASON = 'Streak Restore';
+
     public function isEnabled(): bool
     {
         return (bool) Setting::get('streak_restore_enabled', true);
@@ -77,17 +97,47 @@ class StreakRestoreService
     }
 
     /**
+     * Restored calendar dates, newest-bound limited for display.
+     *
+     * Pass `null` for `withinDays` to get every restore on record — the streak
+     * recount needs the full set, not the 90-day calendar window.
+     *
      * @return Collection<int, string>
      */
-    public function restoredDates(User $user): Collection
+    public function restoredDates(User $user, ?int $withinDays = self::CALENDAR_WINDOW_DAYS): Collection
     {
         return StreakRestore::query()
             ->where('user_id', $user->id)
-            ->where('restored_date', '>=', now()->subDays(90)->toDateString())
+            ->when(
+                $withinDays !== null,
+                fn ($query) => $query->where('restored_date', '>=', now()->subDays($withinDays)->toDateString()),
+            )
             ->pluck('restored_date')
             // The immutable_date cast stringifies with a time suffix, so
             // format explicitly to match the Y-m-d activity dates.
             ->map(fn ($date) => $date->format('Y-m-d'))
+            ->values();
+    }
+
+    /**
+     * The days the student actually did something, as `Y-m-d` strings.
+     * Single source of truth for "was this day active" — the streak recount and the
+     * dashboard heatmap both read this, so the calendar can never disagree with
+     * the streak it is meant to explain.
+     *
+     * @return Collection<int, string>
+     */
+    public function activityDates(User $user, int $withinDays = self::LOOKBACK_DAYS): Collection
+    {
+        return DB::table('gamification_histories')
+            ->where('user_id', $user->id)
+            ->where('created_at', '>=', now()->subDays($withinDays))
+            ->where('reason', '!=', self::RESTORE_AUDIT_REASON)
+            ->selectRaw('DATE(created_at) as d')
+            ->distinct()
+            ->pluck('d')
+            ->map(fn ($d) => (string) $d)
+            ->sort()
             ->values();
     }
 
@@ -111,6 +161,12 @@ class StreakRestoreService
             return ['ok' => false, 'reason' => 'Only past days can be restored.'];
         }
 
+        // Older than the recount window, so the restore could not reach the
+        // streak — refuse instead of taking XP for a day that changes nothing.
+        if ($date < now()->subDays(self::LOOKBACK_DAYS)->toDateString()) {
+            return ['ok' => false, 'reason' => 'This day is too far back to restore.'];
+        }
+
         if ($this->remainingThisMonth($user) <= 0) {
             return ['ok' => false, 'reason' => 'No restores left this month.'];
         }
@@ -126,6 +182,8 @@ class StreakRestoreService
 
         $alreadyActive = DB::table('gamification_histories')
             ->where('user_id', $user->id)
+            ->where('created_at', '>=', now()->subDays(self::LOOKBACK_DAYS))
+            ->where('reason', '!=', self::RESTORE_AUDIT_REASON)
             ->whereDate('created_at', $date)
             ->exists();
 
@@ -143,7 +201,7 @@ class StreakRestoreService
     }
 
     /**
-     * @return array{restored: bool, reason: string, cost: int, remaining: int, total_xp: float, current_streak: int, restored_dates: array<int, string>}
+     * @return array{restored: bool, reason: string, cost: int, remaining: int, total_xp: float, current_streak: int, restored_date: string, restored_dates: array<int, string>}
      */
     public function restore(User $user, string $date): array
     {
@@ -208,7 +266,7 @@ class StreakRestoreService
             $restoringUser->recordGamificationHistory(
                 -$cost,
                 0,
-                'Streak Restore',
+                self::RESTORE_AUDIT_REASON,
                 "Restored streak for {$date} (-{$cost} XP)",
                 null,
                 $season?->id,
@@ -225,6 +283,9 @@ class StreakRestoreService
                 'remaining' => $this->remainingThisMonth($fresh),
                 'total_xp' => (float) ($fresh->activeSeasonProgress()?->exp ?? 0),
                 'current_streak' => (int) ($fresh->current_streak ?? 0),
+                'restored_date' => $date,
+                // Windowed: a restore older than the calendar window is not in
+                // this list, which is why `restored_date` is echoed separately.
                 'restored_dates' => $this->restoredDates($fresh)->all(),
             ];
         }, 3);
@@ -235,17 +296,20 @@ class StreakRestoreService
      * today (or yesterday when today is not active yet). Backfilling an
      * isolated old date fills the calendar without inflating the streak;
      * bridging a gap repairs it.
+     *
+     * This is the ONLY writer of `current_streak`. `StreakService::touch()`
+     * stamps the login and delegates here rather than doing its own day-delta
+     * arithmetic, because two algorithms disagreeing is what previously let a
+     * restored streak get reset to 1 on the next dashboard load.
      */
     public function repairStreak(User $user): void
     {
-        $active = DB::table('gamification_histories')
-            ->where('user_id', $user->id)
-            ->where('created_at', '>=', now()->subDays(370))
-            ->selectRaw('DATE(created_at) as d')
-            ->distinct()
-            ->pluck('d')
-            ->map(fn ($d) => (string) $d)
-            ->merge($this->restoredDates($user))
+        // Build the union as a list of `Y-m-d` strings and flip exactly once at
+        // the end. Flipping before the merge would hand the restored dates
+        // integer keys that collide with the flipped activity dates, silently
+        // dropping whichever date happened to land on key 0.
+        $active = $this->activityDates($user)
+            ->merge($this->restoredDates($user, null))
             ->unique()
             ->flip();
 
@@ -273,7 +337,7 @@ class StreakRestoreService
     }
 
     /**
-     * @return array{restored: false, reason: string, cost: 0, remaining: int, total_xp: float, current_streak: int, restored_dates: array<int, string>}
+     * @return array{restored: false, reason: string, cost: 0, remaining: int, total_xp: float, current_streak: int, restored_date: string, restored_dates: array<int, string>}
      */
     private function notRestored(User $user, string $reason): array
     {
@@ -286,6 +350,7 @@ class StreakRestoreService
             'remaining' => $this->remainingThisMonth($fresh),
             'total_xp' => (float) ($fresh->activeSeasonProgress()?->exp ?? 0),
             'current_streak' => (int) ($fresh->current_streak ?? 0),
+            'restored_date' => '',
             'restored_dates' => $this->restoredDates($fresh)->all(),
         ];
     }
