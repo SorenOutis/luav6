@@ -964,11 +964,16 @@
                                                                     <span class="text-[10px] text-emerald-400/80">Deterministic Guard Passed</span>
                                                                 </div>
                                                                 <template x-if="action.policyChecks && action.policyChecks.length > 0">
-                                                                    <div class="mt-1.5 space-y-1 ps-5 text-[11px] text-zinc-400">
+                                                                    <div class="mt-2 space-y-1.5 ps-5 text-[11px] text-zinc-400">
                                                                         <template x-for="chk in action.policyChecks" :key="chk.label">
-                                                                            <div class="flex items-center gap-1.5">
-                                                                                <span class="text-emerald-400">✓</span>
-                                                                                <span x-text="chk.label"></span>
+                                                                            <div class="group flex items-start justify-between gap-3" :title="chk.explanation || chk.label">
+                                                                                <div class="flex items-center gap-1.5">
+                                                                                    <span class="font-bold text-emerald-400 shrink-0">✓</span>
+                                                                                    <span class="font-medium text-zinc-300" x-text="chk.label"></span>
+                                                                                </div>
+                                                                                <template x-if="chk.explanation">
+                                                                                    <span class="max-w-[280px] text-right text-[10px] italic text-zinc-500 transition-colors group-hover:text-zinc-300 shrink-0" x-text="chk.explanation"></span>
+                                                                                </template>
                                                                             </div>
                                                                         </template>
                                                                     </div>

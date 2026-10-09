@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AiInputGuardrailService;
@@ -8,6 +9,7 @@ use App\Services\AiPolicyEngineService;
 use App\Services\PendingAiActionService;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Ai\Streaming\Events\TextDelta;
 
 uses(RefreshDatabase::class);
 
@@ -176,4 +178,109 @@ test('Chat API blocks prompt injection before hitting LLM', function () {
     $response->assertOk();
     $response->assertJsonStructure(['response']);
     expect($response->json('response'))->toContain('instruction override or jailbreak patterns');
+});
+
+test('automated regression suite against prompt injection fixture', function () {
+    $fixturePath = base_path('tests/Fixtures/prompt_injection_vectors.json');
+    expect(file_exists($fixturePath))->toBeTrue();
+
+    $vectors = json_decode(file_get_contents($fixturePath), true, 512, JSON_THROW_ON_ERROR);
+    $service = app(AiInputGuardrailService::class);
+
+    // 1. Verify attack categories are blocked
+    $attackCategories = [
+        'instruction_overrides',
+        'jailbreak_personas',
+        'delimiter_attacks',
+        'exfiltration_attempts',
+        'obfuscated_variants',
+    ];
+
+    foreach ($attackCategories as $category) {
+        foreach ($vectors[$category] as $payload) {
+            $result = $service->evaluateInput($payload);
+            expect($result->allowed)
+                ->toBeFalse("Expected attack payload to be blocked [{$category}]: {$payload}");
+            expect($result->violations)
+                ->not->toBeEmpty("Expected violations for payload: {$payload}");
+        }
+    }
+
+    // 2. Verify benign educational requests are allowed without false positives
+    foreach ($vectors['benign_control_requests'] as $validRequest) {
+        $result = $service->evaluateInput($validRequest);
+        expect($result->allowed)
+            ->toBeTrue("Expected benign request to pass [benign_control_requests]: {$validRequest}");
+        expect($result->violations)
+            ->toBeEmpty();
+    }
+});
+
+test('dynamic policy thresholds from platform settings are enforced', function () {
+    $engine = app(AiPolicyEngineService::class);
+    $admin = User::factory()->create([
+        'is_admin' => true,
+        'is_super_admin' => true,
+    ]);
+
+    // Set custom strict XP cap of 1,500 XP
+    Setting::setGlobal('echo_ai_max_xp_award', '1500');
+
+    // 1,800 XP was within default (5,000) but violates custom threshold (1,500)
+    $eval = $engine->evaluateAction('award_student_xp', ['xp_amount' => 1800], $admin);
+    expect($eval->allowed)->toBeFalse();
+    expect($eval->violations)->toContain('xp_out_of_bounds');
+    expect($eval->reason)->toContain('1,500 XP');
+
+    // 1,200 XP complies with custom threshold
+    $validEval = $engine->evaluateAction('award_student_xp', ['xp_amount' => 1200], $admin);
+    expect($validEval->allowed)->toBeTrue();
+});
+
+test('mid-stream secret redaction cleanses streaming tokens on the fly', function () {
+    $sanitizer = app(AiOutputSanitizerService::class);
+
+    $events = [
+        new TextDelta(
+            id: 'd1',
+            messageId: 'm1',
+            delta: 'Hello, here is the secret key: ',
+            timestamp: 1000,
+        ),
+        new TextDelta(
+            id: 'd2',
+            messageId: 'm1',
+            delta: 'GROQ_API_KEY="gsk_12345678901234567890123456" for testing.',
+            timestamp: 1001,
+        ),
+        new TextDelta(
+            id: 'd3',
+            messageId: 'm1',
+            delta: ' All finished.',
+            timestamp: 1002,
+        ),
+    ];
+
+    $streamed = iterator_to_array($sanitizer->sanitizeStream($events));
+
+    expect($streamed[0]->delta)->toBe('Hello, here is the secret key: ');
+    expect($streamed[1]->delta)->toContain('[REDACTED_API_KEY]');
+    expect($streamed[1]->delta)->not->toContain('gsk_1234567890');
+    expect($streamed[2]->delta)->toBe(' All finished.');
+});
+
+test('destructive deletion policy check includes impact assessment and explanation', function () {
+    $engine = app(AiPolicyEngineService::class);
+    $admin = User::factory()->create([
+        'is_admin' => true,
+        'is_super_admin' => true,
+    ]);
+
+    $eval = $engine->evaluateAction('delete_section', ['section_id' => 10], $admin);
+    expect($eval->allowed)->toBeTrue();
+
+    $deletionCheck = collect($eval->checks)->firstWhere('label', 'Destructive Deletion Impact Assessment');
+    expect($deletionCheck)->not->toBeNull();
+    expect($deletionCheck['passed'])->toBeTrue();
+    expect($deletionCheck['explanation'])->toContain('High-impact deletion flagged');
 });
