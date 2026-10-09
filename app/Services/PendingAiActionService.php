@@ -59,6 +59,7 @@ class PendingAiActionService
     public function __construct(
         private readonly AiActionExecutor $executor,
         private readonly WorkspaceContext $workspaceContext,
+        private readonly ?AiPolicyEngineService $policyEngine = null,
     ) {}
 
     /**
@@ -89,6 +90,23 @@ class PendingAiActionService
             throw new PendingAiActionException('Select an active workspace before preparing a write action.');
         }
         $this->assertWorkspaceAccess($user, $workspaceId);
+
+        // Deterministic Policy Engine Evaluation (The AI reasons, the policy engine authorizes)
+        $policyEvaluation = ($this->policyEngine ?? app(AiPolicyEngineService::class))->evaluateAction(
+            $type,
+            $payload,
+            $user,
+            $workspaceId,
+        );
+
+        if (! $policyEvaluation->allowed) {
+            throw new PendingAiActionException(
+                $policyEvaluation->reason ?: 'The proposed action violates platform safety policies.'
+            );
+        }
+
+        $preview['policy'] = $policyEvaluation->policyCode;
+        $preview['policy_checks'] = $policyEvaluation->checks;
 
         if ($chatSessionId && ! ChatSession::query()
             ->whereKey($chatSessionId)
@@ -342,6 +360,8 @@ class PendingAiActionService
             'title' => $action->title,
             'summary' => $action->summary,
             'status' => $action->status,
+            'policy' => $action->preview['policy'] ?? null,
+            'policyChecks' => $action->preview['policy_checks'] ?? [],
             'workspace' => $action->workspace ? [
                 'id' => $action->workspace->public_id,
                 'name' => $action->workspace->name,

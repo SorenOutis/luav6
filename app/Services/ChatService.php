@@ -9,6 +9,7 @@ use App\Models\ChatSession;
 use App\Models\Season;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\PolicyEvaluationResult;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -71,7 +72,14 @@ class ChatService
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ];
 
-    public function __construct(private AiChatLogger $aiChatLogger) {}
+    public function __construct(
+        private AiChatLogger $aiChatLogger,
+        private ?AiInputGuardrailService $inputGuardrails = null,
+        private ?AiOutputSanitizerService $outputSanitizer = null,
+    ) {
+        $this->inputGuardrails ??= app(AiInputGuardrailService::class);
+        $this->outputSanitizer ??= app(AiOutputSanitizerService::class);
+    }
 
     /**
      * Convert an uploaded file into the SDK File attachment the agent
@@ -265,16 +273,19 @@ class ChatService
     }
 
     /**
-     * Strip leetspeak substitutions from a string so creative spellings
-     * like 'sh1t' or 'b@stard' are caught by the regex patterns.
+     * Evaluate incoming message through deterministic input guardrails.
      */
-    private function normalizeMessage(string $message): string
+    public function evaluateInput(string $message, ?User $user = null): PolicyEvaluationResult
     {
-        return str_replace(
-            ['0', '1', '3', '4', '5', '7', '8', '@', '$', '!', '|'],
-            ['o', 'i', 'e', 'a', 's', 't', 'b', 'a', 's', 'i', 'i'],
-            $message
-        );
+        return $this->inputGuardrails->evaluateInput($message, $user);
+    }
+
+    /**
+     * Sanitize assistant response text before returning or streaming.
+     */
+    public function sanitizeOutput(string $text): string
+    {
+        return $this->outputSanitizer->sanitize($text);
     }
 
     /**
@@ -283,27 +294,20 @@ class ChatService
      */
     public function isToxic(string $message): bool
     {
-        // Normalize leetspeak/creative spellings before checking
-        $normalized = $this->normalizeMessage($message);
+        return $this->inputGuardrails->isToxic($message);
+    }
 
-        $patterns = [
-            // Swear words and abbreviations (word-boundary)
-            '/\b(fuck|fck|fkn|wtf|wth|stfu|shit|bullshit|shitty|ass|asshole|bitch|bastard|damn|goddamn|hell|crap|pissed|dick|dickhead|prick|cunt|whore|slut|hoe|motherfucker|mofo|douche|douchebag|jackass|arse|bloody)\b/i',
-            // Sloppy match — catches fuck/fck anywhere (inside compound words like "fucking", "motherfcker")
-            '/(fuck|fck)/i',
-            // Insults
-            '/\b(stupid|dumb|idiot|moron|retard|useless|trash|suck|kys|kill yourself|shut up|annoying|loser)\b/i',
-            // Harassment / toxicity — match bully and inflected forms like bullying
-            '/\b(bully(?:ing)?|harass|threat|hate speech|racist|sexist|creep|weirdo)\b/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $message) || preg_match($pattern, $normalized)) {
-                return true;
-            }
-        }
-
-        return false;
+    /**
+     * Strip leetspeak substitutions from a string so creative spellings
+     * like 'sh1t' or 'b@stard' are caught by regex patterns.
+     */
+    private function normalizeMessage(string $message): string
+    {
+        return str_replace(
+            ['0', '1', '3', '4', '5', '7', '8', '@', '$', '!', '|'],
+            ['o', 'i', 'e', 'a', 's', 't', 'b', 'a', 's', 'i', 'i'],
+            $message
+        );
     }
 
     /**
@@ -579,7 +583,7 @@ class ChatService
             );
             $this->logCompletedResponse($attemptContext, $response, $startedAt);
 
-            return $response;
+            return $this->sanitizeOutput($response);
         } catch (Throwable $failure) {
             $usage->cancel($reservation, $failure->getMessage());
             $this->aiChatLogger->error('ai_chat.provider.failed', $failure, [
