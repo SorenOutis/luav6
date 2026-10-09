@@ -140,6 +140,9 @@ class AiSettings extends Page implements HasSchemas
             'school_tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
             'school_logo_path' => Setting::get('school_logo_path'),
             'school_accent_color' => Setting::get('school_accent_color', '#f59e0b'),
+            'echo_ai_max_xp_award' => (int) Setting::get('echo_ai_max_xp_award', 5000),
+            'echo_ai_max_exam_duration' => (int) Setting::get('echo_ai_max_exam_duration', 1440),
+            'echo_ai_require_double_confirmation_for_deletions' => (bool) Setting::get('echo_ai_require_double_confirmation_for_deletions', true),
         ], collect($this->defaultableProviders())
             ->keys()
             ->mapWithKeys(fn (string $key): array => ["provider_default_{$key}" => $provider === $key])
@@ -197,6 +200,34 @@ class AiSettings extends Page implements HasSchemas
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
                     ]),
+
+                Section::make('Echo AI Guardrails & Operational Policies')
+                    ->description('Tune deterministic policy engine thresholds, gamification safety limits, and high-impact confirmation requirements for Echo AI administrative actions.')
+                    ->schema([
+                        TextInput::make('echo_ai_max_xp_award')
+                            ->label('Max XP Award per Action')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(100)
+                            ->maxValue(50000)
+                            ->required()
+                            ->helperText('Upper boundary on bonus XP awards an administrator can propose via Echo AI in a single action (defaults to 5,000 XP).'),
+
+                        TextInput::make('echo_ai_max_exam_duration')
+                            ->label('Max Exam Duration (Minutes)')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(30)
+                            ->maxValue(2880)
+                            ->required()
+                            ->helperText('Maximum allowable exam duration when drafting exams through Echo AI (defaults to 1,440 minutes / 24 hours).'),
+
+                        Toggle::make('echo_ai_require_double_confirmation_for_deletions')
+                            ->label('Require Explicit High-Impact Policy Checks for Deletions')
+                            ->helperText('When enabled, destructive actions (deleting sections, courses, exams, or users) are flagged with high-impact safety requirements in the review card before execution.')
+                            ->default(true),
+                    ])
+                    ->columns(2),
 
                 $this->aiBudgetSection(),
 
@@ -1033,6 +1064,10 @@ class AiSettings extends Page implements HasSchemas
             Setting::setGlobal('school_tagline', $data['school_tagline'] ?? 'Learning Systems Intelligence');
             Setting::setGlobal('school_logo_path', $data['school_logo_path'] ?? null);
             Setting::setGlobal('school_accent_color', $data['school_accent_color'] ?? '#f59e0b');
+
+            Setting::setGlobal('echo_ai_max_xp_award', (string) min(50000, max(100, (int) ($data['echo_ai_max_xp_award'] ?? 5000))));
+            Setting::setGlobal('echo_ai_max_exam_duration', (string) min(2880, max(30, (int) ($data['echo_ai_max_exam_duration'] ?? 1440))));
+            Setting::setGlobal('echo_ai_require_double_confirmation_for_deletions', ($data['echo_ai_require_double_confirmation_for_deletions'] ?? true) ? '1' : '0');
 
             Notification::make()
                 ->title('Settings saved successfully!')

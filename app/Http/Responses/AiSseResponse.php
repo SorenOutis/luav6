@@ -2,6 +2,7 @@
 
 namespace App\Http\Responses;
 
+use App\Services\AiOutputSanitizerService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -31,9 +32,11 @@ class AiSseResponse
                 $adjusted = true;
             }
 
+            $sanitizer = app(AiOutputSanitizerService::class);
             try {
-                foreach ($events as $event) {
-                    echo 'data: '.((string) $event)."\n\n";
+                foreach ($sanitizer->sanitizeStream($events) as $event) {
+                    $payload = (string) $event;
+                    echo 'data: '.$sanitizer->sanitize($payload)."\n\n";
                     self::flush();
                 }
 

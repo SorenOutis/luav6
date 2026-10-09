@@ -99,8 +99,10 @@ class AiInputGuardrailService
             // Instruction override
             '/\b(ignore|disregard|forget|bypass)\s+(all\s+)?(previous|prior|above|existing|system)\s+(instructions|prompts?|rules?|constraints?|directives?)\b/i',
             // Role hijack / persona inversion
-            '/\b(you\s+are\s+now|act\s+as|pretend\s+to\s+be)\s+(in\s+)?(dan|developer|jailbreak|unrestricted|god|anarchist)\s+mode\b/i',
+            '/\b(you\s+are\s+now|act\s+as|pretend\s+to\s+be)\s+(in\s+)?(dan|stan|dude|developer|jailbreak|unrestricted|god|anarchist)\s+mode\b/i',
+            '/\b(dan|stan|dude|developer|jailbreak)\s+mode\b/i',
             '/\b(unrestricted|jailbroken|unfiltered)\s+(mode|version|persona)\b/i',
+            '/\benter\s+jailbreak\s+mode\b/i',
             '/\boverride\s+(your\s+)?(system\s+)?(instructions|prompt|rules|safeguards?|policies)\b/i',
             '/\b(bypass|disable|turn\s+off)\s+(your\s+)?(safety\s+)?(guardrails?|filters?|restrictions?)\b/i',
             // Delimiter injection
@@ -123,8 +125,8 @@ class AiInputGuardrailService
     public function isExfiltrationAttempt(string $message): bool
     {
         $patterns = [
-            '/\b(repeat|print|output|display|show|dump)\s+(your\s+)?(entire\s+|full\s+)?(system\s+prompt|system\s+instructions|instructions\s+verbatim|initial\s+prompt)\b/i',
-            '/\b(dump|reveal|show|print)\s+(the\s+)?(\.env|app_key|api_key|database\s+credentials|db_password|jwt_secret)\b/i',
+            '/\b(repeat|print|output|display|show|dump)\s+(your\s+)?(entire\s+|full\s+|raw\s+)?(system\s+prompt|system\s+instructions|instructions\s+(?:verbatim|word\s+for\s+word)|initial\s+prompt)\b/i',
+            '/\b(dump|reveal|show|print|output)\s+(the\s+|all\s+)?(\.env|app_key|api[_\s\-]?keys?|database\s+credentials|db_password|jwt_secret|openai_api_key|gemini_api_key)\b/i',
             '/\bwhat\s+(is|are)\s+your\s+(exact\s+)?(system\s+prompt|raw\s+instructions|system\s+directives)\b/i',
         ];
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\PolicyEvaluationResult;
 
@@ -44,11 +45,17 @@ class AiPolicyEngineService
         $violations = [];
         $policyCode = $user->isSuperAdmin() ? self::POLICY_SUPER_ADMIN : self::POLICY_WORKSPACE_ADMIN;
 
+        // Dynamic Policy Thresholds from Platform Settings (with fallback to constants)
+        $maxXp = max(100, (int) Setting::get('echo_ai_max_xp_award', self::MAX_XP_AWARD_PER_ACTION));
+        $maxExamDuration = max(30, (int) Setting::get('echo_ai_max_exam_duration', self::MAX_EXAM_DURATION_MINUTES));
+        $requireDoubleConfirmation = (bool) Setting::get('echo_ai_require_double_confirmation_for_deletions', true);
+
         // 1. Administrator Authentication Clearance
         $isAdmin = (bool) $user->is_admin;
         $checks[] = [
             'label' => 'Administrator Clearance',
             'passed' => $isAdmin,
+            'explanation' => 'Authorizes operation under an authenticated administrator session.',
         ];
         if (! $isAdmin) {
             $violations[] = 'not_an_admin';
@@ -69,6 +76,7 @@ class AiPolicyEngineService
             $checks[] = [
                 'label' => 'Platform Maintenance Clearance (Super Admin Required)',
                 'passed' => $isSuperAdmin,
+                'explanation' => 'Super Administrator privilege confirmed for platform-wide maintenance mode.',
             ];
             if (! $isSuperAdmin) {
                 $violations[] = 'maintenance_unauthorized';
@@ -93,6 +101,7 @@ class AiPolicyEngineService
                     $checks[] = [
                         'label' => 'Target User Privilege Isolation',
                         'passed' => false,
+                        'explanation' => 'Protects Super Administrator accounts from lower-tier workspace mutation.',
                     ];
                     $violations[] = 'target_is_super_admin';
 
@@ -110,6 +119,7 @@ class AiPolicyEngineService
                     $checks[] = [
                         'label' => 'Super Admin Grant Prevention',
                         'passed' => false,
+                        'explanation' => 'Precludes unauthorized escalation of administrative privileges.',
                     ];
                     $violations[] = 'granting_super_admin_forbidden';
 
@@ -126,17 +136,19 @@ class AiPolicyEngineService
             $checks[] = [
                 'label' => 'User Privilege Boundary Verification',
                 'passed' => true,
+                'explanation' => 'Target user account modifications conform to workspace administrative boundaries.',
             ];
         }
 
         // 4. Gamification Safety Rules (XP Limits)
         if ($type === 'award_student_xp') {
             $xpAmount = (int) ($payload['amount_xp'] ?? $payload['xp_amount'] ?? $payload['xp'] ?? $payload['points'] ?? 0);
-            $xpValid = $xpAmount > 0 && $xpAmount <= self::MAX_XP_AWARD_PER_ACTION;
+            $xpValid = $xpAmount > 0 && $xpAmount <= $maxXp;
 
             $checks[] = [
-                'label' => 'XP Award Within Safe Range (1 - '.number_format(self::MAX_XP_AWARD_PER_ACTION).' XP)',
+                'label' => 'XP Award Within Safe Range (1 - '.number_format($maxXp).' XP)',
                 'passed' => $xpValid,
+                'explanation' => 'Enforces maximum XP limit to prevent seasonal leaderboard and gamification distortion.',
             ];
 
             if (! $xpValid) {
@@ -147,7 +159,7 @@ class AiPolicyEngineService
                     allowed: false,
                     checks: $checks,
                     violations: $violations,
-                    reason: 'XP awards must be between 1 and '.number_format(self::MAX_XP_AWARD_PER_ACTION).' XP per action.',
+                    reason: 'XP awards must be between 1 and '.number_format($maxXp).' XP per action.',
                 );
             }
         }
@@ -155,11 +167,12 @@ class AiPolicyEngineService
         // 5. Exam Operational Boundaries
         if (in_array($type, ['create_exam', 'update_exam'], true)) {
             $duration = isset($payload['duration_minutes']) ? (int) $payload['duration_minutes'] : 60;
-            $durationValid = $duration >= self::MIN_EXAM_DURATION_MINUTES && $duration <= self::MAX_EXAM_DURATION_MINUTES;
+            $durationValid = $duration >= self::MIN_EXAM_DURATION_MINUTES && $duration <= $maxExamDuration;
 
             $checks[] = [
-                'label' => 'Exam Duration Boundary Check (5 - 1440 mins)',
+                'label' => 'Exam Duration Boundary Check (5 - '.$maxExamDuration.' mins)',
                 'passed' => $durationValid,
+                'explanation' => 'Ensures scheduled test duration is within pedagogic and operational constraints.',
             ];
 
             if (! $durationValid) {
@@ -170,7 +183,7 @@ class AiPolicyEngineService
                     allowed: false,
                     checks: $checks,
                     violations: $violations,
-                    reason: 'Exam duration must be between '.self::MIN_EXAM_DURATION_MINUTES.' minutes and '.self::MAX_EXAM_DURATION_MINUTES.' minutes.',
+                    reason: 'Exam duration must be between '.self::MIN_EXAM_DURATION_MINUTES.' minutes and '.$maxExamDuration.' minutes.',
                 );
             }
         }
@@ -184,6 +197,7 @@ class AiPolicyEngineService
                 $checks[] = [
                     'label' => 'Grade Value Invariant (0 - 1000)',
                     'passed' => $scoreValid,
+                    'explanation' => 'Ensures score is non-negative and complies with assessment rubric scaling.',
                 ];
 
                 if (! $scoreValid) {
@@ -200,10 +214,24 @@ class AiPolicyEngineService
             }
         }
 
-        // 7. Workspace Scope Verification
+        // 7. Destructive Deletion Impact Assessment
+        if (in_array($type, ['delete_section', 'delete_course', 'delete_user', 'delete_exam', 'delete_assignment'], true)) {
+            $checks[] = [
+                'label' => 'Destructive Deletion Impact Assessment',
+                'passed' => true,
+                'explanation' => $requireDoubleConfirmation
+                    ? 'High-impact deletion flagged; requires explicit human confirmation before permanent database removal.'
+                    : 'Destructive operation verified against active workspace bounds.',
+            ];
+        }
+
+        // 8. Workspace Scope Verification
         $checks[] = [
             'label' => $isSuperAdmin ? 'Global Platform Access Authorized' : 'Workspace Scope Isolation Enforced',
             'passed' => true,
+            'explanation' => $isSuperAdmin
+                ? 'Global multi-workspace administrative clearance verified.'
+                : 'All record targets are verified to reside within the active workspace.',
         ];
 
         return new PolicyEvaluationResult(

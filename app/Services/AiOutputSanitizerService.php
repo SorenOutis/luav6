@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Laravel\Ai\Streaming\Events\TextDelta;
+
 /**
  * Deterministic post-generation output sanitizer for Echo AI.
  * Modeled after EduFlow's AdvisorySanitizer:
@@ -53,5 +55,33 @@ class AiOutputSanitizerService
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Sanitize a stream of events/deltas, scrubbing leaked credentials
+     * and system prompt fragments chunk by chunk.
+     *
+     * @param  iterable<int, mixed>  $events
+     * @return \Generator<int, mixed>
+     */
+    public function sanitizeStream(iterable $events): \Generator
+    {
+        foreach ($events as $event) {
+            if ($event instanceof TextDelta) {
+                $sanitizedDelta = $this->sanitize($event->delta);
+                if ($sanitizedDelta !== $event->delta) {
+                    yield new TextDelta(
+                        id: $event->id,
+                        messageId: $event->messageId,
+                        delta: $sanitizedDelta,
+                        timestamp: $event->timestamp,
+                    );
+
+                    continue;
+                }
+            }
+
+            yield $event;
+        }
     }
 }
