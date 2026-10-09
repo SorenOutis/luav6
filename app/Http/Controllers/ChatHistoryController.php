@@ -255,14 +255,17 @@ class ChatHistoryController extends Controller
         );
         $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
-        // ── Server-side toxicity guardrail ──
-        if ($this->chatService->isToxic($request->message)) {
+        // ── Deterministic input guardrail screening (Toxicity, Injection, Exfiltration) ──
+        $inputEvaluation = $this->chatService->evaluateInput($request->message, $user);
+        if (! $inputEvaluation->allowed) {
+            $blockedReason = $inputEvaluation->violations[0] ?? 'input_guardrail';
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
-                'blocked_reason' => 'toxicity_guardrail',
+                'blocked_reason' => $blockedReason,
+                'violations' => $inputEvaluation->violations,
             ]));
 
             return response()->json([
-                'response' => "I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?",
+                'response' => $inputEvaluation->reason,
             ], 200);
         }
 
@@ -359,12 +362,16 @@ class ChatHistoryController extends Controller
         );
         $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
-        if ($this->chatService->isToxic($request->message)) {
+        // ── Deterministic input guardrail screening (Toxicity, Injection, Exfiltration) ──
+        $inputEvaluation = $this->chatService->evaluateInput($request->message, $user);
+        if (! $inputEvaluation->allowed) {
+            $blockedReason = $inputEvaluation->violations[0] ?? 'input_guardrail';
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
-                'blocked_reason' => 'toxicity_guardrail',
+                'blocked_reason' => $blockedReason,
+                'violations' => $inputEvaluation->violations,
             ]));
 
-            return AiSseResponse::from($this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?"));
+            return AiSseResponse::from($this->chatService->streamText($inputEvaluation->reason));
         }
 
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {

@@ -16,6 +16,7 @@ use App\Models\Setting;
 use App\Models\StreakRestore;
 use App\Models\User;
 use App\Services\StreakRestoreService;
+use App\Services\StreakService;
 
 use function Pest\Laravel\actingAs;
 
@@ -253,4 +254,129 @@ it('shares streak restore data with the dashboard', function () {
             ->where('streakRestore.limit', 3)
             ->where('streakRestore.remaining', 3)
             ->where('streakRestore.nextCost', 25));
+});
+
+// ─────────────────────────────────────────────
+//  Month boundaries & interaction with StreakService
+// ─────────────────────────────────────────────
+
+it('counts consecutive active days across a month boundary', function () {
+    [$student, $season] = restoreContext(200);
+
+    // 40 consecutive days ending today — guaranteed to straddle a month edge.
+    foreach (range(0, 39) as $daysAgo) {
+        markActiveDay($student, daysAgo($daysAgo), $season->id);
+    }
+
+    app(StreakRestoreService::class)->repairStreak($student);
+
+    expect((int) $student->fresh()->current_streak)->toBe(40);
+});
+
+it('survives the next dashboard visit after a restore', function () {
+    [$student, $season] = restoreContext(200);
+    // Stale login stamp, as if the student claimed XP without opening the
+    // dashboard for a few days.
+    $student->update(['last_login_at' => now()->subDays(4)]);
+
+    foreach (range(0, 3) as $daysAgo) {
+        markActiveDay($student, daysAgo($daysAgo), $season->id);
+    }
+
+    $result = app(StreakRestoreService::class)->restore($student, daysAgo(4));
+    expect($result['restored'])->toBeTrue();
+
+    // Previously this reset the streak to 1, discarding the repair.
+    app(StreakService::class)->touch($student);
+
+    expect((int) $student->fresh()->current_streak)->toBe(5);
+});
+
+it('bridges a missed day in the previous month', function () {
+    [$student, $season] = restoreContext(500);
+    $student->update(['last_login_at' => now()]);
+
+    // 20 consecutive days ending yesterday, all of them previous month or
+    // earlier, with a single missing day 10 days back that we restore.
+    foreach (range(1, 20) as $daysAgo) {
+        if ($daysAgo === 10) {
+            continue;
+        }
+
+        markActiveDay($student, daysAgo($daysAgo), $season->id);
+    }
+
+    $result = app(StreakRestoreService::class)->restore($student, daysAgo(10));
+
+    expect($result['restored'])->toBeTrue()
+        ->and((int) $student->fresh()->current_streak)->toBe(21);
+});
+
+it('does not count its own audit row as an active day', function () {
+    [$student, $season] = restoreContext(500);
+
+    // Active only through yesterday; today has no activity of its own beyond
+    // the fixture's own 'Season Reward' row.
+    foreach (range(1, 3) as $daysAgo) {
+        markActiveDay($student, daysAgo($daysAgo), $season->id);
+    }
+
+    $service = app(StreakRestoreService::class);
+    $before = $service->activityDates($student)->all();
+
+    // Restoring an unrelated old day writes a "Streak Restore" history row
+    // stamped now(), which must not make today look active.
+    $service->restore($student, daysAgo(20));
+
+    // The audit row is XP bookkeeping, not activity — the active-day set must
+    // be byte-for-byte identical before and after.
+    expect($service->activityDates($student)->all())->toBe($before);
+});
+
+it('still counts a restored day that is outside the calendar window', function () {
+    [$student, $season] = restoreContext(500);
+    $student->update(['last_login_at' => now()]);
+
+    // 100 consecutive days ending yesterday, missing day 95 restored. 95 days
+    // back is outside the 90-day calendar window, so the calendar will not
+    // show it — but the streak must still see it.
+    foreach (range(1, 100) as $daysAgo) {
+        if ($daysAgo === 95) {
+            continue;
+        }
+
+        markActiveDay($student, daysAgo($daysAgo), $season->id);
+    }
+
+    $result = app(StreakRestoreService::class)->restore($student, daysAgo(95));
+
+    expect($result['restored'])->toBeTrue()
+        ->and((int) $student->fresh()->current_streak)->toBe(101)
+        // The windowed list omits it, but the echoed date lets the calendar
+        // mark the cell as restored instead of leaving it restorable.
+        ->and($result['restored_dates'])->not->toContain(daysAgo(95))
+        ->and($result['restored_date'])->toBe(daysAgo(95));
+});
+
+it('echoes no restored date when the restore is refused', function () {
+    [$student] = restoreContext(10);
+
+    $result = app(StreakRestoreService::class)->restore($student, daysAgo(1));
+
+    expect($result['restored'])->toBeFalse()
+        ->and($result['restored_date'])->toBe('');
+});
+
+it('refuses a restore older than the streak lookback window', function () {
+    [$student] = restoreContext(500);
+
+    $result = app(StreakRestoreService::class)->restore(
+        $student,
+        now()->subDays(StreakRestoreService::LOOKBACK_DAYS + 5)->toDateString(),
+    );
+
+    expect($result['restored'])->toBeFalse()
+        ->and($result['reason'])->toBe('This day is too far back to restore.')
+        ->and(StreakRestore::query()->count())->toBe(0)
+        ->and(seasonalExp($student))->toBe(500.0);
 });

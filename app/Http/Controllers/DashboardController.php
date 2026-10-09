@@ -14,7 +14,6 @@ use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
 use App\Support\PublicFileUrl;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Phase 3.3 — Extract the 230-line dashboard closure into a controller.
@@ -50,15 +49,13 @@ class DashboardController extends Controller
         // ── Streak ─────────────────────────────────────────────────
         $this->streakService->touch($user);
 
-        // ── Activity / Login Dates for Heatmap (last 90 days) ────
-        $loginDates = DB::table('gamification_histories')
-            ->where('user_id', $user->id)
-            ->where('created_at', '>=', now()->subDays(90))
-            ->selectRaw('DATE(created_at) as d')
-            ->distinct()
-            ->pluck('d')
-            ->map(fn ($d) => (string) $d)
-            ->values();
+        // ── Activity / Login Dates for Heatmap + streak calendar ───
+        // Shares the active-day definition with StreakRestoreService so the
+        // calendar can never disagree with the streak it is supposed to explain.
+        $loginDates = $this->streakRestoreService->activityDates(
+            $user,
+            StreakRestoreService::CALENDAR_WINDOW_DAYS,
+        );
 
         if ($user->last_login_at && $user->last_login_at->isToday()) {
             $today = now()->toDateString();

@@ -4,6 +4,7 @@ use App\Http\Controllers\AboutController;
 use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\Admin\ExamAnswerReportController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
+use App\Http\Controllers\AiReportDownloadController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\Api\BonusClaimController;
 use App\Http\Controllers\Api\ClaimXpController;
@@ -251,6 +252,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/ai-actions/{action:public_id}/reject', [PendingAiActionController::class, 'reject'])
         ->middleware('throttle:ai-actions')
         ->name('ai-actions.reject');
+
+    Route::get('ai-reports/{workspace}/{filename}', AiReportDownloadController::class)
+        ->middleware('signed')
+        ->name('ai-reports.download');
 
     // Chats history (persisted conversations from the AI widget)
     Route::get('chats', [ChatHistoryController::class, 'index'])
