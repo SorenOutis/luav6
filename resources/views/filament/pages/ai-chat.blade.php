@@ -950,6 +950,32 @@
                                                             Echo prepared this write operation. Review the proposed changes below before committing to the database.
                                                         </p>
 
+                                                        {{-- Verified Policy Checks Badge & List --}}
+                                                        <template x-if="action.policy">
+                                                            <div class="mt-2.5 rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-2 text-xs">
+                                                                <div class="flex items-center justify-between">
+                                                                    <div class="flex items-center gap-1.5 font-medium text-emerald-400">
+                                                                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                                        </svg>
+                                                                        <span>Policy Verified:</span>
+                                                                        <code class="rounded bg-emerald-900/40 px-1 py-0.5 text-[10px] text-emerald-300" x-text="action.policy"></code>
+                                                                    </div>
+                                                                    <span class="text-[10px] text-emerald-400/80">Deterministic Guard Passed</span>
+                                                                </div>
+                                                                <template x-if="action.policyChecks && action.policyChecks.length > 0">
+                                                                    <div class="mt-1.5 space-y-1 ps-5 text-[11px] text-zinc-400">
+                                                                        <template x-for="chk in action.policyChecks" :key="chk.label">
+                                                                            <div class="flex items-center gap-1.5">
+                                                                                <span class="text-emerald-400">✓</span>
+                                                                                <span x-text="chk.label"></span>
+                                                                            </div>
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+
                                                         {{-- Changes Diff Table --}}
                                                         <div x-show="action.changes && action.changes.length > 0" class="mt-2.5 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950/70 p-2.5">
                                                             <table class="w-full text-left text-xs">
@@ -1143,12 +1169,19 @@
 
                                                 {{-- Console Footer --}}
                                                 <div class="flex items-center justify-between border-t border-zinc-800/80 bg-zinc-950/80 px-4 py-2.5 sm:px-5">
-                                                    <span class="font-mono text-[11px] text-zinc-500" x-text="(action.status === 'pending' ? 'Awaiting your approval' : (action.status === 'rejected' ? 'Stopped before any changes' : 'Completed'))"></span>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-mono text-[11px] text-zinc-500" x-text="(action.status === 'pending' ? 'Awaiting your approval' : (action.status === 'rejected' ? 'Stopped before any changes' : 'Completed'))"></span>
+                                                        <template x-if="action.policy">
+                                                            <span class="inline-flex items-center gap-1 rounded bg-emerald-950/40 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400 ring-1 ring-emerald-500/30">
+                                                                <span x-text="action.policy"></span>
+                                                            </span>
+                                                        </template>
+                                                    </div>
                                                     <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-400">
                                                         <svg class="h-3 w-3 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span>Echo Guard Active</span>
+                                                        <span>Echo Policy Verified</span>
                                                     </span>
                                                 </div>
                                             </div>
