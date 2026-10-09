@@ -31,7 +31,7 @@ class AiInputGuardrailService
             'passed' => ! $isToxic,
         ];
         if ($isToxic) {
-            $violations[] = 'toxic_language';
+            $violations[] = 'toxicity_guardrail';
         }
 
         // 2. Prompt Injection & Jailbreak Attempts
@@ -73,7 +73,7 @@ class AiInputGuardrailService
      */
     public function buildDeflectionReason(array $violations): string
     {
-        if (in_array('toxic_language', $violations, true)) {
+        if (in_array('toxicity_guardrail', $violations, true) || in_array('toxic_language', $violations, true)) {
             return "I'm here to help with educational and platform operations, but our conversation needs to stay respectful. Let's focus on your courses, assignments, or platform management.";
         }
 
