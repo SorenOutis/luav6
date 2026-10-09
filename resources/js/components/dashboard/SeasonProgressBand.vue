@@ -51,7 +51,7 @@ const formatDate = (iso?: string | null) => {
     >
         <div class="relative z-10 flex items-start justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2.5">
-                <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
+                <div class="dash-icon-well bg-brand/15 text-brand">
                     <Sparkles class="h-5 w-5" />
                 </div>
                 <div class="min-w-0">

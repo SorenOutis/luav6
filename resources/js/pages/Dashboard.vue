@@ -235,15 +235,15 @@ const greetingTheme = computed(() => {
     const overdue = todaySummary.value.overdueCount;
 
     if (overdue > 0) return 'bg-[#CB7676]';
-    if (streak >= 7) return 'bg-[#D97757]';
+    if (streak >= 7) return 'bg-brand';
     if (streak > 0) return 'bg-[#4D9375]';
 
-    if (hour >= 0 && hour < 4) return 'bg-[#D97757]';
-    if (hour >= 4 && hour < 7) return 'bg-[#D97757]';
-    if (hour >= 7 && hour < 12) return 'bg-[#D97757]';
-    if (hour >= 12 && hour < 17) return 'bg-[#D97757]';
-    if (hour >= 17 && hour < 21) return 'bg-[#D97757]';
-    return 'bg-[#D97757]';
+    if (hour >= 0 && hour < 4) return 'bg-brand';
+    if (hour >= 4 && hour < 7) return 'bg-brand';
+    if (hour >= 7 && hour < 12) return 'bg-brand';
+    if (hour >= 12 && hour < 17) return 'bg-brand';
+    if (hour >= 17 && hour < 21) return 'bg-brand';
+    return 'bg-brand';
 });
 
 // Concise, context-aware subtext for the hero (the "smart" part of the greeting)
@@ -1050,7 +1050,7 @@ const handleLogout = () => {
                         <template #band-action>
                             <button
                                 type="button"
-                                class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/10"
+                                class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/10"
                                 @click="scrollToLeaderboard"
                             >
                                 Full rankings
@@ -1135,7 +1135,7 @@ const handleLogout = () => {
                             </div>
                             <button
                                 type="button"
-                                class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#D97757]/30 bg-[#D97757]/[0.07] px-3 py-1.5 text-[12px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/15"
+                                class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] px-3 py-1.5 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/15"
                                 title="Open your streak calendar"
                                 @click="showStreakCalendar = true"
                             >

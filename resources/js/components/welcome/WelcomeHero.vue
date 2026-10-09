@@ -58,12 +58,12 @@ const isHeroApproved = ref(true);
                 class="group mb-5 inline-flex items-center gap-2.5 rounded-full border border-border/80 bg-card py-1.5 pr-3.5 pl-2 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
             >
                 <div
-                    class="flex h-5 w-5 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
+                    class="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-brand"
                 >
                     <ChatAiOrb
                         size="status"
                         animate-idle
-                        color="#D97757"
+                        color="var(--color-brand)"
                         class="h-3.5 w-3.5"
                     />
                 </div>

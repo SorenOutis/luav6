@@ -294,7 +294,7 @@ const webSiteJsonLd = [
                             </blockquote>
                             <div class="mt-5 flex items-center gap-3">
                                 <div
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97757]/15 font-bold text-[#D97757]"
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-brand"
                                 >
                                     MS
                                 </div>
@@ -337,7 +337,7 @@ const webSiteJsonLd = [
                             </div>
                             <div class="col-span-2 space-y-1 sm:col-span-1">
                                 <p
-                                    class="font-sans text-3xl font-bold tracking-tight text-[#D97757]"
+                                    class="font-sans text-3xl font-bold tracking-tight text-brand"
                                 >
                                     100%
                                 </p>
@@ -478,7 +478,7 @@ const webSiteJsonLd = [
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#D97757] px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#D97757]/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-brand/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                             >
                                 Create free account
                                 <ArrowRight

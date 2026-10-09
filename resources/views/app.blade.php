@@ -129,7 +129,15 @@
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link rel="preload" href="https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|inter:400,700,900" rel="stylesheet" />
+        {{--
+            Inter only — one family for the whole product (the instrument-sans
+            payload was downloaded but no rule ever referenced it). Every weight
+            the UI actually uses must be requested, otherwise the browser fakes
+            or rounds it: font-medium (500) + font-semibold (600) collapse onto
+            400/700 when they are missing, which makes every heading and button
+            look slightly off-weight. font-black (900) is used by badges.
+        --}}
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,900" rel="stylesheet" />
 
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead

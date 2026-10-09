@@ -210,7 +210,7 @@ const kindLabel = (kind: TodayTask['kind']) =>
 const kindBadgeClass = (kind: TodayTask['kind']) =>
     kind === 'exam'
         ? 'bg-[#4D9375]/10 text-[#4D9375]'
-        : 'bg-[#D97757]/10 text-[#D97757]';
+        : 'bg-brand/10 text-brand';
 
 const isOverdue = (task: TodayTask) =>
     !task.isCompleted &&
@@ -254,7 +254,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
             >
                 <div class="flex min-w-0 items-center gap-2">
                     <div
-                        class="dash-icon-well flex h-8 w-8 items-center justify-center rounded-full bg-[#D97757]/15 text-[#D97757]"
+                        class="dash-icon-well flex h-8 w-8 items-center justify-center rounded-full bg-brand/15 text-brand"
                     >
                         <ClipboardList class="h-4 w-4" />
                     </div>
@@ -279,7 +279,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                         class="flex min-h-11 min-w-0 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:text-[13px]"
                         :class="
                             activeTab === tab.key
-                                ? 'bg-[#D97757] text-white'
+                                ? 'bg-brand text-white'
                                 : tab.count > 0 && tab.key === 'overdue'
                                   ? 'text-[#CB7676] hover:bg-muted'
                                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -319,7 +319,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                         :class="
                             task.isCompleted
                                 ? 'border-[#4D9375] bg-[#4D9375]'
-                                : 'border-border bg-background group-hover:border-[#D97757]/60'
+                                : 'border-border bg-background group-hover:border-brand/60'
                         "
                         aria-hidden="true"
                     >
@@ -380,7 +380,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                 </p>
                 <Link
                     href="/activities"
-                    class="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-[#D97757] hover:underline"
+                    class="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
                 >
                     Open Activities
                 </Link>

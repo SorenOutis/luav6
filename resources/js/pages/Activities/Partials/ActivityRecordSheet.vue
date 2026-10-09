@@ -515,7 +515,7 @@ const handlePrint = () => {
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <div
-                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D97757]/15 text-[#D97757]"
+                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/15 text-brand"
                         >
                             <FileSpreadsheet class="h-5 w-5" />
                         </div>

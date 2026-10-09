@@ -91,7 +91,7 @@ const toggleList = () => {
                         :alt="`${userName} avatar`"
                     />
                     <AvatarFallback
-                        class="bg-[#D97757]/15 text-sm font-semibold text-[#D97757]"
+                        class="bg-brand/15 text-sm font-semibold text-brand"
                     >
                         {{ initials }}
                     </AvatarFallback>
@@ -102,19 +102,19 @@ const toggleList = () => {
                         class="truncate text-[17px] leading-tight font-semibold tracking-tight text-foreground sm:text-xl"
                     >
                         {{ greeting }},
-                        <span class="text-[#D97757]">{{ userName }}</span>
+                        <span class="text-brand">{{ userName }}</span>
                     </h1>
                     <div class="mt-1 flex items-center gap-2">
                         <span
-                            class="inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-semibold text-[#D97757]"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2 py-0.5 text-[12px] font-semibold text-brand"
                             :title="`Level ${level} · ${currentXp.toLocaleString()} / ${maxXpForLevel.toLocaleString()} XP`"
                         >
                             Lv {{ level }}
                             <span
-                                class="h-1 w-14 overflow-hidden rounded-full bg-[#D97757]/20 sm:w-20"
+                                class="h-1 w-14 overflow-hidden rounded-full bg-brand/20 sm:w-20"
                             >
                                 <span
-                                    class="block h-full rounded-full bg-[#D97757]"
+                                    class="block h-full rounded-full bg-brand"
                                     :style="{ width: `${xpPercent}%` }"
                                 ></span>
                             </span>
@@ -130,10 +130,10 @@ const toggleList = () => {
             <!-- Announcement pill (first item) -->
             <div
                 v-if="firstAnnouncement"
-                class="order-last flex w-full min-w-0 flex-1 items-center gap-2 rounded-full border border-[#D97757]/25 bg-[#D97757]/[0.07] py-1.5 pr-1.5 pl-3 sm:order-none sm:w-auto"
+                class="order-last flex w-full min-w-0 flex-1 items-center gap-2 rounded-full border border-brand/25 bg-brand/[0.07] py-1.5 pr-1.5 pl-3 sm:order-none sm:w-auto"
             >
                 <Megaphone
-                    class="h-3.5 w-3.5 shrink-0 text-[#D97757]"
+                    class="h-3.5 w-3.5 shrink-0 text-brand"
                     aria-hidden="true"
                 />
                 <button
@@ -145,7 +145,7 @@ const toggleList = () => {
                     {{ firstAnnouncement.title }}
                     <span
                         v-if="overflowCount > 0"
-                        class="font-semibold text-[#D97757]"
+                        class="font-semibold text-brand"
                         >+{{ overflowCount }} more</span
                     >
                 </button>
@@ -222,7 +222,7 @@ const toggleList = () => {
                 class="flex items-start gap-2.5 rounded-xl bg-muted/40 p-3"
             >
                 <Megaphone
-                    class="mt-0.5 h-4 w-4 shrink-0 text-[#D97757]"
+                    class="mt-0.5 h-4 w-4 shrink-0 text-brand"
                     aria-hidden="true"
                 />
                 <div class="min-w-0 flex-1">
@@ -250,7 +250,7 @@ const toggleList = () => {
                     <a
                         v-if="item.link"
                         :href="item.link"
-                        class="mt-1 inline-block text-[13px] font-semibold text-[#D97757] hover:underline"
+                        class="mt-1 inline-block text-[13px] font-semibold text-brand hover:underline"
                         >Read more</a
                     >
                 </div>

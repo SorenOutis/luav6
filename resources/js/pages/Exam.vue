@@ -379,7 +379,7 @@ const getExamTimeInfo = (exam: Exam) => {
             label: exam.ends_at_iso
                 ? `Ends ${formatScheduleDate(exam.ends_at_iso)}`
                 : 'Open',
-            color: 'text-[#D97757]',
+            color: 'text-brand',
             isOverdue: false,
             isUpcoming: false,
         };
@@ -469,7 +469,7 @@ const getStatusBadgeInfo = (exam: Exam) => {
     if (exam.is_upcoming) return { label: 'Upcoming', color: 'bg-[#E0AF68]' };
     if (exam.is_locked) return { label: 'In progress', color: 'bg-[#E0AF68]' };
     if (exam.status === 'published')
-        return { label: 'Open', color: 'bg-[#D97757]' };
+        return { label: 'Open', color: 'bg-brand' };
     if (exam.status === 'closed')
         return { label: 'Closed', color: 'bg-[#CB7676]' };
     return { label: 'Draft', color: 'bg-muted text-muted-foreground' };
@@ -924,7 +924,7 @@ watch(selectedPartId, () => {
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search exams"
-                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-2 pr-4 pl-10 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 sm:py-3 sm:pl-12"
+                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-2 pr-4 pl-10 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-brand/40 focus:ring-2 focus:ring-brand/20 sm:py-3 sm:pl-12"
                 />
             </div>
 
@@ -941,7 +941,7 @@ watch(selectedPartId, () => {
                     class="dash-btn flex shrink-0 items-center gap-2 border px-4 text-left"
                     :class="
                         activeSection === section.key
-                            ? 'border-transparent bg-[#D97757] text-white'
+                            ? 'border-transparent bg-brand text-white'
                             : 'border-border/50 bg-card text-muted-foreground hover:bg-muted'
                     "
                 >
@@ -1064,7 +1064,7 @@ watch(selectedPartId, () => {
                                                 exam.is_locked &&
                                                 hasSubmitted(exam)
                                             "
-                                            class="inline-flex items-center rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
+                                            class="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-1 text-[13px] font-semibold text-brand tabular-nums"
                                         >
                                             {{
                                                 exam.submissions
@@ -1102,7 +1102,7 @@ watch(selectedPartId, () => {
                                             class="flex items-center gap-1.5"
                                         >
                                             <span
-                                                class="inline-flex items-center gap-1 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-semibold text-[#D97757]"
+                                                class="inline-flex items-center gap-1 rounded-full border border-brand/25 bg-brand/10 px-2 py-0.5 text-[12px] font-semibold text-brand"
                                             >
                                                 <Layers class="h-3 w-3" />
                                                 {{ exam.set.title }}
@@ -1235,7 +1235,7 @@ watch(selectedPartId, () => {
                                 <button
                                     v-if="canReviewResults(exam)"
                                     type="button"
-                                    class="dash-btn w-full bg-[#D97757]/10 text-[15px] text-[#D97757] hover:bg-[#D97757]/15"
+                                    class="dash-btn w-full bg-brand/10 text-[15px] text-brand hover:bg-brand/15"
                                     @click.stop="openReview(exam)"
                                 >
                                     Review results
@@ -1282,7 +1282,7 @@ watch(selectedPartId, () => {
                                     :href="exam.url"
                                     target="_blank"
                                     rel="noopener"
-                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#D97757] text-[15px] text-white hover:bg-[#D97757]/90"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-brand text-[15px] text-white hover:bg-brand/90"
                                     @click.stop
                                 >
                                     Start
@@ -1291,7 +1291,7 @@ watch(selectedPartId, () => {
                                 <Link
                                     v-else
                                     :href="examsShow(exam.id).url"
-                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#D97757] text-[15px] text-white hover:bg-[#D97757]/90"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-brand text-[15px] text-white hover:bg-brand/90"
                                     @click.stop
                                 >
                                     Start

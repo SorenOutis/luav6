@@ -268,7 +268,7 @@ const xpRemaining = computed(() => 100 - currentLevelXp.value);
 const nextLevel = computed(() => props.stats.level + 1);
 
 const ringStyle = computed(() => ({
-    background: `conic-gradient(#D97757 ${levelProgress.value}%, rgba(217,119,87,0.18) ${levelProgress.value}%)`,
+    background: `conic-gradient(var(--color-brand) ${levelProgress.value}%, color-mix(in srgb, var(--color-brand) 18%, transparent) ${levelProgress.value}%)`,
 }));
 
 const earnedBadgesCount = computed(
@@ -493,6 +493,20 @@ const generateCardCanvas = async (
 
     ctx.scale(scale, scale);
 
+    // Canvas cannot consume `var(--color-brand)`, so resolve the brand token
+    // once and derive the alpha variants the card art needs from that hex.
+    const brand =
+        getComputedStyle(document.documentElement)
+            .getPropertyValue('--color-brand')
+            .trim() || '#d97757';
+    const brandRgb = (alpha: number) => {
+        const hex = /^#?([0-9a-f]{6})$/i.exec(brand)?.[1] ?? 'd97757';
+        const channels = [0, 2, 4].map((i) =>
+            parseInt(hex.slice(i, i + 2), 16),
+        );
+        return `rgba(${channels.join(', ')}, ${alpha})`;
+    };
+
     const isDark =
         typeof document !== 'undefined' &&
         document.documentElement.classList.contains('dark');
@@ -562,8 +576,8 @@ const generateCardCanvas = async (
         cardY + 30,
         160,
     );
-    glowGrad.addColorStop(0, 'rgba(217, 119, 87, 0.25)');
-    glowGrad.addColorStop(1, 'rgba(217, 119, 87, 0)');
+    glowGrad.addColorStop(0, brandRgb(0.25));
+    glowGrad.addColorStop(1, brandRgb(0));
     ctx.fillStyle = glowGrad;
     ctx.beginPath();
     ctx.arc(cardX + cardW - 30, cardY + 30, 160, 0, Math.PI * 2);
@@ -671,10 +685,10 @@ const generateCardCanvas = async (
 
     ctx.beginPath();
     drawRoundRect(ctx, textStartX, pillY, levelPillW, pillH, 10);
-    ctx.fillStyle = 'rgba(217, 119, 87, 0.16)';
+    ctx.fillStyle = brandRgb(0.16);
     ctx.fill();
 
-    ctx.fillStyle = '#D97757';
+    ctx.fillStyle = brand;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     ctx.fillText(levelText, textStartX + levelPillW / 2, pillY + pillH / 2);
@@ -1239,7 +1253,7 @@ const avatarPulseStyle = computed(() => {
         transform: `scale(${avatarScale.value})`,
         filter:
             avatarGlow.value > 1
-                ? `drop-shadow(0 0 ${avatarGlow.value}px rgba(217, 119, 87, 0.65))`
+                ? `drop-shadow(0 0 ${avatarGlow.value}px color-mix(in srgb, var(--color-brand) 65%, transparent))`
                 : 'none',
         transition: 'transform 60ms ease-out, filter 120ms ease-out',
     };
@@ -1354,10 +1368,7 @@ onBeforeUnmount(() => {
                                         :alt="currentBadge.name"
                                         class="h-full w-full object-cover"
                                     />
-                                    <Medal
-                                        v-else
-                                        class="size-5 text-[#D97757]"
-                                    />
+                                    <Medal v-else class="size-5 text-brand" />
                                 </div>
                             </div>
 
@@ -1408,7 +1419,7 @@ onBeforeUnmount(() => {
                                             />
                                             <Disc3
                                                 v-else
-                                                class="size-3 text-[#D97757]"
+                                                class="size-3 text-brand"
                                             />
                                             <span
                                                 class="absolute size-1 rounded-full bg-background"
@@ -1535,7 +1546,7 @@ onBeforeUnmount(() => {
                                 title="Generate Shareable Profile Card"
                                 @click="showShareCardModal = true"
                             >
-                                <Sparkles class="h-3.5 w-3.5 text-[#D97757]" />
+                                <Sparkles class="h-3.5 w-3.5 text-brand" />
                                 Card
                             </button>
                             <button
@@ -1663,7 +1674,7 @@ onBeforeUnmount(() => {
                                         />
                                         <Disc3
                                             v-else
-                                            class="size-3 text-[#D97757]"
+                                            class="size-3 text-brand"
                                         />
                                         <span
                                             class="absolute size-1 rounded-full bg-background"
@@ -1786,7 +1797,7 @@ onBeforeUnmount(() => {
                                     <span
                                         class="inline-flex items-center gap-1 text-[13px] font-bold text-foreground"
                                     >
-                                        <Zap class="size-4 text-[#D97757]" />
+                                        <Zap class="size-4 text-brand" />
                                         Level {{ stats.level }}
                                     </span>
                                     <span
@@ -1806,7 +1817,7 @@ onBeforeUnmount(() => {
                                 class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-muted"
                             >
                                 <div
-                                    class="h-full rounded-full bg-gradient-to-r from-[#D97757] to-amber-500 transition-all duration-500"
+                                    class="h-full rounded-full bg-gradient-to-r from-brand to-amber-500 transition-all duration-500"
                                     :style="{ width: `${levelProgress}%` }"
                                 ></div>
                             </div>
@@ -1855,7 +1866,7 @@ onBeforeUnmount(() => {
                                 <div
                                     v-for="badge in topEarnedBadges"
                                     :key="badge.id"
-                                    class="group flex flex-col items-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-center transition-all hover:border-[#D97757]/40 hover:bg-muted/40"
+                                    class="group flex flex-col items-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-center transition-all hover:border-brand/40 hover:bg-muted/40"
                                     :title="`${badge.name}: ${badge.description}`"
                                 >
                                     <div
@@ -1869,7 +1880,7 @@ onBeforeUnmount(() => {
                                         />
                                         <Medal
                                             v-else
-                                            class="size-5 text-[#D97757]"
+                                            class="size-5 text-brand"
                                         />
                                     </div>
                                     <p
@@ -2014,7 +2025,7 @@ onBeforeUnmount(() => {
                             class="profile-card flex items-center gap-3 bg-card px-4 py-3 transition-colors hover:bg-muted/40"
                         >
                             <div
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"
                             >
                                 <Trophy class="h-4 w-4" />
                             </div>
@@ -2163,9 +2174,7 @@ onBeforeUnmount(() => {
                                     class="flex flex-wrap items-center justify-between gap-2"
                                 >
                                     <div class="flex items-center gap-2">
-                                        <Calendar
-                                            class="size-4 text-[#D97757]"
-                                        />
+                                        <Calendar class="size-4 text-brand" />
                                         <span
                                             class="text-[13px] font-semibold text-foreground"
                                         >
@@ -2189,11 +2198,11 @@ onBeforeUnmount(() => {
                                         class="group relative flex aspect-square flex-col items-center justify-center rounded-lg border border-border/40 transition-transform hover:scale-110"
                                         :class="
                                             day.level === 3
-                                                ? 'border-[#D97757] bg-[#D97757] text-white shadow-xs'
+                                                ? 'border-brand bg-brand text-white shadow-xs'
                                                 : day.level === 2
-                                                  ? 'border-[#D97757]/60 bg-[#D97757]/50 text-foreground'
+                                                  ? 'border-brand/60 bg-brand/50 text-foreground'
                                                   : day.level === 1
-                                                    ? 'border-[#D97757]/30 bg-[#D97757]/20 text-foreground'
+                                                    ? 'border-brand/30 bg-brand/20 text-foreground'
                                                     : 'border-border/30 bg-muted/30 text-muted-foreground/40'
                                         "
                                         :title="`${day.dayLabel}: ${day.count} activities, ${day.xp} XP`"
@@ -2216,13 +2225,13 @@ onBeforeUnmount(() => {
                                             class="size-2.5 rounded-sm border border-border/30 bg-muted/40"
                                         ></span>
                                         <span
-                                            class="size-2.5 rounded-sm border border-[#D97757]/30 bg-[#D97757]/25"
+                                            class="size-2.5 rounded-sm border border-brand/30 bg-brand/25"
                                         ></span>
                                         <span
-                                            class="size-2.5 rounded-sm border border-[#D97757]/60 bg-[#D97757]/55"
+                                            class="size-2.5 rounded-sm border border-brand/60 bg-brand/55"
                                         ></span>
                                         <span
-                                            class="size-2.5 rounded-sm border border-[#D97757] bg-[#D97757]"
+                                            class="size-2.5 rounded-sm border border-brand bg-brand"
                                         ></span>
                                         <span class="text-[10px]">More</span>
                                     </div>
@@ -2519,7 +2528,7 @@ onBeforeUnmount(() => {
                 >
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                            class="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-brand"
                         >
                             <Users class="h-4 w-4" />
                         </div>
@@ -2704,7 +2713,7 @@ onBeforeUnmount(() => {
                 >
                     <div class="flex items-center gap-2.5">
                         <div
-                            class="flex size-8 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                            class="flex size-8 items-center justify-center rounded-full bg-brand/10 text-brand"
                         >
                             <Sparkles class="size-4" />
                         </div>
@@ -2732,7 +2741,7 @@ onBeforeUnmount(() => {
                     >
                         <!-- Top Accent Banner -->
                         <div
-                            class="absolute -top-12 -right-12 size-36 rounded-full bg-[#D97757]/15 blur-2xl"
+                            class="absolute -top-12 -right-12 size-36 rounded-full bg-brand/15 blur-2xl"
                         ></div>
 
                         <div class="relative flex items-center gap-3.5">
@@ -2763,7 +2772,7 @@ onBeforeUnmount(() => {
                                 </p>
                                 <div class="mt-1 flex items-center gap-1.5">
                                     <span
-                                        class="rounded-full bg-[#D97757]/15 px-2 py-0.5 text-[10px] font-bold text-[#D97757]"
+                                        class="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold text-brand"
                                     >
                                         Level {{ stats.level }}
                                     </span>

@@ -34,7 +34,7 @@ function toggleApproval() {
             >
                 <div class="flex items-center gap-3">
                     <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#D97757]/15 text-[#D97757] sm:h-9 sm:w-9"
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand sm:h-9 sm:w-9"
                     >
                         <GraduationCap class="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
@@ -105,7 +105,7 @@ function toggleApproval() {
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <span
-                            class="rounded-full bg-[#D97757]/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-[#D97757]"
+                            class="rounded-full bg-brand/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-brand"
                         >
                             Competency · M8AL-IIa-1
                         </span>
@@ -151,7 +151,7 @@ function toggleApproval() {
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-2">
                             <div
-                                class="flex h-6 w-6 items-center justify-center rounded-full bg-[#D97757]/15 text-[11px] font-bold text-[#D97757]"
+                                class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-[11px] font-bold text-brand"
                             >
                                 MS
                             </div>
@@ -181,19 +181,19 @@ function toggleApproval() {
                     :class="
                         isApproved
                             ? 'border-emerald-500/40 bg-emerald-500/[0.04]'
-                            : 'border-[#D97757]/30 bg-[#D97757]/[0.05]'
+                            : 'border-brand/30 bg-brand/[0.05]'
                     "
                 >
                     <div
                         class="flex flex-wrap items-center justify-between gap-2 text-xs"
                     >
                         <span
-                            class="flex items-center gap-1.5 font-bold text-[#D97757]"
+                            class="flex items-center gap-1.5 font-bold text-brand"
                         >
                             <ChatAiOrb
                                 size="status"
                                 animate-idle
-                                color="#D97757"
+                                color="var(--color-brand)"
                                 class="h-3.5 w-3.5"
                             />
                             Echo AI Drafted Feedback
@@ -203,7 +203,7 @@ function toggleApproval() {
                             :class="
                                 isApproved
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                    : 'bg-[#D97757]/10 text-[#D97757]'
+                                    : 'bg-brand/10 text-brand'
                             "
                         >
                             <ShieldCheck class="h-3.5 w-3.5" />
@@ -236,7 +236,7 @@ function toggleApproval() {
                             :class="
                                 isApproved
                                     ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                    : 'bg-[#D97757] text-white hover:bg-[#D97757]/90'
+                                    : 'bg-brand text-white hover:bg-brand/90'
                             "
                             @click="toggleApproval"
                         >
@@ -273,7 +273,7 @@ function toggleApproval() {
                 >
                     <div>
                         <span
-                            class="rounded-full bg-[#D97757]/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-[#D97757]"
+                            class="rounded-full bg-brand/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-brand"
                         >
                             M8AL-IIa-1
                         </span>
@@ -337,7 +337,7 @@ function toggleApproval() {
                     >
                         Section Diamond Diagnostic Understanding
                     </h4>
-                    <span class="text-sm font-bold text-[#D97757]"
+                    <span class="text-sm font-bold text-brand"
                         >88% Class Average</span
                     >
                 </div>
@@ -346,7 +346,7 @@ function toggleApproval() {
                         class="h-2.5 w-full overflow-hidden rounded-full bg-secondary"
                     >
                         <div
-                            class="h-full rounded-full bg-[#D97757]"
+                            class="h-full rounded-full bg-brand"
                             style="width: 88%"
                         />
                     </div>
@@ -354,7 +354,7 @@ function toggleApproval() {
                 <div
                     class="flex items-start gap-3 rounded-xl border border-border/60 bg-secondary/20 p-4"
                 >
-                    <Lightbulb class="mt-0.5 h-5 w-5 shrink-0 text-[#D97757]" />
+                    <Lightbulb class="mt-0.5 h-5 w-5 shrink-0 text-brand" />
                     <div class="text-xs sm:text-sm">
                         <span class="font-semibold text-foreground"
                             >Teacher Action Item for Tomorrow</span
