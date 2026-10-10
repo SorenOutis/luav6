@@ -109,6 +109,44 @@ it('blocks only chat composition while AI chat is under maintenance', function (
         ->assertJson(['ok' => true]);
 });
 
+it('allows super admin to chat even when student AI chat and admin AI chat are disabled', function () {
+    AdminAssistantAgent::fake(['Hello Super Admin!']);
+
+    Setting::setGlobal('ai_chat_enabled', '0');
+    Setting::setGlobal('admin_ai_chat_enabled', '0');
+
+    $superAdmin = User::factory()->superAdmin()->create();
+    $session = $superAdmin->chatSessions()->create(['title' => 'Super Admin Chat']);
+
+    $this->actingAs($superAdmin)
+        ->postJson(route('chats.store'))
+        ->assertOk();
+
+    $this->actingAs($superAdmin)
+        ->postJson(route('chats.message', $session), ['message' => 'Super admin inquiry'])
+        ->assertOk()
+        ->assertJsonPath('response', 'Hello Super Admin!');
+});
+
+it('allows regular admin to chat when student chat is disabled but admin chat is enabled', function () {
+    AdminAssistantAgent::fake(['Hello Admin!']);
+
+    Setting::setGlobal('ai_chat_enabled', '0');
+    Setting::setGlobal('admin_ai_chat_enabled', '1');
+
+    $admin = User::factory()->admin()->create();
+    $session = $admin->chatSessions()->create(['title' => 'Admin Chat']);
+
+    $this->actingAs($admin)
+        ->postJson(route('chats.store'))
+        ->assertOk();
+
+    $this->actingAs($admin)
+        ->postJson(route('chats.message', $session), ['message' => 'Admin inquiry'])
+        ->assertOk()
+        ->assertJsonPath('response', 'Hello Admin!');
+});
+
 it('lists only the authenticated users sessions on the chats page', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
