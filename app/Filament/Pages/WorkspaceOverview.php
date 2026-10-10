@@ -23,7 +23,7 @@ class WorkspaceOverview extends Page implements HasActions, HasTable
 
     protected static string|\UnitEnum|null $navigationGroup = 'Administration';
 
-    protected static ?int $navigationSort = 0;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $title = 'Workspace Overview';
 

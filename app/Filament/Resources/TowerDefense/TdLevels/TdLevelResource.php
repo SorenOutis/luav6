@@ -43,6 +43,8 @@ class TdLevelResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
+    protected static ?int $navigationSort = 2;
+
     public static function form(Schema $schema): Schema
     {
         return $schema->columns(2)->components([

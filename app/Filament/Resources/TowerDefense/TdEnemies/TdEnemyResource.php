@@ -38,6 +38,8 @@ class TdEnemyResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
+    protected static ?int $navigationSort = 4;
+
     public static function form(Schema $schema): Schema
     {
         return $schema->columns(2)->components([
