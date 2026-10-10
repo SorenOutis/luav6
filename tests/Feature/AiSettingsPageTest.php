@@ -280,3 +280,21 @@ it('resets the default to gemini when its compatible provider is removed', funct
         $undoRepeaterFake();
     }
 });
+
+it('shows separate toggles for student AI chat and admin AI chat and persists them', function () {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    Livewire::test(AiSettings::class)
+        ->assertSchemaComponentExists('ai_chat_enabled', 'form')
+        ->assertSchemaComponentExists('ai_chat_maintenance_message', 'form')
+        ->assertSchemaComponentExists('admin_ai_chat_enabled', 'form')
+        ->set('data.ai_chat_enabled', false)
+        ->set('data.ai_chat_maintenance_message', 'Student chat maintenance')
+        ->set('data.admin_ai_chat_enabled', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('ai_chat_enabled'))->toBe('0')
+        ->and(Setting::get('ai_chat_maintenance_message'))->toBe('Student chat maintenance')
+        ->and(Setting::get('admin_ai_chat_enabled'))->toBe('0');
+});

@@ -70,6 +70,7 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
+            'admin_ai_chat_enabled' => (bool) Setting::get('admin_ai_chat_enabled', true),
             'ai_budget_enabled' => (string) Setting::get('ai_budget_enabled', '0') === '1',
             'ai_budget_daily_tokens' => (int) Setting::get('ai_budget_daily_tokens', 0),
             'ai_budget_monthly_tokens' => (int) Setting::get('ai_budget_monthly_tokens', 0),
@@ -186,11 +187,11 @@ class AiSettings extends Page implements HasSchemas
 
                 $this->aiProviderSection(),
 
-                Section::make('AI Chat')
-                    ->description('Manage AI chat availability in both the floating widget and the Chats page.')
+                Section::make('Student AI Chat')
+                    ->description('Manage AI chat availability for students across the floating widget and the Chats page.')
                     ->schema([
                         Toggle::make('ai_chat_enabled')
-                            ->label('Enable AI Chat')
+                            ->label('Enable Student AI Chat')
                             ->helperText('If disabled, the floating widget and Chats page composer will show the maintenance message. Students can still open the Chats page and read their history.')
                             ->reactive(),
 
@@ -199,6 +200,15 @@ class AiSettings extends Page implements HasSchemas
                             ->placeholder('Enter the message to display when AI chat is disabled...')
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
+                    ]),
+
+                Section::make('Admin Echo AI Assistant')
+                    ->description('Control the Echo AI Copilot availability within the admin panel.')
+                    ->schema([
+                        Toggle::make('admin_ai_chat_enabled')
+                            ->label('Enable Admin Panel AI Assistant')
+                            ->helperText('If disabled, Echo AI is hidden and inaccessible for regular workspace/tenant admins. Super administrators always retain full access.')
+                            ->reactive(),
                     ]),
 
                 Section::make('Echo AI Guardrails & Operational Policies')
@@ -922,6 +932,7 @@ class AiSettings extends Page implements HasSchemas
             if (isset($data['ai_chat_maintenance_message'])) {
                 Setting::setGlobal('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
+            Setting::setGlobal('admin_ai_chat_enabled', ($data['admin_ai_chat_enabled'] ?? true) ? '1' : '0');
 
             // Workspace AI Budget & Fallback — genuinely tenant-scoped, so it
             // targets the admin's active workspace (or the workspace being
