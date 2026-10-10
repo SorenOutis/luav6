@@ -27,7 +27,7 @@ class GradeResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 8;
 
     protected static ?string $recordTitleAttribute = 'subject';
 

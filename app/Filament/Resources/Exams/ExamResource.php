@@ -22,7 +22,7 @@ class ExamResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $recordTitleAttribute = 'title';
 

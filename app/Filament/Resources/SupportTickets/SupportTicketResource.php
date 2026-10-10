@@ -33,7 +33,7 @@ class SupportTicketResource extends Resource
 
     protected static ?string $navigationLabel = 'Support Tickets';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+    protected static string|\UnitEnum|null $navigationGroup = 'Community';
 
     protected static ?int $navigationSort = 3;
 

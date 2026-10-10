@@ -18,9 +18,9 @@ class AiEssayFeedbackDraftResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Learning';
+    protected static string|\UnitEnum|null $navigationGroup = 'AI Studio';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'AI Feedback Review';
 

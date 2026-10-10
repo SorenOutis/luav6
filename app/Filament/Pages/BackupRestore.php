@@ -40,9 +40,9 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
 
     protected string $view = 'filament.pages.backup-restore';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+    protected static string|\UnitEnum|null $navigationGroup = 'System';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $title = 'Backup & Restore';
 

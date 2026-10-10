@@ -40,7 +40,7 @@ class AiSettings extends Page implements HasSchemas
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cpu-chip';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+    protected static string|\UnitEnum|null $navigationGroup = 'System';
 
     protected static ?int $navigationSort = 1;
 
