@@ -32,7 +32,17 @@ class AdminAiChat extends Page
 
     public static function canAccess(): bool
     {
-        return (bool) Filament::auth()->user()?->is_admin;
+        $user = Filament::auth()->user();
+
+        if (! $user?->is_admin) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return (bool) Setting::get('admin_ai_chat_enabled', true);
     }
 
     /**

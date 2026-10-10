@@ -44,6 +44,29 @@ class ChatController extends Controller
         return $errorId;
     }
 
+    private function isChatBlocked(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if ($user?->is_admin) {
+            if ($user->isSuperAdmin()) {
+                return null;
+            }
+
+            if (! (bool) Setting::get('admin_ai_chat_enabled', true)) {
+                return Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.');
+            }
+
+            return null;
+        }
+
+        if (! (bool) Setting::get('ai_chat_enabled', true)) {
+            return Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.');
+        }
+
+        return null;
+    }
+
     /**
      * Build the client-facing error structure. The correlation `id` is always
      * returned; exception details remain in server logs even in debug mode.
@@ -71,13 +94,13 @@ class ChatController extends Controller
         );
         $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
-        if (! Setting::get('ai_chat_enabled', true)) {
+        if ($blockedMessage = $this->isChatBlocked($request)) {
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
                 'blocked_reason' => 'chat_disabled',
             ]));
 
             return response()->json([
-                'response' => Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.'),
+                'response' => $blockedMessage,
             ], 503);
         }
 
@@ -181,13 +204,13 @@ class ChatController extends Controller
         );
         $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
-        if (! Setting::get('ai_chat_enabled', true)) {
+        if ($blockedMessage = $this->isChatBlocked($request)) {
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
                 'blocked_reason' => 'chat_disabled',
             ]));
 
             return AiSseResponse::from(
-                $this->chatService->streamText(Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.')),
+                $this->chatService->streamText($blockedMessage),
             );
         }
 

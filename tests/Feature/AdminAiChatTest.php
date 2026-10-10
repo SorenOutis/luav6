@@ -49,6 +49,7 @@ use App\Models\Grade;
 use App\Models\LearningMaterial;
 use App\Models\PendingAiAction;
 use App\Models\Section;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\PendingAiActionService;
 use App\Support\PlatformMaintenance;
@@ -75,6 +76,39 @@ it('allows only admins to access the AI chat page', function () {
 
     $this->actingAs($student);
     expect(AdminAiChat::canAccess())->toBeFalse();
+});
+
+it('disables admin AI chat for regular admins when toggle is off while keeping super admin access', function () {
+    $admin = User::factory()->admin()->create();
+    $superAdmin = User::factory()->superAdmin()->create();
+
+    Setting::setGlobal('admin_ai_chat_enabled', '0');
+
+    // Regular admin should be blocked
+    $this->actingAs($admin);
+    expect(AdminAiChat::canAccess())->toBeFalse();
+
+    // Super admin is exempt and still has access
+    $this->actingAs($superAdmin);
+    expect(AdminAiChat::canAccess())->toBeTrue();
+    Livewire::test(AdminAiChat::class)->assertOk();
+
+    // Turning it back on restores access for regular admin
+    Setting::setGlobal('admin_ai_chat_enabled', '1');
+    $this->actingAs($admin);
+    expect(AdminAiChat::canAccess())->toBeTrue();
+    Livewire::test(AdminAiChat::class)->assertOk();
+});
+
+it('does not block admin AI chat when only student AI chat is disabled', function () {
+    $admin = User::factory()->admin()->create();
+
+    Setting::setGlobal('ai_chat_enabled', '0');
+    Setting::setGlobal('admin_ai_chat_enabled', '1');
+
+    $this->actingAs($admin);
+    expect(AdminAiChat::canAccess())->toBeTrue();
+    Livewire::test(AdminAiChat::class)->assertOk();
 });
 
 it('opens AI assistant in a new tab via navigation item', function () {

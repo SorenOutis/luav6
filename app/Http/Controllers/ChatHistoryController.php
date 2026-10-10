@@ -63,6 +63,20 @@ class ChatHistoryController extends Controller
 
     private function composerBlockedMessage(Request $request): ?string
     {
+        $user = $request->user();
+
+        if ($user?->is_admin) {
+            if ($user->isSuperAdmin()) {
+                return null;
+            }
+
+            if (! (bool) Setting::get('admin_ai_chat_enabled', true)) {
+                return $this->aiChatMaintenanceMessage();
+            }
+
+            return null;
+        }
+
         if (! (bool) Setting::get('ai_chat_enabled', true)) {
             return $this->aiChatMaintenanceMessage();
         }
