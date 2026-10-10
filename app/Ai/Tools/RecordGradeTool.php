@@ -3,7 +3,6 @@
 namespace App\Ai\Tools;
 
 use App\Models\Section;
-use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
@@ -27,18 +26,25 @@ class RecordGradeTool extends PendingWriteTool implements Tool
             return $error;
         }
 
-        $studentId = (int) ($request['student_id'] ?? 0);
-        $student = null;
-        if ($studentId > 0) {
-            $student = User::query()->whereKey($studentId)->first();
-        } elseif (! empty($request['student_name'])) {
-            $name = trim((string) $request['student_name']);
-            $student = User::query()->where('name', 'like', "%{$name}%")->first();
+        $student = $this->findWorkspaceUser(
+            $request['student_id'] ?? null,
+            $request['student_name'] ?? null,
+            $request['student_email'] ?? null,
+        );
+
+        if (! $student) {
+            $student = $this->resolveUserByIdentifiers(
+                $request['student_id'] ?? null,
+                $request['student_name'] ?? null,
+                $request['student_email'] ?? null,
+            );
         }
 
         if (! $student) {
-            return 'Error: student not found. Provide a valid student_id or student_name.';
+            return 'Error: student not found. Provide a valid student_id, student_name, or student_email.';
         }
+
+        $targetWorkspaceId = $this->workspaceId() ?: $this->resolveUserWorkspaceId($student);
 
         $sectionId = (int) ($request['section_id'] ?? 0);
         $section = null;
@@ -46,18 +52,25 @@ class RecordGradeTool extends PendingWriteTool implements Tool
             $section = Section::query()
                 ->withoutGlobalScope('workspace')
                 ->whereKey($sectionId)
-                ->where('workspace_id', $this->workspaceId())
                 ->first();
+
+            if ($section && $targetWorkspaceId && $section->workspace_id !== $targetWorkspaceId && ! $this->currentAdmin()?->isSuperAdmin()) {
+                $section = null;
+            }
+
+            if ($section) {
+                $targetWorkspaceId = $section->workspace_id;
+            }
         } else {
             $section = $student->sections()
                 ->withoutGlobalScope('workspace')
-                ->where('sections.workspace_id', $this->workspaceId())
+                ->where('sections.workspace_id', $targetWorkspaceId)
                 ->first();
 
             if (! $section) {
                 $section = Section::query()
                     ->withoutGlobalScope('workspace')
-                    ->where('workspace_id', $this->workspaceId())
+                    ->where('workspace_id', $targetWorkspaceId)
                     ->orderBy('id')
                     ->first();
             }
@@ -120,15 +133,17 @@ class RecordGradeTool extends PendingWriteTool implements Tool
             "Record {$subject} ({$period}) grade of {$score}/{$maxScore} for {$student->name}.",
             $payload,
             $preview,
+            $targetWorkspaceId,
         );
     }
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'student_id' => $schema->integer()->description('Student user ID.')->required(),
             'score' => $schema->number()->description('Score received by the student.')->required(),
+            'student_id' => $schema->integer()->description('Student user ID (optional if student_name or student_email provided).'),
             'student_name' => $schema->string()->description('Optional student name if ID is not known.'),
+            'student_email' => $schema->string()->description('Optional student email if ID is not known.'),
             'section_id' => $schema->integer()->description('Optional section ID. Auto-resolved from student enrollment or workspace.'),
             'subject' => $schema->string()->description('Optional subject or course title. Defaults to section name.'),
             'period' => $schema->string()->description('Optional grading period, e.g. "Prelim", "Midterm", "Final". Defaults to "Midterm". NEVER ask the teacher for this.'),

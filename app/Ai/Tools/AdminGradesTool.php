@@ -33,32 +33,54 @@ class AdminGradesTool implements Tool
             return 'Error: no active workspace selected.';
         }
 
+        $studentEmail = ! empty($request['student_email']) ? trim((string) $request['student_email']) : null;
+        $studentName = ! empty($request['student_name']) ? trim((string) $request['student_name']) : null;
+        $studentId = ! empty($request['student_id']) ? (int) $request['student_id'] : null;
+
+        $applyFilters = function ($q) use ($studentId, $studentName, $studentEmail, $request) {
+            if ($studentId) {
+                $q->where('user_id', $studentId);
+            } elseif ($studentName || $studentEmail) {
+                $q->whereHas('student', function ($sub) use ($studentName, $studentEmail) {
+                    if ($studentEmail) {
+                        $sub->where('email', 'like', "%{$studentEmail}%");
+                    }
+                    if ($studentName) {
+                        $sub->where(fn ($s) => $s->where('name', 'like', "%{$studentName}%")->orWhere('email', 'like', "%{$studentName}%"));
+                    }
+                });
+            }
+
+            if (! empty($request['section_id'])) {
+                $q->where('section_id', (int) $request['section_id']);
+            }
+
+            if (! empty($request['subject'])) {
+                $subject = trim((string) $request['subject']);
+                $q->where('subject', 'like', "%{$subject}%");
+            }
+        };
+
         $query = Grade::query()
             ->withoutGlobalScope('workspace')
             ->where('workspace_id', $workspaceId)
             ->with(['student:id,name,email', 'section:id,name']);
 
-        if (! empty($request['student_id'])) {
-            $query->where('user_id', (int) $request['student_id']);
-        } elseif (! empty($request['student_name'])) {
-            $name = trim((string) $request['student_name']);
-            $query->whereHas('student', fn ($q) => $q->where('name', 'like', "%{$name}%"));
-        }
-
-        if (! empty($request['section_id'])) {
-            $query->where('section_id', (int) $request['section_id']);
-        }
-
-        if (! empty($request['subject'])) {
-            $subject = trim((string) $request['subject']);
-            $query->where('subject', 'like', "%{$subject}%");
-        }
+        $applyFilters($query);
 
         $limit = min(max((int) ($request['limit'] ?? 20), 1), 50);
 
-        $grades = $query->latest('id')
-            ->limit($limit)
-            ->get()
+        $gradeModels = $query->latest('id')->limit($limit)->get();
+
+        if ($gradeModels->isEmpty() && ($studentId || $studentName || $studentEmail) && $admin->isSuperAdmin()) {
+            $fallbackQuery = Grade::query()
+                ->withoutGlobalScope('workspace')
+                ->with(['student:id,name,email', 'section:id,name']);
+            $applyFilters($fallbackQuery);
+            $gradeModels = $fallbackQuery->latest('id')->limit($limit)->get();
+        }
+
+        $grades = $gradeModels
             ->map(fn (Grade $grade) => [
                 'id' => $grade->id,
                 'student_id' => $grade->user_id,
@@ -87,6 +109,7 @@ class AdminGradesTool implements Tool
         return [
             'student_id' => $schema->integer(),
             'student_name' => $schema->string(),
+            'student_email' => $schema->string(),
             'section_id' => $schema->integer(),
             'subject' => $schema->string(),
             'limit' => $schema->integer(),

@@ -62,9 +62,17 @@ class UserResource extends Resource
 
         // Co-admins in the same tenant share one student roster.
         return $query->where('is_admin', false)
-            ->whereHas('sections', fn ($q) => $q
-                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
-                ->when(! $workspaceId, fn ($q) => $q->whereNull('workspace_id')));
+            ->where(function ($sub) use ($workspaceId) {
+                $sub->whereHas('workspaces', fn ($q) => $q
+                    ->when($workspaceId, fn ($q) => $q->whereKey($workspaceId))
+                    ->when(! $workspaceId, fn ($q) => $q->whereNull('workspaces.id')))
+                    ->orWhereHas('sections', fn ($q) => $q
+                        ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                        ->when(! $workspaceId, fn ($q) => $q->whereNull('sections.workspace_id')))
+                    ->orWhere(fn ($q) => $q
+                        ->when($workspaceId, fn ($q) => $q->where('users.current_workspace_id', $workspaceId))
+                        ->when(! $workspaceId, fn ($q) => $q->whereNull('users.current_workspace_id')));
+            });
     }
 
     public static function getRelations(): array
