@@ -18,7 +18,7 @@ class AdminAiChat extends Page
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-sparkles';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+    protected static string|\UnitEnum|null $navigationGroup = 'AI Studio';
 
     protected static ?int $navigationSort = 1;
 
