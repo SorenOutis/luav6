@@ -27,11 +27,16 @@ class UpdateUserTool extends PendingWriteTool implements Tool
             return $error;
         }
 
-        $userId = (int) ($request['user_id'] ?? 0);
-        $user = $this->findWorkspaceUser($userId);
+        $userId = $request['user_id'] ?? null;
+        $userName = isset($request['user_name']) ? trim((string) $request['user_name']) : null;
+        $userEmail = isset($request['user_email']) ? trim((string) $request['user_email']) : null;
+
+        $user = $this->findWorkspaceUser($userId, $userName, $userEmail);
 
         if (! $user) {
-            return "Error: user with ID {$userId} not found in this workspace. Use the students tool to inspect valid users.";
+            $lookup = $userId ?? ($userName ?? ($userEmail ?? 'specified'));
+
+            return "Error: user \"{$lookup}\" not found in this workspace. Use the students tool to inspect valid users.";
         }
 
         $changes = [];
@@ -126,19 +131,24 @@ class UpdateUserTool extends PendingWriteTool implements Tool
             'expected_updated_at' => $user->updated_at?->toJSON(),
         ];
 
+        $targetWorkspaceId = $this->resolveUserWorkspaceId($user);
+
         return $this->stageAction(
             'update_user',
             'Update user account',
             "Update account details for {$user->name} (#{$user->id}).",
             $payload,
             $preview,
+            $targetWorkspaceId,
         );
     }
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'user_id' => $schema->integer()->description('The ID of the user to update.')->required(),
+            'user_id' => $schema->integer()->description('The ID of the user to update.'),
+            'user_name' => $schema->string()->description('The name of the user to update (alternative to user_id).'),
+            'user_email' => $schema->string()->description('The email of the user to update (alternative to user_id).'),
             'name' => $schema->string()->description('Optional updated full name.'),
             'email' => $schema->string()->description('Optional updated email address.'),
             'password' => $schema->string()->description('Optional new password (minimum 6 characters).'),

@@ -76,6 +76,7 @@ class PendingAiActionService
         array $payload,
         array $preview,
         ?int $chatSessionId = null,
+        ?int $workspaceId = null,
     ): PendingAiAction {
         $user = auth()->user();
         if (! $user?->is_admin) {
@@ -85,7 +86,7 @@ class PendingAiActionService
             throw new PendingAiActionException('This AI action type is not supported.');
         }
 
-        $workspaceId = $this->workspaceContext->id();
+        $workspaceId ??= $this->workspaceContext->id();
         if (! $workspaceId) {
             throw new PendingAiActionException('Select an active workspace before preparing a write action.');
         }

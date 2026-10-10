@@ -20,7 +20,7 @@ class StudentsTool implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'List or search students in the admin\'s workspace — name, email, sections, LSI level, streak, and recent exam average. Limited to 10 results.';
+        return 'List or search students in the admin\'s workspace (or platform-wide for Super Admins) — name, email, sections, LSI level, streak, and recent exam average. Supports searching by name, email, or student ID.';
     }
 
     /**
@@ -36,26 +36,56 @@ class StudentsTool implements Tool
 
         $search = trim((string) ($request['search'] ?? ''));
 
-        $students = User::forWorkspace()
+        $applySearchFilter = function ($query) use ($search) {
+            if ($search === '') {
+                return;
+            }
+            $cleanId = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $cleanId) {
+                $q->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%")
+                    ->orWhere('users.first_name', 'like', "%{$search}%")
+                    ->orWhere('users.last_name', 'like', "%{$search}%");
+
+                if (is_numeric($cleanId)) {
+                    $q->orWhere('users.id', (int) $cleanId);
+                }
+            });
+        };
+
+        $mapStudent = fn (User $student) => [
+            'id' => $student->id,
+            'name' => $student->name,
+            'email' => $student->email,
+            'workspace' => $student->workspaces->first()?->name ?? 'Active Workspace',
+            'sections' => $student->sections->pluck('name')->values(),
+            'system_level' => $student->currentSeasonProgress?->level ?? 1,
+            'streak_days' => (int) ($student->current_streak ?? 0),
+            'recent_exam_average' => round(
+                (float) $student->examSubmissions()->where('status', 'graded')->latest('updated_at')->limit(5)->avg('score'),
+                1
+            ),
+        ];
+
+        $studentModels = User::forWorkspace()
             ->where('is_admin', false)
-            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
-            ->with(['currentSeasonProgress', 'sections'])
+            ->where($applySearchFilter)
+            ->with(['currentSeasonProgress', 'sections', 'workspaces'])
             ->orderBy('name')
-            ->limit(10)
-            ->get()
-            ->map(fn (User $student) => [
-                'id' => $student->id,
-                'name' => $student->name,
-                'email' => $student->email,
-                'sections' => $student->sections->pluck('name')->values(),
-                'system_level' => $student->currentSeasonProgress?->level ?? 1,
-                'streak_days' => (int) ($student->current_streak ?? 0),
-                'recent_exam_average' => round(
-                    (float) $student->examSubmissions()->where('status', 'graded')->latest('updated_at')->limit(5)->avg('score'),
-                    1
-                ),
-            ])
-            ->values();
+            ->limit(25)
+            ->get();
+
+        if ($studentModels->isEmpty() && $search !== '' && $admin->isSuperAdmin()) {
+            $studentModels = User::query()
+                ->where('is_admin', false)
+                ->where($applySearchFilter)
+                ->with(['currentSeasonProgress', 'sections', 'workspaces'])
+                ->orderBy('name')
+                ->limit(25)
+                ->get();
+        }
+
+        $students = $studentModels->map($mapStudent)->values();
 
         if ($students->isEmpty()) {
             return $search !== ''
@@ -72,7 +102,7 @@ class StudentsTool implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'search' => $schema->string()->description('Optional partial name to filter students by.'),
+            'search' => $schema->string()->description('Optional name, email, or student ID to filter students by.'),
         ];
     }
 }

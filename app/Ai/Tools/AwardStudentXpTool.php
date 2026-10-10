@@ -25,11 +25,16 @@ class AwardStudentXpTool extends PendingWriteTool implements Tool
             return $error;
         }
 
-        $studentId = (int) ($request['student_id'] ?? 0);
-        $student = $this->findWorkspaceUser($studentId);
+        $studentId = $request['student_id'] ?? null;
+        $studentName = isset($request['student_name']) ? trim((string) $request['student_name']) : null;
+        $studentEmail = isset($request['student_email']) ? trim((string) $request['student_email']) : null;
+
+        $student = $this->findWorkspaceUser($studentId, $studentName, $studentEmail);
 
         if (! $student) {
-            return "Error: student with ID {$studentId} not found in this workspace. Use the students tool to inspect valid students.";
+            $identifier = $studentId ?? ($studentName ?? ($studentEmail ?? 'specified'));
+
+            return "Error: student \"{$identifier}\" not found in this workspace. Use the students tool to inspect valid students.";
         }
 
         if (! isset($request['amount_xp']) || ! is_numeric($request['amount_xp'])) {
@@ -45,6 +50,8 @@ class AwardStudentXpTool extends PendingWriteTool implements Tool
         if ($reason === '') {
             return 'Error: a reason for awarding XP is required (e.g. "Excellent classroom participation").';
         }
+
+        $targetWorkspaceId = $this->resolveUserWorkspaceId($student);
 
         $payload = [
             'student_id' => $student->id,
@@ -66,13 +73,16 @@ class AwardStudentXpTool extends PendingWriteTool implements Tool
             "Award +{$amountXp} XP and +{$amountPoints} Points to {$student->name} for \"{$reason}\".",
             $payload,
             $preview,
+            $targetWorkspaceId,
         );
     }
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'student_id' => $schema->integer()->description('The ID of the student receiving XP.')->required(),
+            'student_id' => $schema->integer()->description('The ID of the student receiving XP.'),
+            'student_name' => $schema->string()->description('The name of the student receiving XP (alternative if ID unknown).'),
+            'student_email' => $schema->string()->description('The email of the student receiving XP (alternative if ID unknown).'),
             'amount_xp' => $schema->number()->description('Amount of XP to award (e.g. 50).')->required(),
             'amount_points' => $schema->number()->description('Amount of gamification points to award (e.g. 25).'),
             'reason' => $schema->string()->description('The reason or achievement note for the award.')->required(),

@@ -930,7 +930,8 @@ class AiActionExecutor
             $amountPoints = (float) ($payload['amount_points'] ?? 0);
             $reason = (string) $payload['reason'];
 
-            $sectionId = $student->sections()->where('workspace_id', $action->workspace_id)->value('sections.id');
+            $sectionId = $student->sections()->where('workspace_id', $action->workspace_id)->value('sections.id')
+                ?? $student->sections()->first()?->id;
 
             if ($sectionId) {
                 $progress = $student->activeSectionProgress($sectionId);
@@ -967,10 +968,15 @@ class AiActionExecutor
             ->whereKey($id)
             ->where(function ($query) use ($action) {
                 $query->whereHas('workspaces', fn ($q) => $q->whereKey($action->workspace_id))
-                    ->orWhereHas('sections', fn ($q) => $q->where('workspace_id', $action->workspace_id));
+                    ->orWhereHas('sections', fn ($q) => $q->where('workspace_id', $action->workspace_id))
+                    ->orWhere('current_workspace_id', $action->workspace_id);
             })
             ->lockForUpdate()
             ->first();
+
+        if (! $user && $action->user?->isSuperAdmin()) {
+            $user = User::query()->whereKey($id)->lockForUpdate()->first();
+        }
 
         if (! $user) {
             throw new PendingAiActionException($message);
