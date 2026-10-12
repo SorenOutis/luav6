@@ -28,7 +28,7 @@ class EditAdmin extends EditRecord
         unset($data['workspace_id']);
 
         // Only hash password if a new one was provided
-        if (filled($data['password'])) {
+        if (filled($data['password'] ?? null)) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);

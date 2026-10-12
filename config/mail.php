@@ -1,5 +1,7 @@
 <?php
 
+use Resend\Resend;
+
 return [
 
     /*
@@ -61,8 +63,17 @@ return [
             // ],
         ],
 
-        'resend' => [
+        'resend' => class_exists(Resend::class)
+        ? [
             'transport' => 'resend',
+        ]
+        : [
+            'transport' => 'smtp',
+            'host' => env('RESEND_SMTP_HOST', 'smtp.resend.com'),
+            'port' => (int) env('RESEND_SMTP_PORT', 465),
+            'encryption' => env('RESEND_SMTP_ENCRYPTION', 'ssl'),
+            'username' => 'resend',
+            'password' => env('RESEND_API_KEY'),
         ],
 
         'sendmail' => [

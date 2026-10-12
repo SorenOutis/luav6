@@ -10,10 +10,13 @@ use App\Models\User;
 use App\Services\AiQuestionGeneratorService;
 use App\Services\AiSdkProviderService;
 use App\Services\AIService;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\AiManager;
 use Laravel\Ai\AnonymousAgent;
+use Laravel\Ai\Responses\AgentResponse;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Laravel\Ai\Tools\ToolNameResolver;
 
 use function Laravel\Ai\agent;
@@ -125,6 +128,72 @@ it('allows a custom authorization header to override the bearer token', function
 
     Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'ApiKey gateway-header-key'));
 });
+
+it('preserves compatible-provider text and usage for structured and unstructured responses', function (string $text, array $expectedStructured, bool $structured) {
+    $name = storeCompatibleProvider(compatibleProvider());
+    AiSdkProviderService::for($name)->applyToSdk();
+    Http::preventStrayRequests();
+    Http::fake([
+        'gateway.example.test/*' => Http::response([
+            'model' => 'qwen3-32b',
+            'choices' => [[
+                'message' => ['role' => 'assistant', 'content' => $text],
+                'finish_reason' => 'stop',
+            ]],
+            'usage' => [
+                'prompt_tokens' => 120,
+                'completion_tokens' => 80,
+                'prompt_tokens_details' => ['cached_tokens' => 30],
+                'completion_tokens_details' => ['reasoning_tokens' => 20],
+            ],
+        ], 200),
+    ]);
+
+    $response = agent(
+        instructions: 'You are concise.',
+        schema: $structured ? fn (JsonSchema $schema): array => [
+            'answer' => $schema->string()->required(),
+        ] : null,
+    )->prompt('Hello', provider: $name, model: 'qwen3-32b');
+
+    expect($response::class)->toBe($structured ? StructuredAgentResponse::class : AgentResponse::class)
+        ->and($response->text)->toBe($text)
+        ->and($response->usage->toArray())->toBe([
+            'prompt_tokens' => 120,
+            'completion_tokens' => 80,
+            'cache_write_input_tokens' => 0,
+            'cache_read_input_tokens' => 30,
+            'reasoning_tokens' => 20,
+        ])
+        ->and($response->meta->provider)->toBe($name)
+        ->and($response->meta->model)->toBe('qwen3-32b')
+        ->and($response->steps)->toHaveCount(1)
+        ->and($response->toolCalls)->toBeEmpty();
+
+    if ($structured) {
+        expect($response->toArray())->toBe($expectedStructured);
+    }
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://gateway.example.test/v1/chat/completions'
+        && $request['model'] === 'qwen3-32b'
+        && ! array_key_exists('tools', $request->data())
+        && ($structured
+            ? $request['response_format']['type'] === 'json_schema'
+            : ! array_key_exists('response_format', $request->data())));
+})->with([
+    'integer' => ['42', []],
+    'float' => ['42.5', []],
+    'true' => ['true', []],
+    'false' => ['false', []],
+    'string' => ['"Gateway response"', []],
+    'object' => ['{"answer":"Gateway response","details":{"ready":true}}', ['answer' => 'Gateway response', 'details' => ['ready' => true]]],
+    'array' => ['[42,true,"Gateway response"]', [42, true, 'Gateway response']],
+    'empty object' => ['{}', []],
+    'empty array' => ['[]', []],
+    'null' => ['null', []],
+    'plain text' => ['Gateway response', []],
+])->with([true, false]);
 
 it('routes chat, grading, and question generation through the selected compatible provider', function () {
     $name = storeCompatibleProvider(compatibleProvider());
