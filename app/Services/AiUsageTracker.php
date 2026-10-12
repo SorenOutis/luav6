@@ -128,27 +128,7 @@ class AiUsageTracker
         int $outputTokens
     ): void {
         try {
-            $inputTokens = max(0, $inputTokens);
-            $outputTokens = max(0, $outputTokens);
-
-            AiUsageLog::create([
-                'workspace_id' => app(WorkspaceContext::class)->id(),
-                'date' => now()->toDateString(),
-                'provider' => Str::limit($provider, 80, ''),
-                'model' => $model ? Str::limit($model, 191, '') : null,
-                'source' => Str::limit($source, 32, ''),
-                'input_tokens' => $inputTokens,
-                'output_tokens' => $outputTokens,
-                'neurons' => $provider === 'cloudflare'
-                    ? self::estimateNeurons($model, $inputTokens, $outputTokens)
-                    : null,
-                'estimated_cost_micros' => $this->costEstimator->estimateMicros(
-                    $provider,
-                    $model,
-                    $inputTokens,
-                    $outputTokens,
-                ),
-            ]);
+            $this->recordOrFail($provider, $model, $source, $inputTokens, $outputTokens);
         } catch (\Throwable $e) {
             // Usage tracking must never break a real AI call, but tests should
             // fail loudly so accounting schema regressions cannot be hidden.
@@ -158,6 +138,37 @@ class AiUsageTracker
 
             report($e);
         }
+    }
+
+    /** Record usage without swallowing failures for callers with durable recovery. */
+    public function recordOrFail(
+        string $provider,
+        ?string $model,
+        string $source,
+        int $inputTokens,
+        int $outputTokens,
+    ): void {
+        $inputTokens = max(0, $inputTokens);
+        $outputTokens = max(0, $outputTokens);
+
+        AiUsageLog::create([
+            'workspace_id' => app(WorkspaceContext::class)->id(),
+            'date' => now()->toDateString(),
+            'provider' => Str::limit($provider, 80, ''),
+            'model' => $model ? Str::limit($model, 191, '') : null,
+            'source' => Str::limit($source, 32, ''),
+            'input_tokens' => $inputTokens,
+            'output_tokens' => $outputTokens,
+            'neurons' => $provider === 'cloudflare'
+                ? self::estimateNeurons($model, $inputTokens, $outputTokens)
+                : null,
+            'estimated_cost_micros' => $this->costEstimator->estimateMicros(
+                $provider,
+                $model,
+                $inputTokens,
+                $outputTokens,
+            ),
+        ]);
     }
 
     /**
