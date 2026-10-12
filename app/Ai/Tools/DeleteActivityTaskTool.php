@@ -27,15 +27,26 @@ class DeleteActivityTaskTool extends PendingWriteTool implements Tool
         }
 
         $taskId = (int) ($request['task_id'] ?? 0);
-        $task = ActivityTask::query()
-            ->withoutGlobalScope('workspace')
-            ->whereKey($taskId)
-            ->where('workspace_id', $this->workspaceId())
-            ->with(['section:id,name', 'scores'])
-            ->first();
+        $task = null;
+        if ($taskId > 0) {
+            $task = ActivityTask::query()
+                ->withoutGlobalScope('workspace')
+                ->whereKey($taskId)
+                ->where('workspace_id', $this->workspaceId())
+                ->with(['section:id,name', 'scores'])
+                ->first();
+        } elseif (! empty($request['task_title']) || ! empty($request['title'])) {
+            $taskTitle = trim((string) ($request['task_title'] ?? $request['title']));
+            $task = ActivityTask::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $this->workspaceId())
+                ->where('title', 'like', "%{$taskTitle}%")
+                ->with(['section:id,name', 'scores'])
+                ->first();
+        }
 
         if (! $task) {
-            return "Error: activity task with ID {$taskId} not found in this workspace. Check activity_tasks_admin for valid IDs.";
+            return 'Error: activity task'.($taskId > 0 ? " with ID {$taskId}" : '').' not found in this workspace. Check activity_tasks_admin for valid tasks.';
         }
 
         $payload = [
@@ -62,7 +73,8 @@ class DeleteActivityTaskTool extends PendingWriteTool implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'task_id' => $schema->integer()->description('The ID of the activity task to delete.')->required(),
+            'task_id' => $schema->integer()->description('The ID of the activity task to delete (optional if task_title is provided).'),
+            'task_title' => $schema->string()->description('Optional activity task title to delete.'),
         ];
     }
 }

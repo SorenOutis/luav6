@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Models\ActivityTask;
+use App\Models\Section;
 use App\Support\WorkspaceContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -43,6 +44,18 @@ class ActivityTasksAdminTool implements Tool
         $sectionId = (int) ($request['section_id'] ?? 0);
         if ($sectionId > 0) {
             $query->where('section_id', $sectionId);
+        } elseif (! empty($request['section_name'])) {
+            $sectionName = trim((string) $request['section_name']);
+            $section = Section::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $workspaceId)
+                ->where(function ($q) use ($sectionName) {
+                    $q->where('name', $sectionName)->orWhere('name', 'like', "%{$sectionName}%");
+                })
+                ->first();
+            if ($section) {
+                $query->where('section_id', $section->id);
+            }
         }
 
         $tasks = $query->latest('id')
@@ -72,6 +85,7 @@ class ActivityTasksAdminTool implements Tool
         return [
             'search' => $schema->string()->description('Optional search term to filter activity tasks by title (e.g. "Additional Points", "Quiz").'),
             'section_id' => $schema->integer()->description('Optional class section ID to filter activity tasks for a specific section.'),
+            'section_name' => $schema->string()->description('Optional class section name (e.g. "BSIT 1-A", "Grade 11 - STEM Einstein").'),
         ];
     }
 }

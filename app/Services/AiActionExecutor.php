@@ -891,13 +891,42 @@ class AiActionExecutor
                 'admin_id' => $action->user_id,
                 'section_id' => $section->id,
                 'title' => $payload['title'],
-                'term' => $payload['term'] ?? 'Midterm',
+                'term' => $payload['term'] ?? ($section->school_level === Section::SCHOOL_LEVEL_SENIOR_HIGH ? 'First Semester - 1st Quarter' : 'Midterm'),
+                'task_type' => $payload['task_type'] ?? 'Performance Task',
                 'max_points' => $payload['max_points'] ?? 100.0,
                 'description' => $payload['description'] ?? null,
                 'due_date' => $payload['due_date'] ?? null,
             ]);
 
-            return "Activity task \"{$task->title}\" (ID {$task->id}) created for section {$section->name}.";
+            $rosterAdded = 0;
+            if (! isset($payload['populate_students']) || ! empty($payload['populate_students'])) {
+                $students = User::query()
+                    ->whereHas('sections', fn ($q) => $q->where('sections.id', $section->id))
+                    ->where('is_admin', false)
+                    ->get();
+
+                foreach ($students as $student) {
+                    ActivityTaskScore::query()->firstOrCreate(
+                        [
+                            'activity_task_id' => $task->id,
+                            'user_id' => $student->id,
+                        ],
+                        [
+                            'score' => null,
+                            'is_missed' => false,
+                            'graded_by' => $action->user_id,
+                        ]
+                    );
+                    $rosterAdded++;
+                }
+            }
+
+            $message = "Activity task \"{$task->title}\" (ID {$task->id}) created for section {$section->name}.";
+            if ($rosterAdded > 0) {
+                $message .= " Added {$rosterAdded} section students to the score sheet roster.";
+            }
+
+            return $message;
         };
     }
 
@@ -926,6 +955,31 @@ class AiActionExecutor
         $payload = $action->payload;
 
         return function () use ($action, $payload): string {
+            if (! empty($payload['all_students']) && ! empty($payload['students'])) {
+                /** @var ActivityTask $task */
+                $task = $this->lockWorkspaceRecord(ActivityTask::class, (int) $payload['activity_task_id'], $action, 'The activity task no longer exists in this workspace.');
+
+                $count = 0;
+                foreach ($payload['students'] as $st) {
+                    $student = $this->lockWorkspaceUser((int) $st['student_id'], $action, 'A student no longer belongs to this workspace.');
+                    ActivityTaskScore::query()->updateOrCreate(
+                        [
+                            'activity_task_id' => $task->id,
+                            'user_id' => $student->id,
+                        ],
+                        [
+                            'score' => $st['score'] ?? $payload['score'] ?? null,
+                            'is_missed' => $st['is_missed'] ?? false,
+                            'remarks' => $st['remarks'] ?? $payload['remarks'] ?? null,
+                            'graded_by' => $action->user_id,
+                        ]
+                    );
+                    $count++;
+                }
+
+                return "Activity task scores recorded for {$count} students in section on \"{$task->title}\".";
+            }
+
             $student = $this->lockWorkspaceUser((int) $payload['student_id'], $action, 'The student no longer belongs to this workspace.');
 
             $items = ! empty($payload['items']) && is_array($payload['items'])

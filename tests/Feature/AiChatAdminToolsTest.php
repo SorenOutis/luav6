@@ -517,5 +517,7 @@ it('validates parameters when recording activity task scores', function () {
         ->toContain('Error: score cannot be negative')
         ->and((string) $tool->handle(new Request(['student_id' => $admin->id, 'score' => 20])))
         ->toContain('Error: task_id, task_ids, or task_title is required')
+        ->and((string) $tool->handle(new Request(['all_students' => true, 'score' => 50])))
+        ->toContain('Error: specify section_id or section_name to record scores for all section students')
         ->and(PendingAiAction::count())->toBe(0);
 });

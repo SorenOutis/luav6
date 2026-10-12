@@ -236,6 +236,30 @@ class AiPolicyEngineService
                     }
                 }
             }
+
+            if (! empty($payload['students']) && is_array($payload['students'])) {
+                foreach ($payload['students'] as $studentItem) {
+                    if (isset($studentItem['score'])) {
+                        $stScore = (float) $studentItem['score'];
+                        if ($stScore < 0 || $stScore > 1000) {
+                            $checks[] = [
+                                'label' => 'Grade Value Invariant (0 - 1000)',
+                                'passed' => false,
+                                'explanation' => 'Ensures score is non-negative and complies with assessment rubric scaling.',
+                            ];
+                            $violations[] = 'score_out_of_bounds';
+
+                            return new PolicyEvaluationResult(
+                                policyCode: self::POLICY_OPERATIONAL_SAFETY,
+                                allowed: false,
+                                checks: $checks,
+                                violations: $violations,
+                                reason: 'Grade score cannot be negative or exceed allowable boundaries.',
+                            );
+                        }
+                    }
+                }
+            }
         }
 
         // 7. Destructive Deletion Impact Assessment
