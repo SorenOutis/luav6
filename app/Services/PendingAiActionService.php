@@ -50,6 +50,7 @@ class PendingAiActionService
         'delete_learning_material',
         'create_activity_task',
         'delete_activity_task',
+        'record_activity_task_score',
         'award_student_xp',
         'generate_exam_questions',
         'manage_maintenance',

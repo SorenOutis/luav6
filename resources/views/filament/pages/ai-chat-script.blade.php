@@ -720,10 +720,20 @@
                         step.target = 'award_student_xp';
                         step.badge = 'Check';
                         target.activity.title = 'Preparing a safe change: Student XP award';
-                    } else if (toolName === 'record_grade' || toolName === 'grade_submission' || toolName === 'update_grade') {
-                        step.label = 'Preparing grade record review';
+                    } else if (toolName === 'record_grade' || toolName === 'grade_submission' || toolName === 'update_grade' || toolName === 'record_activity_task_score') {
+                        step.label = toolName === 'record_activity_task_score' ? 'Preparing activity task score review' : 'Preparing grade record review';
                         step.target = toolName;
                         step.badge = 'Check';
+                    } else if (toolName === 'manage_maintenance') {
+                        step.label = 'Preparing platform maintenance review';
+                        step.target = 'manage_maintenance';
+                        step.badge = 'Check';
+                        target.activity.title = 'Preparing a safe change: Platform maintenance';
+                    } else if (toolName === 'export_report') {
+                        step.label = 'Preparing downloadable report export';
+                        step.target = 'export_report';
+                        step.badge = 'Check';
+                        target.activity.title = 'Preparing a safe change: Export report';
                     } else if (toolName === 'create_course' || toolName === 'update_course') {
                         step.label = 'Preparing course configuration';
                         step.target = toolName;
@@ -736,11 +746,21 @@
                         step.label = 'Preparing user management review';
                         step.target = toolName;
                         step.badge = 'Check';
+                    } else if (toolName === 'create_activity_task') {
+                        step.label = 'Preparing activity task';
+                        step.target = toolName;
+                        step.badge = 'Check';
+                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Create activity task';
+                    } else if (toolName === 'create_learning_material') {
+                        step.label = 'Preparing learning material';
+                        step.target = toolName;
+                        step.badge = 'Check';
+                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Learning material';
                     } else if (toolName === 'workspace_overview') {
                         step.label = 'Querying workspace analytics';
                         step.target = 'workspace_overview';
-                    } else if (toolName === 'courses_admin' || toolName === 'sections_admin') {
-                        step.label = 'Inspecting workspace curriculum';
+                    } else if (toolName === 'courses_admin' || toolName === 'sections_admin' || toolName === 'exams_admin' || toolName === 'assignments_admin' || toolName === 'announcements_admin' || toolName === 'materials_admin' || toolName === 'activity_tasks_admin') {
+                        step.label = 'Inspecting workspace curriculum & records';
                         step.target = toolName;
                     } else if (toolName === 'admin_grades' || toolName === 'submissions_to_grade') {
                         step.label = 'Reviewing student submissions & grades';
@@ -785,7 +805,8 @@
                         'create_learning_material', 'delete_learning_material',
                         'create_activity_task', 'delete_activity_task',
                         'award_student_xp', 'record_grade', 'update_grade', 'delete_grade',
-                        'grade_submission'
+                        'grade_submission', 'record_activity_task_score',
+                        'generate_exam_questions', 'manage_maintenance', 'export_report'
                     ].includes(toolName);
 
                     if (isStagingTool) {

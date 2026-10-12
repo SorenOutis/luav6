@@ -189,7 +189,7 @@ class AiPolicyEngineService
         }
 
         // 6. Grade Score Boundaries
-        if (in_array($type, ['record_grade', 'update_grade', 'grade_submission'], true)) {
+        if (in_array($type, ['record_grade', 'update_grade', 'grade_submission', 'record_activity_task_score'], true)) {
             if (isset($payload['score'])) {
                 $score = (float) $payload['score'];
                 $scoreValid = $score >= 0 && $score <= 1000;
@@ -210,6 +210,30 @@ class AiPolicyEngineService
                         violations: $violations,
                         reason: 'Grade score cannot be negative or exceed allowable boundaries.',
                     );
+                }
+            }
+
+            if (! empty($payload['items']) && is_array($payload['items'])) {
+                foreach ($payload['items'] as $item) {
+                    if (isset($item['score'])) {
+                        $itemScore = (float) $item['score'];
+                        if ($itemScore < 0 || $itemScore > 1000) {
+                            $checks[] = [
+                                'label' => 'Grade Value Invariant (0 - 1000)',
+                                'passed' => false,
+                                'explanation' => 'Ensures score is non-negative and complies with assessment rubric scaling.',
+                            ];
+                            $violations[] = 'score_out_of_bounds';
+
+                            return new PolicyEvaluationResult(
+                                policyCode: self::POLICY_OPERATIONAL_SAFETY,
+                                allowed: false,
+                                checks: $checks,
+                                violations: $violations,
+                                reason: 'Grade score cannot be negative or exceed allowable boundaries.',
+                            );
+                        }
+                    }
                 }
             }
         }

@@ -30,17 +30,29 @@ class ActivityTasksAdminTool implements Tool
 
         $workspaceId = app(WorkspaceContext::class)->id();
 
-        $tasks = ActivityTask::query()
+        $query = ActivityTask::query()
             ->withoutGlobalScope('workspace')
             ->where('workspace_id', $workspaceId)
-            ->with('section:id,name')
-            ->latest('id')
+            ->with('section:id,name');
+
+        $search = trim((string) ($request['search'] ?? ''));
+        if ($search !== '') {
+            $query->where('title', 'like', "%{$search}%");
+        }
+
+        $sectionId = (int) ($request['section_id'] ?? 0);
+        if ($sectionId > 0) {
+            $query->where('section_id', $sectionId);
+        }
+
+        $tasks = $query->latest('id')
             ->limit(20)
             ->get()
             ->map(fn (ActivityTask $task) => [
                 'id' => $task->id,
                 'title' => $task->title,
                 'section' => $task->section?->name,
+                'section_id' => $task->section_id,
                 'term' => $task->term,
                 'task_type' => $task->task_type,
                 'max_points' => (float) $task->max_points,
@@ -49,7 +61,7 @@ class ActivityTasksAdminTool implements Tool
             ->values();
 
         if ($tasks->isEmpty()) {
-            return 'There are no activity tasks in this workspace yet. You can create one using create_activity_task.';
+            return 'There are no activity tasks matching in this workspace yet. You can create one using create_activity_task.';
         }
 
         return (string) json_encode($tasks);
@@ -57,6 +69,9 @@ class ActivityTasksAdminTool implements Tool
 
     public function schema(JsonSchema $schema): array
     {
-        return [];
+        return [
+            'search' => $schema->string()->description('Optional search term to filter activity tasks by title (e.g. "Additional Points", "Quiz").'),
+            'section_id' => $schema->integer()->description('Optional class section ID to filter activity tasks for a specific section.'),
+        ];
     }
 }

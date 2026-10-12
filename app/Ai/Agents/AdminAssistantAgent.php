@@ -32,6 +32,7 @@ use App\Ai\Tools\GradeSubmissionTool;
 use App\Ai\Tools\LearningMaterialsAdminTool;
 use App\Ai\Tools\ManageMaintenanceTool;
 use App\Ai\Tools\PostAnnouncementTool;
+use App\Ai\Tools\RecordActivityTaskScoreTool;
 use App\Ai\Tools\RecordGradeTool;
 use App\Ai\Tools\ResearchTopicTool;
 use App\Ai\Tools\ResetUserPasswordTool;
@@ -129,13 +130,14 @@ AVAILABLE TOOLS:
 - post_announcement, update_announcement, delete_announcement: manage announcements.
 - create_assignment, update_assignment, delete_assignment: manage assignments.
 - create_learning_material, delete_learning_material: manage learning materials.
-- create_activity_task, delete_activity_task: manage activity tasks.
+- create_activity_task, delete_activity_task, record_activity_task_score: manage activity tasks and record student scores on them.
 - award_student_xp: award bonus XP and gamification points to students.
 
 WRITE-ACTION RULES (strict):
 1. Write tools NEVER execute a write. They only create an immutable, expiring approval card with an exact before/after diff and a server-issued nonce that you never receive.
-2. Gather all required values, use the read tools to resolve IDs, then call the appropriate write tool exactly once to stage the card. Do not ask the admin to type 'confirm', do not claim typed approval is sufficient, and never retry the same tool call after it reports PENDING HUMAN APPROVAL.
-3. After staging, tell the admin to review the exact diff and click Approve or Reject in the UI. Only that human click can execute the action.
+2. CRITICAL TOOL INVOCATION RULE: NEVER output text claiming approval cards have been prepared, staged, or are ready for approval unless you actually executed the corresponding write tool (e.g. record_activity_task_score, record_grade, create_exam) in this exact turn. If the user asks to score, grade, create, update, or delete records, you MUST invoke the tool. Never simulate or pretend in text that an action was staged without calling the tool. For multiple tasks/items, call the tool with all items or invoke it for each.
+3. Gather all required values, use the read tools to resolve IDs, then call the appropriate write tool exactly once to stage the card. Do not ask the admin to type 'confirm', do not claim typed approval is sufficient, and never retry the same tool call after it reports PENDING HUMAN APPROVAL.
+4. After staging via tool call, tell the admin to review the exact diff and click Approve or Reject in the UI. Only that human click can execute the action.
 4. SMART DEFAULTS & SCHEDULE/TIME CONFIRMATION (Fast action + teacher control):
    - When creating exams, assignments, or scheduled tasks:
      * If the teacher specified the date, time, duration, term, or blocked students in their prompt (e.g. 'tomorrow 2pm', 'Friday', 'Prelims', '90 mins', 'block John'), use their exact specifications.
@@ -249,6 +251,7 @@ GENERAL RULES:
             new DeleteLearningMaterialTool(chatSessionId: $this->chatSessionId),
             new CreateActivityTaskTool(chatSessionId: $this->chatSessionId),
             new DeleteActivityTaskTool(chatSessionId: $this->chatSessionId),
+            new RecordActivityTaskScoreTool(chatSessionId: $this->chatSessionId),
             new AwardStudentXpTool(chatSessionId: $this->chatSessionId),
             new ManageMaintenanceTool(chatSessionId: $this->chatSessionId),
             new ExportReportTool(chatSessionId: $this->chatSessionId),

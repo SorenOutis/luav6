@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\QuestionType;
 use App\Exceptions\PendingAiActionException;
 use App\Models\ActivityTask;
+use App\Models\ActivityTaskScore;
 use App\Models\AiQuestionDraft;
 use App\Models\Announcement;
 use App\Models\Assignment;
@@ -68,6 +69,7 @@ class AiActionExecutor
             'delete_learning_material' => $this->prepareDeleteLearningMaterial($action),
             'create_activity_task' => $this->prepareCreateActivityTask($action),
             'delete_activity_task' => $this->prepareDeleteActivityTask($action),
+            'record_activity_task_score' => $this->prepareRecordActivityTaskScore($action),
             'award_student_xp' => $this->prepareAwardStudentXp($action),
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
             'manage_maintenance' => $this->prepareManageMaintenance($action),
@@ -915,6 +917,51 @@ class AiActionExecutor
             $task->delete();
 
             return "Activity task \"{$title}\" (ID {$id}) was deleted.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareRecordActivityTaskScore(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            $student = $this->lockWorkspaceUser((int) $payload['student_id'], $action, 'The student no longer belongs to this workspace.');
+
+            $items = ! empty($payload['items']) && is_array($payload['items'])
+                ? $payload['items']
+                : [
+                    [
+                        'activity_task_id' => $payload['activity_task_id'],
+                        'score' => $payload['score'],
+                        'remarks' => $payload['remarks'] ?? null,
+                    ],
+                ];
+
+            $recorded = [];
+            foreach ($items as $item) {
+                /** @var ActivityTask $task */
+                $task = $this->lockWorkspaceRecord(ActivityTask::class, (int) $item['activity_task_id'], $action, 'The activity task no longer exists in this workspace.');
+
+                $score = ActivityTaskScore::query()->updateOrCreate(
+                    [
+                        'activity_task_id' => $task->id,
+                        'user_id' => $student->id,
+                    ],
+                    [
+                        'score' => $item['score'],
+                        'is_missed' => $item['is_missed'] ?? false,
+                        'remarks' => $item['remarks'] ?? null,
+                        'graded_by' => $action->user_id,
+                    ]
+                );
+
+                $max = (float) $task->max_points;
+                $pct = $max > 0 ? round(((float) $score->score / $max) * 100, 1) : 0;
+                $recorded[] = "\"{$task->title}\" ({$score->score}/{$task->max_points} — {$pct}%)";
+            }
+
+            return "Activity task score recorded for {$student->name}: ".implode(', ', $recorded).'.';
         };
     }
 
