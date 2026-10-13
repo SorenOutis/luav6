@@ -252,7 +252,7 @@ it('exposes admin tool names matching the agent instructions', function () {
         'post_announcement', 'update_announcement', 'delete_announcement',
         'create_assignment', 'update_assignment', 'delete_assignment',
         'create_learning_material', 'delete_learning_material',
-        'create_activity_task', 'delete_activity_task',
+        'create_activity_task', 'delete_activity_task', 'record_activity_task_score',
         'award_student_xp', 'manage_maintenance', 'export_report',
     ]);
 

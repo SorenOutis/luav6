@@ -38,10 +38,13 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
         }
 
         if (! $section && ! empty($request['section_name'])) {
+            $sectionName = trim((string) $request['section_name']);
             $section = Section::query()
                 ->withoutGlobalScope('workspace')
                 ->where('workspace_id', $this->workspaceId())
-                ->where('name', trim((string) $request['section_name']))
+                ->where(function ($q) use ($sectionName) {
+                    $q->where('name', $sectionName)->orWhere('name', 'like', "%{$sectionName}%");
+                })
                 ->first();
         }
 
@@ -60,6 +63,26 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
         $title = trim((string) ($request['title'] ?? ''));
         if ($title === '') {
             return 'Error: activity task title is required.';
+        }
+
+        $isShs = $section->school_level === Section::SCHOOL_LEVEL_SENIOR_HIGH;
+
+        $taskType = trim((string) ($request['task_type'] ?? ''));
+        if ($taskType === '') {
+            if ($isShs) {
+                $taskType = 'Performance Task';
+            } else {
+                $titleLower = strtolower($title);
+                if (str_contains($titleLower, 'lab')) {
+                    $taskType = 'Laboratory';
+                } elseif (str_contains($titleLower, 'project')) {
+                    $taskType = 'Project';
+                } elseif (str_contains($titleLower, 'recitation')) {
+                    $taskType = 'Recitation';
+                } else {
+                    $taskType = 'Performance Task';
+                }
+            }
         }
 
         $maxPoints = isset($request['max_points']) && is_numeric($request['max_points'])
@@ -85,7 +108,7 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
                 $term = 'Second Semester - 1st Quarter';
             } elseif (str_contains($titleLower, '4th quarter') || str_contains($titleLower, 'quarter 4')) {
                 $term = 'Second Semester - 2nd Quarter';
-            } elseif ($section->school_level === Section::SCHOOL_LEVEL_SENIOR_HIGH) {
+            } elseif ($isShs) {
                 $term = 'First Semester - 1st Quarter';
             } else {
                 $term = 'Midterm';
@@ -93,6 +116,8 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
         }
 
         $description = trim((string) ($request['description'] ?? '')) ?: null;
+
+        $populateStudents = ! isset($request['populate_students']) || filter_var($request['populate_students'], FILTER_VALIDATE_BOOLEAN);
 
         $rawDueDate = (string) ($request['due_date'] ?? '');
         if ($rawDueDate === '') {
@@ -108,24 +133,28 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
         $payload = [
             'section_id' => $section->id,
             'title' => $title,
+            'task_type' => $taskType,
             'term' => $term,
             'max_points' => $maxPoints,
             'description' => $description,
             'due_date' => $dueDate?->toDateString(),
+            'populate_students' => $populateStudents,
         ];
 
         $preview = [
             ['field' => 'Activity Title', 'before' => null, 'after' => $title],
             ['field' => 'Section', 'before' => null, 'after' => "{$section->name} (#{$section->id})"],
+            ['field' => 'Assessment Type', 'before' => null, 'after' => $taskType],
             ['field' => 'Term', 'before' => null, 'after' => $term],
             ['field' => 'Max Points', 'before' => null, 'after' => (string) $maxPoints],
             ['field' => 'Due Date', 'before' => null, 'after' => $dueDate?->format('M d, Y') ?? 'None'],
+            ['field' => 'Populate Section Roster', 'before' => null, 'after' => $populateStudents ? 'Add all enrolled students' : 'None'],
         ];
 
         return $this->stageAction(
             'create_activity_task',
             'Create activity task',
-            "Create task \"{$title}\" for section {$section->name}.",
+            "Create task \"{$title}\" ({$taskType}) for section {$section->name}.",
             $payload,
             $preview,
         );
@@ -134,13 +163,15 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'title' => $schema->string()->description('The task or activity title, e.g. "Laboratory Exercise 1".')->required(),
-            'section_id' => $schema->integer()->description('Optional ID of the section to assign this activity to. Defaults to the primary section in the active workspace. NEVER ask the teacher for section IDs.'),
-            'section_name' => $schema->string()->description('Optional name of the section if ID is unknown.'),
+            'title' => $schema->string()->description('The task or activity title, e.g. "Laboratory Exercise 1" or "PT 1: System Presentation".')->required(),
+            'section_id' => $schema->integer()->description('Optional ID of the section to assign this activity to. Defaults to the primary section in the active workspace.'),
+            'section_name' => $schema->string()->description('Optional name of the section (e.g. "BSIT 1-A", "Grade 11 - STEM Einstein").'),
+            'task_type' => $schema->string()->description('Assessment type: for Senior High School, defaults to "Performance Task". For College, e.g. "Performance Task", "Laboratory", "Project", "Recitation".'),
             'max_points' => $schema->number()->description('Max possible points (defaults to 100).'),
-            'term' => $schema->string()->description('Optional grading term (e.g. "Prelim", "Midterm", "Final"). Auto-inferred or defaults to "Midterm". NEVER ask the teacher for terms.'),
+            'term' => $schema->string()->description('Optional grading period or term (e.g. "First Semester - 1st Quarter" for SHS; "Prelim", "Midterm", "Final" for College).'),
             'due_date' => $schema->string()->description('Optional due date, e.g. "2026-10-20". Defaults to 7 days from now.'),
-            'description' => $schema->string()->description('Optional activity instructions.'),
+            'populate_students' => $schema->boolean()->description('Whether to automatically add all enrolled section students to the score sheet roster upon approval. Defaults to true.'),
+            'description' => $schema->string()->description('Optional activity instructions or rubric notes.'),
         ];
     }
 }

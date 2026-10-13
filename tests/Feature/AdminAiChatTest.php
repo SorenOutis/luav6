@@ -26,6 +26,7 @@ use App\Ai\Tools\GradeSubmissionTool;
 use App\Ai\Tools\LearningMaterialsAdminTool;
 use App\Ai\Tools\ManageMaintenanceTool;
 use App\Ai\Tools\PostAnnouncementTool;
+use App\Ai\Tools\RecordActivityTaskScoreTool;
 use App\Ai\Tools\RecordGradeTool;
 use App\Ai\Tools\ResetUserPasswordTool;
 use App\Ai\Tools\SectionsAdminTool;
@@ -38,6 +39,7 @@ use App\Ai\Tools\UpdateSectionTool;
 use App\Ai\Tools\UpdateUserTool;
 use App\Filament\Pages\AdminAiChat;
 use App\Models\ActivityTask;
+use App\Models\ActivityTaskScore;
 use App\Models\Announcement;
 use App\Models\Assignment;
 use App\Models\ChatSession;
@@ -1639,4 +1641,385 @@ it('starts with the sidebar closed on phones and in the installed app', function
         ->assertOk()
         ->assertSee('display-mode: standalone', escape: false)
         ->assertSee('window.innerWidth >=', escape: false);
+});
+
+it('stages and records an activity task score upon admin approval', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create(['name' => 'Maria Clara']);
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'name' => 'Grade 10 - Rizal',
+    ]);
+    $section->users()->attach($student->id);
+
+    $task = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section->id,
+        'title' => 'Lab Experiment 1',
+        'task_type' => 'laboratory',
+        'term' => 'Midterm',
+        'max_points' => 100,
+    ]);
+
+    $tool = new RecordActivityTaskScoreTool;
+    $result = (string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'task_id' => $task->id,
+        'score' => 95,
+        'remarks' => 'Excellent lab performance',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'record_activity_task_score')->firstOrFail();
+    expect($action->payload['student_id'])->toBe($student->id);
+    expect((float) $action->payload['score'])->toBe(95.0);
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $score = ActivityTaskScore::query()
+        ->where('activity_task_id', $task->id)
+        ->where('user_id', $student->id)
+        ->firstOrFail();
+
+    expect((float) $score->score)->toBe(95.0);
+    expect($score->remarks)->toBe('Excellent lab performance');
+    expect($score->graded_by)->toBe($admin->id);
+});
+
+it('stages and records multiple activity task scores via task_title or task_ids upon admin approval', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create(['name' => 'Crisostomo Ibarra']);
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section1 = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'name' => 'Section A',
+    ]);
+    $section2 = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'name' => 'Section B',
+    ]);
+    $section1->users()->attach($student->id);
+    $section2->users()->attach($student->id);
+
+    $task1 = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section1->id,
+        'title' => 'Additional Points - Recitation',
+        'task_type' => 'recitation',
+        'term' => 'Midterm',
+        'max_points' => 20,
+    ]);
+
+    $task2 = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section2->id,
+        'title' => 'Additional Points - Attendance Bonus',
+        'task_type' => 'participation',
+        'term' => 'Midterm',
+        'max_points' => 20,
+    ]);
+
+    $tool = new RecordActivityTaskScoreTool;
+    $result = (string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'task_title' => 'Additional Points',
+        'score' => 15,
+        'remarks' => 'Good effort in both tasks',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'record_activity_task_score')->latest('id')->firstOrFail();
+    expect($action->payload['items'])->toHaveCount(2);
+
+    $nonce = pendingActionNonce($action);
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => $nonce,
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $score1 = ActivityTaskScore::query()
+        ->where('activity_task_id', $task1->id)
+        ->where('user_id', $student->id)
+        ->firstOrFail();
+    $score2 = ActivityTaskScore::query()
+        ->where('activity_task_id', $task2->id)
+        ->where('user_id', $student->id)
+        ->firstOrFail();
+
+    expect((float) $score1->score)->toBe(15.0);
+    expect((float) $score2->score)->toBe(15.0);
+    expect($score1->graded_by)->toBe($admin->id);
+    expect($score2->graded_by)->toBe($admin->id);
+});
+
+it('filters activity tasks in activity_tasks_admin tool by search and section', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section1 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Alpha']);
+    $section2 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Beta']);
+
+    ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section1->id,
+        'title' => 'Biology Lab 1',
+        'task_type' => 'laboratory',
+        'term' => 'Prelim',
+        'max_points' => 50,
+    ]);
+
+    ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section2->id,
+        'title' => 'Chemistry Lab 2',
+        'task_type' => 'laboratory',
+        'term' => 'Prelim',
+        'max_points' => 50,
+    ]);
+
+    $tool = new ActivityTasksAdminTool;
+
+    // Search by title
+    $searchResult = json_decode((string) $tool->handle(new Request(['search' => 'Chemistry'])), true);
+    expect($searchResult)->toHaveCount(1)
+        ->and($searchResult[0]['title'])->toBe('Chemistry Lab 2');
+
+    // Filter by section_id
+    $sectionResult = json_decode((string) $tool->handle(new Request(['section_id' => $section1->id])), true);
+    expect($sectionResult)->toHaveCount(1)
+        ->and($sectionResult[0]['title'])->toBe('Biology Lab 1');
+
+    // Filter by section_name
+    $sectionNameResult = json_decode((string) $tool->handle(new Request(['section_name' => 'Section Beta'])), true);
+    expect($sectionNameResult)->toHaveCount(1)
+        ->and($sectionNameResult[0]['title'])->toBe('Chemistry Lab 2');
+});
+
+it('creates activity task with default performance task type and populates section roster upon approval', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'name' => 'Grade 12 - STEM Curie',
+        'school_level' => Section::SCHOOL_LEVEL_SENIOR_HIGH,
+    ]);
+
+    $students = User::factory()->count(3)->create(['is_admin' => false]);
+    foreach ($students as $student) {
+        $section->users()->attach($student->id);
+    }
+
+    $tool = new CreateActivityTaskTool;
+    $result = (string) $tool->handle(new Request([
+        'section_name' => 'STEM Curie',
+        'title' => 'PT 1: Rocket Dynamics Presentation',
+        'populate_students' => true,
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_activity_task')->latest('id')->firstOrFail();
+    expect($action->payload['task_type'])->toBe('Performance Task')
+        ->and($action->payload['term'])->toBe('First Semester - 1st Quarter')
+        ->and($action->payload['section_id'])->toBe($section->id)
+        ->and($action->payload['populate_students'])->toBeTrue();
+
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => pendingActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $task = ActivityTask::query()->where('title', 'PT 1: Rocket Dynamics Presentation')->firstOrFail();
+    expect($task->task_type)->toBe('Performance Task')
+        ->and($task->term)->toBe('First Semester - 1st Quarter');
+
+    $scores = ActivityTaskScore::query()->where('activity_task_id', $task->id)->get();
+    expect($scores)->toHaveCount(3);
+    foreach ($scores as $score) {
+        expect($score->score)->toBeNull()
+            ->and($score->is_missed)->toBeFalse()
+            ->and($score->graded_by)->toBe($admin->id);
+    }
+});
+
+it('creates activity task without populating roster when populate_students is false', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create([
+        'workspace_id' => $workspaceId,
+        'name' => 'BSCS 3-A',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+    ]);
+
+    $student = User::factory()->create(['is_admin' => false]);
+    $section->users()->attach($student->id);
+
+    $tool = new CreateActivityTaskTool;
+    $result = (string) $tool->handle(new Request([
+        'section_id' => $section->id,
+        'title' => 'Final Project Milestone',
+        'task_type' => 'Major Project',
+        'term' => 'Final',
+        'populate_students' => false,
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'create_activity_task')->latest('id')->firstOrFail();
+    expect($action->payload['populate_students'])->toBeFalse()
+        ->and($action->payload['task_type'])->toBe('Major Project')
+        ->and($action->payload['term'])->toBe('Final');
+
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => pendingActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $task = ActivityTask::query()->where('title', 'Final Project Milestone')->firstOrFail();
+    expect(ActivityTaskScore::query()->where('activity_task_id', $task->id)->count())->toBe(0);
+});
+
+it('validates section enrollment when recording activity task score for specific student in section', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section1 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Alpha']);
+    $section2 = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'Section Beta']);
+
+    $studentA = User::factory()->create(['name' => 'Student Alpha Member', 'is_admin' => false]);
+    $studentB = User::factory()->create(['name' => 'Student Beta Member', 'is_admin' => false]);
+
+    $section1->users()->attach($studentA->id);
+    $section2->users()->attach($studentB->id);
+
+    $task = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section1->id,
+        'title' => 'Lab 1',
+        'term' => 'Midterm',
+        'max_points' => 100,
+    ]);
+
+    $tool = new RecordActivityTaskScoreTool;
+
+    // Fails when student B is not enrolled in Section Alpha
+    $failResult = (string) $tool->handle(new Request([
+        'student_id' => $studentB->id,
+        'section_name' => 'Section Alpha',
+        'task_id' => $task->id,
+        'score' => 90,
+    ]));
+    expect($failResult)->toContain('is not enrolled in section Section Alpha');
+
+    // Succeeds when student A is enrolled in Section Alpha
+    $successResult = (string) $tool->handle(new Request([
+        'student_id' => $studentA->id,
+        'section_name' => 'Section Alpha',
+        'task_id' => $task->id,
+        'score' => 92,
+        'remarks' => 'Great laboratory report',
+    ]));
+    expect($successResult)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'record_activity_task_score')->latest('id')->firstOrFail();
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => pendingActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $score = ActivityTaskScore::query()->where('activity_task_id', $task->id)->where('user_id', $studentA->id)->firstOrFail();
+    expect((float) $score->score)->toBe(92.0)
+        ->and($score->remarks)->toBe('Great laboratory report');
+});
+
+it('records activity task scores for all students in section upon approval', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'BSIT 2-B']);
+
+    $students = User::factory()->count(3)->create(['is_admin' => false]);
+    foreach ($students as $student) {
+        $section->users()->attach($student->id);
+    }
+
+    $task = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section->id,
+        'title' => 'PT 2: System Architecture Defense',
+        'term' => 'Midterm',
+        'max_points' => 50,
+    ]);
+
+    $tool = new RecordActivityTaskScoreTool;
+    $result = (string) $tool->handle(new Request([
+        'all_students' => true,
+        'section_name' => 'BSIT 2-B',
+        'task_title' => 'System Architecture Defense',
+        'score' => 48,
+        'remarks' => 'Completed all system requirements',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'record_activity_task_score')->latest('id')->firstOrFail();
+    expect($action->payload['all_students'])->toBeTrue()
+        ->and($action->payload['students'])->toHaveCount(3);
+
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => pendingActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $scores = ActivityTaskScore::query()->where('activity_task_id', $task->id)->get();
+    expect($scores)->toHaveCount(3);
+    foreach ($scores as $sc) {
+        expect((float) $sc->score)->toBe(48.0)
+            ->and($sc->remarks)->toBe('Completed all system requirements')
+            ->and($sc->graded_by)->toBe($admin->id);
+    }
+});
+
+it('deletes activity task using task_title', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $workspaceId = app(WorkspaceContext::class)->id();
+    $section = Section::factory()->create(['workspace_id' => $workspaceId]);
+
+    $task = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'section_id' => $section->id,
+        'title' => 'Temporary Activity Task To Delete',
+        'term' => 'Prelim',
+        'max_points' => 50,
+    ]);
+
+    $tool = new DeleteActivityTaskTool;
+    $result = (string) $tool->handle(new Request([
+        'task_title' => 'Temporary Activity Task To Delete',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL');
+
+    $action = PendingAiAction::query()->where('action_type', 'delete_activity_task')->latest('id')->firstOrFail();
+    expect($action->payload['task_id'])->toBe($task->id);
+
+    $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
+        'nonce' => pendingActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(ActivityTask::query()->whereKey($task->id)->exists())->toBeFalse();
 });

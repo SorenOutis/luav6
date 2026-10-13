@@ -135,6 +135,26 @@ test('AiPolicyEngineService enforces operational safety invariants for XP and ex
     $badDuration = $engine->evaluateAction('create_exam', ['title' => 'Speed Test', 'duration_minutes' => 1], $admin);
     expect($badDuration->allowed)->toBeFalse();
     expect($badDuration->violations)->toContain('invalid_exam_duration');
+
+    // Activity task score boundary checks for multi-student payload
+    $badStudentScore = $engine->evaluateAction('record_activity_task_score', [
+        'all_students' => true,
+        'students' => [
+            ['student_id' => 1, 'score' => 95],
+            ['student_id' => 2, 'score' => 1005],
+        ],
+    ], $admin);
+    expect($badStudentScore->allowed)->toBeFalse();
+    expect($badStudentScore->violations)->toContain('score_out_of_bounds');
+
+    $goodStudentScore = $engine->evaluateAction('record_activity_task_score', [
+        'all_students' => true,
+        'students' => [
+            ['student_id' => 1, 'score' => 95],
+            ['student_id' => 2, 'score' => 100],
+        ],
+    ], $admin);
+    expect($goodStudentScore->allowed)->toBeTrue();
 });
 
 test('PendingAiActionService stages action with policy checks attached', function () {

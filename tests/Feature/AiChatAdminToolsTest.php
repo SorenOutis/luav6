@@ -13,6 +13,7 @@ use App\Ai\Tools\CreateExamTool;
 use App\Ai\Tools\ExamsAdminTool;
 use App\Ai\Tools\GenerateExamQuestionsTool;
 use App\Ai\Tools\PostAnnouncementTool;
+use App\Ai\Tools\RecordActivityTaskScoreTool;
 use App\Ai\Tools\StudentsTool;
 use App\Ai\Tools\SubmissionsToGradeTool;
 use App\Ai\Tools\UpdateExamTool;
@@ -429,6 +430,7 @@ it('never exposes admin write tools to students', function () {
         new GenerateExamQuestionsTool,
         new PostAnnouncementTool,
         new UpdateExamTool,
+        new RecordActivityTaskScoreTool,
     ] as $tool) {
         expect($tool->handle(new Request([])))->toContain('Only admins');
     }
@@ -499,4 +501,23 @@ it('lists exact action previews only for the authenticated owner and session', f
         ->getJson(route('ai-actions.index'))
         ->assertOk()
         ->assertJsonCount(0, 'data');
+});
+
+it('validates parameters when recording activity task scores', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $tool = new RecordActivityTaskScoreTool;
+
+    expect((string) $tool->handle(new Request([])))
+        ->toContain('Error: student not found')
+        ->and((string) $tool->handle(new Request(['student_id' => $admin->id])))
+        ->toContain('Error: score is required and must be a number')
+        ->and((string) $tool->handle(new Request(['student_id' => $admin->id, 'score' => -5])))
+        ->toContain('Error: score cannot be negative')
+        ->and((string) $tool->handle(new Request(['student_id' => $admin->id, 'score' => 20])))
+        ->toContain('Error: task_id, task_ids, or task_title is required')
+        ->and((string) $tool->handle(new Request(['all_students' => true, 'score' => 50])))
+        ->toContain('Error: specify section_id or section_name to record scores for all section students')
+        ->and(PendingAiAction::count())->toBe(0);
 });
