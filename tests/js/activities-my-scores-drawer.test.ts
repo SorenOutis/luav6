@@ -154,7 +154,7 @@ afterEach(() => {
     document.body.style.overflow = '';
 });
 
-describe('activities hub — Activity Record drawer', () => {
+describe('activity hub — Activity Record drawer', () => {
     it('keeps the Record button in the mobile overview', () => {
         wrapper = mountHub();
         const overview = wrapper.get(

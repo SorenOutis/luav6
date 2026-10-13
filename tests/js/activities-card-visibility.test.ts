@@ -107,7 +107,7 @@ const globalStubs = {
     },
 };
 
-describe('activities hub — exam card visibility', () => {
+describe('activity hub — exam card visibility', () => {
     it('renders one card per exam across multiple seasons', async () => {
         const groups = [
             {

@@ -1,7 +1,7 @@
-# Activities Hub & Exams — Performance and Scroll Analysis
+# Activity Hub & Exams — Performance and Scroll Analysis
 
 **Date:** 2026-09-01
-**Scope:** `resources/js/pages/Activities/Index.vue` (Activities Hub, also serves the legacy `/exams` route), `resources/js/pages/Exam.vue` (older exams list), `resources/js/pages/Exams/Show.vue` (the actual exam-taking page).
+**Scope:** `resources/js/pages/Activities/Index.vue` (Activity Hub, also serves the legacy `/exams` route), `resources/js/pages/Exam.vue` (older exams list), `resources/js/pages/Exams/Show.vue` (the actual exam-taking page).
 **Method:** Same as the dashboard analysis — static source read-through with file/line evidence, no live browser (no PHP runtime / no network access for a Playwright browser download in this sandbox).
 
 This is a follow-up to `DASHBOARD_PERF_AND_SCROLL_ANALYSIS.md`. Short version: **the same root-cause pattern from the dashboard (full duplicate mobile+desktop DOM trees, toggled with CSS instead of `v-if`) exists here too, and on the exam-taking page it's worse** because it duplicates every single question card, not just a handful of dashboard widgets — and the code has already had one real bug caused by it (see §3.1).
@@ -16,13 +16,13 @@ Route::get('activities', [ActivityHubController::class, 'index'])->name('activit
 Route::get('exams', [ActivityHubController::class, 'index'])->name('exams.index');   // legacy alias
 ```
 
-Both `/activities` and `/exams` now render **`Activities/Index.vue`** via `ActivityHubController`. The older **`Exam.vue`** page (rendered by `ExamController::index()`, `app/Http/Controllers/ExamController.php:49-56`) has **no route pointing to it anymore** — I searched all of `routes/web.php` and found nothing that calls `ExamController@index`. It appears to be dead code left over from before the Activities Hub replaced it. It still gets built into your JS bundle and still has the same performance issue described below (§2), but since nothing links to it, it's likely not what you're experiencing day-to-day — flagging it mainly so you know it's there and can decide whether to delete it.
+Both `/activities` and `/exams` now render **`Activities/Index.vue`** via `ActivityHubController`. The older **`Exam.vue`** page (rendered by `ExamController::index()`, `app/Http/Controllers/ExamController.php:49-56`) has **no route pointing to it anymore** — I searched all of `routes/web.php` and found nothing that calls `ExamController@index`. It appears to be dead code left over from before the Activity Hub replaced it. It still gets built into your JS bundle and still has the same performance issue described below (§2), but since nothing links to it, it's likely not what you're experiencing day-to-day — flagging it mainly so you know it's there and can decide whether to delete it.
 
 The exam-taking page (`Exams/Show.vue`, at `/exams/{exam}`) is separate and definitely live — that's what `examsShow(exam.id).url` in `Activities/Index.vue:502` and `MobileNav.vue` link to.
 
 ---
 
-## 1. Activities Hub (`Activities/Index.vue`) — mostly fine, one real gap
+## 1. Activity Hub (`Activities/Index.vue`) — mostly fine, one real gap
 
 Good news first: **this page does not have the dashboard's duplicate-mount problem.** It's a single, unified template that uses responsive Tailwind classes (`hidden sm:grid`, `md:hidden`, etc.) on small, cheap elements (a stats bar, a header row) — not two whole parallel component trees. There's no separate "MobileActivities.vue" being mounted alongside a desktop one. Confirmed via `resources/css/app.css:4158` (`.activities-mobile-stats` — a 4-cell summary bar, not a full page duplicate) and the single `<template v-if="filteredExamsBySeason.length > 0">` render path (`Activities/Index.vue:769`) shared by all breakpoints.
 

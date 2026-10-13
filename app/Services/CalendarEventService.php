@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\DB;
  * dashboard, which formats server-side.
  *
  * Events link to the listing a student acts from, never to a single activity's
- * own page: exams deep-link into the Activities Hub (`/activities?exam={id}`)
+ * own page: exams deep-link into the Activity Hub (`/activities?exam={id}`)
  * rather than `/exams/{id}`, because the exam page lays out the whole paper —
  * parts included — before anything has been started, and assignments point at
  * the assignment listing.
@@ -122,7 +122,7 @@ class CalendarEventService
                 'hasEnded' => $exam->scheduleState() === 'ended',
                 'isCompleted' => (int) $exam->parts_count > 0
                     && (int) $exam->submitted_parts === (int) $exam->parts_count,
-                // Deep link into the Activities Hub, not the exam page: the
+                // Deep link into the Activity Hub, not the exam page: the
                 // exam page renders every part (and its question breakdown)
                 // before the student has started, which leaks the paper's
                 // structure from a calendar glance. The hub focuses the card

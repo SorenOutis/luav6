@@ -41,7 +41,7 @@ const isExamUrl = (url: string): boolean => {
             url.startsWith('http') ? new URL(url).pathname : url
         ).split('?')[0];
         // Only active exam-taking sessions (/exams/{id}...) pause the soundtrack.
-        // The Activities Hub listing (/activities and /exams) is for browsing and should play music!
+        // The Activity Hub listing (/activities and /exams) is for browsing and should play music!
         return path.startsWith('/exams/') && path !== '/exams';
     } catch {
         return false;

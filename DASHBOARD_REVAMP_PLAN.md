@@ -23,7 +23,7 @@
 ### 1.1 Composition (desktop)
 
 `resources/js/pages/Dashboard.vue` → `AppLayout` (sidebar: Dashboard, My
-Courses, Assignments, Activities Hub, Calendar, Games, Library Hub, Grades,
+Courses, Assignments, Activity Hub, Calendar, Games, Library Hub, Grades,
 Chats) renders, top → bottom:
 
 | # | Block | Component | What it does today |
