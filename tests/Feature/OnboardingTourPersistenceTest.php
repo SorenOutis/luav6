@@ -25,7 +25,7 @@ it('records a skipped tour on the account', function () {
         ->toBe(['dashboard' => 'skipped']);
 });
 
-it('records the activities hub tour instead of 404ing', function () {
+it('records the activity hub tour instead of 404ing', function () {
     // Regression: Activities/Index.vue posts tour id 'activities-hub', which
     // was missing from the controller's allowlist. The POST aborted with 404
     // and Inertia hard-navigated the student to the "404 Not Found" page

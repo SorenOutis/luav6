@@ -10,6 +10,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\ExamSetAssignmentService;
+use App\Services\StudentAssignmentService;
 use App\Support\ExamPartSerializer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ class ActivityHubController extends Controller
 {
     public function __construct(protected ExamSetAssignmentService $examSets) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, StudentAssignmentService $studentAssignments): Response
     {
         $user = $request->user();
         $examPage = $this->examPage($user, $request->query('cursor'));
@@ -59,8 +60,10 @@ class ActivityHubController extends Controller
                     'completed' => $summary['completed'],
                 ],
             ],
+            'assignments' => $studentAssignments->forUser($user),
             'activityScores' => $activityScores,
             'activityRecordEnabled' => $activityRecordEnabled,
+            'initialTab' => $request->query('tab', 'exams'),
         ]);
     }
 

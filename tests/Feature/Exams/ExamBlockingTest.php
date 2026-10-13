@@ -51,7 +51,7 @@ function blockingContext(array $examAttributes = []): array
     return [$exam, $part, $blocked, $classmate, $section, $season];
 }
 
-it('hides a blocked exam from the activities hub', function () {
+it('hides a blocked exam from the activity hub', function () {
     [$exam, , $blocked] = blockingContext();
     $exam->blockedUsers()->attach($blocked->id);
 

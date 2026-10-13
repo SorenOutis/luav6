@@ -1,5 +1,5 @@
 /**
- * Regression test: opening and closing the Activities hub review modal must
+ * Regression test: opening and closing the Activity Hub review modal must
  * not permanently scroll-lock the page.
  *
  * The page used to set `document.body.style.overflow = 'hidden'` in its
@@ -171,7 +171,7 @@ afterEach(() => {
     document.body.style.overflow = '';
 });
 
-describe('activities hub — review modal scroll lock', () => {
+describe('activity hub — review modal scroll lock', () => {
     it('restores body scrolling after the review modal closes (desktop)', async () => {
         const wrapper = mountHub();
         await flushPromises();

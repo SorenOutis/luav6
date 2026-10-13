@@ -73,7 +73,7 @@ dashboard, the calendar and the AI assistant.
 | # | Surface | Location | Uses `visibleTo()`? |
 |---|---|---|---|
 | 1 | Legacy list `/exams` + `/api/exams` | `ExamController::examPage()` `:124`, scope at `:135` | ✅ |
-| 2 | Activities hub `/activities` + `/api/activities` (grid **and** the overview tiles / section tabs) | `ActivityHubController::visibleExams()` `:219-222`, used by `examPage()` + `hubSummary()` | ✅ |
+| 2 | Activity hub `/activities` + `/api/activities` (grid **and** the overview tiles / section tabs) | `ActivityHubController::visibleExams()` `:219-222`, used by `examPage()` + `hubSummary()` | ✅ |
 | 3 | Direct access + every write action (`show`, `review`, `startPart`, `saveAnswers`, `submitPart`, `partStatus`, `monitorProgress`) | `ExamController::assertCanAccess()` `:867` | ❌ separate check |
 | 4 | Dashboard "Upcoming exams" (`DashboardController:206`) + `/api/dashboard-exams` | `UpcomingExamsService::forUser()` `:35` | ❌ own section filter |
 | 5 | Calendar grid | `CalendarEventService::examEvents()` `:69` | ❌ own section filter |

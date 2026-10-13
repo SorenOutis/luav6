@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use function Pest\Laravel\actingAs;
 
 /**
- * Regression: the Activities Hub hid every exam from students whose section
+ * Regression: the Activity Hub hid every exam from students whose section
  * membership was not mirrored by workspace bookkeeping (`workspace_user` +
  * `current_workspace_id`). Enrollment — not tenant bookkeeping — is the
  * source of truth for student visibility.

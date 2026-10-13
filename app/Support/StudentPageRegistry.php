@@ -33,7 +33,7 @@ class StudentPageRegistry
                 'description' => 'Assignment listing and student submission workflow.',
             ],
             'exams' => [
-                'label' => 'Activities Hub',
+                'label' => 'Activity Hub',
                 'path' => '/activities',
                 'description' => 'Unified hub for exams, assignments, and courses — the student activity timeline.',
             ],

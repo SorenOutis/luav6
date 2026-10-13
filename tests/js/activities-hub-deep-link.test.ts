@@ -140,7 +140,7 @@ afterEach(() => {
     window.history.replaceState({}, '', '/activities');
 });
 
-describe('activities hub — calendar deep link', () => {
+describe('activity hub — calendar deep link', () => {
     it('points calendar exam events at the hub instead of the exam paper', () => {
         const service = readFileSync(
             join(process.cwd(), 'app/Services/CalendarEventService.php'),

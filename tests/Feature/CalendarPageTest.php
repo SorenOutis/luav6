@@ -92,7 +92,7 @@ it('shows section exams and assignments as calendar events', function () {
         ->not->toContain('Other Section Task');
 });
 
-it('deep-links every exam event to its Activities Hub card', function () {
+it('deep-links every exam event to its Activity Hub card', function () {
     $quiz = Exam::factory()->published()->forSection($this->mySection)->create([
         'title' => 'Quiz One',
         'exam_date' => now()->addDays(2),
