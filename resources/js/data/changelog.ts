@@ -55,13 +55,13 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
     },
     {
         version: 'v6.1.0',
-        title: 'Activities Hub, Streaks & Soundtrack',
+        title: 'Activity Hub, Streaks & Soundtrack',
         date: 'September 2026',
         summary:
             'Consolidated activities workspace with streak freeze protections, submission tracking, and ambient study music.',
         features: [
             {
-                title: 'Unified Activities Hub',
+                title: 'Unified Activity Hub',
                 description:
                     'View assignments, prelims, midterms, and finals in a unified gradebook stream with real-time submission tracking.',
                 tag: 'New',

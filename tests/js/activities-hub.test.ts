@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-describe('activities hub', () => {
+describe('activity hub', () => {
     const page = readFileSync(
         join(process.cwd(), 'resources/js/pages/Activities/Index.vue'),
         'utf8',
@@ -78,10 +78,7 @@ describe('activities hub', () => {
         expect(page).toContain('@update:open="showScoresDrawer = $event"');
     });
 
-    it('hides the overview stat cards on mobile', () => {
-        // Mobile keeps the Record button in the header; the four-tile
-        // overview strip is desktop-only now.
-        expect(page).toContain('activities-mobile-stats hidden');
-        expect(page).toContain('sm:grid sm:grid-cols-4');
+    it('omits the overview stat cards from the activity hub', () => {
+        expect(page).not.toContain('activities-mobile-stats');
     });
 });

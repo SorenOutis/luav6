@@ -11,7 +11,7 @@ use App\Models\User;
 
 use function Pest\Laravel\actingAs;
 
-it('passes visible exams to the activities hub card props', function () {
+it('passes visible exams to the activity hub card props', function () {
     $user = User::factory()->create();
     $exam = Exam::factory()->published()->create([
         'title' => 'Visible activity',
