@@ -159,6 +159,22 @@ describe('OnboardingTour', () => {
         vi.useRealTimers();
     });
 
+    it('survives the auto-start timer firing after the environment is gone', async () => {
+        const wrapper = mountTour({ startDelay: 120 });
+
+        vi.stubGlobal('window', undefined);
+
+        await flushTimers(200);
+
+        expect(
+            document.querySelector('[data-testid="onboarding-tour"]'),
+        ).toBeNull();
+
+        vi.unstubAllGlobals();
+        wrapper.unmount();
+        vi.useRealTimers();
+    });
+
     it('does not start when the tour was already completed on this device', async () => {
         setTourStatus('test-tour', 'done', 'user-123');
 
