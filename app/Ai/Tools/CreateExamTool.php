@@ -170,8 +170,15 @@ class CreateExamTool extends PendingWriteTool implements Tool
         }
         if (is_array($rawBlockedStudents) && ! empty($rawBlockedStudents)) {
             $names = collect($rawBlockedStudents)->map(fn ($n) => trim((string) $n))->filter()->values();
-            if ($names->isNotEmpty()) {
+            $workspaceId = $this->workspaceId();
+            if ($names->isNotEmpty() && $workspaceId) {
                 $matchedUserIds = User::query()
+                    ->where(function ($membership) use ($workspaceId) {
+                        $membership->whereHas('workspaces', fn ($q) => $q->whereKey($workspaceId))
+                            ->orWhereHas('sections', fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                            ->orWhere('current_workspace_id', $workspaceId);
+                    })
+                    ->where('is_admin', false)
                     ->where(function ($query) use ($names) {
                         foreach ($names as $name) {
                             $query->orWhere('name', 'like', "%{$name}%");

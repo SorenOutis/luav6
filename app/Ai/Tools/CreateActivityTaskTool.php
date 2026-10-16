@@ -89,6 +89,10 @@ class CreateActivityTaskTool extends PendingWriteTool implements Tool
             ? (float) $request['max_points']
             : 100.0;
 
+        if ($maxPoints <= 0) {
+            return 'Error: max_points must be greater than 0.';
+        }
+
         $term = trim((string) ($request['term'] ?? ''));
         if ($term === '') {
             $titleLower = strtolower($title);

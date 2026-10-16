@@ -186,6 +186,9 @@ test('PendingAiActionService stages action with policy checks attached', functio
     expect($presented)->toHaveKey('policy');
     expect($presented)->toHaveKey('policyChecks');
     expect($presented['policy'])->toBe(AiPolicyEngineService::POLICY_SUPER_ADMIN);
+    expect($presented)->toHaveKey('impact');
+    expect($presented['impact']['level'])->toBe('standard');
+    expect($presented['impact']['label'])->toBe('Standard change');
 });
 
 test('Chat API blocks prompt injection before hitting LLM', function () {

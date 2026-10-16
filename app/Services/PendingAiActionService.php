@@ -47,11 +47,20 @@ class PendingAiActionService
         'update_assignment',
         'delete_assignment',
         'create_learning_material',
+        'update_learning_material',
         'delete_learning_material',
         'create_activity_task',
+        'update_activity_task',
         'delete_activity_task',
         'record_activity_task_score',
         'award_student_xp',
+        'manage_exam_blocks',
+        'send_notification',
+        'reply_support_ticket',
+        'season_admin',
+        'manage_badges_rewards',
+        'manage_lesson',
+        'manage_lesson_quiz',
         'generate_exam_questions',
         'manage_maintenance',
         'export_report',
@@ -359,6 +368,7 @@ class PendingAiActionService
         return [
             'id' => $action->public_id,
             'actionType' => $action->action_type,
+            'impact' => $this->impactFor($action->action_type),
             'title' => $action->title,
             'summary' => $action->summary,
             'status' => $action->status,
@@ -380,6 +390,36 @@ class PendingAiActionService
             'nonce' => $action->status === PendingAiAction::STATUS_PENDING
                 ? $this->nonce($action)
                 : null,
+        ];
+    }
+
+    /**
+     * Plain-language impact metadata shown on the approval card.
+     *
+     * @return array{level: string, label: string, note: string}
+     */
+    private function impactFor(string $type): array
+    {
+        if (str_starts_with($type, 'delete_')) {
+            return [
+                'level' => 'high',
+                'label' => 'High impact',
+                'note' => 'This permanently deletes data and cannot be undone.',
+            ];
+        }
+
+        if ($type === 'manage_maintenance') {
+            return [
+                'level' => 'high',
+                'label' => 'Platform-wide',
+                'note' => 'This change affects every user in the workspace.',
+            ];
+        }
+
+        return [
+            'level' => 'standard',
+            'label' => 'Standard change',
+            'note' => 'Nothing is saved until you approve.',
         ];
     }
 

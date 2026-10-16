@@ -8,6 +8,7 @@
         adminUser: {{ Js::from($adminUser) }},
         initialSessions: {{ Js::from($initialSessions) }},
         initialActiveSession: {{ Js::from($initialActiveSession) }},
+        workspaceStats: {{ Js::from($workspaceStats) }},
     })"
     class="relative flex h-dvh w-full overflow-hidden bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100"
 >
@@ -92,173 +93,25 @@
                     {{-- Group: Today --}}
                     <div x-show="groupedSessions.today.length > 0">
                         <p class="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Today</p>
-                        <div class="space-y-0.5">
-                            <template x-for="item in groupedSessions.today" :key="item.id">
-                                <div
-                                    @click="selectSession(item)" @keydown.enter.prevent="selectSession(item)" @keydown.space.prevent="selectSession(item)" role="button" tabindex="0"
-                                    :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
-                                    class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
-                                >
-                                    <div class="flex min-w-0 items-center gap-2">
-                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                        </svg>
-                                        <span class="truncate" x-text="item.title"></span>
-                                    </div>
-                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
-                                        <button
-                                            type="button"
-                                            @click.stop="copyConversationLink(item)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
-                                            title="Copy link" aria-label="Copy link"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click.stop="confirmDeleteSession(item.id)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
-                                            title="Delete chat" aria-label="Delete chat"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
+                        @include('filament.pages.ai-chat-session-list', ['source' => 'groupedSessions.today'])
                     </div>
 
                     {{-- Group: Yesterday --}}
                     <div x-show="groupedSessions.yesterday.length > 0">
                         <p class="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Yesterday</p>
-                        <div class="space-y-0.5">
-                            <template x-for="item in groupedSessions.yesterday" :key="item.id">
-                                <div
-                                    @click="selectSession(item)" @keydown.enter.prevent="selectSession(item)" @keydown.space.prevent="selectSession(item)" role="button" tabindex="0"
-                                    :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
-                                    class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
-                                >
-                                    <div class="flex min-w-0 items-center gap-2">
-                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                        </svg>
-                                        <span class="truncate" x-text="item.title"></span>
-                                    </div>
-                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
-                                        <button
-                                            type="button"
-                                            @click.stop="copyConversationLink(item)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
-                                            title="Copy link" aria-label="Copy link"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click.stop="confirmDeleteSession(item.id)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
-                                            title="Delete chat" aria-label="Delete chat"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
+                        @include('filament.pages.ai-chat-session-list', ['source' => 'groupedSessions.yesterday'])
                     </div>
 
                     {{-- Group: Previous 7 Days --}}
                     <div x-show="groupedSessions.previousWeek.length > 0">
                         <p class="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Previous 7 Days</p>
-                        <div class="space-y-0.5">
-                            <template x-for="item in groupedSessions.previousWeek" :key="item.id">
-                                <div
-                                    @click="selectSession(item)" @keydown.enter.prevent="selectSession(item)" @keydown.space.prevent="selectSession(item)" role="button" tabindex="0"
-                                    :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
-                                    class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
-                                >
-                                    <div class="flex min-w-0 items-center gap-2">
-                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                        </svg>
-                                        <span class="truncate" x-text="item.title"></span>
-                                    </div>
-                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
-                                        <button
-                                            type="button"
-                                            @click.stop="copyConversationLink(item)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
-                                            title="Copy link" aria-label="Copy link"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click.stop="confirmDeleteSession(item.id)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
-                                            title="Delete chat" aria-label="Delete chat"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
+                        @include('filament.pages.ai-chat-session-list', ['source' => 'groupedSessions.previousWeek'])
                     </div>
 
                     {{-- Group: Older --}}
                     <div x-show="groupedSessions.older.length > 0">
                         <p class="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Older</p>
-                        <div class="space-y-0.5">
-                            <template x-for="item in groupedSessions.older" :key="item.id">
-                                <div
-                                    @click="selectSession(item)" @keydown.enter.prevent="selectSession(item)" @keydown.space.prevent="selectSession(item)" role="button" tabindex="0"
-                                    :class="activeSessionId === item.id ? 'bg-zinc-200/70 text-zinc-900 font-medium dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'"
-                                    class="group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 transition"
-                                >
-                                    <div class="flex min-w-0 items-center gap-2">
-                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                        </svg>
-                                        <span class="truncate" x-text="item.title"></span>
-                                    </div>
-                                    <div class="flex shrink-0 items-center gap-0.5 opacity-100 transition md:gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100">
-                                        <button
-                                            type="button"
-                                            @click.stop="copyConversationLink(item)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-zinc-700 md:p-0.5 md:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200"
-                                            title="Copy link" aria-label="Copy link"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click.stop="confirmDeleteSession(item.id)"
-                                            class="rounded p-1.5 text-zinc-500 hover:text-red-500 md:p-0.5 md:text-zinc-400"
-                                            title="Delete chat" aria-label="Delete chat"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
+                        @include('filament.pages.ai-chat-session-list', ['source' => 'groupedSessions.older'])
                     </div>
                 </div>
 
@@ -543,11 +396,11 @@
                                         @keydown="handleKeyDown($event)"
                                         @input="autoGrowTextarea($event)"
                                         rows="2"
-                                        placeholder="How can Echo help manage your workspace today?"
+                                        placeholder="Ask Echo to manage exams, record grades, evaluate submissions, or post announcements..."
                                         class="min-h-[64px] w-full resize-none border-0 bg-transparent p-0 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                     ></textarea>
 
-                                    {{-- Listening Feedback Banner (Free Browser Dictation - 0 Tokens) --}}
+                                    {{-- Listening feedback banner (free browser dictation) --}}
                                     <div x-show="isListening" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
                                         <div class="flex items-center gap-2">
                                             <span class="relative flex h-2 w-2">
@@ -555,7 +408,7 @@
                                                 <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                                             </span>
                                             <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
-                                            <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(0 tokens)</span>
+                                            <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">Runs in your browser — free</span>
                                         </div>
                                         <button
                                             type="button"
@@ -586,15 +439,21 @@
                                             <span class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500" x-text="modelName"></span>
                                         </div>
 
+                                        <div class="hidden items-center gap-1.5 text-[11px] text-zinc-400 sm:flex dark:text-zinc-500">
+                                            <span>Press</span>
+                                            <kbd class="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-400">Enter</kbd>
+                                            <span>to send</span>
+                                        </div>
+
                                         <div class="flex items-center gap-1.5">
-                                            {{-- Free Microphone Dictation Button (0 Tokens) --}}
+                                            {{-- Voice dictation button (free, runs in your browser) --}}
                                             <button
                                                 type="button"
                                                 @click.stop.prevent="toggleVoice()"
                                                 :disabled="isStreaming"
                                                 class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
                                                 :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
-                                                :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'" :aria-label="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'"
+                                                :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (free, uses your browser microphone)'" :aria-label="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (free, uses your browser microphone)'"
                                             >
                                                 <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
                                                 <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -621,21 +480,84 @@
                                 </p>
                             </form>
 
-                            {{-- Clean Prompt Starters (4 chips in 2x2 grid) --}}
+                            {{-- Prompt starters: one click fills the message box (never sends) --}}
+                            @php
+                                $promptStarters = [
+                                    [
+                                        'title' => 'Draft a Quiz',
+                                        'category' => 'Exams',
+                                        'icon' => 'heroicon-o-document-text',
+                                        'prompt' => 'Create a 20-minute draft quiz for Section 10-A with 5 multiple-choice questions.',
+                                    ],
+                                    [
+                                        'title' => 'Review Submissions',
+                                        'category' => 'Grading',
+                                        'icon' => 'heroicon-o-clipboard-document-check',
+                                        'prompt' => 'List all pending student submissions and suggest scores based on the answer key.',
+                                    ],
+                                    [
+                                        'title' => 'Score Insights',
+                                        'category' => 'Analytics',
+                                        'icon' => 'heroicon-o-chart-bar',
+                                        'prompt' => 'Summarize recent student grades and flag topics where students need extra support.',
+                                    ],
+                                    [
+                                        'title' => 'Exam Notice',
+                                        'category' => 'Announcements',
+                                        'icon' => 'heroicon-o-megaphone',
+                                        'prompt' => 'Draft an encouraging announcement reminding students about exam dates and rules.',
+                                    ],
+                                ];
+                            @endphp
                             <div class="welcome-suggestions mt-6 w-full max-w-xl">
-                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                    <template x-for="starter in filteredPromptStarters" :key="starter.title">
+                                <p class="mb-2 text-left text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Try one of these</p>
+                                <div class="space-y-1.5">
+                                    @foreach ($promptStarters as $starter)
                                         <button
                                             type="button"
-                                            @click="fillAndSend(starter.prompt)"
-                                            class="flex flex-col items-start rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-2.5 text-left transition hover:border-zinc-300 hover:bg-zinc-100/70 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/60"
+                                            @click="prefillPrompt({{ Js::from($starter['prompt']) }})"
+                                            class="group flex w-full items-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-2.5 text-left transition hover:border-amber-500/40 hover:bg-amber-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-amber-500/30 dark:hover:bg-amber-500/5"
+                                            aria-label="Use this prompt: {{ $starter['title'] }}"
                                         >
-                                            <span class="text-xs font-medium text-zinc-800 dark:text-zinc-200" x-text="starter.title"></span>
-                                            <span class="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1" x-text="starter.prompt"></span>
+                                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400">
+                                                <x-dynamic-component :component="$starter['icon']" class="h-4 w-4" />
+                                            </span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-xs font-medium text-zinc-800 dark:text-zinc-200">{{ $starter['title'] }}</span>
+                                                    <span class="rounded-full border border-zinc-200 px-1.5 py-px text-[10px] text-zinc-500 dark:border-zinc-700 dark:text-zinc-500">{{ $starter['category'] }}</span>
+                                                </span>
+                                                <span class="mt-0.5 block truncate text-[11px] text-zinc-500 dark:text-zinc-400">{{ $starter['prompt'] }}</span>
+                                            </span>
+                                            <svg class="h-3.5 w-3.5 shrink-0 text-zinc-300 transition group-hover:translate-x-0.5 group-hover:text-amber-500 dark:text-zinc-600 dark:group-hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                            </svg>
                                         </button>
-                                    </template>
+                                    @endforeach
                                 </div>
                             </div>
+
+                            {{-- Recent chats quick access (mobile only; desktop has the sidebar) --}}
+                            @if (count($initialSessions) > 0)
+                                <div class="mt-5 w-full max-w-xl text-left md:hidden">
+                                    <p class="mb-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Continue where you left off</p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach (array_slice($initialSessions, 0, 2) as $session)
+                                            <button
+                                                type="button"
+                                                @click="selectSession({{ Js::from(['id' => $session['id'], 'uuid' => $session['uuid'], 'title' => $session['title']]) }})"
+                                                class="flex max-w-full items-center gap-2 rounded-full border border-zinc-200/80 bg-zinc-50/60 px-3 py-1.5 transition hover:border-zinc-300 hover:bg-zinc-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/60"
+                                            >
+                                                <svg class="h-3 w-3 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                                </svg>
+                                                <span class="truncate text-[11px] font-medium text-zinc-600 dark:text-zinc-300">{{ $session['title'] }}</span>
+                                                <span class="shrink-0 text-[10px] text-zinc-400 dark:text-zinc-500">{{ $session['updated_at_human'] }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </template>
@@ -758,7 +680,7 @@
                                             {{-- Console Header --}}
                                             <div class="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3 sm:px-5">
                                                 <div class="flex min-w-0 items-center gap-2.5">
-                                                    <h3 class="truncate text-xs font-semibold tracking-tight text-white sm:text-sm" x-text="msg.activity?.title || 'Processing agent activity...'"></h3>
+                                                    <h3 class="truncate text-xs font-semibold tracking-tight text-white sm:text-sm" x-text="msg.activity?.title || 'Working on your request...'"></h3>
                                                     {{-- Status Pill --}}
                                                     <template x-if="msg.activity?.status === 'running'">
                                                         <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-300 ring-1 ring-blue-500/30 ring-inset">
@@ -805,8 +727,7 @@
                                                             <svg class="h-4 w-4 shrink-0 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 2">
                                                                 <circle cx="12" cy="12" r="9" />
                                                             </svg>
-                                                            <span class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-500">agent</span>
-                                                            <span class="truncate">Finalize and prepare the workspace changes</span>
+                                                            <span class="truncate">Preparing the workspace changes for review</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -814,12 +735,12 @@
 
                                             {{-- Console Footer --}}
                                             <div class="flex items-center justify-between border-t border-zinc-800/80 bg-zinc-950/80 px-4 py-2.5 sm:px-5">
-                                                <span class="font-mono text-[11px] text-zinc-500" x-text="'Executing real-time pipeline ' + (msg.elapsedSeconds || 1) + 's'"></span>
-                                                <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-400">
+                                                <span class="font-mono text-[11px] text-zinc-500" x-text="'Working — ' + (msg.elapsedSeconds || 1) + 's'"></span>
+                                                <span class="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
                                                     <svg class="h-3 w-3 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
                                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                                     </svg>
-                                                    <span>Echo Guard Active</span>
+                                                    <span>Safety checks active</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -919,13 +840,11 @@
                                                                     <div class="min-w-0">
                                                                         <div class="flex flex-wrap items-center gap-2">
                                                                             <span class="font-medium text-zinc-200">Prepared changes</span>
-                                                                            <span class="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px] text-amber-300">Check</span>
-                                                                            <span class="font-mono text-[11px] text-zinc-400" x-text="action.actionType"></span>
+                                                                            <span class="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px] text-amber-300">Needs review</span>
                                                                         </div>
                                                                         <p class="mt-1 text-[11px] leading-relaxed text-zinc-400" x-text="action.summary"></p>
                                                                     </div>
                                                                 </div>
-                                                                <span class="shrink-0 font-mono text-[11px] text-zinc-500">0:05</span>
                                                             </div>
                                                         </div>
                                                     </template>
@@ -934,34 +853,37 @@
                                                     <div x-show="action.status === 'pending'" class="rounded-xl border border-zinc-700/80 bg-zinc-900/90 p-3.5 shadow-xs">
                                                         <div class="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
                                                             <div class="flex min-w-0 items-center gap-2">
-                                                                <svg class="h-4 w-4 shrink-0 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <svg class="h-4 w-4 shrink-0" :class="action.impact?.level === 'high' ? 'text-red-400' : 'text-zinc-400'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                                                 </svg>
-                                                                <span class="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">echo</span>
                                                                 <span class="text-xs font-semibold text-white sm:text-sm">Needs your approval</span>
-                                                                <span class="font-mono text-xs text-zinc-400" x-text="action.actionType"></span>
                                                             </div>
-                                                            <span class="shrink-0 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400">
-                                                                High impact
-                                                            </span>
+                                                            <span
+                                                                x-show="action.impact?.level === 'high'"
+                                                                x-cloak
+                                                                class="shrink-0 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
+                                                                x-text="action.impact?.label"
+                                                            ></span>
                                                         </div>
 
                                                         <p class="mt-2 text-xs leading-relaxed text-zinc-300">
-                                                            Echo prepared this write operation. Review the proposed changes below before committing to the database.
+                                                            Echo prepared this change for your review. Nothing is saved to the workspace until you approve.
                                                         </p>
+                                                        <p
+                                                            x-show="action.impact?.level === 'high'"
+                                                            x-cloak
+                                                            class="mt-1 text-[11px] font-medium text-red-400"
+                                                            x-text="action.impact?.note"
+                                                        ></p>
 
                                                         {{-- Verified Policy Checks Badge & List --}}
                                                         <template x-if="action.policy">
                                                             <div class="mt-2.5 rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-2 text-xs">
-                                                                <div class="flex items-center justify-between">
-                                                                    <div class="flex items-center gap-1.5 font-medium text-emerald-400">
-                                                                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                                                        </svg>
-                                                                        <span>Policy Verified:</span>
-                                                                        <code class="rounded bg-emerald-900/40 px-1 py-0.5 text-[10px] text-emerald-300" x-text="action.policy"></code>
-                                                                    </div>
-                                                                    <span class="text-[10px] text-emerald-400/80">Deterministic Guard Passed</span>
+                                                                <div class="flex items-center gap-1.5 font-medium text-emerald-400">
+                                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                                    </svg>
+                                                                    <span>Safety checks passed</span>
                                                                 </div>
                                                                 <template x-if="action.policyChecks && action.policyChecks.length > 0">
                                                                     <div class="mt-2 space-y-1.5 ps-5 text-[11px] text-zinc-400">
@@ -1030,7 +952,7 @@
                                                         {{-- Action Buttons --}}
                                                         <div class="mt-3 flex items-center justify-between border-t border-zinc-800 pt-2.5">
                                                             <div class="flex items-center gap-2">
-                                                                <span class="text-[11px] text-zinc-500">Security check active — expires after 15 min</span>
+                                                                <span class="text-[11px] text-zinc-500" x-text="expiresInLabel(action) || 'Approval window closed'"></span>
                                                                 <template x-if="!action.nonce && action.status === 'pending'">
                                                                     <span class="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
                                                                         Window expired
@@ -1072,8 +994,7 @@
                                                                 </svg>
                                                                 <div class="min-w-0">
                                                                     <div class="flex flex-wrap items-center gap-2">
-                                                                        <span class="font-medium text-emerald-300">Committed action to database</span>
-                                                                        <span class="font-mono text-[11px] text-zinc-400" x-text="action.actionType"></span>
+                                                                        <span class="font-medium text-emerald-300">Change saved to the workspace</span>
                                                                     </div>
                                                                     <div class="mt-1 flex items-center gap-1.5 font-mono text-xs text-emerald-400">
                                                                         <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -1111,10 +1032,9 @@
                                                             </svg>
                                                             <div class="min-w-0">
                                                                 <span class="font-medium text-red-300">Action rejected by administrator</span>
-                                                                <p class="mt-0.5 text-[11px] text-zinc-400">Execution was cancelled and changes were discarded.</p>
+                                                                <p class="mt-0.5 text-[11px] text-zinc-400">The change was discarded and nothing was saved.</p>
                                                             </div>
                                                         </div>
-                                                        <span class="shrink-0 font-mono text-[11px] text-zinc-500">0:00</span>
                                                     </div>
 
                                                     {{-- Step 3 Alternative: Expired --}}
@@ -1126,10 +1046,9 @@
                                                             </svg>
                                                             <div class="min-w-0">
                                                                 <span class="font-medium text-amber-300">Approval window expired</span>
-                                                                <p class="mt-0.5 text-[11px] text-zinc-400">The 15-minute verification window lapsed before approval. Ask Echo to prepare this action again.</p>
+                                                                <p class="mt-0.5 text-[11px] text-zinc-400">The approval window lapsed before this was reviewed. Ask Echo to prepare this action again.</p>
                                                             </div>
                                                         </div>
-                                                        <span class="shrink-0 font-mono text-[11px] text-zinc-500">15:00</span>
                                                     </div>
 
                                                     {{-- Step 3 Alternative: Failed --}}
@@ -1154,9 +1073,7 @@
                                                                 <svg class="h-4 w-4 shrink-0 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 2">
                                                                     <circle cx="12" cy="12" r="9" />
                                                                 </svg>
-                                                                <span class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-500">db</span>
-                                                                <span class="truncate">Commit write operation to workspace database</span>
-                                                                <span class="font-mono text-[11px] text-zinc-600" x-text="action.actionType"></span>
+                                                                <span class="truncate">Saving the approved change to the workspace</span>
                                                             </div>
                                                         </div>
 
@@ -1165,8 +1082,7 @@
                                                                 <svg class="h-4 w-4 shrink-0 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 2">
                                                                     <circle cx="12" cy="12" r="9" />
                                                                 </svg>
-                                                                <span class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-500">audit</span>
-                                                                <span class="truncate">Log immutable audit event & sync workspace status</span>
+                                                                <span class="truncate">Recording this in the activity log</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1175,18 +1091,13 @@
                                                 {{-- Console Footer --}}
                                                 <div class="flex items-center justify-between border-t border-zinc-800/80 bg-zinc-950/80 px-4 py-2.5 sm:px-5">
                                                     <div class="flex items-center gap-2">
-                                                        <span class="font-mono text-[11px] text-zinc-500" x-text="(action.status === 'pending' ? 'Awaiting your approval' : (action.status === 'rejected' ? 'Stopped before any changes' : 'Completed'))"></span>
-                                                        <template x-if="action.policy">
-                                                            <span class="inline-flex items-center gap-1 rounded bg-emerald-950/40 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400 ring-1 ring-emerald-500/30">
-                                                                <span x-text="action.policy"></span>
-                                                            </span>
-                                                        </template>
+                                                        <span class="text-[11px] text-zinc-500" x-text="(action.status === 'pending' ? 'Awaiting your approval' : (action.status === 'rejected' ? 'Stopped before any changes' : 'Completed'))"></span>
                                                     </div>
-                                                    <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-400">
+                                                    <span class="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
                                                         <svg class="h-3 w-3 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span>Echo Policy Verified</span>
+                                                        <span>Safety checks passed</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -1271,7 +1182,7 @@
                             class="w-full resize-none border-0 bg-transparent px-1 py-1 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus:ring-0 sm:text-sm dark:text-zinc-100 dark:placeholder:text-zinc-500"
                         ></textarea>
 
-                        {{-- Listening Feedback Banner (Free Browser Dictation - 0 Tokens) --}}
+                        {{-- Listening feedback banner (free browser dictation) --}}
                         <div x-show="isListening" x-cloak class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-500 dark:text-red-400">
                             <div class="flex items-center gap-2">
                                 <span class="relative flex h-2 w-2">
@@ -1279,7 +1190,7 @@
                                     <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                                 </span>
                                 <span class="font-medium animate-pulse">Listening... speak into your microphone</span>
-                                <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">(0 tokens)</span>
+                                <span class="hidden sm:inline text-[11px] text-zinc-400 dark:text-zinc-500">Runs in your browser — free</span>
                             </div>
                             <button
                                 type="button"
@@ -1313,14 +1224,14 @@
                             </div>
 
                             <div class="flex items-center gap-1.5">
-                                {{-- Free Microphone Dictation Button (0 Tokens) --}}
+                                {{-- Voice dictation button (free, runs in your browser) --}}
                                 <button
                                     type="button"
                                     @click.stop.prevent="toggleVoice()"
                                     :disabled="isStreaming"
                                     class="relative flex h-7 w-7 items-center justify-center rounded-lg transition"
                                     :class="isListening ? 'bg-red-500 text-white shadow-md shadow-red-500/40 ring-2 ring-red-400/50' : 'border border-zinc-200/90 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-100'"
-                                    :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'" :aria-label="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (Click to speak - 0 tokens)'"
+                                    :title="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (free, uses your browser microphone)'" :aria-label="isListening ? 'Stop listening (Microphone active)' : 'Voice dictation (free, uses your browser microphone)'"
                                 >
                                     <span x-show="isListening" x-cloak class="absolute -inset-0.5 animate-ping rounded-lg bg-red-400 opacity-75"></span>
                                     <svg class="relative h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

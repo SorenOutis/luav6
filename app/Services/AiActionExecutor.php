@@ -9,17 +9,24 @@ use App\Models\ActivityTaskScore;
 use App\Models\AiQuestionDraft;
 use App\Models\Announcement;
 use App\Models\Assignment;
+use App\Models\Badge;
 use App\Models\Course;
+use App\Models\CourseModule;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Grade;
 use App\Models\LearningMaterial;
+use App\Models\Lesson;
+use App\Models\LessonQuiz;
 use App\Models\PendingAiAction;
+use App\Models\Reward;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\Setting;
+use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\StudentActivityNotification;
 use App\Support\GamificationSyncContext;
 use App\Support\PlatformMaintenance;
 use Carbon\Carbon;
@@ -66,11 +73,20 @@ class AiActionExecutor
             'update_assignment' => $this->prepareUpdateAssignment($action),
             'delete_assignment' => $this->prepareDeleteAssignment($action),
             'create_learning_material' => $this->prepareCreateLearningMaterial($action),
+            'update_learning_material' => $this->prepareUpdateLearningMaterial($action),
             'delete_learning_material' => $this->prepareDeleteLearningMaterial($action),
             'create_activity_task' => $this->prepareCreateActivityTask($action),
+            'update_activity_task' => $this->prepareUpdateActivityTask($action),
             'delete_activity_task' => $this->prepareDeleteActivityTask($action),
             'record_activity_task_score' => $this->prepareRecordActivityTaskScore($action),
             'award_student_xp' => $this->prepareAwardStudentXp($action),
+            'manage_exam_blocks' => $this->prepareManageExamBlocks($action),
+            'send_notification' => $this->prepareSendNotification($action),
+            'reply_support_ticket' => $this->prepareReplySupportTicket($action),
+            'season_admin' => $this->prepareSeasonAdmin($action),
+            'manage_badges_rewards' => $this->prepareManageBadgesRewards($action),
+            'manage_lesson' => $this->prepareManageLesson($action),
+            'manage_lesson_quiz' => $this->prepareManageLessonQuiz($action),
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
             'manage_maintenance' => $this->prepareManageMaintenance($action),
             'export_report' => $this->prepareExportReport($action),
@@ -363,6 +379,15 @@ class AiActionExecutor
 
             /** @var Section $section */
             $section = $this->lockWorkspaceRecord(Section::class, (int) $payload['section_id'], $action, 'The selected section no longer exists in this workspace.');
+
+            $enrolled = $student->sections()
+                ->withoutGlobalScope('workspace')
+                ->where('sections.id', $section->id)
+                ->exists();
+
+            if (! $enrolled) {
+                throw new PendingAiActionException('The student is no longer enrolled in the selected section.');
+            }
 
             $grade = Grade::query()->create([
                 'workspace_id' => $action->workspace_id,
@@ -793,6 +818,7 @@ class AiActionExecutor
                 } elseif ($field === 'section_ids') {
                     $sectionIds = collect($value)->map(fn ($id) => (int) $id)->filter()->unique()->all();
                     $assignment->sections()->sync($sectionIds);
+                    app(AssignmentRosterService::class)->syncAssignment($assignment);
                     $changes[] = 'sections updated ('.count($sectionIds).' linked)';
                 }
             }
@@ -856,6 +882,39 @@ class AiActionExecutor
             }
 
             return "Learning material \"{$material->title}\" (ID {$material->id}) was created.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareUpdateLearningMaterial(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            /** @var LearningMaterial $material */
+            $material = $this->lockWorkspaceRecord(LearningMaterial::class, (int) $payload['material_id'], $action, 'The learning material no longer exists in this workspace.');
+            $this->assertUnchanged($material, $payload['expected_updated_at'] ?? null);
+
+            $changes = [];
+            foreach ($payload['changes'] as $field => $value) {
+                if ($field === 'title') {
+                    $material->title = (string) $value;
+                    $changes[] = "title → {$value}";
+                } elseif ($field === 'description') {
+                    $material->description = $value === null ? null : (string) $value;
+                    $changes[] = 'description updated';
+                } elseif ($field === 'status') {
+                    $material->status = (string) $value;
+                    $changes[] = "status → {$value}";
+                } elseif ($field === 'section_ids') {
+                    $sectionIds = collect($value)->map(fn ($id) => (int) $id)->filter()->unique()->all();
+                    $material->sections()->sync($sectionIds);
+                    $changes[] = 'target sections updated ('.count($sectionIds).' linked)';
+                }
+            }
+            $material->save();
+
+            return "Learning material \"{$material->title}\" (ID {$material->id}) updated: ".implode('; ', $changes).'.';
         };
     }
 
@@ -927,6 +986,44 @@ class AiActionExecutor
             }
 
             return $message;
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareUpdateActivityTask(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            /** @var ActivityTask $task */
+            $task = $this->lockWorkspaceRecord(ActivityTask::class, (int) $payload['task_id'], $action, 'The activity task no longer exists in this workspace.');
+            $this->assertUnchanged($task, $payload['expected_updated_at'] ?? null);
+
+            $changes = [];
+            foreach ($payload['changes'] as $field => $value) {
+                if ($field === 'title') {
+                    $task->title = (string) $value;
+                    $changes[] = "title → {$value}";
+                } elseif ($field === 'task_type') {
+                    $task->task_type = (string) $value;
+                    $changes[] = "task_type → {$value}";
+                } elseif ($field === 'term') {
+                    $task->term = (string) $value;
+                    $changes[] = "term → {$value}";
+                } elseif ($field === 'max_points') {
+                    $task->max_points = (float) $value;
+                    $changes[] = "max_points → {$value}";
+                } elseif ($field === 'due_date') {
+                    $task->due_date = $value === null ? null : Carbon::parse($value);
+                    $changes[] = 'due_date → '.($value === null ? 'None' : Carbon::parse($value)->format('M d, Y'));
+                } elseif ($field === 'description') {
+                    $task->description = $value === null ? null : (string) $value;
+                    $changes[] = 'description updated';
+                }
+            }
+            $task->save();
+
+            return "Activity task \"{$task->title}\" (ID {$task->id}) updated: ".implode('; ', $changes).'.';
         };
     }
 
@@ -1139,6 +1236,278 @@ class AiActionExecutor
             $status = ! empty($payload['maintenance_enabled']) ? 'enabled' : 'disabled';
 
             return "Platform maintenance mode has been successfully {$status}.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageExamBlocks(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            /** @var Exam $exam */
+            $exam = $this->lockWorkspaceRecord(Exam::class, (int) $payload['exam_id'], $action, 'The exam no longer exists in this workspace.');
+            $this->assertUnchanged($exam, $payload['expected_updated_at'] ?? null);
+
+            $ids = collect($payload['blocked_user_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn (int $id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            app(ExamBlockService::class)->sync($exam, $ids);
+
+            return "Exam \"{$exam->title}\" (ID {$exam->id}) blocked-student list updated: ".count($ids).' student(s) blocked.';
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareSendNotification(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            $ids = collect($payload['student_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $title = (string) $payload['title'];
+            $message = (string) $payload['message'];
+            $href = (string) ($payload['href'] ?? '/dashboard');
+            $meta = 'Sent by '.($action->user?->name ?? 'an administrator');
+
+            $sent = 0;
+            foreach ($ids as $id) {
+                $student = $this->lockWorkspaceUser($id, $action, 'A student no longer belongs to this workspace.');
+
+                $student->notify(new StudentActivityNotification([
+                    'type' => 'announcement',
+                    'icon' => 'megaphone',
+                    'title' => $title,
+                    'message' => $message,
+                    'meta' => $meta,
+                    'href' => $href,
+                ]));
+
+                $sent++;
+            }
+
+            return "Notification \"{$title}\" sent to {$sent} student(s).";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareReplySupportTicket(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            /** @var SupportTicket $ticket */
+            $ticket = $this->lockWorkspaceRecord(SupportTicket::class, (int) $payload['ticket_id'], $action, 'The support ticket no longer exists in this workspace.');
+            $this->assertUnchanged($ticket, $payload['expected_updated_at'] ?? null);
+
+            $admin = $action->user;
+            if (! $admin) {
+                throw new PendingAiActionException('The approving administrator no longer exists.');
+            }
+
+            app(SupportReplyService::class)->createAdminReply($ticket, $admin, (string) $payload['message']);
+
+            $statusNote = '';
+            $newStatus = $payload['new_status'] ?? null;
+            if ($newStatus) {
+                if (in_array($newStatus, [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED], true)) {
+                    $ticket->markResolved($admin, $newStatus);
+                } else {
+                    $ticket->update(['status' => $newStatus]);
+                }
+
+                $statusNote = ' Status set to '.(SupportTicket::STATUSES[$newStatus] ?? $newStatus).'.';
+            }
+
+            return "Replied to support ticket \"{$ticket->subject}\" (ID {$ticket->id}); the student was notified.{$statusNote}";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareSeasonAdmin(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            if (($payload['mode'] ?? '') === 'create') {
+                $attributes = $payload['attributes'] ?? [];
+
+                $season = Season::query()->create([
+                    'workspace_id' => $action->workspace_id,
+                    'admin_id' => $action->user_id,
+                    'name' => (string) $attributes['name'],
+                    'start_date' => Carbon::parse($attributes['start_date']),
+                    'end_date' => ! empty($attributes['end_date']) ? Carbon::parse($attributes['end_date']) : null,
+                    'is_active' => (bool) ($attributes['is_active'] ?? false),
+                    'show_countdown_on_welcome' => (bool) ($attributes['show_countdown_on_welcome'] ?? false),
+                ]);
+
+                return "Season \"{$season->name}\" (ID {$season->id}) created.".($season->is_active ? ' It is now the active season for this workspace.' : '');
+            }
+
+            /** @var Season $season */
+            $season = $this->lockWorkspaceRecord(Season::class, (int) $payload['season_id'], $action, 'The season no longer exists in this workspace.');
+            $this->assertUnchanged($season, $payload['expected_updated_at'] ?? null);
+
+            $changes = $payload['changes'] ?? [];
+
+            if (array_key_exists('name', $changes)) {
+                $season->name = (string) $changes['name'];
+            }
+            if (array_key_exists('start_date', $changes)) {
+                $season->start_date = Carbon::parse($changes['start_date']);
+            }
+            if (array_key_exists('end_date', $changes)) {
+                $season->end_date = $changes['end_date'] !== null ? Carbon::parse($changes['end_date']) : null;
+            }
+            if (array_key_exists('is_active', $changes)) {
+                $season->is_active = (bool) $changes['is_active'];
+            }
+            if (array_key_exists('show_countdown_on_welcome', $changes)) {
+                $season->show_countdown_on_welcome = (bool) $changes['show_countdown_on_welcome'];
+            }
+
+            if ($season->start_date && $season->end_date && $season->end_date->lt($season->start_date)) {
+                throw new PendingAiActionException('The season end date cannot be before its start date.');
+            }
+
+            $season->save();
+
+            $suffix = $season->is_active ? ' The season is now active; other seasons in this workspace were deactivated.' : '';
+
+            return "Season \"{$season->name}\" (ID {$season->id}) updated.{$suffix}";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageBadgesRewards(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            $isBadge = ($payload['entity'] ?? '') === 'badge';
+            $class = $isBadge ? Badge::class : Reward::class;
+            $label = $isBadge ? 'Badge' : 'Reward';
+            $operation = $payload['operation'] ?? '';
+
+            if ($operation === 'create') {
+                $record = $class::query()->create([
+                    'workspace_id' => $action->workspace_id,
+                    'admin_id' => $action->user_id,
+                    ...($payload['attributes'] ?? []),
+                ]);
+
+                return "{$label} \"{$record->name}\" (ID {$record->id}) created.";
+            }
+
+            /** @var Badge|Reward $record */
+            $record = $this->lockWorkspaceRecord($class, (int) $payload['record_id'], $action, "The {$label} no longer exists in this workspace.");
+            $this->assertUnchanged($record, $payload['expected_updated_at'] ?? null);
+
+            if ($operation === 'delete') {
+                $name = $record->name;
+                $id = $record->id;
+                $record->users()->detach();
+                $record->delete();
+
+                return "{$label} \"{$name}\" (ID {$id}) was deleted.";
+            }
+
+            $allowed = $isBadge
+                ? ['name', 'description', 'required_level', 'icon_url']
+                : ['name', 'description', 'points_cost'];
+
+            foreach (($payload['changes'] ?? []) as $field => $value) {
+                if (in_array($field, $allowed, true)) {
+                    $record->{$field} = $value;
+                }
+            }
+            $record->save();
+
+            return "{$label} \"{$record->name}\" (ID {$record->id}) updated.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageLesson(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            if (($payload['operation'] ?? '') === 'create') {
+                $attributes = $payload['attributes'] ?? [];
+
+                /** @var CourseModule $module */
+                $module = $this->lockWorkspaceRecord(CourseModule::class, (int) $attributes['course_module_id'], $action, 'The course module no longer exists in this workspace.');
+
+                $lesson = Lesson::query()->create([
+                    'workspace_id' => $action->workspace_id,
+                    'admin_id' => $action->user_id,
+                    'course_module_id' => $module->id,
+                    'title' => (string) $attributes['title'],
+                    'content' => $attributes['content'] ?? null,
+                    'video_url' => $attributes['video_url'] ?? null,
+                    'sort_order' => (int) ($attributes['sort_order'] ?? 0),
+                ]);
+
+                return "Lesson \"{$lesson->title}\" (ID {$lesson->id}) created in module \"{$module->title}\".";
+            }
+
+            /** @var Lesson $lesson */
+            $lesson = $this->lockWorkspaceRecord(Lesson::class, (int) $payload['lesson_id'], $action, 'The lesson no longer exists in this workspace.');
+            $this->assertUnchanged($lesson, $payload['expected_updated_at'] ?? null);
+
+            $changes = $payload['changes'] ?? [];
+
+            if (array_key_exists('course_module_id', $changes)) {
+                /** @var CourseModule $module */
+                $module = $this->lockWorkspaceRecord(CourseModule::class, (int) $changes['course_module_id'], $action, 'The target course module no longer exists in this workspace.');
+                $lesson->course_module_id = $module->id;
+            }
+
+            foreach (['title', 'content', 'video_url', 'sort_order'] as $field) {
+                if (array_key_exists($field, $changes)) {
+                    $lesson->{$field} = $changes[$field];
+                }
+            }
+
+            $lesson->save();
+
+            return "Lesson \"{$lesson->title}\" (ID {$lesson->id}) updated.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareManageLessonQuiz(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload;
+
+        return function () use ($action, $payload): string {
+            /** @var Lesson $lesson */
+            $lesson = $this->lockWorkspaceRecord(Lesson::class, (int) $payload['lesson_id'], $action, 'The lesson no longer exists in this workspace.');
+
+            $quiz = LessonQuiz::query()->where('lesson_id', $lesson->id)->first();
+
+            if ($quiz) {
+                $this->assertUnchanged($quiz, $payload['expected_updated_at'] ?? null);
+            }
+
+            $quiz ??= new LessonQuiz(['lesson_id' => $lesson->id]);
+            $quiz->questions = $payload['questions'];
+            $quiz->pass_score = (int) $payload['pass_score'];
+            $quiz->allowed_attempts = (int) $payload['allowed_attempts'];
+            $quiz->save();
+
+            return 'Quiz for lesson "'.$lesson->title."\" (ID {$lesson->id}) saved with ".count($payload['questions']).' question(s).';
         };
     }
 }

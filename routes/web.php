@@ -4,6 +4,7 @@ use App\Http\Controllers\AboutController;
 use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\Admin\ExamAnswerReportController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
+use App\Http\Controllers\Admin\GraphifyController;
 use App\Http\Controllers\AiReportDownloadController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\Api\BonusClaimController;
@@ -334,6 +335,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
     Route::get('admin/exams/{exam}/submissions', [ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
     Route::get('admin/exams/{exam}/answer-report', [ExamAnswerReportController::class, 'show'])->name('admin.exams.answer-report');
+    Route::get('admin/graphify/view/{type?}', [GraphifyController::class, 'show'])->name('admin.graphify.view');
 });
 
 require __DIR__.'/settings.php';

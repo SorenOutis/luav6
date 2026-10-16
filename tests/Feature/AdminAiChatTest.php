@@ -134,7 +134,8 @@ it('renders the welcome screen with greeting data and wolf mascot on initial loa
         ->assertSee('greetingLine')
         ->assertSee('timeGreeting')
         ->assertSee('greetingSubtext')
-        ->assertSee('filteredPromptStarters')
+        ->assertSee('workspaceStats')
+        ->assertSee('Try one of these')
         ->assertSee('Professor')
         ->assertSee('welcome-input')
         ->assertSee('welcome-suggestions');
@@ -189,7 +190,9 @@ it('stages and executes exam deletion with admin approval', function () {
     $nonce = pendingActionNonce($action);
     $this->postJson("/api/ai-actions/{$action->public_id}/approve", [
         'nonce' => $nonce,
-    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+    ])->assertOk()
+        ->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED)
+        ->assertJsonPath('data.impact.level', 'high');
 
     expect(Exam::query()->whereKey($exam->id)->exists())->toBeFalse();
 });
@@ -232,6 +235,7 @@ it('stages and records a new student grade with admin approval', function () {
     $workspaceId = app(WorkspaceContext::class)->id();
     $student = User::factory()->create(['name' => 'Crisostomo Ibarra']);
     $section = Section::factory()->create(['workspace_id' => $workspaceId, 'name' => 'History 101']);
+    $section->users()->attach($student->id);
 
     $tool = new RecordGradeTool;
     $result = (string) $tool->handle(new Request([
@@ -909,7 +913,7 @@ it('renders the real-time agent activity console and inline adjustment action ha
         ->assertSee('sendAdjustment(action)')
         ->assertSee('handleToolCallEvent')
         ->assertSee('handleToolResultEvent')
-        ->assertSee('Echo Guard Active')
+        ->assertSee('Safety checks active')
         ->assertSee('Needs you')
         ->assertSee('action._loading')
         ->assertSee('Approval window expired');
@@ -1235,6 +1239,7 @@ it('stages and creates an exam with auto-inferred term and blocked students upon
         'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
         'name' => 'BSCS 3-A',
     ]);
+    $section->users()->attach([$student1->id, $student2->id]);
 
     $tool = new CreateExamTool;
     // Test title with "Prelim" -> should auto-infer term 'Prelim'
