@@ -457,6 +457,9 @@ const maybeAutoStart = () => {
     if (startTimer) clearTimeout(startTimer);
     startTimer = setTimeout(() => {
         startTimer = null;
+        // The environment can be torn down before a long delay elapses
+        // (soft navigations, test teardown) — never touch listeners then.
+        if (typeof window === 'undefined') return;
         if (props.canStart) begin();
     }, props.startDelay);
 };
