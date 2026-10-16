@@ -58,6 +58,10 @@ class CreateLearningMaterialTool extends PendingWriteTool implements Tool
                 ->whereIn('id', $sectionIds)
                 ->where('workspace_id', $this->workspaceId())
                 ->get();
+
+            if ($sections->count() !== count($sectionIds)) {
+                return 'Error: one or more specified sections do not exist in this workspace.';
+            }
         }
 
         $sectionNames = $sections->isNotEmpty()
@@ -68,7 +72,7 @@ class CreateLearningMaterialTool extends PendingWriteTool implements Tool
             'title' => $title,
             'description' => $description,
             'status' => $status,
-            'section_ids' => $sectionIds,
+            'section_ids' => $sections->pluck('id')->values()->all(),
         ];
 
         $preview = [

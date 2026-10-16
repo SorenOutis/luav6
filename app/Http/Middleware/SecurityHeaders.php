@@ -16,8 +16,10 @@ class SecurityHeaders
         /** @var Response $response */
         $response = $next($request);
 
+        $isGraphify = $request->routeIs('admin.graphify.*');
+
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('X-Frame-Options', $isGraphify ? 'SAMEORIGIN' : 'DENY');
         $response->headers->set('Referrer-Policy', (string) config('security.referrer_policy'));
         $response->headers->set('Permissions-Policy', (string) config('security.permissions_policy'));
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
@@ -31,22 +33,24 @@ class SecurityHeaders
             $header = $mode === 'enforce'
                 ? 'Content-Security-Policy'
                 : 'Content-Security-Policy-Report-Only';
-            $response->headers->set($header, $this->contentSecurityPolicy());
+            $response->headers->set($header, $this->contentSecurityPolicy($request));
         }
 
         return $response;
     }
 
-    private function contentSecurityPolicy(): string
+    private function contentSecurityPolicy(Request $request): string
     {
         $nonce = Vite::cspNonce();
+        $isGraphify = $request->routeIs('admin.graphify.*');
+
         $directives = [
             "default-src 'self'",
             "base-uri 'self'",
             "object-src 'none'",
-            "frame-ancestors 'none'",
+            'frame-ancestors '.($isGraphify ? "'self'" : "'none'"),
             "form-action 'self'",
-            "script-src 'self' 'nonce-{$nonce}' https://js.pusher.com",
+            "script-src 'self' ".($isGraphify ? "'unsafe-inline' https://unpkg.com" : "'nonce-{$nonce}' https://js.pusher.com"),
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "font-src 'self' data: https://fonts.bunny.net",
             "img-src 'self' data: blob: https:",

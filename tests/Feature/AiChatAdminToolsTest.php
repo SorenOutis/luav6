@@ -8,16 +8,25 @@
  * only a human approval endpoint can execute a write.
  */
 
+use App\Ai\Agents\AdminAssistantAgent;
+use App\Ai\Tools\CreateActivityTaskTool;
 use App\Ai\Tools\CreateAssignmentTool;
 use App\Ai\Tools\CreateExamTool;
+use App\Ai\Tools\CreateLearningMaterialTool;
 use App\Ai\Tools\ExamsAdminTool;
 use App\Ai\Tools\GenerateExamQuestionsTool;
 use App\Ai\Tools\PostAnnouncementTool;
 use App\Ai\Tools\RecordActivityTaskScoreTool;
+use App\Ai\Tools\RecordGradeTool;
 use App\Ai\Tools\StudentsTool;
 use App\Ai\Tools\SubmissionsToGradeTool;
+use App\Ai\Tools\UpdateActivityTaskTool;
+use App\Ai\Tools\UpdateAssignmentTool;
 use App\Ai\Tools\UpdateExamTool;
+use App\Ai\Tools\UpdateLearningMaterialTool;
+use App\Ai\Tools\UserActivityTool;
 use App\Ai\Tools\WorkspaceOverviewTool;
+use App\Models\ActivityTask;
 use App\Models\AiActionAudit;
 use App\Models\Announcement;
 use App\Models\Assignment;
@@ -25,12 +34,15 @@ use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\LearningMaterial;
 use App\Models\PendingAiAction;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\AssignmentRosterService;
 use App\Services\PendingAiActionService;
 use App\Support\WorkspaceContext;
+use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Tools\Request;
 
 it('scopes the workspace overview to the admin\'s own workspace', function () {
@@ -65,6 +77,7 @@ it('refuses workspace tools for non-admins', function () {
 
     expect((new WorkspaceOverviewTool)->handle(new Request([])))->toContain('Only admins')
         ->and((new StudentsTool)->handle(new Request([])))->toContain('Only admins')
+        ->and((new UserActivityTool)->handle(new Request([])))->toContain('Only admins')
         ->and((new ExamsAdminTool)->handle(new Request([])))->toContain('Only admins')
         ->and((new SubmissionsToGradeTool)->handle(new Request([])))->toContain('Only admins');
 });
@@ -91,6 +104,37 @@ it('searches only students in the admin\'s workspace', function () {
 
     expect($all)->toContain('Alice Santos')->not->toContain('Bob Cruz')
         ->and($searched)->toContain('Alice Santos');
+});
+
+it('finds students by partial first, middle, or last name in any word order', function () {
+    $season = Season::factory()->active()->create();
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $section = Section::factory()->forSeason($season)->create();
+    $angeline = User::factory()->create(['name' => 'Angeline Marquez Cabrera']);
+    $angeline->sections()->attach($section->id, ['season_id' => $season->id]);
+    $other = User::factory()->create(['name' => 'Benedict Cruz']);
+    $other->sections()->attach($section->id, ['season_id' => $season->id]);
+
+    $find = fn (string $search): string => (string) (new StudentsTool)->handle(new Request(['search' => $search]));
+
+    expect($find('angeline'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('ANGELINE'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('cabrera'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('marquez'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('cabrera angeline'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('"angeline"'))->toContain('Angeline Marquez Cabrera')
+        ->and($find('angeline'))->not->toContain('Benedict Cruz')
+        ->and($find('benedict'))->toContain('Benedict Cruz')->not->toContain('Angeline Marquez Cabrera');
+});
+
+it('instructs the assistant to search students when the message is a bare name', function () {
+    $instructions = (string) (new AdminAssistantAgent)->instructions();
+
+    expect($instructions)->toContain('is a student search request')
+        ->and($instructions)->toContain('call this tool immediately with only the name as `search`')
+        ->and((string) (new StudentsTool)->description())->toContain("just a person's name or part of a name");
 });
 
 it('lists only the admin\'s own exams with submission stats', function () {
@@ -427,9 +471,15 @@ it('never exposes admin write tools to students', function () {
     foreach ([
         new CreateAssignmentTool,
         new CreateExamTool,
+        new CreateActivityTaskTool,
+        new CreateLearningMaterialTool,
         new GenerateExamQuestionsTool,
         new PostAnnouncementTool,
+        new RecordGradeTool,
+        new UpdateActivityTaskTool,
+        new UpdateAssignmentTool,
         new UpdateExamTool,
+        new UpdateLearningMaterialTool,
         new RecordActivityTaskScoreTool,
     ] as $tool) {
         expect($tool->handle(new Request([])))->toContain('Only admins');
@@ -520,4 +570,251 @@ it('validates parameters when recording activity task scores', function () {
         ->and((string) $tool->handle(new Request(['all_students' => true, 'score' => 50])))
         ->toContain('Error: specify section_id or section_name to record scores for all section students')
         ->and(PendingAiAction::count())->toBe(0);
+});
+
+it('never stages grades for students outside the target section and handles foreign sections safely', function () {
+    $season = Season::factory()->active()->create();
+    $adminA = User::factory()->admin()->create();
+    $adminB = User::factory()->admin()->create();
+
+    $this->actingAs($adminB);
+    $foreignSection = Section::factory()->forSeason($season)->create();
+
+    $this->actingAs($adminA);
+    $ownSection = Section::factory()->forSeason($season)->create();
+    $student = User::factory()->create(['name' => 'Linda Cruz']);
+
+    $tool = new RecordGradeTool;
+
+    expect((string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'section_id' => $foreignSection->id,
+        'score' => 90,
+    ])))->toContain('does not exist in this workspace');
+
+    expect((string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'section_id' => $ownSection->id,
+        'score' => 90,
+    ])))->toContain('is not enrolled in section');
+
+    $ownSection->users()->attach($student->id);
+
+    expect((string) $tool->handle(new Request([
+        'student_id' => $student->id,
+        'section_id' => $ownSection->id,
+        'score' => 90,
+    ])))->toContain('PENDING HUMAN APPROVAL')
+        ->and(PendingAiAction::count())->toBe(1);
+});
+
+it('re-syncs the assignment roster when the tool changes target sections', function () {
+    $season = Season::factory()->active()->create();
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $sectionA = Section::factory()->forSeason($season)->create(['name' => 'Alpha']);
+    $sectionB = Section::factory()->forSeason($season)->create(['name' => 'Beta']);
+    $studentA = User::factory()->create();
+    $studentB = User::factory()->create();
+    $sectionA->users()->attach($studentA->id);
+    $sectionB->users()->attach($studentB->id);
+
+    $assignment = Assignment::query()->create([
+        'workspace_id' => $admin->current_workspace_id,
+        'admin_id' => $admin->id,
+        'title' => 'Roster Move',
+        'due_date' => now()->addWeek(),
+    ]);
+    $assignment->sections()->sync([$sectionA->id]);
+    app(AssignmentRosterService::class)->syncAssignment($assignment);
+
+    expect(DB::table('assignment_user')->where('assignment_id', $assignment->id)->pluck('user_id')->all())
+        ->toBe([$studentA->id]);
+
+    (new UpdateAssignmentTool)->handle(new Request([
+        'assignment_id' => $assignment->id,
+        'section_ids' => (string) $sectionB->id,
+    ]));
+
+    $action = PendingAiAction::query()->where('action_type', 'update_assignment')->firstOrFail();
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => pendingAiActionNonce($action),
+    ])->assertOk();
+
+    $roster = DB::table('assignment_user')
+        ->where('assignment_id', $assignment->id)
+        ->pluck('user_id')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($roster)->toBe([$studentB->id]);
+});
+
+it('matches blocked-student names only among students in the workspace', function () {
+    $season = Season::factory()->active()->create();
+    $adminA = User::factory()->admin()->create();
+    $adminB = User::factory()->admin()->create();
+
+    $this->actingAs($adminB);
+    $foreignSection = Section::factory()->forSeason($season)->create();
+    $foreignStudent = User::factory()->create(['name' => 'Alice Foreign']);
+    $foreignSection->users()->attach($foreignStudent->id);
+
+    $this->actingAs($adminA);
+    $section = Section::factory()->forSeason($season)->create();
+    $ownStudent = User::factory()->create(['name' => 'Alice Own']);
+    $section->users()->attach($ownStudent->id);
+
+    (new CreateExamTool)->handle(new Request([
+        'title' => 'Blocked names',
+        'exam_date' => '2026-09-01 09:00',
+        'section_id' => $section->id,
+        'blocked_students' => ['Alice'],
+    ]));
+
+    $action = PendingAiAction::firstOrFail();
+
+    expect($action->payload['blocked_user_ids'])->toBe([$ownStudent->id]);
+});
+
+it('rejects learning materials targeting sections outside the workspace', function () {
+    $season = Season::factory()->active()->create();
+    $adminA = User::factory()->admin()->create();
+    $adminB = User::factory()->admin()->create();
+
+    $this->actingAs($adminB);
+    $foreignSection = Section::factory()->forSeason($season)->create();
+
+    $this->actingAs($adminA);
+    $ownSection = Section::factory()->forSeason($season)->create();
+
+    expect((string) (new CreateLearningMaterialTool)->handle(new Request([
+        'title' => 'Sneaky material',
+        'section_ids' => "{$ownSection->id},{$foreignSection->id}",
+    ])))->toContain('do not exist in this workspace')
+        ->and(PendingAiAction::count())->toBe(0);
+});
+
+it('stages and applies learning material updates upon approval', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $workspaceId = app(WorkspaceContext::class)->id();
+
+    $section = Section::factory()->create();
+    $material = LearningMaterial::factory()->create([
+        'workspace_id' => $workspaceId,
+        'admin_id' => $admin->id,
+        'title' => 'Old Title',
+        'status' => LearningMaterial::STATUS_DRAFT,
+    ]);
+
+    $result = (string) (new UpdateLearningMaterialTool)->handle(new Request([
+        'material_id' => $material->id,
+        'title' => 'New Title',
+        'status' => LearningMaterial::STATUS_PUBLISHED,
+        'section_ids' => (string) $section->id,
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL')
+        ->and($material->refresh()->title)->toBe('Old Title');
+
+    $action = PendingAiAction::query()->where('action_type', 'update_learning_material')->firstOrFail();
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => pendingAiActionNonce($action),
+    ])->assertOk();
+
+    $material->refresh();
+    expect($material->title)->toBe('New Title')
+        ->and($material->status)->toBe(LearningMaterial::STATUS_PUBLISHED)
+        ->and($material->sections()->pluck('sections.id')->all())->toBe([$section->id]);
+});
+
+it('stages and applies activity task updates and rejects invalid max points', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $workspaceId = app(WorkspaceContext::class)->id();
+
+    $section = Section::factory()->create();
+    $task = ActivityTask::query()->create([
+        'workspace_id' => $workspaceId,
+        'admin_id' => $admin->id,
+        'section_id' => $section->id,
+        'title' => 'Old Task',
+        'task_type' => 'Performance Task',
+        'term' => 'Midterm',
+        'max_points' => 100,
+        'due_date' => now()->addDays(3)->toDateString(),
+    ]);
+
+    expect((string) (new CreateActivityTaskTool)->handle(new Request([
+        'title' => 'Bad Points Task',
+        'section_id' => $section->id,
+        'max_points' => -5,
+    ])))->toContain('Error: max_points must be greater than 0');
+
+    $tool = new UpdateActivityTaskTool;
+
+    expect((string) $tool->handle(new Request(['task_id' => $task->id, 'max_points' => 0])))
+        ->toContain('Error: max_points must be greater than 0')
+        ->and(PendingAiAction::count())->toBe(0);
+
+    $result = (string) $tool->handle(new Request([
+        'task_id' => $task->id,
+        'title' => 'Renamed Task',
+        'max_points' => 150,
+        'due_date' => now()->addDays(10)->toDateString(),
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL')
+        ->and($task->refresh()->title)->toBe('Old Task');
+
+    $action = PendingAiAction::query()->where('action_type', 'update_activity_task')->firstOrFail();
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => pendingAiActionNonce($action),
+    ])->assertOk();
+
+    $task->refresh();
+    expect($task->title)->toBe('Renamed Task')
+        ->and((float) $task->max_points)->toBe(150.0)
+        ->and($task->due_date?->toDateString())->toBe(now()->addDays(10)->toDateString());
+});
+
+it('reports recent logins and inactive students within the workspace only', function () {
+    $season = Season::factory()->active()->create();
+    $adminA = User::factory()->admin()->create();
+    $adminB = User::factory()->admin()->create();
+
+    $this->actingAs($adminB);
+    $foreignSection = Section::factory()->forSeason($season)->create();
+    $foreignStudent = User::factory()->create(['name' => 'Foreign Fiona', 'last_login_at' => now()->subHour()]);
+    $foreignSection->users()->attach($foreignStudent->id);
+
+    $this->actingAs($adminA);
+    $section = Section::factory()->forSeason($season)->create();
+    $active = User::factory()->create(['name' => 'Active Annie', 'last_login_at' => now()->subHours(2)]);
+    $idle = User::factory()->create(['name' => 'Idle Ivan', 'last_login_at' => now()->subDays(20)]);
+    $never = User::factory()->create(['name' => 'New Nina', 'last_login_at' => null]);
+    $section->users()->attach([$active->id, $idle->id, $never->id]);
+
+    $recent = json_decode((string) (new UserActivityTool)->handle(new Request([])), true);
+
+    expect($recent['mode'])->toBe('recent_logins')
+        ->and($recent['summary']['workspace_members'])->toBe(3)
+        ->and($recent['summary']['logged_in_within_days'])->toBe(1)
+        ->and(collect($recent['users'])->pluck('name')->all())->toBe(['Active Annie']);
+
+    $inactive = json_decode((string) (new UserActivityTool)->handle(new Request(['mode' => 'inactive', 'days' => 7])), true);
+
+    expect(collect($inactive['users'])->pluck('name')->sort()->values()->all())->toBe(['Idle Ivan', 'New Nina'])
+        ->and($inactive['summary']['never_logged_in'])->toBe(1)
+        ->and(json_encode($inactive))->not->toContain('Foreign Fiona');
+
+    $signups = json_decode((string) (new UserActivityTool)->handle(new Request(['mode' => 'recent_signups', 'days' => 1])), true);
+
+    expect($signups['summary']['new_signups_within_days'])->toBe(3);
 });

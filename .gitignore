@@ -55,3 +55,6 @@ bun.lock
 /.freebuff
 /.opencode
 .impeccable/
+
+# Graphify generated output (regenerate via `php artisan graphify:generate`)
+graphify-out/

@@ -11,6 +11,7 @@ use App\Ai\Tools\LessonsTool;
 use App\Ai\Tools\ProgressTool;
 use App\Ai\Tools\UpcomingExamsTool;
 use App\Ai\Tools\UserInfoTool;
+use App\Support\PlatformKnowledge;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
@@ -102,6 +103,8 @@ Professional, encouraging, and educational — like a supportive tutor.";
             $instructions .= "\n\n{$this->userContext}";
             $instructions .= "\n\nIMPORTANT: Use the AUTHENTICATED USER DATA above to personalize your response. When the user asks about their level, XP, streak, or points, answer directly from this data — do not say you don't have access. You have it right here.";
         }
+
+        $instructions .= "\n\n".PlatformKnowledge::studentNotes();
 
         return $instructions;
     }

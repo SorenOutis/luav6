@@ -10,6 +10,7 @@
                 adminUser: config.adminUser,
                 sessions: config.initialSessions || [],
                 initialActiveSession: config.initialActiveSession || null,
+                workspaceStats: config.workspaceStats || {},
 
                 // Start with the history sidebar closed on phones and in the
                 // installed app — it covers the whole chat there. Desktop
@@ -32,6 +33,7 @@
                 isStreaming: false,
                 abortController: null,
                 actionLoading: {},
+                expirationNow: Date.now(),
                 continuationActionId: null,
                 continuationInterval: null,
                 continuationCountdown: 0,
@@ -42,37 +44,6 @@
                 voiceRecognition: null,
                 voiceError: null,
                 isSpeaking: false,
-
-                promptStarters: [
-                    {
-                        category: 'exams',
-                        categoryLabel: 'Exams',
-                        title: 'Draft a Quiz',
-                        prompt: 'Create a 20-minute draft quiz for Section 10-A with 5 multiple-choice questions.'
-                    },
-                    {
-                        category: 'grading',
-                        categoryLabel: 'Grading',
-                        title: 'Review Submissions',
-                        prompt: 'List all pending student submissions and suggest scores based on the answer key.'
-                    },
-                    {
-                        category: 'analytics',
-                        categoryLabel: 'Analytics',
-                        title: 'Score Insights',
-                        prompt: 'Summarize recent student grades and flag topics where students need extra support.'
-                    },
-                    {
-                        category: 'announcements',
-                        categoryLabel: 'Announcements',
-                        title: 'Exam Notice',
-                        prompt: 'Draft an encouraging announcement reminding students about exam dates and rules.'
-                    }
-                ],
-
-                get filteredPromptStarters() {
-                    return this.promptStarters;
-                },
 
                 init() {
                     this.isListening = false;
@@ -86,6 +57,14 @@
                             this.$refs.welcomeComposerInput.focus();
                         }
                     });
+
+                    // Keep approval-window countdowns fresh while a card is open.
+                    if (this.expirationTimer) {
+                        clearInterval(this.expirationTimer);
+                    }
+                    this.expirationTimer = setInterval(() => {
+                        this.expirationNow = Date.now();
+                    }, 30000);
 
                     const urlParams = new URLSearchParams(window.location.search);
                     const requestedParam = urlParams.get('c') || urlParams.get('session');
@@ -139,7 +118,24 @@
                 },
 
                 get greetingSubtext() {
-                    return 'How can Echo help manage your workspace today?';
+                    const stats = this.workspaceStats || {};
+                    const parts = [];
+
+                    if (stats.sections > 0) {
+                        parts.push(stats.sections + (stats.sections === 1 ? ' section' : ' sections'));
+                    }
+                    if (stats.students > 0) {
+                        parts.push(stats.students + (stats.students === 1 ? ' student' : ' students'));
+                    }
+                    if (stats.pendingApprovals > 0) {
+                        parts.push(stats.pendingApprovals + (stats.pendingApprovals === 1 ? ' approval waiting' : ' approvals waiting'));
+                    }
+
+                    if (parts.length > 0) {
+                        return parts.join(' · ');
+                    }
+
+                    return 'Ask Echo about exams, grades, submissions, or announcements.';
                 },
 
                 get firstName() {
@@ -596,6 +592,14 @@
                     return `${mins}:${rem < 10 ? '0' : ''}${rem}`;
                 },
 
+                expiresInLabel(action) {
+                    if (!action?.expiresAt) return null;
+                    const remainingMs = new Date(action.expiresAt).getTime() - this.expirationNow;
+                    if (remainingMs <= 0) return null;
+                    const minutes = Math.max(1, Math.ceil(remainingMs / 60000));
+                    return 'Approval window: ' + minutes + ' min left';
+                },
+
                 isLikelyAgentTask(text) {
                     if (!text) return false;
                     const lower = text.toLowerCase();
@@ -612,22 +616,22 @@
                     if (!text) return 'Echo is preparing your request';
                     const lower = text.toLowerCase();
                     if (lower.includes('exam') || lower.includes('quiz') || lower.includes('test')) {
-                        return 'Preparing a safe change: Create exam';
+                        return 'Preparing: Create exam';
                     }
                     if (lower.includes('assignment') || lower.includes('homework')) {
-                        return 'Preparing a safe change: Create assignment';
+                        return 'Preparing: Create assignment';
                     }
                     if (lower.includes('announc')) {
-                        return 'Preparing a safe change: Post announcement';
+                        return 'Preparing: Post announcement';
                     }
                     if (lower.includes('course')) {
-                        return 'Preparing a safe change: Course operation';
+                        return 'Preparing: Course operation';
                     }
                     if (lower.includes('section')) {
-                        return 'Preparing a safe change: Create class section';
+                        return 'Preparing: Create class section';
                     }
                     if (lower.includes('xp') || lower.includes('gamif') || lower.includes('award')) {
-                        return 'Preparing a safe change: Student XP award';
+                        return 'Preparing: Student XP award';
                     }
                     if (lower.includes('research') || lower.includes('curriculum')) {
                         return 'Autonomous research & analysis';
@@ -695,67 +699,67 @@
                     } else if (toolName === 'create_exam') {
                         step.label = 'Preparing exam creation';
                         step.target = 'create_exam';
-                        step.badge = 'Check';
-                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Create exam';
+                        step.badge = 'Needs review';
+                        target.activity.title = args.title ? ('Preparing: ' + args.title) : 'Preparing: Create exam';
                     } else if (toolName === 'update_exam') {
                         step.label = 'Preparing exam update';
                         step.target = 'update_exam';
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'create_assignment') {
                         step.label = 'Preparing assignment';
                         step.target = 'create_assignment';
-                        step.badge = 'Check';
-                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Create assignment';
+                        step.badge = 'Needs review';
+                        target.activity.title = args.title ? ('Preparing: ' + args.title) : 'Preparing: Create assignment';
                     } else if (toolName === 'update_assignment') {
                         step.label = 'Preparing assignment update';
                         step.target = 'update_assignment';
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'post_announcement') {
                         step.label = 'Preparing announcement broadcast';
                         step.target = 'post_announcement';
-                        step.badge = 'Check';
-                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Post announcement';
+                        step.badge = 'Needs review';
+                        target.activity.title = args.title ? ('Preparing: ' + args.title) : 'Preparing: Post announcement';
                     } else if (toolName === 'award_student_xp') {
                         step.label = 'Preparing student gamification XP';
                         step.target = 'award_student_xp';
-                        step.badge = 'Check';
-                        target.activity.title = 'Preparing a safe change: Student XP award';
+                        step.badge = 'Needs review';
+                        target.activity.title = 'Preparing: Student XP award';
                     } else if (toolName === 'record_grade' || toolName === 'grade_submission' || toolName === 'update_grade' || toolName === 'record_activity_task_score') {
                         step.label = toolName === 'record_activity_task_score' ? 'Preparing activity task score review' : 'Preparing grade record review';
                         step.target = toolName;
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'manage_maintenance') {
                         step.label = 'Preparing platform maintenance review';
                         step.target = 'manage_maintenance';
-                        step.badge = 'Check';
-                        target.activity.title = 'Preparing a safe change: Platform maintenance';
+                        step.badge = 'Needs review';
+                        target.activity.title = 'Preparing: Platform maintenance';
                     } else if (toolName === 'export_report') {
                         step.label = 'Preparing downloadable report export';
                         step.target = 'export_report';
-                        step.badge = 'Check';
-                        target.activity.title = 'Preparing a safe change: Export report';
+                        step.badge = 'Needs review';
+                        target.activity.title = 'Preparing: Export report';
                     } else if (toolName === 'create_course' || toolName === 'update_course') {
                         step.label = 'Preparing course configuration';
                         step.target = toolName;
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'create_section' || toolName === 'update_section') {
                         step.label = 'Preparing section configuration';
                         step.target = toolName;
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'create_user' || toolName === 'update_user' || toolName === 'reset_user_password') {
                         step.label = 'Preparing user management review';
                         step.target = toolName;
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else if (toolName === 'create_activity_task') {
                         step.label = 'Preparing activity task';
                         step.target = toolName;
-                        step.badge = 'Check';
-                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Create activity task';
+                        step.badge = 'Needs review';
+                        target.activity.title = args.title ? ('Preparing: ' + args.title) : 'Preparing: Create activity task';
                     } else if (toolName === 'create_learning_material') {
                         step.label = 'Preparing learning material';
                         step.target = toolName;
-                        step.badge = 'Check';
-                        target.activity.title = args.title ? ('Preparing a safe change: ' + args.title) : 'Preparing a safe change: Learning material';
+                        step.badge = 'Needs review';
+                        target.activity.title = args.title ? ('Preparing: ' + args.title) : 'Preparing: Learning material';
                     } else if (toolName === 'workspace_overview') {
                         step.label = 'Querying workspace analytics';
                         step.target = 'workspace_overview';
@@ -769,9 +773,9 @@
                         step.label = 'Querying enrolled students list';
                         step.target = 'students';
                     } else if (toolName.startsWith('delete_')) {
-                        step.label = 'Preparing database deletion: ' + toolName.replace('delete_', '');
+                        step.label = 'Preparing deletion: ' + toolName.replace('delete_', '');
                         step.target = toolName;
-                        step.badge = 'Check';
+                        step.badge = 'Needs review';
                     } else {
                         step.label = 'Executing ' + toolName.replace(/_/g, ' ');
                         step.target = toolName;
@@ -832,7 +836,7 @@
                     if (!action) return;
                     if (!action.nonce) {
                         action.error = action.status === 'pending'
-                            ? 'The 15-minute approval window has expired. Please ask Echo to prepare the action again.'
+                            ? 'The approval window has expired. Please ask Echo to prepare it again.'
                             : ('This action has already been ' + (action.status || 'processed') + '.');
                         return;
                     }
@@ -905,7 +909,7 @@
                     if (!action) return;
                     if (!action.nonce) {
                         action.error = action.status === 'pending'
-                            ? 'The 15-minute approval window has expired. Please ask Echo to prepare the action again.'
+                            ? 'The approval window has expired. Please ask Echo to prepare it again.'
                             : ('This action has already been ' + (action.status || 'processed') + '.');
                         return;
                     }
@@ -950,9 +954,16 @@
                     }
                 },
 
-                fillAndSend(prompt) {
+                prefillPrompt(prompt) {
+                    if (this.isStreaming) return;
                     this.inputMessage = prompt;
-                    this.sendMessage();
+                    this.$nextTick(() => {
+                        const input = this.$refs.welcomeComposerInput || this.$refs.composerInput;
+                        if (!input) return;
+                        this.autoGrowTextarea({ target: input });
+                        input.focus();
+                        input.setSelectionRange(input.value.length, input.value.length);
+                    });
                 },
 
                 async sendMessage(explicitText = null) {

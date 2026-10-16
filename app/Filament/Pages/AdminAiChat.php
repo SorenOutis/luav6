@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\ChatSession;
+use App\Models\PendingAiAction;
+use App\Models\Section;
 use App\Models\Setting;
 use App\Services\AiSdkProviderService;
 use App\Support\PublicFileUrl;
@@ -10,6 +12,7 @@ use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationItem;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AdminAiChat extends Page
@@ -82,6 +85,20 @@ class AdminAiChat extends Page
         };
 
         $workspace = app(WorkspaceContext::class)->workspace();
+
+        $workspaceStats = [
+            'sections' => $workspace ? Section::query()->where('workspace_id', $workspace->id)->count() : 0,
+            'students' => $workspace
+                ? DB::table('workspace_user')->where('workspace_id', $workspace->id)->where('role', 'student')->count()
+                : 0,
+            'pendingApprovals' => $user
+                ? PendingAiAction::query()
+                    ->where('user_id', $user->id)
+                    ->where('status', PendingAiAction::STATUS_PENDING)
+                    ->where('expires_at', '>', now())
+                    ->count()
+                : 0,
+        ];
 
         $requestedParam = request()->query('c') ?? request()->query('session');
         $initialActiveSession = null;
@@ -158,6 +175,7 @@ class AdminAiChat extends Page
                 'uuid' => $initialActiveSession->uuid,
                 'title' => $initialActiveSession->title ?: 'New chat',
             ] : null,
+            'workspaceStats' => $workspaceStats,
         ];
     }
 }

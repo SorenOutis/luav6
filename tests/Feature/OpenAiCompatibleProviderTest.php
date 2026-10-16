@@ -240,7 +240,8 @@ it('exposes admin tool names matching the agent instructions', function () {
     $names = array_map(fn ($tool): string => ToolNameResolver::resolve($tool), $agent->tools());
 
     expect($names)->toBe([
-        'workspace_overview', 'students', 'exams_admin',
+        'workspace_overview', 'students', 'user_activity', 'at_risk_students', 'section_performance',
+        'leaderboard', 'daily_report', 'ai_action_log', 'support_tickets', 'exams_admin',
         'courses_admin', 'sections_admin', 'assignments_admin',
         'announcements_admin', 'materials_admin', 'research_topic', 'activity_tasks_admin',
         'submissions_to_grade', 'grades_admin',
@@ -251,9 +252,11 @@ it('exposes admin tool names matching the agent instructions', function () {
         'create_course', 'update_course', 'delete_course',
         'post_announcement', 'update_announcement', 'delete_announcement',
         'create_assignment', 'update_assignment', 'delete_assignment',
-        'create_learning_material', 'delete_learning_material',
-        'create_activity_task', 'delete_activity_task', 'record_activity_task_score',
-        'award_student_xp', 'manage_maintenance', 'export_report',
+        'create_learning_material', 'update_learning_material', 'delete_learning_material',
+        'create_activity_task', 'update_activity_task', 'delete_activity_task', 'record_activity_task_score',
+        'award_student_xp', 'manage_exam_blocks', 'send_notification', 'reply_support_ticket',
+        'season_admin', 'manage_badges_rewards', 'manage_lesson', 'manage_lesson_quiz',
+        'manage_maintenance', 'export_report',
     ]);
 
     foreach ($names as $name) {

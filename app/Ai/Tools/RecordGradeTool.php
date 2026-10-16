@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Models\Section;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
@@ -54,13 +55,19 @@ class RecordGradeTool extends PendingWriteTool implements Tool
                 ->whereKey($sectionId)
                 ->first();
 
-            if ($section && $targetWorkspaceId && $section->workspace_id !== $targetWorkspaceId && ! $this->currentAdmin()?->isSuperAdmin()) {
+            if ($section && $targetWorkspaceId && $section->workspace_id !== $targetWorkspaceId && ! auth()->user()?->isSuperAdmin()) {
                 $section = null;
             }
 
-            if ($section) {
-                $targetWorkspaceId = $section->workspace_id;
+            if (! $section) {
+                return "Error: section #{$sectionId} does not exist in this workspace. Check workspace_overview or sections_admin for valid section IDs.";
             }
+
+            if (! $this->isStudentEnrolledIn($student, $section)) {
+                return "Error: {$student->name} is not enrolled in section \"{$section->name}\" (#{$section->id}). Enroll the student in that section first, or choose a section they belong to.";
+            }
+
+            $targetWorkspaceId = $section->workspace_id;
         } else {
             $section = $student->sections()
                 ->withoutGlobalScope('workspace')
@@ -68,16 +75,8 @@ class RecordGradeTool extends PendingWriteTool implements Tool
                 ->first();
 
             if (! $section) {
-                $section = Section::query()
-                    ->withoutGlobalScope('workspace')
-                    ->where('workspace_id', $targetWorkspaceId)
-                    ->orderBy('id')
-                    ->first();
+                return 'Error: the student is not enrolled in any section in this workspace. Enroll the student in a section first, or pass a section_id they belong to.';
             }
-        }
-
-        if (! $section) {
-            return 'Error: no sections found in this workspace for recording grades.';
         }
 
         $subject = trim((string) ($request['subject'] ?? ''));
@@ -135,6 +134,14 @@ class RecordGradeTool extends PendingWriteTool implements Tool
             $preview,
             $targetWorkspaceId,
         );
+    }
+
+    private function isStudentEnrolledIn(User $student, Section $section): bool
+    {
+        return $student->sections()
+            ->withoutGlobalScope('workspace')
+            ->where('sections.id', $section->id)
+            ->exists();
     }
 
     public function schema(JsonSchema $schema): array
