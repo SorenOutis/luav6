@@ -126,6 +126,18 @@ class ChatController extends Controller
             ], 200);
         }
 
+        // ── Text attachments get the same guardrail screening as the message ──
+        if ($attachmentEvaluation = $this->chatService->evaluateAttachments($request)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'attachment_guardrail',
+                'violations' => $attachmentEvaluation->violations,
+            ]));
+
+            return response()->json([
+                'response' => $attachmentEvaluation->reason,
+            ], 200);
+        }
+
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
@@ -234,6 +246,16 @@ class ChatController extends Controller
             return AiSseResponse::from($this->chatService->streamText($inputEvaluation->reason));
         }
 
+        // ── Text attachments get the same guardrail screening as the message ──
+        if ($attachmentEvaluation = $this->chatService->evaluateAttachments($request)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'attachment_guardrail',
+                'violations' => $attachmentEvaluation->violations,
+            ]));
+
+            return AiSseResponse::from($this->chatService->streamText($attachmentEvaluation->reason));
+        }
+
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
@@ -266,13 +288,16 @@ class ChatController extends Controller
                 ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext)
                 ->then(function ($response) use ($sessionId, $loggingContext) {
                     try {
-                        $text = (string) $response->text;
+                        // The SSE frames are sanitized on the way out, but the DB
+                        // row must be sanitized too — history endpoints serve it
+                        // raw on reload.
+                        $text = $this->chatService->sanitizeOutput((string) $response->text);
 
                         if ($sessionId && trim($text) !== '') {
                             $this->persistExchange((int) $sessionId, [
                                 'role' => 'assistant',
                                 'content' => $text,
-                                'thinking' => $this->chatService->combineReasoning($response->events),
+                                'thinking' => $this->chatService->sanitizeOutput($this->chatService->combineReasoning($response->events)),
                             ]);
                         }
 

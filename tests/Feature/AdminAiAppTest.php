@@ -10,7 +10,7 @@ it('lets superadmins open the installable assistant', function () {
     $this->actingAs(User::factory()->superAdmin()->create())
         ->get(AdminAiApp::getUrl())
         ->assertOk()
-        ->assertSee('ai-assistant.webmanifest')
+        ->assertSee('echo-ai.webmanifest')
         ->assertSee('ai-app-install.js')
         ->assertSee('Install Echo AI');
 });
@@ -32,7 +32,7 @@ it('keeps ordinary admin chat without install controls', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->get(AdminAiChat::getUrl())
         ->assertOk()
-        ->assertDontSee('ai-assistant.webmanifest')
+        ->assertDontSee('echo-ai.webmanifest')
         ->assertDontSee('Install Echo AI');
 });
 
@@ -40,7 +40,7 @@ it('offers installation on the existing superadmin chat page', function () {
     $this->actingAs(User::factory()->superAdmin()->create())
         ->get(AdminAiChat::getUrl())
         ->assertOk()
-        ->assertSee('ai-assistant.webmanifest')
+        ->assertSee('echo-ai.webmanifest')
         ->assertSee('Install Echo AI');
 });
 
@@ -53,10 +53,66 @@ it('ships a standalone manifest with correctly sized icons', function () {
         ->and($manifest['name'])->toBe('Echo AI')
         ->and($manifest['short_name'])->toBe('Echo AI');
 
-    // Every manifest icon follows the uploaded school logo via /favicon.png
-    // (FaviconController serves school_logo_path and grants exact sizing).
+    // "any" icons follow the uploaded school logo via /favicon.png
+    // (FaviconController serves school_logo_path and grants exact sizing),
+    // while the maskable entry points at the bundled safe-zone artwork.
     expect(collect($manifest['icons'])->pluck('src')->all())
-        ->toBe(['/favicon.png?size=192', '/favicon.png?size=512']);
+        ->toBe(['/favicon.png?size=192', '/favicon.png?size=512', '/images/ai-app-512.png']);
+
+    $maskable = collect($manifest['icons'])->firstWhere('purpose', 'maskable');
+
+    expect($maskable)->not->toBeNull()
+        ->and($maskable['sizes'])->toBe('512x512')
+        ->and(file_exists(public_path('images/ai-app-512.png')))->toBeTrue();
+});
+
+it('serves a manifest with the school accent color applied', function () {
+    Setting::setGlobal('school_accent_color', '#123456');
+
+    $this->get(route('ai-app-manifest'))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/manifest+json')
+        ->assertJsonPath('theme_color', '#123456')
+        ->assertJsonPath('background_color', '#123456')
+        ->assertJsonPath('start_url', '/admin/ai-assistant-app');
+});
+
+it('ignores invalid accent colors in the manifest', function () {
+    Setting::setGlobal('school_accent_color', 'javascript:alert(1)');
+
+    $this->get(route('ai-app-manifest'))
+        ->assertOk()
+        ->assertJsonPath('theme_color', '#09090b');
+});
+
+it('falls back to correctly sized bundled icons when no logo is uploaded', function (int $size, string $expected) {
+    Setting::setGlobal('school_logo_path', null);
+
+    $this->get('/favicon.png?size='.$size)->assertRedirect($expected);
+})->with([
+    [512, '/images/ai-app-512.png'],
+    [192, '/images/ai-app-192.png'],
+    [180, '/apple-touch-icon.png'],
+    [32, '/favicon.ico'],
+]);
+
+it('registers a scoped service worker for the installed app', function () {
+    $installScript = file_get_contents(public_path('js/ai-app-install.js'));
+
+    expect($installScript)
+        ->toContain('/ai-app-sw.js')
+        ->toContain("scope: '/admin/ai-assistant-app'");
+
+    $worker = file_get_contents(public_path('ai-app-sw.js'));
+
+    expect($worker)
+        ->toContain("addEventListener('fetch'")
+        ->toContain("addEventListener('install'")
+        ->toContain("addEventListener('activate'");
+
+    // Navigations and API traffic must never be served from cache.
+    expect($worker)->toContain("request.mode === 'navigate'")
+        ->and($worker)->toContain("url.pathname.startsWith('/api/')");
 });
 
 it('labels the assistant Echo AI in navigation', function () {

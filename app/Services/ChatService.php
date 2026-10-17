@@ -281,6 +281,49 @@ class ChatService
     }
 
     /**
+     * Screen text-extractable attachments (txt/csv/md/html) through the same
+     * deterministic guardrails as the message, so injections or secret
+     * exfiltration attempts cannot hide in a file instead of the composer.
+     * Binary documents (pdf, office, images) are covered by MIME/size
+     * validation only. Returns null when every attachment is clean.
+     */
+    public function evaluateAttachments(Request $request): ?PolicyEvaluationResult
+    {
+        $violations = [];
+
+        foreach ($request->file('attachments', []) as $file) {
+            $mime = $file->getMimeType() ?: '';
+
+            if (! str_starts_with($mime, 'text/')) {
+                continue;
+            }
+
+            $text = file_get_contents($file->getRealPath());
+
+            if (! is_string($text) || trim($text) === '') {
+                continue;
+            }
+
+            foreach ($this->inputGuardrails->evaluateInput($text)->violations as $violation) {
+                $violations[] = $violation;
+            }
+        }
+
+        if ($violations === []) {
+            return null;
+        }
+
+        $violations = array_values(array_unique($violations));
+
+        return new PolicyEvaluationResult(
+            policyCode: AiInputGuardrailService::POLICY_CODE,
+            allowed: false,
+            violations: $violations,
+            reason: $this->inputGuardrails->buildDeflectionReason($violations),
+        );
+    }
+
+    /**
      * Sanitize assistant response text before returning or streaming.
      */
     public function sanitizeOutput(string $text): string
@@ -314,6 +357,10 @@ class ChatService
      * Build a user context block with the authenticated user's real data,
      * so Echo can give accurate, personalized responses without needing
      * to fabricate or guess.
+     *
+     * Every field below is user- or admin-controlled (registration names,
+     * workspace names, season names), so it is fenced as untrusted content —
+     * newlines or boundary markers in a name must never look like instructions.
      */
     public function buildUserContext(): string
     {
@@ -326,10 +373,12 @@ class ChatService
         if ($user->is_admin) {
             $workspaceContext = app(WorkspaceContext::class);
             $workspace = $workspaceContext->workspace();
-            $workspaceName = $workspace?->name ?? 'Active Workspace';
+            $workspaceName = $this->inputGuardrails->wrapUntrusted($workspace?->name ?? 'Active Workspace', 'Workspace Name');
             $workspaceId = $workspace?->id ?? $workspaceContext->id() ?? 'N/A';
             $activeSeason = Season::current();
-            $seasonName = $activeSeason?->name ?? 'Active Academic Season';
+            $seasonName = $this->inputGuardrails->wrapUntrusted($activeSeason?->name ?? 'Active Academic Season', 'School Year Name');
+            $userName = $this->inputGuardrails->wrapUntrusted((string) $user->name, 'User Name');
+            $userEmail = $this->inputGuardrails->wrapUntrusted((string) $user->email, 'User Email');
             $isSuperAdmin = $user->isSuperAdmin();
             $roleLabel = $isSuperAdmin ? 'Super Administrator (Full platform access)' : 'Teacher/Workspace Admin (workspace manager)';
             $isSuperAdminText = $isSuperAdmin ? 'YES' : 'NO';
@@ -338,8 +387,8 @@ class ChatService
                 ? "- The user is a SUPER ADMINISTRATOR. They have complete, unrestricted authority over the entire platform.\n".
                   "- ALLOW ALL administrative actions they request, including platform-wide maintenance mode (enable, disable, update message/title), platform settings, and managing users across the entire site.\n".
                   "- NEVER say an action is 'outside your scope' or that you cannot manage platform settings. For maintenance mode, use the `manage_maintenance` tool to stage their request for approval.\n".
-                  "- All workspace tools also remain available and default to active workspace \"{$workspaceName}\"."
-                : "- The user is a WORKSPACE ADMINISTRATOR. Their authority is strictly limited to their active workspace (\"{$workspaceName}\").\n".
+                  "- All workspace tools also remain available and default to active workspace:\n{$workspaceName}"
+                : "- The user is a WORKSPACE ADMINISTRATOR. Their authority is strictly limited to their active workspace:\n{$workspaceName}\n".
                   "- All entity creation (sections, courses, exams, assignments, announcements, learning materials, tasks) automatically targets this workspace.\n".
                   "- NEVER ask the prompter which workspace to use or leave the workspace blank; it is already resolved.\n".
                   '- Standard workspace admins CANNOT toggle platform maintenance mode or modify global platform settings. If requested, politely inform them that platform maintenance is restricted to Super Administrators.';
@@ -347,10 +396,10 @@ class ChatService
             return "=== AUTHENTICATED USER & ACTIVE WORKSPACE CONTEXT ===\n".
                 "Role: {$roleLabel}\n".
                 "Is Super Admin: {$isSuperAdminText}\n".
-                "Name: {$user->name}\n".
-                "Email: {$user->email}\n".
-                "Active Workspace: {$workspaceName} (ID: {$workspaceId})\n".
-                "Active School Year / Season: {$seasonName}\n".
+                "Name:\n{$userName}\n".
+                "Email:\n{$userEmail}\n".
+                "Active Workspace (ID: {$workspaceId}):\n{$workspaceName}\n".
+                "Active School Year / Season:\n{$seasonName}\n".
                 "======================================================\n".
                 "PERMISSIONS & WORKSPACE INSTRUCTIONS:\n".
                 $scopeInstructions."\n".
@@ -364,15 +413,17 @@ class ChatService
         $points = $progress?->points ?? 0;
         $streak = $user->current_streak ?? 0;
         $joined = $user->created_at?->format('M Y') ?? 'Unknown';
+        $userName = $this->inputGuardrails->wrapUntrusted((string) $user->name, 'User Name');
+        $userEmail = $this->inputGuardrails->wrapUntrusted((string) $user->email, 'User Email');
 
         return "=== AUTHENTICATED USER DATA (use this to personalize your response) ===\n".
-            "Name: {$user->name}\n".
+            "Name:\n{$userName}\n".
             "Joined: {$joined}\n".
             "LSI System Level: {$level} (this is the gamification progression level, NOT a school grade)\n".
             "Total XP: {$totalXp}\n".
             "Points: {$points}\n".
             "Current Streak: {$streak} day(s)\n".
-            "Email: {$user->email}\n".
+            "Email:\n{$userEmail}\n".
             '====================================================================';
     }
 
@@ -388,13 +439,17 @@ class ChatService
 
             if ($dailyLimit > 0) {
                 $cacheKey = "ai_chat_daily:{$user->id}:".now()->toDateString();
-                $used = (int) Cache::get($cacheKey, 0);
 
-                if ($used >= $dailyLimit) {
+                // Atomic tally: `add` seeds the key with its TTL and
+                // `increment` returns a unique count per concurrent request,
+                // so parallel requests cannot both slip past the boundary
+                // the way a get-then-put check allows.
+                Cache::add($cacheKey, 0, now()->endOfDay());
+                $used = (int) Cache::increment($cacheKey);
+
+                if ($used > $dailyLimit) {
                     return "You've used all {$dailyLimit} of your Echo messages for today — nice dedication! Your limit resets at midnight. In the meantime, your dashboard has your assignments, exams, and lessons.";
                 }
-
-                Cache::put($cacheKey, $used + 1, now()->endOfDay());
             }
         }
 

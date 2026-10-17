@@ -7,6 +7,7 @@ use App\Models\PendingAiAction;
 use App\Models\Section;
 use App\Models\Setting;
 use App\Services\AiSdkProviderService;
+use App\Services\GeminiAIService;
 use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
@@ -71,17 +72,16 @@ class AdminAiChat extends Page
     {
         $user = Filament::auth()->user();
         $provider = (string) Setting::get('ai_provider', 'gemini');
-        if (str_starts_with($provider, 'openai-compatible')) {
-            $providerLabel = 'OpenAI Compatible';
-        } else {
-            $providerLabel = AiSdkProviderService::TEXT_PROVIDER_LABELS[$provider] ?? ucfirst($provider);
-        }
 
-        $model = match ($provider) {
-            'gemini' => Setting::get('gemini_chat_model', 'gemini-3.5-flash'),
-            'groq' => Setting::get('groq_chat_model', 'llama-3.3-70b-versatile'),
-            'cloudflare' => Setting::get('cloudflare_chat_model', '@cf/meta/llama-3.1-8b-instruct'),
-            default => Setting::get("{$provider}_model") ?: (AiSdkProviderService::DEFAULT_MODELS[$provider] ?? 'Standard model'),
+        $providerLabel = AiSdkProviderService::textProviderLabels()[$provider]
+            ?? (str_starts_with($provider, 'openai-compatible') ? 'OpenAI Compatible' : ucfirst($provider));
+
+        $model = match (true) {
+            $provider === 'gemini' => Setting::get('gemini_chat_model', GeminiAIService::DEFAULT_CHAT_MODEL),
+            $provider === 'groq' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
+            $provider === 'cloudflare' => Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash'),
+            AiSdkProviderService::isSdkRouted($provider) => AiSdkProviderService::for($provider)->model() ?: 'Standard model',
+            default => 'Standard model',
         };
 
         $workspace = app(WorkspaceContext::class)->workspace();

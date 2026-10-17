@@ -15,7 +15,9 @@ use App\Services\ChatService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
+use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Streaming\Events\ReasoningDelta;
 use Laravel\Ai\Streaming\Events\TextDelta;
 
 beforeEach(function () {
@@ -284,4 +286,62 @@ it('appends an interrupted notice when streaming fails after delivering initial 
     expect($assistantMessage)->not->toBeNull()
         ->and($assistantMessage->content)->toContain('Let me check your activities...')
         ->and($assistantMessage->content)->toContain('Echo encountered an issue and could not complete this response');
+});
+
+it('persists streamed assistant text sanitized, not just the live stream', function () {
+    AssistantAgent::fake(['Here is the key APP_KEY=base64:VerySecretValue1234567890 done']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Secrets']);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'Summarize the setup notes'])
+        ->assertSuccessful();
+
+    $response->streamedContent();
+
+    $stored = $session->refresh()->messages()->where('role', 'assistant')->firstOrFail();
+
+    expect($stored->content)->toContain('[REDACTED_APP_KEY]')
+        ->and($stored->content)->not->toContain('VerySecretValue1234567890');
+});
+
+it('persists streamed reasoning sanitized as well', function () {
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Reasoning']);
+
+    $chatService = mock(ChatService::class, [app(AiChatLogger::class)])->makePartial();
+    $chatService->shouldReceive('stream')->andReturn(
+        new StreamableAgentResponse(
+            (string) Str::uuid7(),
+            function () {
+                yield new ReasoningDelta(
+                    id: (string) Str::uuid7(),
+                    reasoningId: 'reasoning-1',
+                    delta: 'Considering APP_KEY=base64:ThinkingSecret1234567890 then answering.',
+                    timestamp: (int) (microtime(true) * 1000),
+                );
+                yield new TextDelta(
+                    id: (string) Str::uuid7(),
+                    messageId: (string) Str::uuid7(),
+                    delta: 'Final answer',
+                    timestamp: (int) (microtime(true) * 1000),
+                );
+            },
+            new Meta('openai', 'test-model'),
+        )
+    );
+    app()->instance(ChatService::class, $chatService);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'Think then answer'])
+        ->assertSuccessful();
+
+    $response->streamedContent();
+
+    $assistant = $session->refresh()->messages()->where('role', 'assistant')->firstOrFail();
+
+    expect($assistant->content)->toBe('Final answer')
+        ->and($assistant->thinking)->toContain('[REDACTED_APP_KEY]')
+        ->and($assistant->thinking)->not->toContain('ThinkingSecret1234567890');
 });
