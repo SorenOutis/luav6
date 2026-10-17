@@ -3,7 +3,6 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
     BookOpen,
-    ClipboardList,
     GraduationCap,
     Gamepad2,
     Award,
@@ -50,12 +49,6 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: '/courses',
             icon: BookOpen,
             studentPageKey: 'courses',
-        },
-        {
-            title: 'Assignments',
-            href: '/assignments',
-            icon: ClipboardList,
-            studentPageKey: 'assignments',
         },
         {
             title: 'Activity Hub',
