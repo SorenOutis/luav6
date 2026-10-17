@@ -4,7 +4,7 @@
     "short_name": "Echo AI",
     "description": "Echo AI — Superadmin AI assistant. Requires sign-in and an internet connection.",
     "start_url": "/admin/ai-assistant-app",
-    "scope": "/admin/ai-assistant-app",
+    "scope": "/admin",
     "display": "standalone",
     "background_color": "#09090b",
     "theme_color": "#09090b",
