@@ -1,12 +1,15 @@
 <?php
 
+use App\Enums\AssignmentStatus;
 use App\Models\ActivityTask;
 use App\Models\ActivityTaskScore;
+use App\Models\Assignment;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
+use App\Models\Submission;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -450,4 +453,241 @@ it('eager loads section season for both exams and tasks so they share the same s
         ->and($performanceTask['season_name'])->toBe('Season 1')
         ->and($performanceTask['section_id'])->toBe($section->id)
         ->and($performanceTask['category'])->toBe('performance');
+});
+
+it('includes targeted assignments in activityScores for enrolled sections', function () {
+    $user = User::factory()->create();
+    $season = Season::factory()->create(['name' => '2026-2027 Season']);
+    $sectionA = Section::factory()->create([
+        'name' => 'Section A',
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $sectionB = Section::factory()->create([
+        'name' => 'Section B',
+        'season_id' => $season->id,
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $sectionA->users()->attach($user->id);
+
+    $assignment1 = Assignment::create([
+        'title' => 'Lab Report 1',
+        'term' => 'Prelim',
+        'points_possible' => 100,
+        'due_date' => now()->addWeek(),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $assignment1->sections()->sync([$sectionA->id]);
+
+    Submission::create([
+        'assignment_id' => $assignment1->id,
+        'user_id' => $user->id,
+        'submitted' => true,
+        'status' => 'Graded',
+        'points' => 88.0,
+    ]);
+
+    $assignment2 = Assignment::create([
+        'title' => 'Section B Only Project',
+        'term' => 'Prelim',
+        'points_possible' => 50,
+        'due_date' => now()->addWeek(),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $assignment2->sections()->sync([$sectionB->id]);
+
+    $draftAssignment = Assignment::create([
+        'title' => 'Draft Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 50,
+        'due_date' => now()->addWeek(),
+        'status' => AssignmentStatus::Draft->value,
+    ]);
+    $draftAssignment->sections()->sync([$sectionA->id]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    expect($scores)->toHaveCount(1);
+    expect($scores[0]['seasonName'])->toBe('2026-2027 Season');
+
+    $allExams = $scores[0]['exams'];
+    $row = collect($allExams)->firstWhere('title', 'Lab Report 1');
+
+    expect($row)->not->toBeNull();
+    expect($row['id'])->toBe('assignment_'.$assignment1->id.'_'.$sectionA->id);
+    expect($row['activity_type'])->toBe('Assignment');
+    expect($row['category'])->toBe('performance');
+    expect($row['term'])->toBe('Prelim');
+    expect($row['section_id'])->toBe($sectionA->id);
+    expect($row['section_name'])->toBe('Section A');
+    expect($row['school_level'])->toBe(Section::SCHOOL_LEVEL_COLLEGE);
+    expect($row['season_name'])->toBe('2026-2027 Season');
+    expect((float) $row['score'])->toBe(88.0);
+    expect((float) $row['total_points'])->toBe(100.0);
+    expect((float) $row['percentage'])->toBe(88.0);
+    expect($row['submitted'])->toBeTrue();
+    expect($row['is_missed'])->toBeFalse();
+    expect($row['is_pending_review'])->toBeFalse();
+    expect($row['state'])->toBe('completed');
+
+    expect(collect($allExams)->firstWhere('title', 'Section B Only Project'))->toBeNull();
+    expect(collect($allExams)->firstWhere('title', 'Draft Assignment'))->toBeNull();
+});
+
+it('filters assignments in activityScores by section activity_record_terms', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+        'activity_record_terms' => ['Prelim'],
+    ]);
+    $section->users()->attach($user->id);
+
+    $prelimAssignment = Assignment::create([
+        'title' => 'Prelim Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 100,
+        'due_date' => now()->addWeek(),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $prelimAssignment->sections()->sync([$section->id]);
+
+    $midtermAssignment = Assignment::create([
+        'title' => 'Midterm Assignment',
+        'term' => 'Midterm',
+        'points_possible' => 100,
+        'due_date' => now()->addWeeks(2),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $midtermAssignment->sections()->sync([$section->id]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allTitles = collect($scores)->flatMap(fn ($group) => collect($group['exams'])->pluck('title'))->all();
+
+    expect($allTitles)->toContain('Prelim Assignment');
+    expect($allTitles)->not()->toContain('Midterm Assignment');
+});
+
+it('handles unsubmitted, pending review, overdue/missed, and closed assignment states', function () {
+    $user = User::factory()->create();
+    $section = Section::factory()->create([
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $section->users()->attach($user->id);
+
+    $openAssignment = Assignment::create([
+        'title' => 'Open Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 50,
+        'due_date' => now()->addDays(5),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $openAssignment->sections()->sync([$section->id]);
+
+    $pendingAssignment = Assignment::create([
+        'title' => 'Pending Review Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 60,
+        'due_date' => now()->addDays(2),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $pendingAssignment->sections()->sync([$section->id]);
+    Submission::create([
+        'assignment_id' => $pendingAssignment->id,
+        'user_id' => $user->id,
+        'submitted' => true,
+        'status' => 'Submitted',
+    ]);
+
+    $overdueAssignment = Assignment::create([
+        'title' => 'Overdue Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 70,
+        'due_date' => now()->subDay(),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $overdueAssignment->sections()->sync([$section->id]);
+
+    $closedAssignment = Assignment::create([
+        'title' => 'Closed Assignment',
+        'term' => 'Prelim',
+        'points_possible' => 80,
+        'due_date' => now()->addDays(5),
+        'status' => AssignmentStatus::Closed->value,
+    ]);
+    $closedAssignment->sections()->sync([$section->id]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $open = collect($allExams)->firstWhere('title', 'Open Assignment');
+    expect($open['state'])->toBe('open');
+    expect($open['submitted'])->toBeFalse();
+    expect($open['is_missed'])->toBeFalse();
+    expect($open['score'])->toBeNull();
+
+    $pending = collect($allExams)->firstWhere('title', 'Pending Review Assignment');
+    expect($pending['state'])->toBe('in_progress');
+    expect($pending['submitted'])->toBeTrue();
+    expect($pending['is_pending_review'])->toBeTrue();
+    expect($pending['score'])->toBeNull();
+
+    $overdue = collect($allExams)->firstWhere('title', 'Overdue Assignment');
+    expect($overdue['state'])->toBe('closed');
+    expect($overdue['submitted'])->toBeFalse();
+    expect($overdue['is_missed'])->toBeTrue();
+
+    $closed = collect($allExams)->firstWhere('title', 'Closed Assignment');
+    expect($closed['state'])->toBe('closed');
+    expect($closed['submitted'])->toBeFalse();
+    expect($closed['is_missed'])->toBeTrue();
+});
+
+it('maps an assignment across multiple enrolled sections when targeted at both', function () {
+    $user = User::factory()->create();
+    $section1 = Section::factory()->create([
+        'name' => 'Section 1',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $section2 = Section::factory()->create([
+        'name' => 'Section 2',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'activity_record_enabled' => true,
+    ]);
+    $section1->users()->attach($user->id);
+    $section2->users()->attach($user->id);
+
+    $sharedAssignment = Assignment::create([
+        'title' => 'Cross-Section Project',
+        'term' => 'Prelim',
+        'points_possible' => 100,
+        'due_date' => now()->addWeek(),
+        'status' => AssignmentStatus::Published->value,
+    ]);
+    $sharedAssignment->sections()->sync([$section1->id, $section2->id]);
+
+    $res = actingAs($user)->get(route('activities.index'))->assertOk();
+
+    $scores = $res->viewData('page')['props']['activityScores'];
+    $allExams = collect($scores)->flatMap(fn ($group) => $group['exams'])->all();
+
+    $matchingRows = collect($allExams)->where('title', 'Cross-Section Project')->all();
+    expect($matchingRows)->toHaveCount(2);
+
+    $sectionIds = collect($matchingRows)->pluck('section_id')->all();
+    expect($sectionIds)->toContain($section1->id);
+    expect($sectionIds)->toContain($section2->id);
+
+    $rowIds = collect($matchingRows)->pluck('id')->all();
+    expect($rowIds)->toContain('assignment_'.$sharedAssignment->id.'_'.$section1->id);
+    expect($rowIds)->toContain('assignment_'.$sharedAssignment->id.'_'.$section2->id);
 });

@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssignmentStatus;
 use App\Models\ActivityTask;
+use App\Models\Assignment;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
+use App\Models\Submission;
 use App\Models\User;
 use App\Services\ExamSetAssignmentService;
 use App\Services\StudentAssignmentService;
@@ -177,7 +180,19 @@ class ActivityHubController extends Controller
                 ->get()
             : collect();
 
-        if ($exams->isEmpty() && $tasks->isEmpty()) {
+        $assignments = ! empty($userSectionIds)
+            ? Assignment::withoutGlobalScope('workspace')
+                ->visibleToSections($userSectionIds)
+                ->with([
+                    'sections' => fn ($q) => $q->withoutGlobalScope('workspace')
+                        ->whereIn('sections.id', $userSectionIds)
+                        ->select(['sections.id', 'sections.name', 'sections.season_id', 'sections.school_level', 'sections.activity_record_enabled', 'sections.activity_record_terms']),
+                    'sections.season' => fn ($q) => $q->withoutGlobalScope('workspace')->select(['id', 'name', 'start_date']),
+                ])
+                ->get()
+            : collect();
+
+        if ($exams->isEmpty() && $tasks->isEmpty() && $assignments->isEmpty()) {
             return [];
         }
 
@@ -313,7 +328,68 @@ class ActivityHubController extends Controller
                 ];
             });
 
-        $rows = $examRows->concat($taskRows);
+        $assignmentSubmissions = $assignments->isNotEmpty()
+            ? Submission::query()
+                ->where('user_id', $user->id)
+                ->whereIn('assignment_id', $assignments->pluck('id'))
+                ->get(['id', 'assignment_id', 'status', 'submitted', 'points', 'submitted_at', 'graded_at'])
+                ->keyBy('assignment_id')
+            : collect();
+
+        $assignmentRows = $assignments->flatMap(function (Assignment $assignment) use ($assignmentSubmissions) {
+            $submission = $assignmentSubmissions->get($assignment->id);
+            $isSubmitted = (bool) ($submission?->submitted ?? false);
+            $isGraded = $submission !== null && $submission->status === 'Graded';
+            $isClosed = $assignment->status()?->value === AssignmentStatus::Closed->value;
+            $isOverdue = $assignment->due_date && $assignment->due_date->isPast();
+            $isMissed = ($isClosed || $isOverdue) && ! $isSubmitted;
+            $score = $isGraded && $submission->points !== null ? round((float) $submission->points, 2) : null;
+            $totalPoints = round((float) ($assignment->points_possible ?? 0), 2);
+            $pct = ($score !== null && $totalPoints > 0) ? round(($score / $totalPoints) * 100, 1) : null;
+            $isPendingReview = $isSubmitted && ! $isGraded;
+            $state = $isGraded ? 'completed' : ($isSubmitted ? 'in_progress' : (($isClosed || $isOverdue) ? 'closed' : 'open'));
+
+            return $assignment->sections
+                ->filter(fn (Section $section) => $section->isTermAllowedForActivityRecord($assignment->term))
+                ->map(function (Section $section) use (
+                    $assignment,
+                    $isSubmitted,
+                    $isMissed,
+                    $isPendingReview,
+                    $score,
+                    $totalPoints,
+                    $pct,
+                    $state
+                ) {
+                    return [
+                        'id' => 'assignment_'.$assignment->id.'_'.$section->id,
+                        'title' => $assignment->title,
+                        'activity_type' => 'Assignment',
+                        'category' => 'performance',
+                        'term' => $assignment->term ?: 'General',
+                        'section_id' => $section->id,
+                        'section_name' => $section->name,
+                        'school_level' => $section->school_level ?? Section::SCHOOL_LEVEL_COLLEGE,
+                        'season_name' => $section->season?->name ?? 'Other',
+                        'season_start' => $section->season?->start_date?->getTimestamp() ?? 0,
+                        'created_at' => $assignment->created_at?->getTimestamp() ?? 0,
+                        'ends_at_iso' => $assignment->due_date?->toIso8601String(),
+                        'score' => $score,
+                        'total_points' => $totalPoints,
+                        'percentage' => $pct,
+                        'submitted' => $isSubmitted,
+                        'is_missed' => $isMissed,
+                        'is_incomplete' => false,
+                        'is_pending_review' => $isPendingReview,
+                        'submitted_parts' => $isSubmitted ? 1 : 0,
+                        'total_parts' => 1,
+                        'is_late' => false,
+                        'state' => $state,
+                    ];
+                });
+        });
+
+        $rows = $examRows->concat($taskRows)->concat($assignmentRows);
 
         $seasonStarts = $rows
             ->groupBy('season_name')
