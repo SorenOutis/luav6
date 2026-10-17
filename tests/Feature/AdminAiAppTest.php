@@ -101,23 +101,18 @@ it('ships a standalone manifest with correctly sized icons', function () {
         ->and(file_exists(public_path('images/ai-app-512.png')))->toBeTrue();
 });
 
-it('serves a manifest with the school accent color applied', function () {
-    Setting::setGlobal('school_accent_color', '#123456');
-
+it('serves the Echo AI logo palette in the manifest', function () {
     $this->get(route('ai-app-manifest'))
         ->assertOk()
         ->assertHeader('Content-Type', 'application/manifest+json')
-        ->assertJsonPath('theme_color', '#123456')
-        ->assertJsonPath('background_color', '#123456')
+        ->assertJsonPath('theme_color', '#3c4d3e')
+        ->assertJsonPath('background_color', '#f5e8d7')
         ->assertJsonPath('start_url', '/admin/ai-assistant-app');
-});
 
-it('ignores invalid accent colors in the manifest', function () {
-    Setting::setGlobal('school_accent_color', 'javascript:alert(1)');
+    $static = json_decode((string) file_get_contents(public_path('ai-assistant.webmanifest')), true);
 
-    $this->get(route('ai-app-manifest'))
-        ->assertOk()
-        ->assertJsonPath('theme_color', '#09090b');
+    expect($static['theme_color'])->toBe('#3c4d3e')
+        ->and($static['background_color'])->toBe('#f5e8d7');
 });
 
 it('falls back to correctly sized bundled icons when no logo is uploaded', function (int $size, string $expected) {
