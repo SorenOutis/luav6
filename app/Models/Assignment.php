@@ -14,7 +14,7 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active', 'status'];
+    protected $fillable = ['title', 'description', 'due_date', 'term', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active', 'status'];
 
     protected $attributes = [
         'is_active' => true,
