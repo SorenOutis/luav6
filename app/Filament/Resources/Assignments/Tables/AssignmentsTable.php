@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Assignments\Tables;
 
 use App\Filament\Support\WorkspaceTable;
+use App\Models\Assignment;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,6 +31,14 @@ class AssignmentsTable
                         default => 'secondary',
                     })
                     ->sortable(),
+                TextColumn::make('term')
+                    ->label('Term / Period')
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('info')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('sections.name')
                     ->label('Assigned sections')
                     ->badge()
@@ -72,6 +81,9 @@ class AssignmentsTable
                     ->relationship('sections', 'name')
                     ->multiple()
                     ->preload(),
+                SelectFilter::make('term')
+                    ->label('Term / Period')
+                    ->options(fn () => Assignment::query()->whereNotNull('term')->distinct()->pluck('term', 'term')->all()),
                 Filter::make('unassigned')
                     ->label('Unassigned only')
                     ->query(fn (Builder $query): Builder => $query->whereDoesntHave('sections')),
