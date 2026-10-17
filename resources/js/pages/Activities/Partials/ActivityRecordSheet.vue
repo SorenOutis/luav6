@@ -167,28 +167,109 @@ const calcMax = (items: ActivityScoreItem[]) =>
 const calcPct = (earned: number, max: number) =>
     max > 0 ? Math.round((earned / max) * 1000) / 10 : null;
 
+const resolveComponentCategory = (
+    activity: ActivityScoreItem,
+): {
+    key: string;
+    category: 'written' | 'performance';
+    label: string;
+} => {
+    const category =
+        activity.category ??
+        (typeof activity.id === 'string' ? 'performance' : 'written');
+    if (category === 'written') {
+        return {
+            key: 'written',
+            category: 'written',
+            label: 'Written Activities',
+        };
+    }
+
+    const rawType = activity.activity_type?.trim() || 'Performance Task';
+    if (/^(activities|activity|act\.?)(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Activities',
+            category: 'performance',
+            label: 'Activities',
+        };
+    }
+    if (/^(laborator(y|ies)|labs?)(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Laboratory',
+            category: 'performance',
+            label: 'Laboratory',
+        };
+    }
+    if (/^(performance\s*tasks?|pt)(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Performance Task',
+            category: 'performance',
+            label: 'Performance Tasks',
+        };
+    }
+    if (/^presentations?(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Presentation',
+            category: 'performance',
+            label: 'Presentation',
+        };
+    }
+    if (/^projects?(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Project',
+            category: 'performance',
+            label: 'Project',
+        };
+    }
+    if (/^quizz?es?(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Quiz',
+            category: 'performance',
+            label: 'Quiz',
+        };
+    }
+    return {
+        key: `performance:${rawType}`,
+        category: 'performance',
+        label: rawType,
+    };
+};
+
+const hasSpecificActivityType = (
+    activity: ActivityScoreItem,
+    componentLabel: string,
+): boolean => {
+    const raw = activity.activity_type?.trim();
+    if (!raw) {
+        return false;
+    }
+    if (
+        /^(performance\s*tasks?|written\s*(work|activities)|activities|activity|act\.?|laborator(y|ies)|labs?|presentations?|projects?|quizz?es?)$/i.test(
+            raw,
+        )
+    ) {
+        return false;
+    }
+    if (raw.toLowerCase() === componentLabel.trim().toLowerCase()) {
+        return false;
+    }
+    if (raw.toLowerCase() === activity.title.trim().toLowerCase()) {
+        return false;
+    }
+    return true;
+};
+
 const groupComponents = (items: ActivityScoreItem[]): ComponentGroup[] => {
     const groups = new Map<string, ComponentGroup>();
 
     for (const activity of items) {
-        const category =
-            activity.category ??
-            (typeof activity.id === 'string' ? 'performance' : 'written');
-        const activityType =
-            activity.activity_type?.trim() || 'Performance Task';
-        const key =
-            category === 'written' ? 'written' : `performance:${activityType}`;
+        const { key, category, label } = resolveComponentCategory(activity);
 
         if (!groups.has(key)) {
             groups.set(key, {
                 key,
                 category,
-                label:
-                    category === 'written'
-                        ? 'Written Activities'
-                        : activityType === 'Performance Task'
-                          ? 'Performance Tasks'
-                          : activityType,
+                label,
                 activities: [],
                 subtotalScore: 0,
                 subtotalMax: 0,
@@ -204,13 +285,31 @@ const groupComponents = (items: ActivityScoreItem[]): ComponentGroup[] => {
             if (a.category !== b.category) {
                 return a.category === 'written' ? -1 : 1;
             }
-            if (a.key === 'performance:Performance Task') {
+            if (
+                a.key === 'performance:Performance Task' &&
+                b.key !== 'performance:Performance Task'
+            ) {
                 return -1;
             }
-            if (b.key === 'performance:Performance Task') {
+            if (
+                b.key === 'performance:Performance Task' &&
+                a.key !== 'performance:Performance Task'
+            ) {
                 return 1;
             }
-            return 0;
+            if (
+                a.key === 'performance:Activities' &&
+                b.key !== 'performance:Activities'
+            ) {
+                return -1;
+            }
+            if (
+                b.key === 'performance:Activities' &&
+                a.key !== 'performance:Activities'
+            ) {
+                return 1;
+            }
+            return a.label.localeCompare(b.label);
         })
         .map((group) => {
             const earned = calcEarned(group.activities);
@@ -306,16 +405,13 @@ const availableTypes = computed<TypeOption[]>(() => {
     const customTypes = new Set<string>();
 
     for (const activity of allActivities.value) {
-        const category =
-            activity.category ??
-            (typeof activity.id === 'string' ? 'performance' : 'written');
-        if (category === 'written') {
+        const resolved = resolveComponentCategory(activity);
+        if (resolved.category === 'written') {
             hasWritten = true;
         } else {
             hasPerformance = true;
-            const activityType = activity.activity_type?.trim();
-            if (activityType && activityType !== 'Performance Task') {
-                customTypes.add(activityType);
+            if (resolved.key !== 'performance:Performance Task') {
+                customTypes.add(resolved.label);
             }
         }
     }
@@ -392,39 +488,30 @@ const filteredActivities = computed(() => {
     if (selectedType.value !== 'all') {
         if (selectedType.value === 'written') {
             list = list.filter((a) => {
-                const category =
-                    a.category ??
-                    (typeof a.id === 'string' ? 'performance' : 'written');
-                return category === 'written';
+                const resolved = resolveComponentCategory(a);
+                return resolved.category === 'written';
             });
         } else if (selectedType.value === 'performance') {
             list = list.filter((a) => {
-                const category =
-                    a.category ??
-                    (typeof a.id === 'string' ? 'performance' : 'written');
-                return category === 'performance';
+                const resolved = resolveComponentCategory(a);
+                return resolved.category === 'performance';
             });
         } else if (selectedType.value === 'performance:standard') {
             list = list.filter((a) => {
-                const category =
-                    a.category ??
-                    (typeof a.id === 'string' ? 'performance' : 'written');
-                const activityType =
-                    a.activity_type?.trim() || 'Performance Task';
+                const resolved = resolveComponentCategory(a);
                 return (
-                    category === 'performance' &&
-                    activityType === 'Performance Task'
+                    resolved.category === 'performance' &&
+                    resolved.key === 'performance:Performance Task'
                 );
             });
         } else if (selectedType.value.startsWith('custom:')) {
             const customType = selectedType.value.slice(7);
             list = list.filter((a) => {
-                const category =
-                    a.category ??
-                    (typeof a.id === 'string' ? 'performance' : 'written');
+                const resolved = resolveComponentCategory(a);
                 return (
-                    category === 'performance' &&
-                    a.activity_type?.trim() === customType
+                    resolved.category === 'performance' &&
+                    (resolved.label === customType ||
+                        a.activity_type?.trim() === customType)
                 );
             });
         }
@@ -800,6 +887,17 @@ const handlePrint = () => {
                                             <td
                                                 class="border border-black p-1.5 font-medium text-black"
                                             >
+                                                <div
+                                                    v-if="
+                                                        hasSpecificActivityType(
+                                                            activity,
+                                                            component.label,
+                                                        )
+                                                    "
+                                                    class="text-[10px] font-bold text-neutral-600 uppercase"
+                                                >
+                                                    {{ activity.activity_type }}
+                                                </div>
                                                 <div>{{ activity.title }}</div>
                                                 <p
                                                     v-if="
@@ -1118,6 +1216,19 @@ const handlePrint = () => {
                                                     scope="row"
                                                     class="px-3 py-3 text-left align-top font-normal"
                                                 >
+                                                    <p
+                                                        v-if="
+                                                            hasSpecificActivityType(
+                                                                activity,
+                                                                component.label,
+                                                            )
+                                                        "
+                                                        class="text-xs font-semibold text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            activity.activity_type
+                                                        }}
+                                                    </p>
                                                     <button
                                                         v-if="
                                                             (activity.submitted ||

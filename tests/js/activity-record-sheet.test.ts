@@ -987,7 +987,9 @@ describe('ActivityRecordSheet component totals', () => {
         );
 
         // Initially shows all 4 activities across both sections and types
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(4);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(4);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
@@ -1006,7 +1008,9 @@ describe('ActivityRecordSheet component totals', () => {
         expect(sectionAOption).toBeDefined();
         await sectionSelect.setValue(sectionAOption!.value);
 
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(2);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
@@ -1015,7 +1019,9 @@ describe('ActivityRecordSheet component totals', () => {
 
         // Filter per type: Written Activities only
         await typeSelect.setValue('written');
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(1);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
@@ -1024,7 +1030,9 @@ describe('ActivityRecordSheet component totals', () => {
 
         // Switch to all sections but keep Written Activities
         await sectionSelect.setValue('all');
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(2);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
@@ -1033,7 +1041,9 @@ describe('ActivityRecordSheet component totals', () => {
 
         // Filter per type: Laboratory only (custom type)
         await typeSelect.setValue('custom:Laboratory');
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(1);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
@@ -1042,7 +1052,9 @@ describe('ActivityRecordSheet component totals', () => {
 
         // Reset both dropdowns to all
         await typeSelect.setValue('all');
-        expect(wrapper.findAll('[data-test="activity-record-table"]')).toHaveLength(4);
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(4);
     });
 
     it('displays an empty state with reset filters button when filters exclude all activities', async () => {
@@ -1063,7 +1075,9 @@ describe('ActivityRecordSheet component totals', () => {
         await search.setValue('nonexistent activity');
 
         expect(wrapper.text()).toContain('No activities match the filter');
-        const resetButton = wrapper.findAll('button').find((b) => b.text() === 'Reset filters');
+        const resetButton = wrapper
+            .findAll('button')
+            .find((b) => b.text() === 'Reset filters');
         expect(resetButton).toBeDefined();
 
         await resetButton!.trigger('click');
@@ -1073,5 +1087,97 @@ describe('ActivityRecordSheet component totals', () => {
                 .findAll('[data-test="activity-record-cell"]')
                 .map((cell) => cell.attributes('aria-label')),
         ).toEqual(['Solo Quiz']);
+    });
+
+    it('groups numbered activity tasks under a single Activities table with one combined total and no per-activity subtotals', async () => {
+        wrapper = mountRecord([
+            task({
+                id: 'act-1',
+                title: 'Git Setup',
+                activity_type: 'Activity 1',
+                score: 25,
+                total_points: 30,
+                percentage: 83.3,
+            }),
+            task({
+                id: 'act-2',
+                title: 'HTML Basics',
+                activity_type: 'Activity 2',
+                score: 45,
+                total_points: 50,
+                percentage: 90,
+            }),
+        ]);
+
+        expectComponentCount(1);
+        expectComponent(
+            'performance:Activities',
+            'Activities',
+            '70 / 80',
+            '88%',
+        );
+
+        const screenTable = wrapper.get(
+            selector('table', 'performance:Activities'),
+        );
+        const rows = screenTable.findAll('tbody tr');
+        expect(rows).toHaveLength(2);
+
+        const row1Th = rows[0].get('th[scope="row"]');
+        expect(row1Th.get('p').text()).toBe('Activity 1');
+        expect(row1Th.text()).toContain('Git Setup');
+
+        const row2Th = rows[1].get('th[scope="row"]');
+        expect(row2Th.get('p').text()).toBe('Activity 2');
+        expect(row2Th.text()).toContain('HTML Basics');
+
+        expect(screenTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(
+                screenTable
+                    .get('[data-test="activity-record-total-cell"]')
+                    .text(),
+            ),
+        ).toBe('70 / 80');
+
+        const printTable = wrapper.get(
+            selector('print-component-table', 'performance:Activities'),
+        );
+        expect(printTable.findAll('tbody tr')).toHaveLength(2);
+        expect(printTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(printTable.get('tbody tr:first-child td:nth-child(2)').text()),
+        ).toContain('Activity 1');
+        expect(
+            text(printTable.get('tbody tr:first-child td:nth-child(2)').text()),
+        ).toContain('Git Setup');
+        expect(
+            text(printTable.get('tbody tr:last-child td:nth-child(2)').text()),
+        ).toContain('Activity 2');
+        expect(
+            text(printTable.get('tbody tr:last-child td:nth-child(2)').text()),
+        ).toContain('HTML Basics');
+
+        const typeSelect = wrapper.get<HTMLSelectElement>(
+            '[data-test="activity-record-type-filter"]',
+        );
+        const options = Array.from(typeSelect.element.options).map((o) => ({
+            value: o.value,
+            text: o.text,
+        }));
+        expect(options).toContainEqual({
+            value: 'custom:Activities',
+            text: 'Activities',
+        });
+
+        await typeSelect.setValue('custom:Activities');
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(1);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Git Setup', 'HTML Basics']);
     });
 });
