@@ -50,6 +50,10 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::HEAD_END,
                 fn (): View => view('filament.components.ai-app-head'),
             )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): View => view('filament.components.ai-chat-head'),
+            )
             ->sidebarCollapsibleOnDesktop()
             ->spa()
             ->viteTheme('resources/css/filament/admin/theme.css')
