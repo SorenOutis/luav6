@@ -58,6 +58,21 @@
                     this.isSpeaking = false;
                         this.speakingContent = null;
 
+                    const rememberSession = () => {
+                        try {
+                            const identifier = this.activeSessionUuid || (this.activeSessionId ? String(this.activeSessionId) : '');
+
+                            if (identifier) {
+                                window.localStorage.setItem('echoAiChatHead.session', identifier);
+                            } else {
+                                window.localStorage.removeItem('echoAiChatHead.session');
+                            }
+                        } catch (e) {}
+                    };
+
+                    this.$watch('activeSessionUuid', rememberSession);
+                    this.$watch('activeSessionId', rememberSession);
+
                     this.$nextTick(() => {
                         if (this.$refs.welcomeComposerInput && !this.activeSessionId) {
                             this.$refs.welcomeComposerInput.focus();

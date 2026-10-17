@@ -44,11 +44,46 @@ it('offers installation on the existing superadmin chat page', function () {
         ->assertSee('Install Echo AI');
 });
 
+it('renders the floating chat head for superadmins across the admin panel', function () {
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->get(route('filament.admin.pages.admin-dashboard'))
+        ->assertOk()
+        ->assertSee('data-echo-chat-head', escape: false)
+        ->assertSee('ai-chat-head.js');
+});
+
+it('keeps the floating chat head away from regular admins', function () {
+    $this->actingAs(User::factory()->admin()->create())
+        ->get(route('filament.admin.pages.admin-dashboard'))
+        ->assertOk()
+        ->assertDontSee('data-echo-chat-head', escape: false)
+        ->assertDontSee('ai-chat-head.js');
+});
+
+it('serves an embed variant of the assistant without page chrome', function () {
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->get(AdminAiApp::getUrl().'?embed=1')
+        ->assertOk()
+        ->assertSee('data-ai-chat-embed', escape: false)
+        ->assertDontSee('data-ai-chat-sidebar', escape: false)
+        ->assertDontSee('Toggle chat history')
+        ->assertDontSee('ai-chat-head.js');
+});
+
+it('keeps the full chat page chrome outside embed mode', function () {
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->get(AdminAiApp::getUrl())
+        ->assertOk()
+        ->assertSee('data-ai-chat-sidebar', escape: false)
+        ->assertSee('Toggle chat history')
+        ->assertDontSee('data-ai-chat-embed', escape: false);
+});
+
 it('ships a standalone manifest with correctly sized icons', function () {
     $manifest = json_decode(file_get_contents(public_path('ai-assistant.webmanifest')), true, flags: JSON_THROW_ON_ERROR);
 
     expect($manifest['start_url'])->toBe('/admin/ai-assistant-app')
-        ->and($manifest['scope'])->toBe('/admin/ai-assistant-app')
+        ->and($manifest['scope'])->toBe('/admin')
         ->and($manifest['display'])->toBe('standalone')
         ->and($manifest['name'])->toBe('Echo AI')
         ->and($manifest['short_name'])->toBe('Echo AI');

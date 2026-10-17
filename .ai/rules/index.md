@@ -6,7 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Ai/** | .ai/rules/ai.md |
 | app/** | .ai/rules/app.md |
-| resources/views/filament/components/ai-app-head.blade.php | .ai/rules/components.md |
+| resources/views/filament/components/ai-*.blade.php | .ai/rules/components.md |
 | app/Http/Controllers/Chat*.php, app/Http/Controllers/ChatHistoryController.php | .ai/rules/controllers.md |
 | resources/js/components/dashboard/StreakCalendarModal.vue | .ai/rules/dashboard.md |
 | app/Filament/Pages/AiSettings.php | .ai/rules/filament-pages.md |
@@ -17,3 +17,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | routes/**/*.php | .ai/rules/routes.md |
 | app/Services/Streak*.php, app/Services/PendingAiActionService.php | .ai/rules/services.md |
 | app/Ai/Tools/** | .ai/rules/tools.md |
+| resources/views/**/*.blade.php | .ai/rules/views.md |
