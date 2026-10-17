@@ -1180,4 +1180,137 @@ describe('ActivityRecordSheet component totals', () => {
                 .map((cell) => cell.attributes('aria-label')),
         ).toEqual(['Git Setup', 'HTML Basics']);
     });
+
+    it('groups assignments under a single Assignments table with one combined total and no per-activity subtotals', async () => {
+        wrapper = mountRecord([
+            task({
+                id: 'assignment_1_1',
+                title: 'Essay Analysis',
+                activity_type: 'Assignment',
+                score: 45,
+                total_points: 50,
+                percentage: 90,
+            }),
+            task({
+                id: 'assignment_2_1',
+                title: 'Peer Review',
+                activity_type: 'Assignment 2',
+                score: 40,
+                total_points: 50,
+                percentage: 80,
+            }),
+        ]);
+
+        expectComponentCount(1);
+        expectComponent(
+            'performance:Assignments',
+            'Assignments',
+            '85 / 100',
+            '85%',
+        );
+
+        const screenTable = wrapper.get(
+            selector('table', 'performance:Assignments'),
+        );
+        const rows = screenTable.findAll('tbody tr');
+        expect(rows).toHaveLength(2);
+
+        // General 'Assignment' type does not duplicate as a specific type label
+        const row1Th = rows[0].get('th[scope="row"]');
+        expect(row1Th.find('p').exists()).toBe(false);
+        expect(row1Th.text()).toContain('Essay Analysis');
+
+        // Specific 'Assignment 2' type renders the specific tag
+        const row2Th = rows[1].get('th[scope="row"]');
+        expect(row2Th.get('p').text()).toBe('Assignment 2');
+        expect(row2Th.text()).toContain('Peer Review');
+
+        expect(screenTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(
+                screenTable
+                    .get('[data-test="activity-record-total-cell"]')
+                    .text(),
+            ),
+        ).toBe('85 / 100');
+
+        const printTable = wrapper.get(
+            selector('print-component-table', 'performance:Assignments'),
+        );
+        expect(printTable.findAll('tbody tr')).toHaveLength(2);
+        expect(printTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(printTable.get('tbody tr:first-child td:nth-child(2)').text()),
+        ).toContain('Essay Analysis');
+        expect(
+            text(printTable.get('tbody tr:last-child td:nth-child(2)').text()),
+        ).toContain('Assignment 2');
+
+        const typeSelect = wrapper.get<HTMLSelectElement>(
+            '[data-test="activity-record-type-filter"]',
+        );
+        const options = Array.from(typeSelect.element.options).map((o) => ({
+            value: o.value,
+            text: o.text,
+        }));
+        expect(options).toContainEqual({
+            value: 'custom:Assignments',
+            text: 'Assignments',
+        });
+
+        await typeSelect.setValue('custom:Assignments');
+        expect(
+            wrapper.findAll('[data-test="activity-record-table"]'),
+        ).toHaveLength(1);
+        expect(
+            wrapper
+                .findAll('[data-test="activity-record-cell"]')
+                .map((cell) => cell.attributes('aria-label')),
+        ).toEqual(['Essay Analysis', 'Peer Review']);
+    });
+
+    it('orders component groups as Written, Performance Tasks, Activities, Assignments, then others alphabetically', () => {
+        wrapper = mountRecord([
+            task({
+                id: 'pres-1',
+                title: 'Final Pitch',
+                activity_type: 'Presentation',
+            }),
+            task({
+                id: 'assignment-1',
+                title: 'Homework 1',
+                activity_type: 'Assignment',
+            }),
+            task({
+                id: 'act-1',
+                title: 'Exercise 1',
+                activity_type: 'Activity',
+            }),
+            task({
+                id: 'pt-1',
+                title: 'Project Milestone',
+                activity_type: 'Performance Task',
+            }),
+            activity({
+                id: 1,
+                title: 'Unit Test Exam',
+            }),
+        ]);
+
+        const componentLabels = wrapper
+            .findAll('[data-test="activity-record-table"]')
+            .map((table) =>
+                table.element.parentElement?.parentElement
+                    ?.querySelector('h5')
+                    ?.textContent?.trim(),
+            );
+
+        expect(componentLabels).toEqual([
+            'Written Activities',
+            'Performance Tasks',
+            'Activities',
+            'Assignments',
+            'Presentation',
+        ]);
+    });
 });

@@ -193,6 +193,13 @@ const resolveComponentCategory = (
             label: 'Activities',
         };
     }
+    if (/^(assignments?|asg\.?)(\s*#?\s*\d+)?$/i.test(rawType)) {
+        return {
+            key: 'performance:Assignments',
+            category: 'performance',
+            label: 'Assignments',
+        };
+    }
     if (/^(laborator(y|ies)|labs?)(\s*#?\s*\d+)?$/i.test(rawType)) {
         return {
             key: 'performance:Laboratory',
@@ -244,7 +251,7 @@ const hasSpecificActivityType = (
         return false;
     }
     if (
-        /^(performance\s*tasks?|written\s*(work|activities)|activities|activity|act\.?|laborator(y|ies)|labs?|presentations?|projects?|quizz?es?)$/i.test(
+        /^(performance\s*tasks?|written\s*(work|activities)|activities|activity|act\.?|assignments?|asg\.?|laborator(y|ies)|labs?|presentations?|projects?|quizz?es?)$/i.test(
             raw,
         )
     ) {
@@ -306,6 +313,18 @@ const groupComponents = (items: ActivityScoreItem[]): ComponentGroup[] => {
             if (
                 b.key === 'performance:Activities' &&
                 a.key !== 'performance:Activities'
+            ) {
+                return 1;
+            }
+            if (
+                a.key === 'performance:Assignments' &&
+                b.key !== 'performance:Assignments'
+            ) {
+                return -1;
+            }
+            if (
+                b.key === 'performance:Assignments' &&
+                a.key !== 'performance:Assignments'
             ) {
                 return 1;
             }
