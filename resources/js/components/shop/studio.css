@@ -1,0 +1,141 @@
+.st-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+
+.st-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.7rem 1.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    transition:
+        background-color 0.25s ease,
+        color 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.15s ease;
+}
+
+.st-pill:active {
+    transform: scale(0.97);
+}
+
+.st-pill--solid {
+    background: var(--st-accent);
+    color: var(--st-on-accent);
+}
+
+.st-pill--solid:hover {
+    background: var(--st-accent-strong);
+}
+
+.st-pill--ghost {
+    border: 1px solid var(--st-hairline-strong);
+    color: var(--st-ink);
+}
+
+.st-pill--ghost:hover {
+    background: var(--st-ghost-hover);
+    border-color: var(--st-ink);
+}
+
+.st-capsule {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 9999px;
+    border: 1px solid var(--st-capsule-line);
+    padding: 0.45rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--st-ink-mute);
+    transition:
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.st-capsule:hover {
+    color: var(--st-ink);
+    border-color: var(--st-ink-mute);
+}
+
+.st-capsule[aria-pressed='true'] {
+    background: var(--st-ink);
+    border-color: var(--st-ink);
+    color: var(--st-bg);
+}
+
+.st-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0;
+}
+
+.st-row + .st-row {
+    border-top: 1px solid var(--st-hairline);
+}
+
+.st-pool {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(58% 44% at 50% 40%, var(--st-pool-a), transparent 72%),
+        radial-gradient(46% 14% at 50% 88%, var(--st-pool-b), transparent 78%);
+}
+
+.st-swap {
+    animation: st-swap 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes st-swap {
+    from {
+        opacity: 0.2;
+        transform: scale(1.02);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.st-sheet {
+    animation: st-sheet-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes st-sheet-in {
+    from {
+        opacity: 0;
+        transform: scale(0.965) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .st-swap,
+    .st-sheet {
+        animation: none;
+    }
+
+    .st-pill:active {
+        transform: none;
+    }
+}
