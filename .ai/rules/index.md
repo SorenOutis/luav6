@@ -8,6 +8,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/** | .ai/rules/app.md |
 | resources/js/components/dashboard/StreakCalendarModal.vue | .ai/rules/dashboard.md |
 | app/Filament/** | .ai/rules/filament.md |
+| resources/js/** | .ai/rules/js.md |
 | resources/views/filament/pages/** | .ai/rules/pages.md |
 | routes/**/*.php | .ai/rules/routes.md |
 | app/Services/Streak*.php, app/Services/PendingAiActionService.php | .ai/rules/services.md |

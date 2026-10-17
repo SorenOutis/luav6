@@ -35,8 +35,8 @@ class MerchSeeder extends Seeder
                 'sort_order' => 1,
             ],
             [
-                'name' => 'KOAMISHIN BSIT Techwear Hoodie',
-                'description' => '380 GSM heavyweight technical fleece with topographic contour sleeves, weatherproof angular pocket, and BSIT signature insignia.',
+                'name' => 'KOAMISHIN Techwear Hoodie',
+                'description' => '380 GSM heavyweight technical fleece with topographic contour sleeves, weatherproof angular pocket, and signature insignia.',
                 'price' => 1650.00,
                 'currency' => 'PHP',
                 'stock' => 12,

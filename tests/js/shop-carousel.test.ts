@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import Shop from '@/pages/Shop.vue';
 import type { MerchItem } from '@/types/merch';
 
-// Mock Inertia Head and Link components
 vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<head-stub><slot /></head-stub>' },
     Link: { template: '<a :href="$attrs.href"><slot /></a>' },
@@ -16,7 +16,6 @@ vi.mock('@inertiajs/vue3', () => ({
     }),
 }));
 
-// Mock Wayfinder routes
 vi.mock('@/routes', () => ({
     dashboard: () => ({ url: '/dashboard' }),
     login: () => ({ url: '/login' }),
@@ -32,7 +31,7 @@ const sampleMerches: MerchItem[] = [
         price: 750,
         currency: 'PHP',
         formatted_price: '₱750.00',
-        image_url: 'https://placehold.co/400x400',
+        image_url: 'https://placehold.co/400x400/tee',
         stock: 24,
         is_out_of_stock: false,
         stock_label: '24 in stock',
@@ -40,12 +39,12 @@ const sampleMerches: MerchItem[] = [
     },
     {
         id: 2,
-        name: 'KOAMISHIN BSIT Techwear Hoodie',
+        name: 'KOAMISHIN Techwear Hoodie',
         description: 'Ultra-soft fleece with double-lined hood.',
         price: 1450,
         currency: 'PHP',
         formatted_price: '₱1,450.00',
-        image_url: 'https://placehold.co/400x400/obsidian',
+        image_url: 'https://placehold.co/400x400/hoodie',
         variants: [
             {
                 name: 'Obsidian',
@@ -68,7 +67,7 @@ const sampleMerches: MerchItem[] = [
         price: 550,
         currency: 'PHP',
         formatted_price: '₱550.00',
-        image_url: 'https://placehold.co/400x400',
+        image_url: 'https://placehold.co/400x400/cap',
         stock: 4,
         is_out_of_stock: false,
         stock_label: 'Only 4 left',
@@ -81,7 +80,7 @@ const sampleMerches: MerchItem[] = [
         price: 420,
         currency: 'PHP',
         formatted_price: '₱420.00',
-        image_url: 'https://placehold.co/400x400',
+        image_url: 'https://placehold.co/400x400/tote',
         stock: 0,
         is_out_of_stock: true,
         stock_label: 'Out of Stock',
@@ -89,11 +88,11 @@ const sampleMerches: MerchItem[] = [
     },
 ];
 
-const mountShop = () => {
+const mountShop = (merches: MerchItem[] = sampleMerches) => {
     return mount(Shop, {
         props: {
             canRegister: true,
-            merches: sampleMerches,
+            merches,
         },
         global: {
             mocks: {
@@ -109,61 +108,108 @@ const mountShop = () => {
     });
 };
 
-describe('Shop.vue Bento Grid Collection', () => {
-    it('renders the Bento Grid layout with merchandise cards and brand spec tile', () => {
+describe('Shop.vue studio world', () => {
+    it('renders the stage headline and the external store CTA', () => {
         const wrapper = mountShop();
 
-        const grid = wrapper.find('.merch-bento-grid');
-        expect(grid.exists()).toBe(true);
+        expect(wrapper.find('.studio-stage').exists()).toBe(true);
+        expect(wrapper.find('.stage-title').text()).toBe('The merch line.');
 
-        // Contains product cards in the bento grid
-        const cards = wrapper.findAll('.merch-bento-grid .merch-card');
-        expect(cards.length).toBe(sampleMerches.length);
+        const storeLink = wrapper.find(
+            '.studio-stage a[href^="https://koamishin.com"]',
+        );
+        expect(storeLink.exists()).toBe(true);
+        expect(storeLink.text()).toContain('Visit store');
+    });
 
-        // First card (Flagship) has title and Shop Now button pointing to koamishin.com
-        const firstCard = cards[0];
-        expect(firstCard.text()).toContain(
+    it('leads the stage with the piece that has a colorway story', async () => {
+        const wrapper = mountShop();
+        await nextTick();
+
+        expect(wrapper.find('.stage-garment').attributes('src')).toBe(
+            'https://placehold.co/800x800/alabaster.jpg',
+        );
+
+        expect(wrapper.findAll('.piece-tile').length).toBe(
+            sampleMerches.length,
+        );
+    });
+
+    it('swaps the garment in place when a colorway capsule is clicked', async () => {
+        const wrapper = mountShop();
+        await nextTick();
+
+        const capsules = wrapper.findAll('.colorway-capsule');
+        const obsidian = capsules.find(
+            (capsule) => capsule.text() === 'Obsidian',
+        );
+        const alabaster = capsules.find(
+            (capsule) => capsule.text() === 'Alabaster',
+        );
+
+        expect(obsidian?.exists()).toBe(true);
+        expect(alabaster?.exists()).toBe(true);
+
+        await obsidian?.trigger('click');
+        expect(wrapper.find('.stage-garment').attributes('src')).toBe(
+            'https://placehold.co/800x800/obsidian.jpg',
+        );
+        expect(
+            wrapper
+                .findAll('.colorway-capsule')
+                .find((capsule) => capsule.text() === 'Obsidian')
+                ?.attributes('aria-pressed'),
+        ).toBe('true');
+
+        await alabaster?.trigger('click');
+        expect(wrapper.find('.stage-garment').attributes('src')).toBe(
+            'https://placehold.co/800x800/alabaster.jpg',
+        );
+    });
+
+    it('reports the on-stage piece stock honestly', async () => {
+        const wrapper = mountShop();
+        await nextTick();
+
+        expect(wrapper.find('.studio-stage').text()).toContain('12 in stock');
+    });
+
+    it('renders one collection tile per piece with name, price, and stock label', () => {
+        const wrapper = mountShop();
+
+        const tiles = wrapper.findAll('.piece-tile');
+        expect(tiles.length).toBe(sampleMerches.length);
+
+        const firstTile = tiles[0];
+        expect(firstTile.text()).toContain(
             'KOAMISHIN Signature Heavyweight Tee',
         );
-        expect(firstCard.text()).toContain('₱750.00');
-        expect(firstCard.text()).toContain('24 in stock');
+        expect(firstTile.text()).toContain('₱750.00');
+        expect(firstTile.text()).toContain('24 in stock');
 
-        const shopNowLink = firstCard.find('a[href^="https://koamishin.com"]');
-        expect(shopNowLink.exists()).toBe(true);
-        expect(shopNowLink.text()).toContain('Visit store');
-
-        // Contains Atelier brand spec tile
-        expect(wrapper.text()).toContain('KOAMISHIN × BSIT Department');
+        expect(tiles[3].text()).toContain('Out of Stock');
     });
 
-    it('has clean catalog header with inventory count and external store link', () => {
+    it('reports catalog counts and the reference-price note', () => {
         const wrapper = mountShop();
 
-        // Catalog header contains item count and clean external link
-        expect(wrapper.text()).toContain('Merchandise Catalog');
-        expect(wrapper.text()).toContain('4 Items');
-
-        const storeLink = wrapper.find('a[href^="https://koamishin.com"]');
-        expect(storeLink.exists()).toBe(true);
-        expect(wrapper.text()).toContain('Visit main store');
+        expect(wrapper.text()).toContain('04 items');
+        expect(wrapper.text()).toContain('03 in stock');
+        expect(wrapper.text()).toContain(
+            'checkout & fulfillment on koamishin.com',
+        );
     });
 
-    it('opens the Quick-View Lightbox modal when a merchandise card image is clicked', async () => {
+    it('opens the detail sheet when a tile is clicked', async () => {
         const wrapper = mountShop();
 
-        // Initially, modal dialog should not be rendered
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
-        // Find the first card's image button trigger
-        const firstCardImageBtn = wrapper.find(
-            '.merch-bento-grid .merch-card button.group\\/img',
-        );
-        expect(firstCardImageBtn.exists()).toBe(true);
+        const firstTileOpen = wrapper.find('.piece-tile .tile-open');
+        expect(firstTileOpen.exists()).toBe(true);
 
-        // Click to open quick-view lightbox
-        await firstCardImageBtn.trigger('click');
+        await firstTileOpen.trigger('click');
 
-        // Modal should now be open
         const modal = wrapper.findComponent({ name: 'ShopQuickViewModal' });
         expect(modal.exists()).toBe(true);
         expect(modal.props('open')).toBe(true);
@@ -172,45 +218,7 @@ describe('Shop.vue Bento Grid Collection', () => {
         );
     });
 
-    it('renders dynamic variant buttons and updates hero showcase image on click', async () => {
-        const wrapper = mountShop();
-
-        // Check variant buttons rendered
-        const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const obsidianBtn = variantButtons.find(
-            (btn) => btn.text() === 'Obsidian',
-        );
-        const alabasterBtn = variantButtons.find(
-            (btn) => btn.text() === 'Alabaster',
-        );
-
-        expect(obsidianBtn?.exists()).toBe(true);
-        expect(alabasterBtn?.exists()).toBe(true);
-
-        // Find hero image
-        const heroImg = wrapper.find('section[aria-label*="Showcase"] img');
-        expect(heroImg.exists()).toBe(true);
-
-        // Click Alabaster
-        await alabasterBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/alabaster.jpg');
-
-        // Click Obsidian
-        await obsidianBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/obsidian.jpg');
-    });
-
-    it('renders tabs when 1 variant is uploaded per merch item across different merches', async () => {
+    it('shows a single colorway as one selected capsule', async () => {
         const merchesWithOneVariantEach: MerchItem[] = [
             {
                 id: 1,
@@ -254,171 +262,30 @@ describe('Shop.vue Bento Grid Collection', () => {
             },
         ];
 
-        const wrapper = mount(Shop, {
-            props: {
-                canRegister: true,
-                merches: merchesWithOneVariantEach,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: { auth: { user: null }, schoolBranding: null },
-                        url: '/shop',
-                    },
-                },
-            },
-        });
+        const wrapper = mountShop(merchesWithOneVariantEach);
+        await nextTick();
 
-        const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const alabasterBtn = variantButtons.find(
-            (btn) => btn.text() === 'Alabaster',
-        );
-        const obsidianBtn = variantButtons.find(
-            (btn) => btn.text() === 'Obsidian',
+        expect(wrapper.find('.stage-garment').attributes('src')).toBe(
+            'https://placehold.co/800x800/alabaster-lone.jpg',
         );
 
-        expect(alabasterBtn?.exists()).toBe(true);
-        expect(obsidianBtn?.exists()).toBe(true);
-
-        await obsidianBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/obsidian-lone.jpg');
-
-        await alabasterBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/alabaster-lone.jpg');
+        const capsules = wrapper.findAll('.colorway-capsule');
+        expect(capsules.length).toBe(1);
+        expect(capsules[0].text()).toBe('Alabaster');
+        expect(capsules[0].attributes('aria-pressed')).toBe('true');
     });
 
-    it('renders dynamic variant buttons and updates hero showcase image on click', async () => {
-        const wrapper = mountShop();
+    it('renders an empty-stage state with a store link when there is no merch', () => {
+        const wrapper = mountShop([]);
 
-        // Check variant buttons rendered
-        const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const obsidianBtn = variantButtons.find(
-            (btn) => btn.text() === 'Obsidian',
-        );
-        const alabasterBtn = variantButtons.find(
-            (btn) => btn.text() === 'Alabaster',
+        expect(wrapper.find('.stage-garment').exists()).toBe(false);
+        expect(wrapper.find('.empty-stage').exists()).toBe(true);
+        expect(wrapper.find('.empty-stage').text()).toContain(
+            'Nothing in the studio yet.',
         );
 
-        expect(obsidianBtn?.exists()).toBe(true);
-        expect(alabasterBtn?.exists()).toBe(true);
-
-        // Find hero image
-        const heroImg = wrapper.find('section[aria-label*="Showcase"] img');
-        expect(heroImg.exists()).toBe(true);
-
-        // Click Alabaster
-        await alabasterBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/alabaster.jpg');
-
-        // Click Obsidian
-        await obsidianBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/obsidian.jpg');
-    });
-
-    it('renders tabs when 1 variant is uploaded per merch item across different merches', async () => {
-        const merchesWithOneVariantEach: MerchItem[] = [
-            {
-                id: 1,
-                name: 'Merch Item One',
-                description: 'First item description',
-                price: 1200,
-                currency: 'PHP',
-                formatted_price: '₱1,200.00',
-                image_url: 'https://placehold.co/400x400/one',
-                variants: [
-                    {
-                        name: 'Alabaster',
-                        image_url:
-                            'https://placehold.co/800x800/alabaster-lone.jpg',
-                    },
-                ],
-                stock: 10,
-                is_out_of_stock: false,
-                stock_label: '10 in stock',
-                url: 'https://koamishin.com/products/one',
-            },
-            {
-                id: 2,
-                name: 'Merch Item Two',
-                description: 'Second item description',
-                price: 1400,
-                currency: 'PHP',
-                formatted_price: '₱1,400.00',
-                image_url: 'https://placehold.co/400x400/two',
-                variants: [
-                    {
-                        name: 'Obsidian',
-                        image_url:
-                            'https://placehold.co/800x800/obsidian-lone.jpg',
-                    },
-                ],
-                stock: 8,
-                is_out_of_stock: false,
-                stock_label: '8 in stock',
-                url: 'https://koamishin.com/products/two',
-            },
-        ];
-
-        const wrapper = mount(Shop, {
-            props: {
-                canRegister: true,
-                merches: merchesWithOneVariantEach,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: { auth: { user: null }, schoolBranding: null },
-                        url: '/shop',
-                    },
-                },
-            },
-        });
-
-        const variantButtons = wrapper.findAll('.shop-root button.rounded-lg');
-        const alabasterBtn = variantButtons.find(
-            (btn) => btn.text() === 'Alabaster',
-        );
-        const obsidianBtn = variantButtons.find(
-            (btn) => btn.text() === 'Obsidian',
-        );
-
-        expect(alabasterBtn?.exists()).toBe(true);
-        expect(obsidianBtn?.exists()).toBe(true);
-
-        await obsidianBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/obsidian-lone.jpg');
-
-        await alabasterBtn?.trigger('click');
-        await new Promise((r) => setTimeout(r, 300));
-        expect(
-            wrapper
-                .find('section[aria-label*="Showcase"] img')
-                .attributes('src'),
-        ).toBe('https://placehold.co/800x800/alabaster-lone.jpg');
+        const storeLink = wrapper.find('.empty-stage a');
+        expect(storeLink.attributes('href')).toBe('https://koamishin.com/');
+        expect(storeLink.text()).toContain('Visit store');
     });
 });
