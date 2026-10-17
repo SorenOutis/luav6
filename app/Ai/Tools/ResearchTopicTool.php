@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Services\AiInputGuardrailService;
 use App\Services\TopicResearchService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -10,7 +11,10 @@ use Stringable;
 
 class ResearchTopicTool implements Tool
 {
-    public function __construct(private readonly ?TopicResearchService $researchService = null) {}
+    public function __construct(
+        private readonly ?TopicResearchService $researchService = null,
+        private readonly ?AiInputGuardrailService $guardrails = null,
+    ) {}
 
     public function name(): string
     {
@@ -38,7 +42,10 @@ class ResearchTopicTool implements Tool
         $result = $service->research($topic);
 
         if ($result && mb_strlen($result) > 100) {
-            return "Researched source material for \"{$topic}\":\n\n{$result}\n\nYou can now use this text as source_text in generate_exam_questions or curriculum planning.";
+            $guardrails = $this->guardrails ?? app(AiInputGuardrailService::class);
+            $fenced = $guardrails->wrapUntrusted($result, 'Web Research Results');
+
+            return "Researched source material for \"{$topic}\":\n\n{$fenced}\n\nYou can now use this text as source_text in generate_exam_questions or curriculum planning.";
         }
 
         return "Online reference for \"{$topic}\" returned limited text. As an educational AI assistant, synthesize a comprehensive 500–1,500 word curriculum text from your own knowledge base and pass it as source_text directly.";

@@ -1278,5 +1278,7 @@
 
     @include('filament.pages.ai-chat-style')
 
+    <script src="{{ asset('js/ai-chat-format.js') }}"></script>
+
     @include('filament.pages.ai-chat-script')
 </div>

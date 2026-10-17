@@ -5,6 +5,7 @@ use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\Admin\ExamAnswerReportController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\Admin\GraphifyController;
+use App\Http\Controllers\AiAppManifestController;
 use App\Http\Controllers\AiReportDownloadController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\Api\BonusClaimController;
@@ -95,6 +96,11 @@ Route::post('/csp/report', CspReportController::class)
 // Serves the uploaded school logo as the site favicon (falling back to the
 // bundled /favicon.ico when no logo is set).
 Route::get('/favicon.png', FaviconController::class)->name('favicon');
+
+// Echo AI PWA manifest with the school accent color applied. The static
+// public/ai-assistant.webmanifest remains the source of truth for
+// name/scope/icons; this only overrides theme/background colors.
+Route::get('/echo-ai.webmanifest', AiAppManifestController::class)->name('ai-app-manifest');
 
 // Streams approved profile music with full CORS headers so Web Audio
 // AnalyserNode can read real frequency amplitudes with 0 CORS errors.

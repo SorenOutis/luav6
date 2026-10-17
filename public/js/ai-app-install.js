@@ -2,6 +2,12 @@
     if (window.aiAppInstallInitialized) return;
     window.aiAppInstallInitialized = true;
 
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/ai-app-sw.js', { scope: '/admin/ai-assistant-app' }).catch(() => {
+            // Registration is an installability nicety; the app works without it.
+        });
+    }
+
     let installPrompt = null;
     const installed = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     const hideControls = () => {

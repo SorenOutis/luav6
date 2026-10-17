@@ -12,11 +12,15 @@
 
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
+use App\Http\Controllers\ChatHistoryController;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AiChatLogger;
 use App\Services\AiSdkProviderService;
+use App\Services\ChatService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -425,4 +429,79 @@ it('transcribes direct audio input', function () {
         ->assertJson([
             'text' => 'Create a 20-minute quiz for Section 10-A',
         ]);
+});
+
+it('rejects oversized audio payloads for transcription', function () {
+    $user = User::factory()->create();
+    $base64 = str_repeat('A', (int) ceil(5120 * 1024 * 4 / 3) + 10);
+
+    $this->actingAs($user)
+        ->postJson(route('chats.transcribe'), [
+            'audio' => 'data:audio/webm;base64,'.$base64,
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('error', fn (string $error) => str_contains($error, 'too large'));
+});
+
+it('rejects unsupported audio formats for transcription', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('chats.transcribe'), [
+            'audio' => 'data:text/plain;base64,dGVzdA==',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('error', fn (string $error) => str_contains($error, 'Unsupported audio format'));
+});
+
+it('returns a generic error when the transcription provider fails', function () {
+    Http::fake(fn () => throw new ConnectionException('private-provider-detail'));
+
+    Setting::set('ai_provider', 'openai-compatible-test');
+    Setting::set(AiSdkProviderService::OPENAI_COMPATIBLE_SETTINGS_KEY, json_encode([
+        [
+            'id' => 'test',
+            'name' => 'test',
+            'url' => 'https://api.example.com/v1',
+            'api_key' => 'test-key',
+        ],
+    ]));
+
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.transcribe'), [
+            'audio' => 'data:audio/webm;base64,dGVzdGF1ZGlv',
+        ]);
+
+    $response->assertStatus(500)
+        ->assertJsonPath('error', 'Transcription failed. Please try again.')
+        ->assertJsonStructure(['error', 'error_id']);
+
+    expect($response->getContent())->not->toContain('private-provider-detail');
+});
+
+it('keeps the user turn when a synchronous reply fails', function () {
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'New chat']);
+
+    $chatService = mock(ChatService::class, [app(AiChatLogger::class)])->makePartial();
+    $chatService->shouldReceive('prompt')->andThrow(new RuntimeException('provider down'));
+    app()->instance(ChatService::class, $chatService);
+
+    $this->actingAs($user)
+        ->postJson(route('chats.message', $session), ['message' => 'Will this be saved?'])
+        ->assertStatus(500);
+
+    $session->refresh()->load('messages');
+
+    expect($session->messages->where('role', 'user')->where('content', 'Will this be saved?')->count())->toBe(1)
+        ->and($session->messages->where('role', 'assistant')->count())->toBe(0)
+        ->and($session->title)->toBe('Will this be saved?');
+});
+
+it('builds prefix boolean fulltext terms for search', function () {
+    expect(ChatHistoryController::booleanSearchTerm('exam  notes'))->toBe('exam* notes*')
+        ->and(ChatHistoryController::booleanSearchTerm('+exam -notes'))->toBe('exam* notes*')
+        ->and(ChatHistoryController::booleanSearchTerm('   '))->toBe('');
 });
