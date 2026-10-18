@@ -241,25 +241,37 @@ it('exposes admin tool names matching the agent instructions', function () {
 
     expect($names)->toBe([
         'workspace_overview', 'students', 'user_activity', 'at_risk_students', 'section_performance',
-        'leaderboard', 'daily_report', 'ai_action_log', 'support_tickets', 'exams_admin',
+        'leaderboard', 'ai_action_log', 'support_tickets', 'exams_admin',
         'courses_admin', 'sections_admin', 'assignments_admin',
         'announcements_admin', 'materials_admin', 'research_topic', 'activity_tasks_admin',
         'submissions_to_grade', 'grades_admin',
-        'generate_exam_questions', 'create_exam', 'update_exam', 'delete_exam',
+        'daily_report', 'list_workspaces', 'platform_counts', 'failed_jobs',
+        'manage_maintenance', 'export_report',
+        'generate_exam_questions', 'create_exam', 'update_exam', 'delete_exam', 'manage_exam_blocks',
         'record_grade', 'update_grade', 'delete_grade', 'grade_submission',
-        'create_user', 'update_user', 'reset_user_password', 'delete_user',
+        'create_user', 'update_user', 'reset_user_password', 'delete_user', 'send_notification',
         'create_section', 'update_section', 'delete_section',
         'create_course', 'update_course', 'delete_course',
         'post_announcement', 'update_announcement', 'delete_announcement',
         'create_assignment', 'update_assignment', 'delete_assignment',
         'create_learning_material', 'update_learning_material', 'delete_learning_material',
         'create_activity_task', 'update_activity_task', 'delete_activity_task', 'record_activity_task_score',
-        'award_student_xp', 'manage_exam_blocks', 'send_notification', 'reply_support_ticket',
-        'season_admin', 'manage_badges_rewards', 'manage_lesson', 'manage_lesson_quiz',
-        'manage_maintenance', 'export_report',
+        'award_student_xp', 'season_admin', 'manage_badges_rewards',
+        'reply_support_ticket',
+        'manage_lesson', 'manage_lesson_quiz',
     ]);
 
-    foreach ($names as $name) {
+    $documentedInInstructions = [
+        'workspace_overview', 'students', 'user_activity', 'at_risk_students', 'section_performance',
+        'leaderboard', 'ai_action_log', 'support_tickets', 'exams_admin',
+        'courses_admin', 'sections_admin', 'assignments_admin',
+        'announcements_admin', 'materials_admin', 'research_topic', 'activity_tasks_admin',
+        'submissions_to_grade', 'grades_admin',
+        'daily_report', 'list_workspaces', 'platform_counts', 'failed_jobs',
+        'manage_maintenance', 'export_report',
+    ];
+
+    foreach ($documentedInInstructions as $name) {
         expect((string) $agent->instructions())->toContain($name);
     }
 });
