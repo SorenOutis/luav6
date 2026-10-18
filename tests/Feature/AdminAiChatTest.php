@@ -1521,7 +1521,7 @@ it('allows any admin to inspect platform maintenance status', function () {
     $tool = new ManageMaintenanceTool;
     $result = (string) $tool->handle(new Request(['action' => 'status']));
 
-    expect($result)->toContain('Current Platform Maintenance Status:');
+    expect($result)->toContain('"scope":"platform-wide"');
 });
 
 it('strictly blocks standard workspace admin from modifying maintenance mode', function () {
