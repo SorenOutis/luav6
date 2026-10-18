@@ -17,6 +17,6 @@ it('includes the runtime skill in admin assistant instructions', function () {
 
     expect($instructions)
         ->toContain('RUNTIME SKILL:')
-        ->toContain('Expected export feature contract')
+        ->toContain('Do not claim that an Excel, Word, or PDF file was created')
         ->toContain('Never invent student, section, course, exam, submission, or grade IDs.');
 });
