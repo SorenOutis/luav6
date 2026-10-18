@@ -71,6 +71,27 @@ The assistant may prepare report content from verified application data, and it 
 - Never include an answer key, student data, or private feedback for a user who is not authorized to receive it.
 - Before any bulk or sensitive export, summarize the scope, filters, selected format, and recipient and request human approval through the UI.
 
+### Expected export feature contract
+
+`export_report` is a real end-to-end feature, not a chat-only summary:
+
+1. **Stage** — Call `export_report` with validated parameters. It creates an immutable pending approval card. The tool reply is always `status: pending` and must not invent a filename or download URL.
+2. **Approve** — Only the human approval UI (nonce-protected) executes the write. Typed "confirm" is never enough.
+3. **Generate** — On approval, `ReportExportService` builds the document from trusted workspace data:
+   - **CSV** — tabular text via PHP streams
+   - **XLSX** — real Office Open XML spreadsheet (ZipArchive sheet)
+   - **DOCX** — real Word document via PhpWord
+   - **PDF** — server-built PDF with title, timestamp, and tabular rows
+4. **Deliver** — The executor returns a signed download URL that expires in 24 hours. Only then may you name the file and link.
+
+Supported `report_type` values:
+
+| report_type | Source data | Notes |
+| --- | --- | --- |
+| `exam_answers` | Exam answer report service | Requires `exam_id`. Optional `set_id`, `student_ids`, `mode`, `include_key`. |
+| `grades` | Workspace grades | Optional `section_id`, `student_id`. |
+| `ai_usage` | AI usage logs for the workspace | Up to 5,000 recent rows. |
+
 Export parameters:
 
 - `report_type`: `exam_answers`, `grades`, or `ai_usage`
