@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Models\Setting;
 use App\Support\PlatformMaintenance;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -17,7 +18,7 @@ class ManageMaintenanceTool extends PendingWriteTool implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Inspect or modify platform-wide maintenance mode (enable, disable, or update maintenance message/title). EXCLUSIVELY available to Super Administrators. Never available to standard workspace admins.';
+        return 'Inspect or modify platform-wide maintenance mode (enable, disable, or update maintenance message/title). EXCLUSIVELY available to Super Administrators. Status returns typed JSON: enabled, title, message, image, retry_after, updated_at, last_changed_by.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -30,21 +31,28 @@ class ManageMaintenanceTool extends PendingWriteTool implements Tool
 
         $action = trim((string) ($request['action'] ?? 'status'));
 
-        // If inspecting current status, return the state immediately
         if ($action === 'status') {
             $state = PlatformMaintenance::formState();
-            $statusText = $state['maintenance_enabled']
-                ? 'ENABLED (The site is currently in maintenance mode; students and workspace admins see the maintenance page)'
-                : 'DISABLED (The site is live and fully accessible)';
+            $updatedAt = Setting::query()
+                ->where('key', PlatformMaintenance::ENABLED_KEY)
+                ->whereNull('workspace_id')
+                ->value('updated_at');
 
-            return "Current Platform Maintenance Status:\n"
-                ."- Status: {$statusText}\n"
-                ."- Title: \"{$state['maintenance_title']}\"\n"
-                ."- Message: \"{$state['maintenance_message']}\"\n"
-                ."- Mascot Image: {$state['maintenance_image']}";
+            return json_encode([
+                'scope' => 'platform-wide',
+                'enabled' => (bool) $state['maintenance_enabled'],
+                'title' => (string) $state['maintenance_title'],
+                'message' => (string) $state['maintenance_message'],
+                'image' => (string) $state['maintenance_image'],
+                'retry_after' => null,
+                'updated_at' => $updatedAt ? (string) $updatedAt : null,
+                'last_changed_by' => null,
+                'summary' => $state['maintenance_enabled']
+                    ? 'Platform is offline (maintenance mode enabled). Students and workspace admins see the maintenance page until a Super Admin approves disable.'
+                    : 'Platform is live (maintenance mode disabled).',
+            ], JSON_UNESCAPED_UNICODE);
         }
 
-        // For modifying maintenance mode, strictly require Super Admin privileges
         if (! $user->isSuperAdmin()) {
             return 'PERMISSION DENIED: Modifying platform maintenance mode requires Super Administrator privileges. Standard workspace administrators cannot change platform-wide maintenance.';
         }
