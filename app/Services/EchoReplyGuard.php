@@ -85,6 +85,7 @@ final class EchoReplyGuard
 
     private function stripInventedExportClaims(string $text): string
     {
+        // Filenames / download URLs must only appear after a real export result.
         $text = preg_replace(
             '/\b[\w.-]+\.(csv|xlsx|docx|pdf)\b/iu',
             '[export pending approval]',

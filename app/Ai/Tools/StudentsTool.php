@@ -15,17 +15,11 @@ class StudentsTool implements Tool
         return 'students';
     }
 
-    /**
-     * Get the description of the tool's purpose.
-     */
     public function description(): Stringable|string
     {
-        return 'List or search students in the admin\'s workspace (or platform-wide for Super Admins) — name, email, sections, LSI level, streak, and recent exam average. Supports searching by name, email, or student ID. Call this tool immediately whenever the admin\'s message is just a person\'s name or part of a name (even a single word like "angeline" or "cabrera"): the search is a case-insensitive partial match over first, middle, and last name and email, and it works with any word order.';
+        return 'List or search students in the admin\'s workspace (or platform-wide for Super Admins) — name, email, sections, LSI level, streak, and recent exam average. Supports searching by name, email, or student ID. Call this tool immediately whenever the admin\'s message is just a person\'s name or part of a name (even a single word like "angeline" or "cabrera"): the search is a case-insensitive partial match over first, middle, and last name and email, and it works with any word order. When several students match, return them as options and ask which one — never pick silently.';
     }
 
-    /**
-     * Execute the tool.
-     */
     public function handle(Request $request): Stringable|string
     {
         $admin = auth()->user();
@@ -99,17 +93,35 @@ class StudentsTool implements Tool
         $students = $studentModels->map($mapStudent)->values();
 
         if ($students->isEmpty()) {
-            return $search !== ''
-                ? "No students found matching \"{$search}\" in this workspace."
-                : 'There are no students in this workspace yet.';
+            return json_encode([
+                'search' => $search,
+                'match_count' => 0,
+                'students' => [],
+                'message' => $search !== ''
+                    ? "No students found matching \"{$search}\" in this workspace."
+                    : 'There are no students in this workspace yet.',
+            ]);
         }
 
-        return json_encode($students);
+        $payload = [
+            'search' => $search,
+            'match_count' => $students->count(),
+            'students' => $students,
+        ];
+
+        if ($search !== '' && $students->count() > 1) {
+            $payload['disambiguation_required'] = true;
+            $payload['message'] = 'Multiple students matched. Present these options to the admin and ask which student they mean. Do not pick one silently.';
+            $payload['options'] = $students->map(fn (array $row): array => [
+                'id' => $row['id'],
+                'label' => $row['name'].' <'.$row['email'].'>',
+                'sections' => $row['sections'],
+            ])->values();
+        }
+
+        return json_encode($payload);
     }
 
-    /**
-     * Get the tool's schema definition.
-     */
     public function schema(JsonSchema $schema): array
     {
         return [

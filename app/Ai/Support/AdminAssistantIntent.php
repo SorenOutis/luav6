@@ -54,6 +54,7 @@ final class AdminAssistantIntent
             return [self::READ];
         }
 
+        // Broad manage / help requests keep the full write surface.
         if (preg_match('/\b(manage everything|full access|all tools|do everything)\b/u', $m)) {
             return [self::ALL];
         }
@@ -103,11 +104,14 @@ final class AdminAssistantIntent
             $groups[] = self::EXPORT;
         }
 
+        // Multi-step phrasing: "create a section and an exam" already matches both.
+        // If the message only looks like a bare name or pure read, keep reads only.
         if ($groups === [] && self::looksLikeBareName($m)) {
             return [self::READ, self::USERS];
         }
 
         if ($groups === []) {
+            // Ambiguous operational chat: mount all write groups so existing flows do not break.
             return [self::ALL];
         }
 
@@ -121,10 +125,12 @@ final class AdminAssistantIntent
             return false;
         }
 
+        // Reject obvious sentences / commands.
         if (preg_match('/[?!]|\b(create|update|delete|show|list|export|grade|find|search|please|can you|how|what|when|where|why)\b/iu', $m)) {
             return false;
         }
 
+        // 1–4 tokens of letters / hyphens / apostrophes only.
         return (bool) preg_match("/^[\p{L}][\p{L}\-']*(?:\s+[\p{L}][\p{L}\-']*){0,3}$/u", $m);
     }
 
