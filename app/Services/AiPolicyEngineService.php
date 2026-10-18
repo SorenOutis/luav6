@@ -71,6 +71,24 @@ class AiPolicyEngineService
 
         $isSuperAdmin = $user->isSuperAdmin();
 
+        $requestedWorkspace = $payload['workspace_id'] ?? $payload['target_workspace_id'] ?? null;
+        if (! $isSuperAdmin && $requestedWorkspace && $workspaceId && (int) $requestedWorkspace !== (int) $workspaceId) {
+            $checks[] = [
+                'label' => 'Workspace Scope Isolation Enforced',
+                'passed' => false,
+                'explanation' => 'Workspace administrators cannot stage a write against a different workspace.',
+            ];
+            $violations[] = 'cross_workspace';
+
+            return new PolicyEvaluationResult(
+                policyCode: $policyCode,
+                allowed: false,
+                checks: $checks,
+                violations: $violations,
+                reason: 'This action targets a different workspace. Workspace administrators can only stage changes in their active workspace.',
+            );
+        }
+
         // 2. Platform Maintenance Authorization
         if ($type === 'manage_maintenance') {
             $checks[] = [
