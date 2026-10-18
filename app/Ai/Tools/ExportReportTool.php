@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
@@ -16,7 +17,7 @@ class ExportReportTool extends PendingWriteTool implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Prepare a real downloadable report as CSV, XLSX, DOCX, or PDF. This tool stages an exact export request for human approval; it never creates or returns a file until the administrator approves the card.';
+        return 'Prepare a real downloadable report as CSV, XLSX, DOCX, or PDF. This tool stages an exact export request for human approval; it never creates or returns a file until the administrator approves the card. The result is status pending and must not include a filename or download URL.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -59,7 +60,24 @@ class ExportReportTool extends PendingWriteTool implements Tool
             ['field' => 'Download expiry', 'before' => null, 'after' => '24 hours after approval'],
         ];
 
-        return $this->stageAction('export_report', $title, $summary, $payload, $changes);
+        Log::info('echo.export_report.staged', [
+            'actor_id' => auth()->id(),
+            'workspace_id' => $this->workspaceId(),
+            'report_type' => $type,
+            'format' => $format,
+            'filters' => array_filter([
+                'exam_id' => $payload['exam_id'],
+                'set_id' => $payload['set_id'],
+                'student_id' => $payload['student_id'],
+                'section_id' => $payload['section_id'],
+                'student_ids' => $payload['student_ids'],
+            ]),
+            'status' => 'pending',
+        ]);
+
+        $staged = $this->stageAction('export_report', $title, $summary, $payload, $changes);
+
+        return $staged.' format: '.$format.'. status: pending. Do not mention a filename or download URL.';
     }
 
     public function schema(JsonSchema $schema): array
