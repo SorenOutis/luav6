@@ -1,0 +1,237 @@
+/* ════════════════════════════════════════════════════
+   Studio palette. Surfaces, hairlines, and ink read from the
+   studio skin tokens that app.css declares on
+   :root .shop-root / :root .st-sheet, so the shop and the
+   welcome page are literally the same theme in both modes.
+   ════════════════════════════════════════════════════ */
+.shop-root,
+.st-sheet {
+    --st-ink: var(--color-foreground, #1a1a1e);
+    --st-ink-soft: color-mix(
+        in srgb,
+        var(--color-foreground, #1a1a1e) 75%,
+        transparent
+    );
+    --st-ink-mute: var(--color-muted-foreground, #68625a);
+
+    --st-bg: var(--color-card, #faf7f2);
+    --st-tile: var(--color-secondary, #ebe5dc);
+    --st-stage-bg: var(--color-card, #faf7f2);
+    --st-well-bg: var(--color-secondary, #ebe5dc);
+    --st-panel-bg: var(--color-card, #faf7f2);
+
+    --st-hairline: color-mix(
+        in srgb,
+        var(--color-border, #e0dbd3) 82%,
+        transparent
+    );
+    --st-hairline-strong: var(--color-border, #e0dbd3);
+    --st-capsule-line: color-mix(
+        in srgb,
+        var(--color-border, #e0dbd3) 92%,
+        transparent
+    );
+
+    /* Mixing toward --color-foreground darkens the brand on light surfaces
+       and lightens it on dark ones, which is what the old per-mode hexes did. */
+    --st-accent: var(--color-brand, #d97757);
+    --st-accent-strong: color-mix(
+        in srgb,
+        var(--color-brand, #d97757) 86%,
+        var(--color-foreground, #1a1a1e)
+    );
+    --st-accent-text: color-mix(
+        in srgb,
+        var(--color-brand, #d97757) 78%,
+        var(--color-foreground, #1a1a1e)
+    );
+    /* Sits on top of --st-accent, so it stays ink-dark in both modes. */
+    --st-on-accent: #1a1208;
+
+    --st-ghost-hover: color-mix(
+        in srgb,
+        var(--color-foreground, #1a1a1e) 6%,
+        transparent
+    );
+    --st-pool-a: color-mix(
+        in srgb,
+        var(--color-foreground, #1a1a1e) 4%,
+        transparent
+    );
+    --st-pool-b: color-mix(
+        in srgb,
+        var(--color-foreground, #1a1a1e) 10%,
+        transparent
+    );
+
+    --st-chip-bg: color-mix(
+        in srgb,
+        var(--color-card, #faf7f2) 90%,
+        transparent
+    );
+    --st-sheet-bg: color-mix(
+        in srgb,
+        var(--color-card, #faf7f2) 85%,
+        transparent
+    );
+    --st-sheet-shadow: 0 40px 120px
+        color-mix(in srgb, var(--color-foreground, #1a1a1e) 25%, transparent);
+}
+
+/* ── Studio-dark extras ──
+   Surfaces the theme tokens have no slot for: the recessed
+   well the garment sits in, the translucent info panel, and
+   the quick-view sheet. These stay a step below --st-stage-bg
+   so the stage keeps its depth in dark mode. */
+.dark .shop-root,
+.dark .st-sheet {
+    --st-well-bg: #0e0f11;
+    --st-panel-bg: rgba(19, 20, 22, 0.6);
+    --st-pool-a: rgba(245, 245, 247, 0.11);
+    --st-pool-b: rgba(245, 245, 247, 0.075);
+    --st-chip-bg: rgba(11, 12, 13, 0.8);
+    --st-sheet-bg: rgba(29, 29, 31, 0.78);
+    --st-sheet-shadow: 0 40px 120px rgba(0, 0, 0, 0.55);
+}
+
+.st-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+
+.st-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.7rem 1.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    transition:
+        background-color 0.25s ease,
+        color 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.15s ease;
+}
+
+.st-pill:active {
+    transform: scale(0.97);
+}
+
+.st-pill--solid {
+    background: var(--st-accent);
+    color: var(--st-on-accent);
+}
+
+.st-pill--solid:hover {
+    background: var(--st-accent-strong);
+}
+
+.st-pill--ghost {
+    border: 1px solid var(--st-hairline-strong);
+    color: var(--st-ink);
+}
+
+.st-pill--ghost:hover {
+    background: var(--st-ghost-hover);
+    border-color: var(--st-ink);
+}
+
+.st-capsule {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 9999px;
+    border: 1px solid var(--st-capsule-line);
+    padding: 0.45rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--st-ink-mute);
+    transition:
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.st-capsule:hover {
+    color: var(--st-ink);
+    border-color: var(--st-ink-mute);
+}
+
+.st-capsule[aria-pressed='true'] {
+    background: var(--st-ink);
+    border-color: var(--st-ink);
+    color: var(--st-bg);
+}
+
+.st-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0;
+}
+
+.st-row + .st-row {
+    border-top: 1px solid var(--st-hairline);
+}
+
+.st-pool {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(58% 44% at 50% 40%, var(--st-pool-a), transparent 72%),
+        radial-gradient(46% 14% at 50% 88%, var(--st-pool-b), transparent 78%);
+}
+
+.st-swap {
+    animation: st-swap 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes st-swap {
+    from {
+        opacity: 0.2;
+        transform: scale(1.02);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.st-sheet {
+    animation: st-sheet-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes st-sheet-in {
+    from {
+        opacity: 0;
+        transform: scale(0.965) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .st-swap,
+    .st-sheet {
+        animation: none;
+    }
+
+    .st-pill:active {
+        transform: none;
+    }
+}

@@ -64,7 +64,7 @@
             }
 
             html.dark {
-                background-color: #000000;
+                background-color: #1a1410;
             }
         </style>
 

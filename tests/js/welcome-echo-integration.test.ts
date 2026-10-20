@@ -1,11 +1,44 @@
 import { mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
-import EchoInteractiveDemo from '@/components/welcome/EchoInteractiveDemo.vue';
+import HeroDemoWindow from '@/components/welcome/HeroDemoWindow.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
+import heroSource from '@/components/welcome/WelcomeHero.vue?raw';
 import welcomeSource from '@/pages/Welcome.vue?raw';
 
 describe('Welcome page Echo AI integration', () => {
+    /** Echo thinks, then greets, before Maria's cursor appears. */
+    const GREETING_PLUS_START_MS = 1700;
+
+    /**
+     * Phase budgets are sized from each scenario's own copy, so the tests step
+     * forward until the phase flips instead of hardcoding millisecond counts.
+     */
+    const advanceToPhase = async (
+        wrapper: VueWrapper,
+        target: number,
+        budgetMs = 30000,
+    ) => {
+        let elapsed = 0;
+
+        while (elapsed < budgetMs) {
+            if (Number(wrapper.attributes('data-phase')) === target) {
+                return elapsed;
+            }
+
+            await vi.advanceTimersByTimeAsync(50);
+            elapsed += 50;
+        }
+
+        expect(wrapper.attributes('data-phase')).toBe(String(target));
+    };
+
+    const releaseEntrance = (wrapper: VueWrapper) =>
+        wrapper
+            .find('#echo-demo')
+            .trigger('animationend', { animationName: 'hero-window-in' });
+
     beforeEach(() => {
         vi.stubGlobal('matchMedia', () => ({
             matches: false,
@@ -37,12 +70,14 @@ describe('Welcome page Echo AI integration', () => {
             },
         });
 
-        expect(wrapper.find('a[href="#interactive-echo"]').exists()).toBe(true);
+        expect(wrapper.find('a[href="#how-it-works"]').exists()).toBe(true);
         expect(wrapper.text()).not.toContain('Interactive Demo');
         expect(wrapper.text()).toContain(
             'Meet Echo · Intelligent Study Companion',
         );
         expect(wrapper.find('.wolf-persona').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Make every assessment count.');
+        wrapper.unmount();
     });
 
     it.each([true, false])(
@@ -124,45 +159,299 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.text()).toContain('25/28 Completed');
     });
 
-    it('simulates thinking and speaking transitions in EchoInteractiveDemo', async () => {
+    it('holds the scripted conversation until the hero entrance animation settles', async () => {
         vi.useFakeTimers();
-        const wrapper = mount(EchoInteractiveDemo, {
-            global: {
-                stubs: {
-                    Link: { template: '<a><slot /></a>' },
-                },
-            },
-        });
+        const wrapper = mount(HeroDemoWindow);
 
-        expect(wrapper.find('.wolf-persona').exists()).toBe(true);
-        const buttons = wrapper.findAll('button');
-        expect(buttons.length).toBeGreaterThanOrEqual(3);
+        // While the window animates in, the chat stage is masked by the
+        // boot placeholder and the script has not started yet.
+        expect(wrapper.attributes('data-phase')).toBe('0');
+        expect(wrapper.text()).toContain('Loading preview');
+        expect(wrapper.findAll('.hdw-stage.is-hidden')).toHaveLength(2);
 
-        // Click second prompt
-        await buttons[1].trigger('click');
+        // Nested animations bubble to the window — they must not release it.
+        await wrapper
+            .find('.demo-dot')
+            .trigger('animationend', { animationName: 'demo-dot' });
+        await vi.advanceTimersByTimeAsync(1400);
+        expect(wrapper.attributes('data-phase')).toBe('0');
+        expect(wrapper.findAll('.hdw-stage.is-hidden')).toHaveLength(2);
+
+        // The window's own entrance ends → the script boots.
+        await releaseEntrance(wrapper);
+        expect(wrapper.findAll('.hdw-stage.is-hidden')).toHaveLength(0);
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Awaiting request',
+        );
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('shows Echo thinking before it greets Maria once the entrance finishes', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        expect(wrapper.text()).toContain('Echo is thinking');
+        expect(wrapper.text()).not.toContain('Hi Maria!');
         expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
             'thinking',
         );
-        expect(wrapper.text()).toContain('Synthesizing rubric…');
 
-        // Advance past thinking phase into speaking
-        await vi.advanceTimersByTimeAsync(700);
-        expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
-            'speaking',
+        await vi.advanceTimersByTimeAsync(800);
+        expect(wrapper.text()).toContain(
+            'Hi Maria! Ready to build tomorrow’s quiz?',
         );
-
-        // Advance past typing animation to idle completion
-        await vi.advanceTimersByTimeAsync(3000);
-        expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
-            'welcome',
-        );
-        expect(wrapper.text()).toContain('mastered standard trinomials');
+        expect(wrapper.text()).not.toContain('Echo is thinking');
 
         vi.useRealTimers();
+        wrapper.unmount();
     });
 
-    it('mounts EchoInteractiveDemo inside the Welcome page flow', () => {
-        expect(welcomeSource).toContain('import EchoInteractiveDemo');
-        expect(welcomeSource).toContain('<EchoInteractiveDemo />');
+    it('frames the demo as the teacher talking to Echo', async () => {
+        const wrapper = mount(HeroDemoWindow);
+
+        expect(wrapper.text()).toContain('Maria Santos · Teacher');
+        expect(wrapper.text()).toContain('Grade 8 · 3 sections · 84 learners');
+        expect(wrapper.text()).toContain('Teaching Copilot');
+        expect(wrapper.text()).not.toContain('Maria Santos · Student');
+        expect(wrapper.text()).not.toContain('Formative Companion');
+
+        wrapper.unmount();
+    });
+
+    it('types Maria’s request slowly enough to follow', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+        // Echo thinks, then greets, before Maria starts typing.
+        await vi.advanceTimersByTimeAsync(GREETING_PLUS_START_MS);
+
+        const promptInput = wrapper.get('[data-testid="prompt-input"]');
+        const total = 'Build me a 15-item quiz on quadratics for tomorrow.'
+            .length;
+
+        // A believable hand: a fraction of the line per 200ms, never a flood.
+        await vi.advanceTimersByTimeAsync(200);
+        const firstTick = promptInput.text().trim().length;
+        expect(firstTick).toBeGreaterThan(0);
+        expect(firstTick).toBeLessThan(total / 2);
+
+        // Still mid-sentence 700ms in — the old 22ms tick had finished by now.
+        await vi.advanceTimersByTimeAsync(700);
+        const midFlight = promptInput.text().trim().length;
+        expect(midFlight).toBeLessThan(total);
+        expect(midFlight).toBeGreaterThan(firstTick);
+        expect(wrapper.find('.typing-cursor').exists()).toBe(true);
+
+        // And it does finish inside the phase.
+        await advanceToPhase(wrapper, 1);
+        expect(wrapper.text()).toContain(
+            'Build me a 15-item quiz on quadratics for tomorrow.',
+        );
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('holds the working skeleton until Echo’s first character lands', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        // Phase 2 — Echo is visibly working, skeleton on, answer off.
+        await advanceToPhase(wrapper, 2);
+        expect(wrapper.text()).toContain(
+            'Echo is aligning items to your syllabus',
+        );
+        expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(false);
+        expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(false);
+
+        // Phase 3 opens on the skeleton, not an empty reply bubble.
+        await advanceToPhase(wrapper, 3);
+        expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(false);
+        expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(false);
+
+        // First characters land, then the answer takes over — partially
+        // typed, so the bubble is never rendered empty.
+        await vi.advanceTimersByTimeAsync(700);
+        expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(true);
+        expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(true);
+
+        const firstLine = wrapper.find('.hdw-type-line').text();
+        expect(firstLine.startsWith('Drafted 15')).toBe(true);
+        expect(firstLine.length).toBeLessThan(
+            'Drafted 15 items across three difficulty tiers.'.length,
+        );
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('streams Echo’s answer line by line instead of flooding the bubble', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+        await advanceToPhase(wrapper, 3);
+        await vi.advanceTimersByTimeAsync(700);
+
+        const landed = () =>
+            wrapper.findAll('.hdw-type-line').map((line) => line.text());
+
+        expect(landed()).toHaveLength(1);
+        expect(wrapper.text()).not.toContain('Every item maps to');
+
+        // The next line only appears once the first has finished streaming.
+        let previous = landed()[0].length;
+        let guard = 0;
+        while (landed().length === 1 && guard < 200) {
+            await vi.advanceTimersByTimeAsync(100);
+            guard += 1;
+            previous = previous + 1;
+        }
+
+        expect(landed().length).toBeGreaterThan(1);
+        expect(landed()[0].length).toBe(
+            'Drafted 15 items across three difficulty tiers.'.length,
+        );
+        expect(previous).toBeGreaterThan(0);
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('cycles the hero demo through request, work, and confirmation phases', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        expect(wrapper.attributes('data-phase')).toBe('0');
+        expect(wrapper.find('.wolf-persona').exists()).toBe(true);
+
+        await releaseEntrance(wrapper);
+
+        // Maria's request lands with the result pill.
+        await advanceToPhase(wrapper, 1);
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Request sent',
+        );
+        expect(wrapper.text()).toContain('15 items ready');
+
+        // Echo starts working — orb switches to thinking.
+        await advanceToPhase(wrapper, 2);
+        expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
+            'thinking',
+        );
+
+        // Answer streams in — awaiting the teacher's confirmation.
+        await advanceToPhase(wrapper, 3);
+        expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
+            'micro',
+        );
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Needs your OK',
+        );
+
+        // Confirmed — it reaches the class, loop completes before restarting.
+        await advanceToPhase(wrapper, 4);
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Sent to class',
+        );
+        expect(wrapper.text()).toContain('Delivered to class ✓');
+        expect(wrapper.text()).toContain(
+            '“Checked against last term’s item bank.”',
+        );
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('replays the opening beat when the teacher switches conversations', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        // The first conversation gets as far as Echo working.
+        await advanceToPhase(wrapper, 2);
+
+        const conversations = wrapper.findAll(
+            'nav[aria-label="Demo conversations"] button',
+        );
+        await conversations[1].trigger('click');
+
+        // The new conversation restarts from the top instead of inheriting
+        // the finished turn of the one it replaced.
+        expect(wrapper.attributes('data-phase')).toBe('0');
+        expect(wrapper.text()).toContain('Echo is thinking');
+        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(false);
+
+        // Echo greets the new topic.
+        await vi.advanceTimersByTimeAsync(1600);
+        expect(wrapper.text()).not.toContain('Echo is thinking');
+        expect(wrapper.get('[data-testid="greeting-text"]').text()).toBe(
+            'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
+        );
+
+        // Then Maria types her request, letter by letter.
+        const promptInput = wrapper.get('[data-testid="prompt-input"]');
+        await vi.advanceTimersByTimeAsync(200);
+        const firstTick = promptInput.text().trim();
+        expect(firstTick.length).toBeGreaterThan(0);
+        expect(firstTick.length).toBeLessThan(
+            'Who has actually logged in today?'.length / 2,
+        );
+        expect(wrapper.find('.typing-cursor').exists()).toBe(true);
+
+        // The opening beat keeps its own budget — the turn only lands once the
+        // request is fully typed, not on the leftover of the phase it
+        // replaced.
+        await vi.advanceTimersByTimeAsync(1200);
+        expect(wrapper.attributes('data-phase')).toBe('0');
+        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(false);
+
+        await advanceToPhase(wrapper, 1);
+        expect(wrapper.text()).toContain('21 of 28 active');
+        expect(wrapper.text()).toContain('Who has actually logged in today?');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('cycles through every teacher task the demo advertises', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        const sidebar = wrapper.find('nav[aria-label="Demo conversations"]');
+        expect(sidebar.text()).toContain('Quadratics · Quiz Builder');
+        expect(sidebar.text()).toContain('Section Diamond · Roster');
+        expect(sidebar.text()).toContain('Grade 8 · Analytics');
+        expect(sidebar.text()).toContain('Grade 8 · Reports');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('parks the hero demo on the finished state when motion is reduced', () => {
+        const wrapper = mount(HeroDemoWindow, {
+            props: { prefersReducedMotion: true },
+        });
+
+        expect(wrapper.attributes('data-phase')).toBe('4');
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Sent to class',
+        );
+        wrapper.unmount();
+    });
+
+    it('mounts the scripted demo inside the WelcomeHero flow', () => {
+        expect(heroSource).toContain('HeroDemoWindow');
+        expect(welcomeSource).toContain('<WelcomeHero');
     });
 });

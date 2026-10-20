@@ -120,6 +120,45 @@ it('opens AI assistant in a new tab via navigation item', function () {
         ->and($items[0]->shouldOpenUrlInNewTab())->toBeTrue();
 });
 
+it('shows the configured model for the active provider', function (string $provider, string $model) {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin);
+
+    Setting::setGlobal('ai_provider', $provider);
+    Setting::setGlobal("{$provider}_model", $model);
+
+    Livewire::test(AdminAiChat::class)
+        ->assertOk()
+        ->assertSee($model);
+})->with([
+    ['groq', 'llama-3.1-8b-instant'],
+    ['cloudflare', '@cf/meta/llama-3.2-1b-instruct'],
+]);
+
+it('shows the custom OpenAI-compatible provider name and model in the chat header', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin);
+
+    $id = '198d3df2-95d0-46a7-b449-092fed2238be';
+
+    Setting::setGlobal('ai_provider', "openai-compatible-{$id}");
+    Setting::setGlobal('openai_compatible_providers', json_encode([[
+        'id' => $id,
+        'name' => 'Campus Gateway',
+        'url' => 'https://gateway.example.test/v1',
+        'model' => 'ag/claude-opus-4-6-thinking',
+        'api_key' => 'gateway-key',
+        'headers' => [],
+    ]], JSON_THROW_ON_ERROR));
+
+    Livewire::test(AdminAiChat::class)
+        ->assertOk()
+        ->assertSee('Campus Gateway (OpenAI-compatible)')
+        ->assertSee('ag/claude-opus-4-6-thinking');
+});
+
 it('renders the welcome screen with greeting data and wolf mascot on initial load', function () {
     $admin = User::factory()->admin()->create([
         'name' => 'Professor Albus Dumbledore',

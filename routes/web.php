@@ -5,6 +5,7 @@ use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\Admin\ExamAnswerReportController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\Admin\GraphifyController;
+use App\Http\Controllers\AiAppManifestController;
 use App\Http\Controllers\AiReportDownloadController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\Api\BonusClaimController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CookiePolicyController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
@@ -96,6 +98,11 @@ Route::post('/csp/report', CspReportController::class)
 // bundled /favicon.ico when no logo is set).
 Route::get('/favicon.png', FaviconController::class)->name('favicon');
 
+// Echo AI PWA manifest with the school accent color applied. The static
+// public/ai-assistant.webmanifest remains the source of truth for
+// name/scope/icons; this only overrides theme/background colors.
+Route::get('/echo-ai.webmanifest', AiAppManifestController::class)->name('ai-app-manifest');
+
 // Streams approved profile music with full CORS headers so Web Audio
 // AnalyserNode can read real frequency amplitudes with 0 CORS errors.
 Route::get('profile-music/{track}/stream', [ProfileMusicStreamController::class, 'stream'])
@@ -122,6 +129,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('community', [CommunityController::class, 'index'])
+        ->middleware('student.page:community')
+        ->name('community.index');
 
     Route::get('calendar', CalendarController::class)
         ->middleware('student.page:calendar')

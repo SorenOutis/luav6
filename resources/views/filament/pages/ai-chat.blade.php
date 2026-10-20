@@ -1,3 +1,7 @@
+@php
+    $embedded = request()->boolean('embed');
+@endphp
+
 <div
     x-data="adminAiChat({
         csrfToken: '{{ csrf_token() }}',
@@ -11,11 +15,15 @@
         workspaceStats: {{ Js::from($workspaceStats) }},
     })"
     class="relative flex h-dvh w-full overflow-hidden bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100"
+    data-ai-chat
+    @if ($embedded) data-ai-chat-embed @endif
 >
         <div class="sr-only" aria-live="polite" x-text="isStreaming ? 'Echo is responding' : (aiActions.some(a => a.status === 'pending') ? 'An action is waiting for your approval.' : '')"></div>
 
+        @if (! $embedded)
         {{-- Left Sidebar: Conversations & History -------------------------------- --}}
         <aside
+            data-ai-chat-sidebar
             :class="sidebarOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full md:w-0 md:translate-x-0'"
             class="absolute inset-y-0 start-0 z-40 flex flex-col border-r border-zinc-200/90 bg-zinc-50/70 transition-all duration-200 ease-in-out md:static md:z-auto dark:border-zinc-800 dark:bg-zinc-900/60"
             style="min-width: 0;"
@@ -138,9 +146,11 @@
             class="fixed inset-0 z-30 bg-zinc-950/50 md:hidden"
             aria-hidden="true"
         ></div>
+        @endif
 
         {{-- Main Chat Area ------------------------------------------------------ --}}
         <main class="relative flex min-w-0 flex-1 flex-col bg-white dark:bg-zinc-950">
+            @if (! $embedded)
             {{-- Top Navbar / Copilot Header --}}
             <header class="flex h-13 shrink-0 items-center justify-between border-b border-zinc-200/90 px-3.5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div class="flex items-center gap-2.5">
@@ -272,6 +282,7 @@
                     </button>
                 </div>
             </header>
+            @endif
 
             {{-- Message Stream Container --}}
             <div
@@ -1277,6 +1288,8 @@
     </div>
 
     @include('filament.pages.ai-chat-style')
+
+    <script src="{{ asset('js/ai-chat-format.js') }}"></script>
 
     @include('filament.pages.ai-chat-script')
 </div>

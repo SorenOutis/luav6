@@ -14,6 +14,7 @@ use App\Support\StudentPageRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -33,6 +34,16 @@ class ChatHistoryController extends Controller
     private const SESSION_PAGE_SIZE = 30;
 
     private const MESSAGE_PAGE_SIZE = 80;
+
+    /** Per-recording size cap for transcription (5 MB). */
+    private const MAX_TRANSCRIBE_KB = 5120;
+
+    /** MIME types accepted for recorded audio transcription. */
+    private const ALLOWED_AUDIO_MIMES = [
+        'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a',
+        'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/flac', 'audio/x-flac', 'audio/aac',
+        'video/webm',
+    ];
 
     public function __construct(
         protected ChatService $chatService,
@@ -154,7 +165,11 @@ class ChatHistoryController extends Controller
 
         $sessionIds = ChatMessage::query()
             ->whereIn('session_id', $user->chatSessions()->select('id'))
-            ->where('content', 'like', '%'.$escaped.'%')
+            ->when(
+                $this->useFulltextSearch($q),
+                fn ($query) => $query->whereRaw('MATCH(content) AGAINST (? IN BOOLEAN MODE)', [self::booleanSearchTerm($q)]),
+                fn ($query) => $query->where('content', 'like', '%'.$escaped.'%'),
+            )
             ->distinct()
             ->limit(15)
             ->pluck('session_id');
@@ -180,6 +195,40 @@ class ChatHistoryController extends Controller
             ->values();
 
         return response()->json(['data' => $sessions]);
+    }
+
+    /**
+     * FULLTEXT indexing is MySQL-only and needs a meaningful term length;
+     * SQLite (tests), PostgreSQL, and 2-character queries keep the LIKE
+     * fallback.
+     */
+    private function useFulltextSearch(string $q): bool
+    {
+        return DB::connection()->getDriverName() === 'mysql'
+            && mb_strlen($q) >= 3
+            && self::booleanSearchTerm($q) !== '';
+    }
+
+    /**
+     * Convert a free-text query into a boolean-mode FULLTEXT expression:
+     * every token becomes a prefix match ("exam" also finds "exams"), and
+     * boolean operators in the user's input are stripped so a query can
+     * never be malformed SQL-level syntax.
+     */
+    public static function booleanSearchTerm(string $q): string
+    {
+        $tokens = preg_split('/\s+/', trim($q)) ?: [];
+
+        $tokens = array_filter(array_map(
+            fn (string $token): string => (string) preg_replace('/[+\-><\(\)~*"@]+/', '', $token),
+            $tokens,
+        ));
+
+        if ($tokens === []) {
+            return '';
+        }
+
+        return implode(' ', array_map(fn (string $token): string => $token.'*', $tokens));
     }
 
     /**
@@ -283,6 +332,18 @@ class ChatHistoryController extends Controller
             ], 200);
         }
 
+        // ── Text attachments get the same guardrail screening as the message ──
+        if ($attachmentEvaluation = $this->chatService->evaluateAttachments($request)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'attachment_guardrail',
+                'violations' => $attachmentEvaluation->violations,
+            ]));
+
+            return response()->json([
+                'response' => $attachmentEvaluation->reason,
+            ], 200);
+        }
+
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
             $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
@@ -301,19 +362,25 @@ class ChatHistoryController extends Controller
             $loggingContext = $this->aiChatLogger->withConversation($loggingContext, $session->id, $historyData, $attachmentMeta);
             $this->aiChatLogger->info('ai_chat.request.dispatched', $loggingContext);
 
-            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext);
-
             if (! $session->title || $session->title === 'New chat') {
                 $session->update(['title' => Str::limit($request->message, 60)]);
             }
 
-            $session->messages()->createMany([
-                [
-                    'role' => 'user',
-                    'content' => $request->message,
-                    'attachments' => $attachmentMeta,
-                ],
-                ['role' => 'assistant', 'content' => $response],
+            // Persist the user turn before the provider call so an interrupted
+            // or failed reply never silently drops the question — mirrors the
+            // streaming path.
+            $session->messages()->create([
+                'role' => 'user',
+                'content' => $request->message,
+                'attachments' => $attachmentMeta,
+            ]);
+            $session->touch();
+
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext);
+
+            $session->messages()->create([
+                'role' => 'assistant',
+                'content' => $response,
             ]);
 
             $session->touch();
@@ -386,6 +453,16 @@ class ChatHistoryController extends Controller
             ]));
 
             return AiSseResponse::from($this->chatService->streamText($inputEvaluation->reason));
+        }
+
+        // ── Text attachments get the same guardrail screening as the message ──
+        if ($attachmentEvaluation = $this->chatService->evaluateAttachments($request)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'attachment_guardrail',
+                'violations' => $attachmentEvaluation->violations,
+            ]));
+
+            return AiSseResponse::from($this->chatService->streamText($attachmentEvaluation->reason));
         }
 
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
@@ -499,10 +576,15 @@ class ChatHistoryController extends Controller
 
             $response->then(function ($streamedResponse) use ($session, $loggingContext) {
                 try {
-                    $text = (string) $streamedResponse->text;
+                    // The SSE frames are sanitized on the way out, but the DB
+                    // row must be sanitized too — history endpoints serve it
+                    // raw on reload.
+                    $text = $this->chatService->sanitizeOutput((string) $streamedResponse->text);
 
                     if (trim($text) !== '') {
-                        $thinking = $this->chatService->combineReasoning($streamedResponse->events);
+                        $thinking = $this->chatService->sanitizeOutput(
+                            $this->chatService->combineReasoning($streamedResponse->events)
+                        );
 
                         $session->messages()->create([
                             'role' => 'assistant',
@@ -725,25 +807,44 @@ class ChatHistoryController extends Controller
             'audio' => 'required',
         ]);
 
-        $audioData = $request->input('audio');
-        $mimeType = 'audio/webm';
         $base64 = null;
+        $mimeType = null;
 
         if ($request->hasFile('audio')) {
+            $request->validate([
+                'audio' => ['file', 'max:'.self::MAX_TRANSCRIBE_KB],
+            ]);
+
             $file = $request->file('audio');
-            $mimeType = $file->getMimeType() ?: 'audio/webm';
-            $base64 = base64_encode(file_get_contents($file->getRealPath()));
-        } elseif (is_string($audioData)) {
+            $mimeType = strtolower((string) ($file->getMimeType() ?: ''));
+            $base64 = base64_encode((string) file_get_contents($file->getRealPath()));
+        } else {
+            $audioData = $request->input('audio');
+
+            if (! is_string($audioData) || $audioData === '') {
+                return response()->json(['error' => 'No valid audio data provided.'], 422);
+            }
+
             if (preg_match('/^data:(.*?);base64,(.*)$/s', $audioData, $matches)) {
-                $mimeType = $matches[1] ?: 'audio/webm';
+                $mimeType = strtolower(trim($matches[1]));
                 $base64 = $matches[2];
             } else {
+                $mimeType = 'audio/webm';
                 $base64 = $audioData;
             }
         }
 
-        if (! $base64) {
+        if (! is_string($base64) || $base64 === '') {
             return response()->json(['error' => 'No valid audio data provided.'], 422);
+        }
+
+        // Bound the decoded payload even when it arrives as a base64 string.
+        if (strlen($base64) > (int) ceil(self::MAX_TRANSCRIBE_KB * 1024 * 4 / 3) + 4) {
+            return response()->json(['error' => 'The audio recording is too large. Keep recordings under 5 MB.'], 422);
+        }
+
+        if (! in_array($mimeType, self::ALLOWED_AUDIO_MIMES, true)) {
+            return response()->json(['error' => 'Unsupported audio format. Use WebM, OGG, MP3, MP4/M4A, WAV, FLAC, or AAC.'], 422);
         }
 
         try {
@@ -753,10 +854,11 @@ class ChatHistoryController extends Controller
                 'text' => trim($text),
             ]);
         } catch (Throwable $e) {
-            report($e);
+            $errorId = $this->logError('Chat Transcribe Error', $e);
 
             return response()->json([
-                'error' => 'Transcription failed: '.$e->getMessage(),
+                'error' => 'Transcription failed. Please try again.',
+                'error_id' => $errorId,
             ], 500);
         }
     }

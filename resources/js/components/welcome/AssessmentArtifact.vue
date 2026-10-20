@@ -107,7 +107,7 @@ function toggleApproval() {
                         <span
                             class="rounded-full bg-brand/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-brand"
                         >
-                            Competency · M8AL-IIa-1
+                            Competency · Quadratic Equations
                         </span>
                         <span
                             class="hidden text-xs text-muted-foreground sm:inline"
@@ -275,7 +275,7 @@ function toggleApproval() {
                         <span
                             class="rounded-full bg-brand/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-brand"
                         >
-                            M8AL-IIa-1
+                            Quadratic Equations
                         </span>
                         <h4
                             class="mt-1.5 text-sm font-semibold text-foreground sm:text-base"

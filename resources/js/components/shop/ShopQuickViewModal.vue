@@ -3,9 +3,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ExternalLink,
-    Package,
     ShoppingBag,
-    Sparkles,
     X,
     ZoomIn,
 } from 'lucide-vue-next';
@@ -16,6 +14,7 @@ const props = defineProps<{
     open: boolean;
     merch: MerchItem | null;
     items?: MerchItem[];
+    backdropColors?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -32,7 +31,6 @@ const totalItems = computed(() => props.items?.length ?? 0);
 
 const hasMultiple = computed(() => totalItems.value > 1);
 
-// Interactive mouse-hover zoom lens state
 const isZooming = ref(false);
 const zoomOrigin = ref('50% 50%');
 
@@ -44,7 +42,14 @@ const handleMouseMove = (event: MouseEvent) => {
     zoomOrigin.value = `${Math.max(0, Math.min(100, x))}% ${Math.max(0, Math.min(100, y))}%`;
 };
 
+const pointerCanHover = (): boolean =>
+    typeof window === 'undefined' ||
+    window.matchMedia?.('(hover: hover)')?.matches !== false;
+
 const handleMouseEnter = () => {
+    if (!pointerCanHover()) {
+        return;
+    }
     isZooming.value = true;
 };
 
@@ -72,6 +77,17 @@ const modalDisplayImage = computed(() => {
     return props.merch?.image_url || null;
 });
 
+const modalBackdropStyle = computed((): Record<string, string> => {
+    const url = modalDisplayImage.value;
+    const color = url ? props.backdropColors?.[url] : undefined;
+
+    if (!color) {
+        return {};
+    }
+
+    return { backgroundColor: color };
+});
+
 const modalDisplayName = computed(() => {
     if (!props.merch) return '';
     if (props.merch.variants && props.merch.variants.length > 0) {
@@ -84,6 +100,14 @@ const modalDisplayName = computed(() => {
         }
     }
     return props.merch.name;
+});
+
+const stockTone = computed(() => {
+    if (!props.merch) return '';
+    if (props.merch.is_out_of_stock) return 'text-[var(--st-ink-mute)]';
+    if (props.merch.stock <= 5)
+        return 'font-medium text-[var(--st-accent-text)]';
+    return 'text-[var(--st-ink)]';
 });
 
 const handlePrevious = () => {
@@ -113,15 +137,13 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 };
 
+const padCount = (value: number): string => String(value).padStart(2, '0');
+
 watch(
     () => props.open,
     (isOpen) => {
         if (typeof document !== 'undefined') {
-            if (isOpen) {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = '';
-            }
+            document.body.style.overflow = isOpen ? 'hidden' : '';
         }
     },
 );
@@ -155,237 +177,171 @@ onUnmounted(() => {
                 aria-modal="true"
                 :aria-label="`Quick view for ${merch.name}`"
             >
-                <!-- Backdrop with blur -->
                 <div
-                    class="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+                    class="absolute inset-0 bg-[#05060a]/60 backdrop-blur-[2px]"
                     @click="emit('close')"
                 ></div>
 
-                <!-- Modal Window -->
                 <div
-                    class="relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+                    class="st-sheet relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-[var(--st-hairline)] bg-[var(--st-sheet-bg)] text-[var(--st-ink)] shadow-[var(--st-sheet-shadow)] backdrop-blur-xl backdrop-saturate-150"
                 >
-                    <!-- Header / Navigation Bar -->
                     <div
-                        class="flex items-center justify-between border-b border-border/50 px-4 py-3 sm:px-6 sm:py-4"
+                        class="flex items-center justify-between gap-3 border-b border-[var(--st-hairline)] px-4 py-3 sm:px-6"
                     >
+                        <span class="st-label text-[var(--st-ink-mute)]">
+                            {{ padCount(currentIndex + 1) }} /
+                            {{ padCount(totalItems) }}
+                        </span>
+
                         <div class="flex items-center gap-2">
-                            <span
-                                class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
-                            >
-                                <Sparkles class="h-3.5 w-3.5" />
-                                <span>Quick View</span>
-                            </span>
-
-                            <span
-                                v-if="hasMultiple"
-                                class="text-xs font-medium text-muted-foreground"
-                            >
-                                {{ currentIndex + 1 }} of {{ totalItems }}
-                            </span>
-                        </div>
-
-                        <!-- Controls: Prev / Next / Close -->
-                        <div class="flex items-center gap-1.5 sm:gap-2">
                             <button
                                 v-if="hasMultiple"
                                 type="button"
-                                @click="handlePrevious"
-                                class="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--st-capsule-line)] text-[var(--st-ink-mute)] transition-colors hover:bg-[var(--st-ghost-hover)] hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none sm:h-9 sm:w-9"
                                 title="Previous item (←)"
                                 aria-label="Previous item"
+                                @click="handlePrevious"
                             >
                                 <ChevronLeft class="h-4 w-4" />
                             </button>
                             <button
                                 v-if="hasMultiple"
                                 type="button"
-                                @click="handleNext"
-                                class="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--st-capsule-line)] text-[var(--st-ink-mute)] transition-colors hover:bg-[var(--st-ghost-hover)] hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none sm:h-9 sm:w-9"
                                 title="Next item (→)"
                                 aria-label="Next item"
+                                @click="handleNext"
                             >
                                 <ChevronRight class="h-4 w-4" />
                             </button>
                             <button
                                 type="button"
-                                @click="emit('close')"
-                                class="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--st-capsule-line)] text-[var(--st-ink-mute)] transition-colors hover:bg-[var(--st-ghost-hover)] hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none sm:h-9 sm:w-9"
                                 title="Close (Esc)"
                                 aria-label="Close modal"
+                                @click="emit('close')"
                             >
                                 <X class="h-4 w-4" />
                             </button>
                         </div>
                     </div>
 
-                    <!-- Modal Body (Grid on desktop) -->
                     <div
                         class="grid flex-1 overflow-y-auto lg:grid-cols-[1.35fr_1fr]"
                     >
-                        <!-- Media Stage (Interactive Hover-to-Zoom Lens) -->
                         <div
-                            class="relative flex min-h-[280px] items-center justify-center overflow-hidden border-b border-border/50 bg-black/40 p-4 sm:min-h-[400px] sm:p-8 lg:border-r lg:border-b-0"
+                            class="relative flex min-h-[280px] items-center justify-center overflow-hidden border-b border-[var(--st-hairline)] bg-[var(--st-well-bg)] p-4 transition-colors duration-300 sm:min-h-[400px] sm:p-8 lg:border-r lg:border-b-0"
+                            :style="modalBackdropStyle"
                         >
-                            <!-- Atmospheric Ambient Glow from image colors (stable backdrop) -->
-                            <img
-                                v-if="modalDisplayImage"
-                                :src="modalDisplayImage"
-                                aria-hidden="true"
-                                alt=""
-                                class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-25 blur-3xl filter"
-                            />
+                            <span class="st-pool" aria-hidden="true"></span>
 
-                            <!-- Interactive Zoom Viewport -->
                             <div
                                 v-if="modalDisplayImage"
-                                class="relative z-10 flex max-h-[50vh] w-auto max-w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-xl sm:max-h-[60vh]"
+                                class="relative z-10 flex max-h-[50vh] w-auto max-w-full cursor-zoom-in items-center justify-center overflow-hidden sm:max-h-[60vh]"
                                 @mousemove="handleMouseMove"
                                 @mouseenter="handleMouseEnter"
                                 @mouseleave="handleMouseLeave"
                             >
-                                <!-- Sharp merchandise image with mouse-following zoom -->
                                 <img
+                                    :key="modalDisplayImage"
                                     :src="modalDisplayImage"
                                     :alt="modalDisplayName"
-                                    class="pointer-events-none max-h-[50vh] w-auto max-w-full rounded-xl object-contain drop-shadow-2xl will-change-transform sm:max-h-[60vh]"
+                                    class="st-swap pointer-events-none max-h-[50vh] w-auto max-w-full object-contain will-change-transform sm:max-h-[60vh]"
                                     :style="{
                                         transformOrigin: zoomOrigin,
                                         transform: isZooming
-                                            ? 'scale(2.2)'
+                                            ? 'scale(1.8)'
                                             : 'scale(1)',
                                         transition: isZooming
-                                            ? 'transform 0.08s ease-out'
+                                            ? 'transform 0.12s ease-out'
                                             : 'transform 0.3s ease-out',
                                     }"
                                 />
 
-                                <!-- Subtle 'Hover to zoom' hint pill -->
                                 <span
-                                    class="pointer-events-none absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white/90 shadow-md backdrop-blur-md transition-opacity duration-200"
+                                    class="st-label pointer-events-none absolute right-3 bottom-3 hidden items-center gap-1.5 rounded-full bg-[var(--st-chip-bg)] px-3 py-1.5 text-[var(--st-ink)] backdrop-blur-sm transition-opacity duration-200 pointer-fine:inline-flex"
                                     :class="{ 'opacity-0': isZooming }"
                                 >
-                                    <ZoomIn class="h-3.5 w-3.5 text-primary" />
+                                    <ZoomIn
+                                        class="h-3.5 w-3.5 text-[#d97757]"
+                                        aria-hidden="true"
+                                    />
                                     <span>Hover to zoom</span>
                                 </span>
                             </div>
 
                             <div
                                 v-else
-                                class="relative z-10 flex flex-col items-center justify-center p-8 text-center text-muted-foreground"
+                                class="relative z-10 flex flex-col items-center justify-center p-8 text-center text-[var(--st-ink-mute)]"
                             >
                                 <div
-                                    class="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                                    class="flex h-20 w-20 items-center justify-center rounded-2xl border border-[var(--st-hairline-strong)]"
                                 >
-                                    <ShoppingBag class="h-10 w-10" />
+                                    <ShoppingBag
+                                        class="h-10 w-10"
+                                        aria-hidden="true"
+                                    />
                                 </div>
-                                <span
-                                    class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                                >
-                                    KOAMISHIN
-                                </span>
+                                <span class="st-label mt-3"> KOAMISHIN </span>
                             </div>
                         </div>
 
-                        <!-- Product Details Column -->
                         <div class="flex flex-col justify-between p-5 sm:p-8">
-                            <div class="space-y-5">
-                                <div>
-                                    <p
-                                        class="text-[11px] font-bold tracking-wider text-primary uppercase"
-                                    >
-                                        Official Gear
-                                    </p>
-                                    <h3
-                                        class="mt-1 font-sans text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-                                    >
-                                        {{ modalDisplayName }}
-                                    </h3>
-                                </div>
+                            <div>
+                                <h3
+                                    class="text-2xl font-semibold tracking-[-0.02em] text-[var(--st-ink)]"
+                                >
+                                    {{ modalDisplayName }}
+                                </h3>
+                                <p
+                                    class="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[var(--st-ink)]"
+                                >
+                                    {{ merch.formatted_price }}
+                                </p>
 
-                                <!-- Price Banner & Clean Stock Status Row -->
-                                <div class="flex flex-wrap items-center gap-3">
-                                    <div
-                                        class="inline-flex items-baseline gap-2 rounded-xl border border-border/50 bg-muted/50 px-3.5 py-2"
-                                    >
+                                <div class="mt-5">
+                                    <div class="st-row">
                                         <span
-                                            class="text-xs font-medium text-muted-foreground uppercase"
+                                            class="st-label text-[var(--st-ink-mute)]"
+                                            >Stock</span
                                         >
-                                            Price
-                                        </span>
                                         <span
-                                            class="text-2xl font-black tracking-tight text-foreground sm:text-3xl"
+                                            class="text-sm"
+                                            :class="stockTone"
+                                            >{{ merch.stock_label }}</span
                                         >
-                                            {{ merch.formatted_price }}
-                                        </span>
                                     </div>
-
-                                    <!-- Clean, Non-vibecoded Stock Indicator -->
-                                    <div class="text-xs font-medium">
+                                    <div class="st-row">
                                         <span
-                                            v-if="merch.is_out_of_stock"
-                                            class="inline-flex items-center gap-1.5 font-semibold text-rose-500"
+                                            class="st-label text-[var(--st-ink-mute)]"
+                                            >Colorway</span
                                         >
-                                            <span
-                                                class="h-1.5 w-1.5 rounded-full bg-rose-500"
-                                            ></span>
-                                            Out of stock
-                                        </span>
                                         <span
-                                            v-else-if="merch.stock <= 5"
-                                            class="inline-flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400"
+                                            class="text-sm text-[var(--st-ink)]"
                                         >
-                                            <span
-                                                class="h-1.5 w-1.5 rounded-full bg-amber-500"
-                                            ></span>
-                                            Only {{ merch.stock }} left in stock
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="inline-flex items-center gap-1.5 text-muted-foreground"
-                                        >
-                                            <span
-                                                class="h-1.5 w-1.5 rounded-full bg-emerald-500"
-                                            ></span>
-                                            {{ merch.stock }} available
+                                            {{
+                                                merch.variants?.length
+                                                    ? merch.variants[
+                                                          selectedVariantIndex
+                                                      ]?.name
+                                                    : 'Single'
+                                            }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Variant / Edition Selector -->
                                 <div
                                     v-if="
                                         merch.variants &&
                                         merch.variants.length > 0
                                     "
-                                    class="space-y-2 border-t border-border/50 pt-4"
+                                    class="mt-5"
                                 >
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <h4
-                                            class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                                        >
-                                            Edition / Colorway
-                                        </h4>
-                                        <span
-                                            v-if="
-                                                merch.variants[
-                                                    selectedVariantIndex
-                                                ]
-                                            "
-                                            class="text-xs font-semibold text-primary"
-                                        >
-                                            {{
-                                                merch.variants[
-                                                    selectedVariantIndex
-                                                ]?.name
-                                            }}
-                                        </span>
-                                    </div>
                                     <div
                                         v-if="merch.variants.length > 1"
                                         class="flex flex-wrap gap-2"
+                                        role="group"
+                                        aria-label="Choose a colorway"
                                     >
                                         <button
                                             v-for="(
@@ -393,30 +349,27 @@ onUnmounted(() => {
                                             ) in merch.variants"
                                             :key="variant.name"
                                             type="button"
-                                            @click="selectedVariantIndex = idx"
-                                            class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
-                                            :class="
+                                            class="st-capsule focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                            :aria-pressed="
                                                 selectedVariantIndex === idx
-                                                    ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
-                                                    : 'border border-border/70 bg-card text-foreground hover:bg-muted/50'
+                                                    ? 'true'
+                                                    : 'false'
                                             "
+                                            @click="selectedVariantIndex = idx"
                                         >
                                             {{ variant.name }}
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- Description -->
-                                <div
-                                    class="space-y-2 border-t border-border/50 pt-4"
-                                >
+                                <div class="mt-5">
                                     <h4
-                                        class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                                        class="st-label text-[var(--st-ink-mute)]"
                                     >
                                         Overview
                                     </h4>
                                     <p
-                                        class="text-sm leading-relaxed text-muted-foreground sm:text-base"
+                                        class="mt-2 text-sm leading-relaxed text-[var(--st-ink-soft)] sm:text-base"
                                     >
                                         {{
                                             merch.description ||
@@ -424,31 +377,10 @@ onUnmounted(() => {
                                         }}
                                     </p>
                                 </div>
-
-                                <!-- Features Pill List -->
-                                <div
-                                    class="grid grid-cols-2 gap-2 pt-2 text-xs text-muted-foreground"
-                                >
-                                    <div
-                                        class="flex items-center gap-2 rounded-lg bg-muted/30 p-2"
-                                    >
-                                        <Package class="h-4 w-4 text-primary" />
-                                        <span>Official Packaging</span>
-                                    </div>
-                                    <div
-                                        class="flex items-center gap-2 rounded-lg bg-muted/30 p-2"
-                                    >
-                                        <Sparkles
-                                            class="h-4 w-4 text-primary"
-                                        />
-                                        <span>Limited Batch</span>
-                                    </div>
-                                </div>
                             </div>
 
-                            <!-- Actions -->
                             <div
-                                class="mt-6 flex flex-col gap-2.5 border-t border-border/50 pt-5 sm:flex-row"
+                                class="mt-6 flex flex-col gap-2.5 border-t border-[var(--st-hairline)] pt-5 sm:flex-row"
                             >
                                 <a
                                     :href="
@@ -456,20 +388,29 @@ onUnmounted(() => {
                                     "
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
+                                    class="st-pill st-pill--solid flex-1 focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
                                 >
-                                    <span>Coming Soon...</span>
-                                    <ExternalLink class="h-4 w-4" />
+                                    <span>Visit store</span>
+                                    <ExternalLink
+                                        class="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
                                 </a>
 
                                 <button
                                     type="button"
+                                    class="st-pill st-pill--ghost focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
                                     @click="emit('close')"
-                                    class="inline-flex items-center justify-center rounded-xl border border-border/70 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
-                                    Close
+                                    <span>Close</span>
                                 </button>
                             </div>
+
+                            <p
+                                class="st-label mt-3 text-[var(--st-ink-mute)] opacity-70"
+                            >
+                                Opens koamishin.com — external store
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -477,3 +418,19 @@ onUnmounted(() => {
         </Transition>
     </Teleport>
 </template>
+
+<style scoped src="./studio.css"></style>
+
+<style scoped>
+/* Palette lives in studio.css alongside the shop root, so the sheet and the
+   page can never drift apart. Only the sheet's own geometry stays here. */
+.st-sheet {
+    max-height: 92vh;
+}
+
+@supports (height: 100dvh) {
+    .st-sheet {
+        max-height: 92dvh;
+    }
+}
+</style>

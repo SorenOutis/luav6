@@ -16,8 +16,9 @@ class FaviconController extends Controller
      * AiSettings -> School Branding), so the favicon follows whatever logo the
      * admin uploads — including per-workspace logos — without any build step.
      *
-     * - No logo uploaded: redirect to the bundled static icon (favicon.ico for
-     *   small sizes, apple-touch-icon.png for the 180px touch icon).
+     * - No logo uploaded: redirect to the best matching bundled static icon
+     *   (ai-app-512/192.png for PWA sizes, apple-touch-icon.png for 180px,
+     *   favicon.ico otherwise).
      * - GD available: re-encode the logo as a transparent square PNG so
      *   horizontal logos render centered instead of squashed.
      * - GD unavailable: serve the original file with its own content type.
@@ -26,7 +27,12 @@ class FaviconController extends Controller
     {
         $size = min(max((int) $request->query('size', 64), 16), 512);
 
-        $fallback = $size >= 180 ? '/apple-touch-icon.png' : '/favicon.ico';
+        $fallback = match (true) {
+            $size >= 512 => '/images/ai-app-512.png',
+            $size >= 192 => '/images/ai-app-192.png',
+            $size >= 180 => '/apple-touch-icon.png',
+            default => '/favicon.ico',
+        };
 
         $path = Setting::get('school_logo_path');
 

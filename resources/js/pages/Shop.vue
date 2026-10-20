@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ExternalLink, ShoppingBag, Sparkles } from 'lucide-vue-next';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { ExternalLink, ShoppingBag } from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
@@ -20,155 +20,157 @@ const props = withDefaults(
     },
 );
 
-const totalInStock = computed(() => {
-    return props.merches.filter((m) => !m.is_out_of_stock && m.stock > 0)
-        .length;
+const frames = computed<MerchItem[]>(() => props.merches ?? []);
+
+const inStockCount = computed(
+    () => frames.value.filter((m) => !m.is_out_of_stock && m.stock > 0).length,
+);
+
+const pad = (value: number): string => String(value).padStart(2, '0');
+
+const pieceIndex = ref(0);
+const variantIndex = ref(0);
+
+const currentPiece = computed<MerchItem | null>(
+    () => frames.value[pieceIndex.value] ?? null,
+);
+
+const variantOptions = computed(() => currentPiece.value?.variants ?? []);
+
+const displayImageUrl = computed<string | null>(() => {
+    const piece = currentPiece.value;
+    if (!piece) {
+        return null;
+    }
+    const variant = piece.variants?.[variantIndex.value];
+    return variant?.image_url || piece.image_url;
 });
 
-const selectedQuickViewMerch = ref<MerchItem | null>(null);
-const isQuickViewOpen = ref(false);
+let prefersDark = false;
 
-interface HeroTab {
-    key: string;
-    name: string;
-    imageUrl: string;
-    merch: MerchItem;
-}
-
-const heroTabs = computed<HeroTab[]>(() => {
-    const list = props.merches || [];
-    if (list.length === 0) return [];
-
-    // 1. If any merch has multiple variants (e.g. Hoodie with [Obsidian, Alabaster]), use its variants
-    const multiVariantMerch = list.find(
-        (m) => m.variants && m.variants.length > 1,
+const preferredVariantIndex = (merch: MerchItem): number => {
+    const variants = merch.variants ?? [];
+    if (variants.length === 0) {
+        return 0;
+    }
+    const hints = prefersDark
+        ? ['obsidian', 'black', 'dark']
+        : ['alabaster', 'white', 'light'];
+    const match = variants.findIndex((v) =>
+        hints.some((hint) => v.name.toLowerCase().includes(hint)),
     );
-    if (multiVariantMerch && multiVariantMerch.variants) {
-        return multiVariantMerch.variants.map((v, idx) => ({
-            key: `${multiVariantMerch.id}-variant-${idx}`,
-            name: v.name,
-            imageUrl:
-                v.image_url ||
-                multiVariantMerch.image_url ||
-                '/images/merch/techwear-hoodie-black.jpg',
-            merch: {
-                ...multiVariantMerch,
-                name: `${multiVariantMerch.name} (${v.name})`,
-                image_url: v.image_url || multiVariantMerch.image_url,
-            },
-        }));
+    return match === -1 ? 0 : match;
+};
+
+const selectPiece = (index: number) => {
+    pieceIndex.value = index;
+    const piece = frames.value[index];
+    variantIndex.value = piece ? preferredVariantIndex(piece) : 0;
+};
+
+const selectVariant = (index: number) => {
+    variantIndex.value = index;
+};
+
+const toneFor = (merch: MerchItem): string => {
+    if (merch.is_out_of_stock || merch.stock <= 0) {
+        return 'text-[var(--st-ink-mute)]';
     }
-
-    // 2. If merches each have 1 or more variants (e.g. 1 variant uploaded in each merch), aggregate them
-    const merchesWithVariants = list.filter(
-        (m) => m.variants && m.variants.length > 0,
-    );
-    if (merchesWithVariants.length > 0) {
-        const tabs: HeroTab[] = [];
-        for (const m of merchesWithVariants) {
-            for (let idx = 0; idx < (m.variants?.length || 0); idx++) {
-                const v = m.variants![idx];
-                tabs.push({
-                    key: `${m.id}-variant-${idx}`,
-                    name: v.name,
-                    imageUrl:
-                        v.image_url ||
-                        m.image_url ||
-                        '/images/merch/techwear-hoodie-black.jpg',
-                    merch: {
-                        ...m,
-                        name: `${m.name} (${v.name})`,
-                        image_url: v.image_url || m.image_url,
-                    },
-                });
-            }
-        }
-        return tabs;
+    if (merch.stock <= 5) {
+        return 'font-medium text-[var(--st-accent-text)]';
     }
-
-    return [];
-});
-
-const selectedTabIndex = ref(0);
-
-const setTabIndex = (index: number) => {
-    selectedTabIndex.value = index;
-    if (heroTabTimer) {
-        clearInterval(heroTabTimer);
-        heroTabTimer = setInterval(() => {
-            if (heroTabs.value.length > 1) {
-                selectedTabIndex.value =
-                    (selectedTabIndex.value + 1) % heroTabs.value.length;
-            }
-        }, 8000);
-    }
+    return 'text-[var(--st-ink-mute)]';
 };
 
 watch(
-    heroTabs,
-    (tabs) => {
-        if (selectedTabIndex.value >= tabs.length) {
-            selectedTabIndex.value = 0;
+    frames,
+    (list) => {
+        if (pieceIndex.value >= list.length) {
+            pieceIndex.value = 0;
+            variantIndex.value = 0;
         }
     },
     { immediate: true },
 );
 
-let heroTabTimer: ReturnType<typeof setInterval> | undefined;
+const preloadImages = computed<string[]>(() => {
+    const urls = frames.value.flatMap((frame) => [
+        ...(frame.variants ?? []).map((v) => v.image_url),
+        frame.image_url,
+    ]);
+    return [...new Set(urls.filter((url): url is string => Boolean(url)))];
+});
 
-onMounted(() => {
-    heroTabTimer = setInterval(() => {
-        if (heroTabs.value.length > 1) {
-            selectedTabIndex.value =
-                (selectedTabIndex.value + 1) % heroTabs.value.length;
+const backdropByUrl = ref<Record<string, string>>({});
+
+/**
+ * Poster art carries its own background, which otherwise reads as a hard
+ * rectangle against the stage surfaces. Average a few edge samples of every
+ * loaded image and paint the surface behind it with that same tone, so each
+ * piece blends into the well, bench, tile, and modal instead of stacking
+ * another colored card on top of the theme.
+ */
+const onImageLoad = (event: Event): void => {
+    const img = event.target as HTMLImageElement | null;
+    const key = img?.getAttribute('src');
+
+    if (!img || !key || backdropByUrl.value[key]) {
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 8;
+    canvas.height = 8;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        return;
+    }
+
+    try {
+        context.drawImage(img, 0, 0, 8, 8);
+        const { data } = context.getImageData(0, 0, 8, 8);
+        const samples = [0, 7, 56, 63, 3, 24, 59, 31];
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let weight = 0;
+
+        for (const index of samples) {
+            const offset = index * 4;
+            const alpha = data[offset + 3] / 255;
+
+            if (alpha <= 0) {
+                continue;
+            }
+
+            r += data[offset] * alpha;
+            g += data[offset + 1] * alpha;
+            b += data[offset + 2] * alpha;
+            weight += alpha;
         }
-    }, 8000);
-});
 
-onUnmounted(() => {
-    if (heroTabTimer) {
-        clearInterval(heroTabTimer);
+        if (weight === 0) {
+            return;
+        }
+
+        backdropByUrl.value = {
+            ...backdropByUrl.value,
+            [key]: `rgb(${Math.round(r / weight)}, ${Math.round(g / weight)}, ${Math.round(b / weight)})`,
+        };
+    } catch {
+        // Cross-origin artwork without CORS headers taints the canvas;
+        // the surface simply keeps its theme color.
     }
-});
+};
 
-const activeHeroTab = computed<HeroTab | null>(() => {
-    if (!heroTabs.value.length) return null;
-    return heroTabs.value[selectedTabIndex.value] || heroTabs.value[0];
-});
+const backdropStyle = (url?: string | null): Record<string, string> =>
+    url && backdropByUrl.value[url]
+        ? { backgroundColor: backdropByUrl.value[url] }
+        : {};
 
-const currentHeroMerch = computed<MerchItem>(() => {
-    if (activeHeroTab.value) {
-        return activeHeroTab.value.merch;
-    }
-    const list = props.merches || [];
-    const hoodie = list.find((m) => m.name.toLowerCase().includes('hoodie'));
-    if (hoodie) return hoodie;
-    if (list[0]) return list[0];
-    return {
-        id: 2,
-        name: 'KOAMISHIN BSIT Techwear Hoodie',
-        description:
-            '380 GSM heavyweight technical fleece with topographic contour sleeves, weatherproof angular pocket, and BSIT signature insignia.',
-        price: 1650,
-        currency: 'PHP',
-        formatted_price: '₱1,650.00',
-        image_url: '/images/merch/techwear-hoodie-black.jpg',
-        stock: 12,
-        is_out_of_stock: false,
-        stock_label: '12 in stock',
-        url: 'https://koamishin.com/',
-    };
-});
-
-const currentHeroImageUrl = computed<string>(() => {
-    if (activeHeroTab.value?.imageUrl) {
-        return activeHeroTab.value.imageUrl;
-    }
-    return (
-        currentHeroMerch.value.image_url ||
-        '/images/merch/techwear-hoodie-black.jpg'
-    );
-});
+const selectedQuickViewMerch = ref<MerchItem | null>(null);
+const isQuickViewOpen = ref(false);
 
 const openQuickView = (merch: MerchItem) => {
     selectedQuickViewMerch.value = merch;
@@ -184,67 +186,27 @@ const handleQuickViewSelect = (merch: MerchItem) => {
     selectedQuickViewMerch.value = merch;
 };
 
-// Eagerly preload and decode all variant graphics in memory so tab clicks swap instantaneously
-const preloadedImages = new Set<string>();
-
-const preloadHeroImages = () => {
-    if (typeof window === 'undefined') return;
-
-    heroTabs.value.forEach((tab) => {
-        if (tab.imageUrl && !preloadedImages.has(tab.imageUrl)) {
-            const img = new window.Image();
-            img.src = tab.imageUrl;
-            if ('decode' in img) {
-                img.decode().catch(() => {});
-            }
-            preloadedImages.add(tab.imageUrl);
-        }
-    });
-};
-
-watch(heroTabs, preloadHeroImages, { immediate: true });
-
-const getBentoColSpan = (index: number, total: number): string => {
-    if (index === 0) {
-        return total === 1
-            ? 'md:col-span-2 lg:col-span-8'
-            : 'md:col-span-2 lg:col-span-8';
-    }
-    return 'md:col-span-1 lg:col-span-4';
-};
-
 onMounted(() => {
-    if (typeof window !== 'undefined') {
-        preloadHeroImages();
+    if (typeof window === 'undefined') {
+        return;
+    }
 
-        const isDark =
-            document.documentElement.classList.contains('dark') ||
-            window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+    prefersDark =
+        document.documentElement.classList.contains('dark') ||
+        window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
 
-        if (heroTabs.value.length > 0) {
-            const preferredMatch = heroTabs.value.findIndex((tab) => {
-                const lower = tab.name.toLowerCase();
-                return isDark
-                    ? lower.includes('obsidian') ||
-                          lower.includes('black') ||
-                          lower.includes('dark')
-                    : lower.includes('alabaster') ||
-                          lower.includes('white') ||
-                          lower.includes('light');
-            });
-            if (preferredMatch !== -1) {
-                selectedTabIndex.value = preferredMatch;
-            }
-        }
+    const lead = frames.value.findIndex(
+        (frame) => (frame.variants?.length ?? 0) > 1,
+    );
+    selectPiece(lead === -1 ? 0 : lead);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const qvParam = urlParams.get('quickview');
-        if (qvParam && props.merches && props.merches.length > 0) {
-            const target =
-                props.merches.find((m) => String(m.id) === qvParam) ||
-                props.merches[0];
-            openQuickView(target);
-        }
+    const urlParams = new URLSearchParams(window.location.search);
+    const qvParam = urlParams.get('quickview');
+    if (qvParam && frames.value.length > 0) {
+        const target =
+            frames.value.find((m) => String(m.id) === qvParam) ??
+            frames.value[0];
+        openQuickView(target);
     }
 });
 </script>
@@ -258,7 +220,7 @@ onMounted(() => {
     />
 
     <div
-        class="shop-root min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="shop-root min-h-screen overflow-x-hidden bg-background font-sans text-[var(--st-ink)] selection:bg-primary/20"
     >
         <WelcomeHeader
             :can-register="props.canRegister"
@@ -271,388 +233,327 @@ onMounted(() => {
         />
 
         <main
-            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-4 pb-16 sm:px-6 sm:pt-10 sm:pb-24 lg:px-16 lg:pt-12 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-4 pb-16 sm:px-6 sm:pt-8 sm:pb-24 lg:px-16 lg:pt-10 lg:pb-28"
         >
-            <!-- Breadcrumbs & Variant Switcher -->
-            <div class="flex items-center justify-between gap-4">
-                <nav
-                    aria-label="Breadcrumb"
-                    class="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm"
+            <nav
+                aria-label="Breadcrumb"
+                class="st-label flex items-center gap-2 text-[var(--st-ink-mute)]"
+            >
+                <Link
+                    href="/"
+                    class="transition-colors hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
                 >
-                    <Link
-                        href="/"
-                        class="transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        Home
-                    </Link>
-                    <span class="text-muted-foreground/40" aria-hidden="true"
-                        >/</span
-                    >
-                    <span
-                        class="font-medium text-foreground"
-                        aria-current="page"
-                        >Shop</span
-                    >
-                </nav>
+                    Home
+                </Link>
+                <span aria-hidden="true">/</span>
+                <span class="text-[var(--st-ink)]" aria-current="page"
+                    >Shop</span
+                >
+            </nav>
 
-                <!-- Dynamic Variant Switcher (e.g. Obsidian / Alabaster) -->
+            <section
+                v-if="currentPiece"
+                class="studio-stage mt-4 overflow-hidden rounded-3xl border border-[var(--st-hairline)] bg-[var(--st-stage-bg)] sm:rounded-[32px]"
+                aria-label="The studio — preview the line"
+            >
                 <div
-                    v-if="heroTabs.length > 0"
-                    class="inline-flex rounded-xl border border-border/80 bg-card p-1 shadow-xs"
+                    class="flex flex-wrap items-center justify-between gap-3 px-6 pt-6 sm:px-10 lg:px-12"
+                >
+                    <p class="st-label text-[var(--st-ink-mute)]">
+                        KOAMISHIN — MERCH LINE
+                    </p>
+                    <p class="st-label text-[var(--st-ink-mute)]">
+                        {{ pad(frames.length) }} items ·
+                        {{ pad(inStockCount) }} in stock
+                    </p>
+                </div>
+
+                <div
+                    class="mx-auto max-w-2xl px-6 pt-10 pb-2 text-center sm:pt-14"
+                >
+                    <h1
+                        class="stage-title text-4xl font-semibold tracking-[-0.025em] text-[var(--st-ink)] sm:text-5xl lg:text-[3.5rem] lg:leading-[1.06]"
+                    >
+                        The merch line.
+                    </h1>
+                    <p
+                        class="mt-4 text-[15px] leading-relaxed text-[var(--st-ink-mute)] sm:text-base"
+                    >
+                        Official KOAMISHIN apparel for educators, learners, and
+                        creators. Specs, stock, and colorways live here —
+                        checkout and fulfillment happen on koamishin.com.
+                    </p>
+                </div>
+
+                <div
+                    class="grid gap-2 px-4 pt-8 pb-10 sm:px-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-8 lg:px-12 lg:pt-12"
                 >
                     <button
-                        v-for="(tab, idx) in heroTabs"
-                        :key="tab.key"
                         type="button"
-                        @click="setTabIndex(idx)"
-                        class="rounded-lg px-2.5 py-1 text-xs transition-all"
-                        :class="
-                            selectedTabIndex === idx
-                                ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
-                                : 'font-medium text-muted-foreground hover:text-foreground'
-                        "
+                        class="group/garment relative block min-h-[320px] w-full cursor-zoom-in overflow-hidden rounded-[24px] bg-[var(--st-well-bg)] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:ring-inset sm:min-h-[420px] lg:min-h-[520px]"
+                        :style="backdropStyle(displayImageUrl)"
+                        :aria-label="`Open details for ${currentPiece.name}`"
+                        @click="openQuickView(currentPiece)"
                     >
-                        {{ tab.name }}
-                    </button>
-                </div>
-            </div>
-
-            <!-- Hero Showcase Graphic (Clean, unencumbered presentation) -->
-            <section
-                class="relative mt-3 overflow-hidden rounded-2xl shadow-xl transition-all sm:mt-5 sm:rounded-3xl"
-                :aria-label="`${currentHeroMerch.name} Showcase`"
-            >
-                <button
-                    type="button"
-                    @click="openQuickView(currentHeroMerch)"
-                    class="group/hero block w-full cursor-zoom-in text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    :aria-label="`Quick view ${currentHeroMerch.name}`"
-                >
-                    <Transition name="hero-swap" mode="out-in">
+                        <span class="st-pool" aria-hidden="true"></span>
                         <img
-                            :key="currentHeroImageUrl"
-                            :src="currentHeroImageUrl"
-                            :alt="`${currentHeroMerch.name} (Showcase View)`"
-                            class="h-full w-full object-contain transition-transform duration-700 ease-out group-hover/hero:scale-[1.01]"
+                            v-if="displayImageUrl"
+                            :key="displayImageUrl"
+                            :src="displayImageUrl"
+                            :alt="currentPiece.name"
+                            class="stage-garment st-swap relative z-10 mx-auto h-full w-full object-contain p-6 transition-transform duration-700 ease-out group-hover/garment:scale-[1.015] sm:p-10 lg:p-12"
                             loading="eager"
-                            decoding="sync"
+                            @load="onImageLoad"
                         />
-                    </Transition>
-                </button>
-            </section>
-
-            <!-- Store Inventory & Action Bar (Directly Above Bento Grid) -->
-            <div
-                class="mt-12 flex items-center justify-between border-b border-border/40 pb-4 text-xs font-medium text-muted-foreground sm:mt-16 sm:text-sm"
-            >
-                <!-- Left: Catalog Heading & Inventory Count -->
-                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span
-                        class="font-sans text-sm font-bold tracking-tight text-foreground sm:text-base"
-                    >
-                        Merchandise Catalog
-                    </span>
-                    <span class="text-muted-foreground/40">·</span>
-                    <span class="font-semibold text-foreground">
-                        {{ merches.length }}
-                        {{ merches.length === 1 ? 'Item' : 'Items' }}
-                    </span>
-                    <span class="text-muted-foreground/50">·</span>
-                    <span class="text-emerald-600 dark:text-emerald-400">
-                        {{ totalInStock }} In Stock
-                    </span>
-                </div>
-
-                <!-- Right: Visit Main Store Link -->
-                <div>
-                    <a
-                        href="https://koamishin.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
-                    >
-                        <span>Visit main store</span>
-                        <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                </div>
-            </div>
-
-            <!-- Merch Bento Grid Section -->
-            <section
-                class="relative mt-6 sm:mt-8"
-                aria-label="Merchandise collection"
-            >
-                <div
-                    v-if="merches && merches.length > 0"
-                    class="merch-bento-grid grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-12"
-                >
-                    <article
-                        v-for="(merch, index) in merches"
-                        :key="`bento-${merch.id}`"
-                        class="merch-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs transition-all duration-300 ease-out hover:border-foreground/20 sm:rounded-3xl"
-                        :class="getBentoColSpan(index, merches.length)"
-                    >
-                        <!-- Spec Header Badge -->
-                        <div
-                            class="flex items-center justify-between border-b border-border/50 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-3.5"
+                        <span
+                            v-else
+                            class="relative z-10 flex h-full min-h-[320px] w-full items-center justify-center text-[var(--st-ink-mute)]"
                         >
-                            <span
-                                class="font-mono text-[10px] font-medium tracking-wider text-muted-foreground uppercase"
-                            >
-                                {{
-                                    index === 0
-                                        ? 'Featured'
-                                        : `Item 0${index + 1}`
-                                }}
-                            </span>
+                            <ShoppingBag class="h-10 w-10" aria-hidden="true" />
+                        </span>
+                    </button>
 
-                            <!-- Stock Indicator -->
-                            <span
-                                v-if="merch.is_out_of_stock"
-                                class="text-xs font-medium text-rose-500"
-                            >
-                                Out of stock
-                            </span>
-                            <span
-                                v-else-if="merch.stock <= 5"
-                                class="text-xs font-medium text-amber-600 dark:text-amber-400"
-                            >
-                                Only {{ merch.stock }} left
-                            </span>
-                            <span
-                                v-else
-                                class="text-xs font-medium text-muted-foreground"
-                            >
-                                {{ merch.stock }} in stock
-                            </span>
-                        </div>
-
-                        <!-- Image Container with Hover Quick View -->
-                        <button
-                            type="button"
-                            @click="openQuickView(merch)"
-                            class="group/img relative w-full cursor-zoom-in overflow-hidden bg-muted/20 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                            :class="
-                                index === 0
-                                    ? 'aspect-video sm:aspect-[21/10]'
-                                    : 'aspect-video sm:aspect-[4/3]'
-                            "
-                            :aria-label="`Quick view ${merch.name}`"
+                    <div
+                        class="flex flex-col justify-center rounded-[24px] border border-[var(--st-hairline)] bg-[var(--st-panel-bg)] p-6 sm:p-8 lg:p-9"
+                    >
+                        <p class="st-label text-[var(--st-ink-mute)]">
+                            On stage
+                        </p>
+                        <h2
+                            class="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--st-ink)] sm:text-[1.75rem]"
                         >
-                            <!-- Sharp Product Image -->
-                            <img
-                                v-if="merch.image_url"
-                                :src="merch.image_url"
-                                :alt="merch.name"
-                                loading="lazy"
-                                class="relative z-10 h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover/img:scale-105 sm:p-6"
-                            />
-                            <div
-                                v-else
-                                class="flex h-full w-full flex-col items-center justify-center p-6 text-center"
-                            >
-                                <div
-                                    class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                            {{ currentPiece.name }}
+                        </h2>
+                        <p
+                            v-if="currentPiece.description"
+                            class="mt-3 text-[15px] leading-relaxed text-[var(--st-ink-mute)]"
+                        >
+                            {{ currentPiece.description }}
+                        </p>
+
+                        <div class="mt-6">
+                            <div class="st-row">
+                                <span class="st-label text-[var(--st-ink-mute)]"
+                                    >Price</span
                                 >
-                                    <ShoppingBag class="h-8 w-8" />
-                                </div>
                                 <span
-                                    class="mt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                                    class="text-xl font-semibold tracking-[-0.01em] text-[var(--st-ink)]"
+                                    >{{ currentPiece.formatted_price }}</span
                                 >
-                                    KOAMISHIN
+                            </div>
+                            <div class="st-row">
+                                <span class="st-label text-[var(--st-ink-mute)]"
+                                    >Stock</span
+                                >
+                                <span
+                                    class="text-sm"
+                                    :class="toneFor(currentPiece)"
+                                    >{{ currentPiece.stock_label }}</span
+                                >
+                            </div>
+                            <div class="st-row">
+                                <span class="st-label text-[var(--st-ink-mute)]"
+                                    >Colorway</span
+                                >
+                                <span class="text-sm text-[var(--st-ink)]">
+                                    {{
+                                        variantOptions.length > 0
+                                            ? variantOptions[variantIndex]?.name
+                                            : 'Single'
+                                    }}
                                 </span>
                             </div>
-                        </button>
+                        </div>
 
-                        <!-- Card Content -->
                         <div
-                            class="flex flex-1 flex-col justify-between p-5 sm:p-6"
+                            v-if="variantOptions.length > 0"
+                            class="mt-5 flex flex-wrap gap-2"
+                            role="group"
+                            aria-label="Choose a colorway"
                         >
-                            <div>
-                                <h2
-                                    class="line-clamp-1 font-sans text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
-                                >
-                                    {{ merch.name }}
-                                </h2>
-                                <p
-                                    class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:mt-2 sm:text-sm"
-                                >
-                                    {{
-                                        merch.description ||
-                                        'Official KOAMISHIN gear with signature styling and premium quality.'
-                                    }}
-                                </p>
-
-                                <!-- Variant Pills -->
-                                <p
-                                    v-if="
-                                        merch.variants &&
-                                        merch.variants.length > 0
-                                    "
-                                    class="mt-3 text-[11px] font-medium tracking-wide text-muted-foreground"
-                                >
-                                    {{
-                                        merch.variants
-                                            .map((v) => v.name)
-                                            .join(' · ')
-                                    }}
-                                </p>
-                            </div>
-
-                            <!-- Price & CTA -->
-                            <div
-                                class="mt-5 flex items-center justify-between border-t border-border/50 pt-4"
+                            <button
+                                v-for="(variant, index) in variantOptions"
+                                :key="variant.name"
+                                type="button"
+                                class="colorway-capsule st-capsule focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                :aria-pressed="
+                                    index === variantIndex ? 'true' : 'false'
+                                "
+                                @click="selectVariant(index)"
                             >
-                                <span
-                                    class="font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
-                                >
-                                    {{ merch.formatted_price }}
-                                </span>
-
-                                <a
-                                    :href="
-                                        merch.url || 'https://koamishin.com/'
-                                    "
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/60 px-4 py-2 text-xs font-medium text-foreground shadow-xs transition-all hover:bg-secondary hover:text-foreground active:scale-[0.98] sm:text-sm"
-                                >
-                                    <span>Visit store</span>
-                                    <ExternalLink
-                                        class="h-3.5 w-3.5 text-muted-foreground"
-                                        aria-hidden="true"
-                                    />
-                                </a>
-                            </div>
-                        </div>
-                    </article>
-
-                    <!-- Atelier / Department Brand Spec Bento Tile -->
-                    <article
-                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-6 shadow-xs transition-all duration-300 ease-out hover:border-foreground/20 sm:rounded-3xl sm:p-8 md:col-span-2 lg:col-span-4"
-                    >
-                        <div>
-                            <span
-                                class="font-mono text-[10px] font-medium tracking-wider text-primary uppercase"
-                            >
-                                Atelier
-                            </span>
-
-                            <h3
-                                class="mt-4 font-sans text-lg font-bold tracking-tight text-foreground sm:text-xl"
-                            >
-                                KOAMISHIN × BSIT Department
-                            </h3>
-
-                            <p
-                                class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                            >
-                                Official student merchandise and technical gear
-                                engineered exclusively for the BSIT student body
-                                and innovators.
-                            </p>
-
-                            <ul
-                                class="mt-4 space-y-2 text-xs text-muted-foreground"
-                            >
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-primary"
-                                    ></span>
-                                    <span
-                                        >240–380 GSM Heavyweight Technical
-                                        Fleece</span
-                                    >
-                                </li>
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-primary"
-                                    ></span>
-                                    <span>High-Density Contrast Insignia</span>
-                                </li>
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-primary"
-                                    ></span>
-                                    <span
-                                        >Campus Pickup & Nationwide
-                                        Fulfillment</span
-                                    >
-                                </li>
-                            </ul>
+                                {{ variant.name }}
+                            </button>
                         </div>
 
-                        <div class="mt-6 border-t border-border/50 pt-4">
+                        <div class="mt-7 flex flex-wrap gap-3">
                             <a
-                                href="https://koamishin.com/"
+                                :href="
+                                    currentPiece.url || 'https://koamishin.com/'
+                                "
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:opacity-90 active:scale-[0.98] sm:text-sm"
+                                class="st-pill st-pill--solid min-w-[10rem] flex-1 focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
                             >
-                                <span>Explore Official Store</span>
+                                <span>Visit store</span>
                                 <ExternalLink
-                                    class="h-3.5 w-3.5"
+                                    class="h-4 w-4"
                                     aria-hidden="true"
                                 />
                             </a>
+                            <button
+                                type="button"
+                                class="st-pill st-pill--ghost focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                @click="openQuickView(currentPiece)"
+                            >
+                                <span>Details</span>
+                            </button>
                         </div>
-                    </article>
-                </div>
-
-                <!-- Empty State -->
-                <div
-                    v-else
-                    class="mx-auto max-w-xl rounded-2xl border border-border/80 bg-card p-8 text-center sm:p-12"
-                >
-                    <div
-                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-                    >
-                        <Sparkles class="h-7 w-7" />
+                        <p
+                            class="st-label mt-4 text-[var(--st-ink-mute)] opacity-80"
+                        >
+                            Prices in PHP · Opens koamishin.com
+                        </p>
                     </div>
+                </div>
+            </section>
+
+            <section
+                v-else
+                class="studio-stage empty-stage mt-4 overflow-hidden rounded-3xl border border-[var(--st-hairline)] bg-[var(--st-stage-bg)] px-6 py-16 text-center sm:rounded-[32px] sm:py-24"
+                aria-label="The studio is empty"
+            >
+                <h2
+                    class="text-2xl font-semibold tracking-[-0.02em] text-[var(--st-ink)] sm:text-3xl"
+                >
+                    Nothing in the studio yet.
+                </h2>
+                <p
+                    class="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-[var(--st-ink-mute)]"
+                >
+                    New merch drops arriving soon. We're preparing the latest
+                    run of KOAMISHIN apparel and community goods — check out the
+                    official shop in the meantime.
+                </p>
+                <a
+                    href="https://koamishin.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="st-pill st-pill--solid mt-7 inline-flex focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                >
+                    <span>Visit store</span>
+                    <ExternalLink class="h-4 w-4" aria-hidden="true" />
+                </a>
+            </section>
+
+            <section
+                v-if="frames.length > 0"
+                id="collection"
+                class="mt-12 scroll-mt-28 sm:mt-16"
+                aria-label="The collection"
+            >
+                <div class="flex flex-wrap items-end justify-between gap-4">
                     <h2
-                        class="mt-4 font-sans text-lg font-semibold text-foreground sm:text-xl"
+                        class="text-2xl font-semibold tracking-[-0.02em] text-[var(--st-ink)] sm:text-[1.75rem]"
                     >
-                        New merch drops arriving soon
+                        The collection.
                     </h2>
-                    <p
-                        class="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base"
-                    >
-                        We’re preparing the latest run of KOAMISHIN apparel and
-                        community goods. Check out the official shop in the
-                        meantime.
-                    </p>
-                    <div class="mt-6 flex justify-center">
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <span class="st-label text-[var(--st-ink-mute)]">
+                            {{ pad(frames.length) }} items ·
+                            {{ pad(inStockCount) }} in stock
+                        </span>
                         <a
                             href="https://koamishin.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
+                            class="st-label inline-flex items-center gap-1.5 text-[var(--st-accent-text)] transition-colors hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
                         >
-                            <span>Visit koamishin.com</span>
-                            <ExternalLink class="h-4 w-4" aria-hidden="true" />
+                            <span>Visit store</span>
+                            <ExternalLink
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
                         </a>
                     </div>
+                </div>
+                <p class="st-label mt-3 text-[var(--st-ink-mute)] opacity-80">
+                    Prices shown for reference · checkout &amp; fulfillment on
+                    koamishin.com
+                </p>
+
+                <div
+                    class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5"
+                >
+                    <article
+                        v-for="merch in frames"
+                        :key="merch.id"
+                        class="piece-tile"
+                    >
+                        <button
+                            type="button"
+                            class="tile-open group/tile block w-full cursor-pointer overflow-hidden rounded-3xl bg-[var(--st-tile)] text-left transition-transform duration-300 ease-out hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                            :aria-label="`Open details for ${merch.name}`"
+                            @click="openQuickView(merch)"
+                        >
+                            <span
+                                class="block aspect-square w-full overflow-hidden transition-colors duration-300"
+                                :style="backdropStyle(merch.image_url)"
+                            >
+                                <img
+                                    v-if="merch.image_url"
+                                    :src="merch.image_url"
+                                    :alt="merch.name"
+                                    loading="lazy"
+                                    class="h-full w-full object-contain p-6 transition-transform duration-500 ease-out group-hover/tile:scale-[1.03]"
+                                    @load="onImageLoad"
+                                />
+                                <span
+                                    v-else
+                                    class="flex h-full w-full items-center justify-center text-[var(--st-ink-mute)]"
+                                >
+                                    <ShoppingBag
+                                        class="h-8 w-8"
+                                        aria-hidden="true"
+                                    />
+                                </span>
+                            </span>
+                            <span class="block px-5 pb-5">
+                                <span
+                                    class="block text-[15px] font-semibold tracking-[-0.01em] text-[var(--st-ink)]"
+                                    >{{ merch.name }}</span
+                                >
+                                <span
+                                    class="mt-1 block text-sm text-[var(--st-ink-mute)]"
+                                    >{{ merch.formatted_price }}</span
+                                >
+                                <span
+                                    class="mt-1 block text-xs"
+                                    :class="toneFor(merch)"
+                                    >{{ merch.stock_label }}</span
+                                >
+                            </span>
+                        </button>
+                    </article>
                 </div>
             </section>
         </main>
 
-        <!-- Hidden variant preloader so the browser fetches & caches all variant graphics immediately -->
         <div class="hidden" aria-hidden="true">
             <img
-                v-for="tab in heroTabs"
-                :key="`preload-${tab.key}`"
-                :src="tab.imageUrl"
+                v-for="url in preloadImages"
+                :key="`preload-${url}`"
+                :src="url"
                 loading="eager"
-                decoding="sync"
                 alt=""
+                @load="onImageLoad"
             />
         </div>
 
-        <!-- Quick View Lightbox Modal for Uncropped Viewing -->
         <ShopQuickViewModal
             :open="isQuickViewOpen"
             :merch="selectedQuickViewMerch"
             :items="props.merches"
+            :backdrop-colors="backdropByUrl"
             @close="closeQuickView"
             @select="handleQuickViewSelect"
         />
@@ -661,56 +562,4 @@ onMounted(() => {
     </div>
 </template>
 
-<style scoped>
-.hero-swap-enter-active {
-    transition:
-        opacity 0.35s ease-out,
-        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hero-swap-leave-active {
-    transition: opacity 0.2s ease-in;
-}
-
-.hero-swap-enter-from {
-    opacity: 0;
-    transform: scale(1.02);
-}
-
-.hero-swap-leave-to {
-    opacity: 0;
-}
-
-.shop-root {
-    background-image:
-        radial-gradient(
-            ellipse at 50% 0%,
-            rgba(0, 168, 135, 0.07) 0%,
-            transparent 65%
-        ),
-        repeating-linear-gradient(
-            -45deg,
-            rgba(0, 168, 135, 0.025) 0px,
-            rgba(0, 168, 135, 0.025) 1px,
-            transparent 1px,
-            transparent 48px
-        );
-}
-
-/* Card hover elevate effect */
-.merch-card {
-    will-change: transform, box-shadow;
-    transition:
-        transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-        border-color 0.3s ease;
-}
-
-.merch-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(0, 168, 135, 0.5);
-    box-shadow:
-        0 20px 25px -5px rgba(0, 0, 0, 0.15),
-        0 8px 10px -6px rgba(0, 0, 0, 0.1);
-}
-</style>
+<style scoped src="../components/shop/studio.css"></style>
