@@ -64,12 +64,15 @@ abstract class PendingWriteTool
             return 'Error preparing approval: '.$exception->getMessage();
         }
 
-        $expiresAt = $action->expires_at?->format('g:i A');
+        $expiresAt = $action->expires_at?->toIso8601String();
+        $expiresHuman = $action->expires_at?->format('g:i A');
 
         return 'PENDING HUMAN APPROVAL — no write was executed. '
-            ."A review card for \"{$action->title}\" is now visible to the administrator"
-            .($expiresAt ? " and expires at {$expiresAt}" : '')
-            .'. The administrator must review the exact diff and click Approve; do not ask them to type a confirmation and do not call this tool again for the same change.';
+            ."action_id: {$action->public_id}. "
+            ."title: \"{$action->title}\". "
+            .($expiresAt ? "expires_at: {$expiresAt} ({$expiresHuman}). " : '')
+            .'A review card with the exact diff is now visible to the administrator. '
+            .'The administrator must review the exact diff and click Approve; do not ask them to type a confirmation and do not call this tool again for the same change.';
     }
 
     protected function workspaceName(): string
@@ -87,10 +90,6 @@ abstract class PendingWriteTool
         return auth()->user()?->is_admin ? null : 'Only admins can use this tool.';
     }
 
-    /**
-     * Resolve a user by ID, name, or email within the active workspace.
-     * For super administrators, falls back to platform-wide matching if not in the active workspace.
-     */
     protected function findWorkspaceUser(int|string|null $identifier = null, ?string $name = null, ?string $email = null): ?User
     {
         $workspaceId = $this->workspaceId();
@@ -157,9 +156,6 @@ abstract class PendingWriteTool
         return null;
     }
 
-    /**
-     * Resolve a user by ID, name, or email across the platform.
-     */
     protected function resolveUserByIdentifiers(int|string|null $identifier = null, ?string $name = null, ?string $email = null): ?User
     {
         $numericId = null;
@@ -200,9 +196,6 @@ abstract class PendingWriteTool
             ->first();
     }
 
-    /**
-     * Resolve the target workspace ID for a user.
-     */
     protected function resolveUserWorkspaceId(User $user): int
     {
         $workspaceId = $this->workspaceId();

@@ -14,7 +14,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Filament/** | .ai/rules/filament.md |
 | app/Ai/Gateway/** | .ai/rules/gateway.md |
 | resources/js/components/ChatAiOrb.vue | .ai/rules/js-components.md |
-| resources/js/composables/useDemoLoop.ts | .ai/rules/composables.md |
+| resources/js/** | .ai/rules/js.md |
 | resources/views/filament/pages/**, resources/views/filament/pages/ai-chat*.blade.php | .ai/rules/pages.md |
 | routes/**/*.php | .ai/rules/routes.md |
 | app/Services/Streak*.php, app/Services/PendingAiActionService.php | .ai/rules/services.md |
