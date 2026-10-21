@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +8,11 @@ import HeroDemoWindow from '@/components/welcome/HeroDemoWindow.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
 import heroSource from '@/components/welcome/WelcomeHero.vue?raw';
 import welcomeSource from '@/pages/Welcome.vue?raw';
+
+const appCss = readFileSync(
+    resolve(process.cwd(), 'resources/css/app.css'),
+    'utf8',
+);
 
 describe('Welcome page Echo AI integration', () => {
     /** Echo thinks, then greets, before Maria's cursor appears. */
@@ -38,6 +45,18 @@ describe('Welcome page Echo AI integration', () => {
         wrapper
             .find('#echo-demo')
             .trigger('animationend', { animationName: 'hero-window-in' });
+
+    /** Steps the clock forward until the predicate holds. */
+    const advanceUntil = async (predicate: () => boolean, budgetMs = 15000) => {
+        let elapsed = 0;
+
+        while (!predicate() && elapsed < budgetMs) {
+            await vi.advanceTimersByTimeAsync(50);
+            elapsed += 50;
+        }
+
+        expect(predicate()).toBe(true);
+    };
 
     beforeEach(() => {
         vi.stubGlobal('matchMedia', () => ({
@@ -421,6 +440,108 @@ describe('Welcome page Echo AI integration', () => {
         vi.useRealTimers();
         wrapper.unmount();
     });
+    it('plays Maria pressing Enter before the request leaves the composer', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        const sendButton = wrapper.get('button[aria-label="Send message"]');
+        const pointer = wrapper.get('[data-testid="demo-cursor"]');
+        const isPressing = () => sendButton.classes().includes('is-pressing');
+        const pointerPressed = () => pointer.classes().includes('is-pressing');
+
+        // The pointer is on screen, waiting next to the keyboard.
+        expect(pointer.classes()).toContain('is-visible');
+        expect(isPressing()).toBe(false);
+
+        // Her request lands and the key lights up.
+        await advanceUntil(() => sendButton.classes().includes('scale-105'));
+        expect(isPressing()).toBe(false);
+
+        // The pointer glides onto the key and clicks it.
+        await advanceUntil(isPressing);
+        expect(pointerPressed()).toBe(true);
+
+        // The press releases into the sent turn — the pointer stays put.
+        await advanceToPhase(wrapper, 1);
+        expect(isPressing()).toBe(false);
+        expect(pointer.classes()).toContain('is-visible');
+        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(true);
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('moves the pointer to the next conversation instead of jumping threads', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        const rows = wrapper.findAll(
+            'nav[aria-label="Demo conversations"] button',
+        );
+        const activeRow = () =>
+            rows.findIndex((row) => row.classes().includes('bg-card'));
+        const pointer = wrapper.get('[data-testid="demo-cursor"]');
+
+        expect(activeRow()).toBe(0);
+
+        // The first thread plays out to the confirmation.
+        await advanceToPhase(wrapper, 4);
+
+        // The pointer crosses to the next thread — the history lights it up.
+        await advanceUntil(() => rows[1].classes().includes('bg-secondary/50'));
+        expect(activeRow()).toBe(0);
+
+        // It clicks, and the next conversation opens.
+        await advanceUntil(() => activeRow() === 1);
+        expect(wrapper.text()).toContain('Section Diamond · Roster');
+
+        // The pointer goes back to the keyboard for the next request.
+        expect(pointer.classes()).toContain('is-visible');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('keeps the chat history in step with the live conversation', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+
+        const rows = wrapper.findAll(
+            'nav[aria-label="Demo conversations"] button',
+        );
+        const activeRow = () => rows[0].text();
+
+        // Echo is thinking, and the history says so.
+        expect(activeRow()).toContain('Echo is typing…');
+
+        // The closed conversations keep their own last line.
+        expect(rows[1].text()).toContain(
+            '21 of 28 learners opened a task today.',
+        );
+        expect(rows[2].text()).toContain(
+            '6 of 28 learners sit below 70% on quadratics.',
+        );
+        expect(rows[3].text()).toContain(
+            'Compiled 28 learners across your three sections.',
+        );
+
+        // Once Maria is typing, the history follows her request live.
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(activeRow()).toContain('You: ');
+
+        // And the delivered turn shows up in the history too.
+        await advanceToPhase(wrapper, 4);
+        expect(activeRow()).toContain('Sent to class ✓');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
 
     it('cycles through every teacher task the demo advertises', async () => {
         vi.useFakeTimers();
@@ -448,6 +569,18 @@ describe('Welcome page Echo AI integration', () => {
             'Sent to class',
         );
         wrapper.unmount();
+    });
+
+    it('keeps the scripted pointer gliding on low-end devices', () => {
+        // The low-end guard collapses every transition to 0.01ms, which turns
+        // the pointer into a teleport. It has to stay excluded from it.
+        const guard = appCss.slice(
+            appCss.indexOf('html[data-low-end] *:not('),
+            appCss.indexOf('html[data-low-end] .backdrop-blur-sm'),
+        );
+
+        expect(guard).toContain('.hdw-cursor');
+        expect(guard).toContain('.hdw-enter');
     });
 
     it('mounts the scripted demo inside the WelcomeHero flow', () => {

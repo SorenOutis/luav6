@@ -101,16 +101,45 @@ describe('device snapshot', () => {
         ).toBe(true);
     });
 
-    it('treats ≤4 GB RAM or ≤4 cores as low-end', () => {
+    it('treats ≤4 GB RAM or ≤4 cores as low-end on a small screen', () => {
+        const smallScreen = {
+            ...desktopSnapshot(),
+            isMobile: true,
+            isDesktop: false,
+        };
+
+        expect(isLowEndDeviceFrom({ ...smallScreen, deviceMemory: 4 })).toBe(
+            true,
+        );
+        expect(
+            isLowEndDeviceFrom({ ...smallScreen, hardwareConcurrency: 4 }),
+        ).toBe(true);
+    });
+
+    it('does not flag a 4-core desktop on hardware alone', () => {
+        // A desktop renders transitions fine — freezing the whole site for a
+        // 4-core laptop costs more than it saves.
         expect(
             isLowEndDeviceFrom({ ...desktopSnapshot(), deviceMemory: 4 }),
-        ).toBe(true);
+        ).toBe(false);
         expect(
             isLowEndDeviceFrom({
                 ...desktopSnapshot(),
                 hardwareConcurrency: 4,
             }),
-        ).toBe(true);
+        ).toBe(false);
+    });
+
+    it('does not flag a touch laptop that has a mouse', () => {
+        // `ontouchstart` is true on any Windows laptop with a touchscreen,
+        // but the primary pointer is still fine.
+        expect(
+            isLowEndDeviceFrom({
+                ...desktopSnapshot(),
+                isTouchDevice: true,
+                isCoarsePointer: false,
+            }),
+        ).toBe(false);
     });
 
     it('does not flag a capable desktop mouse setup', () => {
@@ -140,6 +169,18 @@ describe('device snapshot', () => {
 
         expect(snapshot.isCoarsePointer).toBe(true);
         expect(isLowEndDeviceSignal()).toBe(true);
+    });
+
+    it('treats a touch laptop with a mouse as capable', () => {
+        // jsdom exposes ontouchstart; a real touch laptop has it too, but
+        // its primary pointer stays fine.
+        stubNavigator({ maxTouchPoints: 5, hardwareConcurrency: 4 });
+        stubMatchMedia((query) => query.includes('pointer: coarse') === false);
+
+        const snapshot = readDeviceSnapshot();
+
+        expect(snapshot.isTouchDevice).toBe(true);
+        expect(snapshot.isCoarsePointer).toBe(false);
     });
 
     it('stamps data-low-end on the document for CSS to pick up', () => {

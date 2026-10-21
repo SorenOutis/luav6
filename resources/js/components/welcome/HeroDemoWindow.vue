@@ -4,6 +4,7 @@ import {
     nextTick,
     onBeforeUnmount,
     onMounted,
+    reactive,
     ref,
     watch,
 } from 'vue';
@@ -35,7 +36,14 @@ const GREETING_TYPE_MS = 750;
 const PROMPT_START_MS = 1600;
 /** A believable hand on the keyboard, not a text marquee. */
 const PROMPT_MS_PER_CHAR = 58;
-const PROMPT_TAIL_MS = 350;
+/** A beat of stillness once Maria has finished typing. */
+const PROMPT_TAIL_MS = 300;
+/** Her pointer glides onto the Enter key. */
+const CURSOR_TRAVEL_MS = 400;
+/** The click. */
+const PRESS_MS = 280;
+/** A long sweep across the window — back to the keyboard, or to the history. */
+const POINTER_SWEEP_MS = 700;
 /** Phase 1 — the request lands and Echo's result pill confirms it. */
 const ANSWERED_MS = 1900;
 /** Phase 2 — Echo works; the skeleton holds the bubble. */
@@ -46,6 +54,12 @@ const ECHO_MS_PER_CHAR = 33;
 const ECHO_TAIL_MS = 600;
 /** Phase 4 — the teacher confirms and it reaches the class. */
 const APPROVED_MS = 3200;
+/** The pointer glides to the next conversation in the history. */
+const SWITCH_TRAVEL_MS = POINTER_SWEEP_MS;
+/** The click that opens it. */
+const SWITCH_CLICK_MS = 260;
+/** Slack so the pointer's click lands before the loop would auto-advance. */
+const SWITCH_SLACK_MS = 140;
 
 /** How the highlighted values in Echo's third line read when strung together. */
 const RESULT_JOIN = ' · ';
@@ -88,6 +102,8 @@ interface Scenario {
     contextLabel: string;
     /** Right half of the chat header, e.g. the standard it aligns to. */
     alignment: string;
+    /** Last line of the exchange, as the history list shows it. */
+    historyPreview: string;
     echoGreeting: string;
     /** What the teacher types into the composer. */
     teacherRequest: string;
@@ -117,6 +133,7 @@ const scenarios: Scenario[] = [
         topic: 'Quadratics · Quiz Builder',
         contextLabel: 'Draft · 15 items',
         alignment: 'Standards Aligned · Quadratics',
+        historyPreview: 'Drafted 15 items across three difficulty tiers.',
         echoGreeting:
             'Hi Maria! Ready to build tomorrow’s quiz? I can draft it from your syllabus.',
         teacherRequest: 'Build me a 15-item quiz on quadratics for tomorrow.',
@@ -138,6 +155,7 @@ const scenarios: Scenario[] = [
         topic: 'Section Diamond · Roster',
         contextLabel: 'Live · 28 enrolled',
         alignment: 'Today · Term 2',
+        historyPreview: '21 of 28 learners opened a task today.',
         echoGreeting:
             'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
         teacherRequest: 'Who has actually logged in today?',
@@ -159,6 +177,7 @@ const scenarios: Scenario[] = [
         topic: 'Grade 8 · Analytics',
         contextLabel: 'Term 2 · Item analysis',
         alignment: 'Quadratic Equations · 6 at risk',
+        historyPreview: '6 of 28 learners sit below 70% on quadratics.',
         echoGreeting:
             'Hi Maria! I’ve finished scoring Term 2 — want the item analysis?',
         teacherRequest: 'Which students are struggling with quadratics?',
@@ -180,6 +199,7 @@ const scenarios: Scenario[] = [
         topic: 'Grade 8 · Reports',
         contextLabel: 'Report · Term 2',
         alignment: 'Official Records · School year 2026',
+        historyPreview: 'Compiled 28 learners across your three sections.',
         echoGreeting:
             'Hi Maria! Term 2 reporting is packaged whenever you’re ready for it.',
         teacherRequest: 'Export Grade 8 term grades.',
@@ -221,11 +241,15 @@ const SCENARIO_TIMINGS = scenarios.map((scenario) => {
         prompt,
         echo,
         phases: [
-            PROMPT_START_MS + prompt + PROMPT_TAIL_MS,
+            PROMPT_START_MS +
+                prompt +
+                PROMPT_TAIL_MS +
+                CURSOR_TRAVEL_MS +
+                PRESS_MS,
             ANSWERED_MS,
             THINKING_MS,
             ECHO_LEAD_MS + echo + ECHO_TAIL_MS,
-            APPROVED_MS,
+            APPROVED_MS + SWITCH_TRAVEL_MS + SWITCH_CLICK_MS + SWITCH_SLACK_MS,
         ],
     };
 });
@@ -334,6 +358,212 @@ let initialDelayTimer: ReturnType<typeof setTimeout> | undefined;
 let greetingTimer: ReturnType<typeof setTimeout> | undefined;
 
 /**
+ * True in the tail of phase 0, once Maria has finished typing — the beat
+ * where her thumb lands on Enter and the request leaves the composer.
+ */
+const pressing = ref(false);
+
+/** Maria has typed her request in full. */
+const promptComplete = computed(() => {
+    return (
+        typedPromptChars.value > 0 &&
+        typedPromptChars.value >= activeScenario.value.teacherRequest.length
+    );
+});
+
+/** Echo is mid-turn: thinking, or working through the request. */
+const echoWorking = computed(() => {
+    if (!enabled.value) return false;
+    if (phase.value === 0) return !greetingReady.value;
+
+    return phase.value === 2;
+});
+
+/**
+ * What the history list shows for the open conversation. It mirrors the live
+ * exchange so the sidebar keeps moving with the chat instead of sitting still
+ * while the demo runs.
+ */
+const activePreview = computed(() => {
+    const scenario = activeScenario.value;
+
+    if (!enabled.value) {
+        return scenario.historyPreview;
+    }
+
+    if (echoWorking.value) {
+        return 'Echo is typing…';
+    }
+
+    if (phase.value === 0) {
+        if (typedPromptChars.value > 0) {
+            return `You: ${effectiveTypedPrompt.value}`;
+        }
+
+        return scenario.echoGreeting;
+    }
+
+    if (phase.value === 1) {
+        return scenario.resultValue;
+    }
+
+    if (phase.value === 3) {
+        return displayLine1.value || 'Echo is writing…';
+    }
+
+    if (phase.value === 4) {
+        return 'Sent to class ✓';
+    }
+
+    return scenario.historyPreview;
+});
+
+watch(promptComplete, (complete) => {
+    if (!complete || phase.value !== 0) return;
+
+    cursorTimer = setTimeout(beginCursorApproach, PROMPT_TAIL_MS);
+});
+
+/**
+ * Maria's pointer. It flies in from the open chat area once her request is
+ * typed, lands on the Enter key, and clicks it.
+ */
+const cursor = reactive({
+    visible: false,
+    pressing: false,
+    /** Set while the pointer is dropped at a point, so it does not glide. */
+    instant: false,
+    /** How long the current glide takes, in ms. */
+    travel: CURSOR_TRAVEL_MS,
+    x: 0,
+    y: 0,
+});
+
+/** The conversation the pointer is reaching for. */
+const pointedIndex = ref<number | null>(null);
+
+const sendButtonRef = ref<HTMLElement | null>(null);
+const conversationNavRef = ref<HTMLElement | null>(null);
+/** The pointer has been dropped into the window at least once. */
+let cursorPlaced = false;
+let cursorTimer: ReturnType<typeof setTimeout> | undefined;
+let pressTimer: ReturnType<typeof setTimeout> | undefined;
+let switchTimer: ReturnType<typeof setTimeout> | undefined;
+let switchFireTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Where the Enter key sits, in the demo window's own coordinates. */
+function enterKeyPoint(): { x: number; y: number } {
+    const frame = root.value?.getBoundingClientRect();
+    const key = sendButtonRef.value?.getBoundingClientRect();
+
+    if (!frame || !key || key.width === 0) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: key.left - frame.left + key.width / 2,
+        y: key.top - frame.top + key.height / 2,
+    };
+}
+
+/**
+ * The pointer's resting place: the hand waiting next to the keyboard, just
+ * above and to the right of the Enter key.
+ */
+function restingPoint(): { x: number; y: number } {
+    const key = enterKeyPoint();
+
+    return { x: key.x + 92, y: key.y - 104 };
+}
+
+/** Where a conversation in the history sits, in the window's coordinates. */
+function conversationPoint(index: number): { x: number; y: number } {
+    const frame = root.value?.getBoundingClientRect();
+    const row = conversationNavRef.value?.querySelector<HTMLElement>(
+        `[data-conversation="${index}"]`,
+    );
+
+    if (!frame || !row) {
+        return { x: 0, y: 0 };
+    }
+
+    const rect = row.getBoundingClientRect();
+
+    return {
+        x: rect.left - frame.left + 40,
+        y: rect.top - frame.top + rect.height / 2,
+    };
+}
+
+/** Sends the pointer to a point — the transition does the gliding. */
+function glideTo(target: { x: number; y: number }) {
+    cursor.x = target.x;
+    cursor.y = target.y;
+}
+
+/** Drops the pointer at a point without gliding there. */
+function placeAt(target: { x: number; y: number }) {
+    cursor.instant = true;
+    glideTo(target);
+
+    nextTick(() => {
+        cursor.instant = false;
+    });
+}
+
+/** The pointer settles on the Enter key and hits it. */
+function beginCursorApproach() {
+    cursor.travel = CURSOR_TRAVEL_MS;
+    cursor.pressing = false;
+    cursor.visible = true;
+    glideTo(enterKeyPoint());
+
+    pressTimer = setTimeout(() => {
+        cursor.pressing = true;
+        pressing.value = true;
+    }, CURSOR_TRAVEL_MS);
+}
+
+/** Fades the pointer out. */
+function hideCursor() {
+    cursor.visible = false;
+    cursor.pressing = false;
+    pressing.value = false;
+}
+
+/** Clears the press state, ready for the next run. */
+function resetCursor() {
+    cursor.pressing = false;
+    pressing.value = false;
+    pointedIndex.value = null;
+}
+
+/**
+ * Maria moves on: the pointer leaves the Enter key, crosses the window to
+ * the next conversation in the history and opens it. The demo never jumps
+ * between threads on its own.
+ */
+function beginConversationSwitch() {
+    const current = activeScenarioIndex.value;
+    const next = (current + 1) % scenarios.length;
+
+    cursor.travel = SWITCH_TRAVEL_MS;
+    cursor.pressing = false;
+    cursor.visible = true;
+    pointedIndex.value = next;
+    glideTo(conversationPoint(next));
+
+    // The click lands when the pointer reaches the row.
+    pressTimer = setTimeout(() => {
+        cursor.pressing = true;
+    }, SWITCH_TRAVEL_MS);
+
+    switchFireTimer = setTimeout(() => {
+        selectScenario(next);
+    }, SWITCH_TRAVEL_MS + SWITCH_CLICK_MS);
+}
+
+/**
  * Reveals `counter` one character per step, spreading the work across
  * `budgetMs` and weighting each pause by punctuation, so the stream always
  * finishes exactly when its phase ends. Returns a cancel handle.
@@ -382,6 +612,22 @@ function clearTypingTimers() {
     cancelPromptStream = undefined;
     cancelEchoStream?.();
     cancelEchoStream = undefined;
+    if (cursorTimer !== undefined) {
+        clearTimeout(cursorTimer);
+        cursorTimer = undefined;
+    }
+    if (pressTimer !== undefined) {
+        clearTimeout(pressTimer);
+        pressTimer = undefined;
+    }
+    if (switchTimer !== undefined) {
+        clearTimeout(switchTimer);
+        switchTimer = undefined;
+    }
+    if (switchFireTimer !== undefined) {
+        clearTimeout(switchFireTimer);
+        switchFireTimer = undefined;
+    }
 }
 
 function clearEntranceTimer() {
@@ -619,8 +865,10 @@ watch(
     [phase, replay, enabled, booted],
     ([newPhase, , isEnabled, isBooted]) => {
         clearTypingTimers();
+        resetCursor();
 
         if (!isEnabled) {
+            hideCursor();
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
@@ -630,6 +878,7 @@ watch(
 
         // Still animating in — hold every timer until the script boots.
         if (!isBooted) {
+            hideCursor();
             greetingReady.value = false;
             typedGreetingChars.value = 0;
             typedPromptChars.value = 0;
@@ -642,6 +891,19 @@ watch(
             typedGreetingChars.value = 0;
             typedPromptChars.value = 0;
             typedEchoChars.value = 0;
+
+            // The pointer goes back to the keyboard, ready to send the
+            // request. It stays on screen from here on — the demo is one
+            // continuous hand.
+            cursor.travel = POINTER_SWEEP_MS;
+            cursor.visible = true;
+
+            if (cursorPlaced) {
+                glideTo(restingPoint());
+            } else {
+                cursorPlaced = true;
+                placeAt(restingPoint());
+            }
 
             // 1. AI thinking briefly, then types its greeting to Maria
             greetingTimer = setTimeout(() => {
@@ -661,6 +923,8 @@ watch(
                     SCENARIO_TIMINGS[activeScenarioIndex.value].prompt,
                 );
             }, PROMPT_START_MS);
+
+            // 3. Her pointer flies in and hits Enter once the request is done
         } else if (newPhase === 1 || newPhase === 2) {
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
@@ -685,6 +949,9 @@ watch(
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
             typedEchoChars.value = totalEchoChars.value;
+
+            // 4. Maria moves on: the pointer crosses to the next thread
+            switchTimer = setTimeout(beginConversationSwitch, APPROVED_MS);
         }
     },
     { immediate: true },
@@ -806,7 +1073,7 @@ watch(
     <div
         id="echo-demo"
         ref="root"
-        class="hero-window-in w-full scroll-mt-32"
+        class="hero-window-in relative w-full scroll-mt-32"
         :data-phase="phase"
         @animationend="onEntranceEnd"
         aria-label="Live preview: a teacher asks Echo to build a quiz, check the roster, read the scores, or export grades, then confirms it goes to the class"
@@ -917,26 +1184,80 @@ watch(
                             >
                         </div>
                         <nav
+                            ref="conversationNavRef"
                             class="space-y-1.5"
                             aria-label="Demo conversations"
                         >
                             <button
                                 v-for="(conv, i) in scenarios"
                                 :key="conv.id"
+                                :data-conversation="i"
                                 type="button"
-                                class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-all duration-300"
-                                :class="
+                                class="flex w-full cursor-pointer items-start gap-2 rounded-lg px-3 py-2 text-left transition-all duration-300"
+                                :class="[
                                     activeScenarioIndex === i
-                                        ? 'border border-border/80 bg-card font-medium text-foreground shadow-xs dark:border-[#2c2520] dark:bg-[#221b15] dark:text-[#f5f0eb] dark:shadow-none'
-                                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]'
-                                "
+                                        ? 'border border-border/80 bg-card shadow-xs dark:border-[#2c2520] dark:bg-[#221b15] dark:shadow-none'
+                                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
+                                    pointedIndex === i &&
+                                    activeScenarioIndex !== i
+                                        ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
+                                        : '',
+                                ]"
                                 @click="selectScenario(i)"
                             >
-                                <span class="truncate">{{ conv.topic }}</span>
-                                <span
-                                    v-if="activeScenarioIndex === i"
-                                    class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
-                                ></span>
+                                <span class="min-w-0 flex-1">
+                                    <span
+                                        class="flex items-center gap-1.5 text-xs"
+                                    >
+                                        <span
+                                            class="min-w-0 truncate font-medium"
+                                            :class="
+                                                activeScenarioIndex === i
+                                                    ? 'text-foreground dark:text-[#f5f0eb]'
+                                                    : ''
+                                            "
+                                            >{{ conv.topic }}</span
+                                        >
+                                        <!-- Echo is mid-turn in the open thread. -->
+                                        <span
+                                            v-if="
+                                                activeScenarioIndex === i &&
+                                                echoWorking
+                                            "
+                                            class="flex shrink-0 items-center gap-0.5"
+                                            aria-hidden="true"
+                                        >
+                                            <span
+                                                v-for="dot in 3"
+                                                :key="dot"
+                                                class="demo-dot h-1 w-1 rounded-full bg-brand"
+                                                :style="{
+                                                    '--dot-index': String(
+                                                        dot - 1,
+                                                    ),
+                                                }"
+                                            ></span>
+                                        </span>
+                                        <span
+                                            v-else-if="
+                                                activeScenarioIndex === i
+                                            "
+                                            class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                                            aria-hidden="true"
+                                        ></span>
+                                    </span>
+                                    <!-- The stacked sidebar below md has no room
+                                         for a second line. -->
+                                    <span
+                                        class="mt-0.5 hidden truncate text-[11px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
+                                    >
+                                        {{
+                                            activeScenarioIndex === i
+                                                ? activePreview
+                                                : conv.historyPreview
+                                        }}
+                                    </span>
+                                </span>
                             </button>
                             <div
                                 class="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground dark:text-[#a1968a] dark:hover:text-[#f5f0eb]"
@@ -1428,15 +1749,15 @@ watch(
                                 </span>
                             </div>
                             <button
+                                ref="sendButtonRef"
                                 type="button"
-                                class="absolute top-1/2 right-1.5 flex -translate-y-1/2 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 font-mono text-[10px] transition-all duration-300"
-                                :class="
-                                    phase === 0 &&
-                                    typedPromptChars >=
-                                        activeScenario.teacherRequest.length
+                                class="hdw-enter absolute top-1/2 right-1.5 flex -translate-y-1/2 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 font-mono text-[10px] transition-all duration-300"
+                                :class="[
+                                    phase === 0 && promptComplete
                                         ? 'scale-105 bg-brand font-semibold text-white shadow-xs hover:brightness-110 active:scale-95'
-                                        : 'bg-secondary text-muted-foreground/60 dark:bg-[#221b15] dark:text-[#a1968a]'
-                                "
+                                        : 'bg-secondary text-muted-foreground/60 dark:bg-[#221b15] dark:text-[#a1968a]',
+                                    { 'is-pressing': pressing },
+                                ]"
                                 aria-label="Send message"
                                 @click="handleSendPrompt"
                             >
@@ -1450,7 +1771,7 @@ watch(
                                     stroke-width="2"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    class="h-3 w-3"
+                                    class="hdw-enter-arrow h-3 w-3"
                                     aria-hidden="true"
                                 >
                                     <path d="M8 12V4M4 8l4-4 4 4" />
@@ -1487,11 +1808,41 @@ watch(
                     <span>{{ activeScenario.footNote }}</span>
                 </div>
                 <span
-                    class="font-mono text-[11px] text-muted-foreground dark:text-[#72695f]"
+                    class="font-mono text-[11px] text-muted-foreground dark:text-[#a1968a]"
                 >
                     100% human-verified AI actions
                 </span>
             </div>
+        </div>
+
+        <!-- Scripted pointer — Maria's hand on the keyboard. -->
+        <div
+            data-testid="demo-cursor"
+            class="hdw-cursor pointer-events-none absolute top-0 left-0 z-20"
+            :class="{
+                'is-visible': cursor.visible,
+                'is-pressing': cursor.pressing,
+                'is-instant': cursor.instant,
+            }"
+            :style="{
+                '--cursor-x': `${cursor.x}px`,
+                '--cursor-y': `${cursor.y}px`,
+                '--cursor-travel': `${cursor.travel}ms`,
+            }"
+            aria-hidden="true"
+        >
+            <svg
+                viewBox="0 0 15 21"
+                class="h-[21px] w-[15px] overflow-visible text-neutral-900 drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)] dark:text-neutral-100"
+            >
+                <path
+                    d="M0 0 L0 17 L4.4 12.8 L7 19 L10 17.8 L7.4 11.8 L13.4 11.5 Z"
+                    fill="currentColor"
+                    stroke="white"
+                    stroke-width="1.3"
+                    stroke-linejoin="round"
+                />
+            </svg>
         </div>
     </div>
 </template>
@@ -1774,6 +2125,112 @@ watch(
     transform: translateY(0);
 }
 
+/* ── Scripted pointer ──
+   Maria's pointer flies in from the open chat area, settles on the Enter
+   key and clicks it. The travel is a transition on the position, so the
+   pointer fades in where it starts and lands exactly on the key. */
+.hdw-cursor {
+    opacity: 0;
+    transform: translate3d(var(--cursor-x), var(--cursor-y), 0);
+    transition:
+        transform var(--cursor-travel) var(--ease-out-expo),
+        opacity 180ms var(--ease-out-expo);
+}
+
+.hdw-cursor.is-visible {
+    opacity: 1;
+}
+
+/* The pointer is teleported to its start before the travel — no drift. */
+.hdw-cursor.is-instant {
+    transition: none;
+}
+
+.hdw-cursor.is-pressing svg {
+    transform-origin: top left;
+    animation: hdw-cursor-click 220ms var(--ease-out-expo);
+}
+
+@keyframes hdw-cursor-click {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(0.8);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ── Enter keypress ──
+   Maria's thumb lands on Enter: the key dips, the arrow springs up, and a
+   ring pings out of it. The scale and translate Tailwind utilities use their
+   own properties, so animating `transform` here composes with them. */
+.hdw-enter {
+    isolation: isolate;
+}
+
+.hdw-enter::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-brand);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hdw-enter.is-pressing {
+    animation: hdw-enter-press 280ms var(--ease-out-expo);
+}
+
+@keyframes hdw-enter-press {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(0.86);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.hdw-enter.is-pressing .hdw-enter-arrow {
+    animation: hdw-enter-arrow 280ms var(--ease-out-expo);
+}
+
+@keyframes hdw-enter-arrow {
+    0% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(2px);
+    }
+    72% {
+        transform: translateY(-1.5px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.hdw-enter.is-pressing::after {
+    animation: hdw-enter-ring 420ms var(--ease-out-expo);
+}
+
+@keyframes hdw-enter-ring {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.92);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.35);
+    }
+}
+
 /* ── Letter-by-letter typing cursor ──
    A slim caret with a soft glow, blinking on a long beat so it reads as a
    text field waiting for input rather than a blinking cursor gimmick. */
@@ -1842,6 +2299,21 @@ watch(
     .hdw-nudge,
     .hdw-result-chip {
         animation: none;
+    }
+
+    /* `:root` keeps these above the app-level low-end guard, which reverts
+       the durations with `!important` on the very devices that need the
+       reduced-motion treatment the most. */
+    :root .hdw-enter,
+    :root .hdw-enter .hdw-enter-arrow,
+    :root .hdw-enter::after {
+        animation: none !important;
+    }
+
+    :root .hdw-cursor,
+    :root .hdw-cursor svg {
+        animation: none !important;
+        transition: none !important;
     }
 }
 </style>
