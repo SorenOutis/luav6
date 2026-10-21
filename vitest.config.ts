@@ -73,5 +73,10 @@ export default defineConfig({
         include: ['tests/js/**/*.test.ts'],
         setupFiles: ['./tests/js/setup.ts'],
         globals: true,
+        // Several suites mount a full page (Exams/Show, the dashboard shell)
+        // with GSAP running. The 5s default is tight for them on a loaded CI
+        // runner, where a slow mount trips the timeout and fails a suite
+        // that passes in isolation.
+        testTimeout: 15000,
     },
 });
