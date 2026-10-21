@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Motion } from '@motionone/vue';
 import { ArrowRight } from 'lucide-vue-next';
 import { computed } from 'vue';
+import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
-import DualPerspectiveShowcase from '@/components/welcome/DualPerspectiveShowcase.vue';
-import EchoInteractiveDemo from '@/components/welcome/EchoInteractiveDemo.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
+import RevealGroup from '@/components/welcome/RevealGroup.vue';
+import RolePillSwitcher from '@/components/welcome/RolePillSwitcher.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
+import WelcomeStatement from '@/components/welcome/WelcomeStatement.vue';
 import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
 
@@ -28,27 +29,22 @@ const effectiveReducedMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
 
-const revealTransition = (delay = 0) =>
-    effectiveReducedMotion.value
-        ? { duration: 0.2, easing: 'ease-out' as const }
-        : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
-
 const faqs = [
     {
         question: 'What does LSI stand for?',
-        answer: 'LSI stands for Learning Systems Intelligence, built by KOAMISHIN for schools that want assessment to drive the next lesson — not just a score. Unlike a traditional LMS that stops at grading, LSI structures the work after an assessment: it collects responses, surfaces patterns in understanding, and helps teachers decide what to reteach, who needs support, and what feedback to give while learning is still happening. Demonstrating verified first-hand classroom experience, LSI keeps teachers as mandatory reviewers who approve AI-assisted feedback before it reaches learners, ensuring every next step is intentional and classroom-ready.',
+        answer: 'Learning Systems Intelligence — built for schools that want assessment to drive the next lesson, not just a score. Teachers stay mandatory reviewers, approving every AI-assisted remark before it reaches a learner.',
     },
     {
         question: 'Who is LSI for?',
-        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. Built for formative assessment as part of learning, LSI makes the post-assessment workflow — not just the test — the core product.',
+        answer: 'Teachers get section-targeted exams, auto-graded objective items, and AI-drafted essay feedback to review. Learners get immediate feedback with XP, levels, and section leaderboards. Schools get a tenant-isolated workspace with progress, grades, and audit trails.',
     },
     {
         question: 'Do teachers stay in control?',
-        answer: 'Yes — teachers stay in full control by design. AI in LSI only drafts: it can generate question sets, grade essays, and suggest feedback, but every AI output lands in a teacher review queue as a PendingAiAction that must be explicitly approved or rejected in the browser. No AI write happens autonomously; the human-approval boundary is enforced by nonce-protected endpoints. By making clear who created it (teacher + AI), how it was produced (AI draft + human review), and why (to help learners), LSI keeps the classroom relationship intact while saving teachers hours on routine grading.',
+        answer: 'Yes. AI only drafts — question sets, grades, suggested feedback — and every output lands in a review queue as a pending action. Nothing is written autonomously; the human-approval boundary is enforced by nonce-protected endpoints.',
     },
     {
         question: 'How is learner data handled?',
-        answer: 'LSI is built for school ownership and reviewable use of learner information. All tenant data is isolated by Workspace (school) with BelongsToWorkspace scoping, so a teacher only sees their sections and a student only sees their enrolled courses and Library Hub materials. Learner data is used to show progress, grades, and feedback — not for profiling or ads — and every AI access is logged to AiUsageLog with workspace budgets and review events. Schools retain ownership, can export or delete, and all public pages are noindex where appropriate, following strict privacy-by-default and school data sovereignty principles.',
+        answer: 'Tenant data is isolated per Workspace, so teachers see only their sections and learners only their enrolled courses. AI access is logged with workspace budgets, schools retain ownership, and public pages are noindex where appropriate.',
     },
 ];
 
@@ -190,7 +186,7 @@ const webSiteJsonLd = [
         />
 
         <main
-            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-2 pb-16 sm:px-6 sm:pt-4 sm:pb-24 lg:px-16 lg:pt-4 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-2 pb-16 sm:px-6 sm:pt-4 sm:pb-24 lg:px-8 lg:pt-4 lg:pb-32 xl:px-12"
         >
             <WelcomeHero
                 :can-register="props.canRegister"
@@ -199,24 +195,14 @@ const webSiteJsonLd = [
                 :login="() => login().url"
                 :register="() => register().url"
                 :is-booted="true"
+                :prefers-reduced-motion="prefersReducedMotion"
+            />
+
+            <WelcomeStatement
                 :prefers-reduced-motion="effectiveReducedMotion"
             />
 
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.04)"
-                id="how-it-works"
-            >
+            <div id="how-it-works" class="scroll-mt-32">
                 <FeatureCards
                     :is-coarse-pointer="isLowEndDevice"
                     :prefers-reduced-motion="effectiveReducedMotion"
@@ -224,331 +210,265 @@ const webSiteJsonLd = [
                     :dashboard="() => dashboard().url"
                     :login="() => login().url"
                 />
-            </Motion>
+            </div>
 
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.06)"
-            >
-                <EchoInteractiveDemo />
-            </Motion>
+            <RolePillSwitcher :prefers-reduced-motion="prefersReducedMotion" />
 
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.08)"
+            <RevealGroup
+                as="section"
+                :stagger="90"
+                class="surface-card mx-auto my-20 w-full max-w-6xl overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-24 sm:p-10 lg:p-12 xl:max-w-7xl"
+                aria-labelledby="field-note-heading"
             >
-                <DualPerspectiveShowcase />
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.14)"
-            >
-                <section
-                    class="surface-card my-20 overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-24 sm:p-10 lg:p-12"
-                    aria-labelledby="field-note-heading"
+                <div
+                    class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <div
-                        class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-                    >
-                        <div class="max-w-2xl">
-                            <blockquote
-                                id="field-note-heading"
-                                class="mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
-                            >
-                                “LSI cut our grading turnaround by half.
-                                Students receive feedback while the lesson is
-                                still fresh in their minds, and our teachers
-                                retain 100% approval authority over every AI
-                                draft.”
-                            </blockquote>
-                            <div class="mt-5 flex items-center gap-3">
-                                <div
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-brand"
-                                >
-                                    MS
-                                </div>
-                                <div>
-                                    <p
-                                        class="text-sm font-semibold text-foreground"
-                                    >
-                                        Maria Santos
-                                    </p>
-                                    <p class="text-xs text-muted-foreground">
-                                        Grade 8 Mathematics Head
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Real metric badges -->
+                    <div class="max-w-3xl">
+                        <blockquote
+                            id="field-note-heading"
+                            class="rv mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
+                            :style="{ '--rv-i': 0 }"
+                        >
+                            “LSI cut our grading turnaround by half. Students
+                            receive feedback while the lesson is still fresh in
+                            their minds, and our teachers retain 100% approval
+                            authority over every AI draft.”
+                        </blockquote>
                         <div
-                            class="grid grid-cols-2 gap-4 border-t border-border/70 pt-6 sm:grid-cols-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
+                            class="rv mt-5 flex items-center gap-3"
+                            :style="{ '--rv-i': 1 }"
                         >
-                            <div class="space-y-1">
-                                <p
-                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
-                                >
-                                    50%+
-                                </p>
-                                <p class="text-xs text-muted-foreground">
-                                    Time saved on item grading
-                                </p>
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-brand"
+                            >
+                                MS
                             </div>
-                            <div class="space-y-1">
+                            <div>
                                 <p
-                                    class="font-sans text-3xl font-bold tracking-tight text-foreground"
+                                    class="text-sm font-semibold text-foreground"
                                 >
-                                    &lt; 2 hrs
+                                    Maria Santos
                                 </p>
                                 <p class="text-xs text-muted-foreground">
-                                    Feedback dispatch speed
-                                </p>
-                            </div>
-                            <div class="col-span-2 space-y-1 sm:col-span-1">
-                                <p
-                                    class="font-sans text-3xl font-bold tracking-tight text-brand"
-                                >
-                                    100%
-                                </p>
-                                <p class="text-xs text-muted-foreground">
-                                    Teacher approval control
+                                    Grade 8 Mathematics Head
                                 </p>
                             </div>
                         </div>
                     </div>
-                </section>
-            </Motion>
 
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.16)"
-            >
-                <PricingSection
-                    :auth="$page.props.auth"
-                    :dashboard="() => dashboard().url"
-                    :register="() => register().url"
-                    :is-coarse-pointer="isLowEndDevice"
-                    :prefers-reduced-motion="effectiveReducedMotion"
-                />
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.2)"
-            >
-                <section
-                    id="faq"
-                    class="welcome-faq scroll-mt-32 border-y border-border/70 py-20 sm:py-28"
-                    aria-labelledby="faq-heading"
-                >
-                    <h2
-                        id="faq-heading"
-                        class="text-center font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-                    >
-                        Questions, answered.
-                    </h2>
+                    <!-- Real metric badges -->
                     <div
-                        class="mx-auto mt-8 max-w-3xl divide-y divide-border/70 border-y border-border/70"
+                        class="grid grid-cols-2 gap-4 border-t border-border/70 pt-6 sm:grid-cols-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
                     >
-                        <details
-                            v-for="faq in faqs"
-                            :key="faq.question"
-                            class="group py-5"
+                        <div
+                            class="rv rv-pop space-y-1"
+                            :style="{ '--rv-i': 2 }"
                         >
-                            <summary
-                                class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                            >
-                                {{ faq.question }}
-                                <span
-                                    class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
-                                    aria-hidden="true"
-                                    >+</span
-                                >
-                            </summary>
                             <p
-                                class="max-w-2xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                                class="font-sans text-3xl font-bold tracking-tight text-foreground"
                             >
-                                {{ faq.answer }}
+                                50%+
                             </p>
-                        </details>
-                    </div>
-                </section>
-            </Motion>
-
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.24)"
-            >
-                <section
-                    id="contact"
-                    class="welcome-cta relative mt-16 overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-14 text-foreground shadow-xs sm:mt-24 sm:px-10 sm:py-20 lg:px-14"
-                    aria-labelledby="cta-heading"
-                >
-                    <div
-                        class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
-                    >
-                        <div>
-                            <h2
-                                id="cta-heading"
-                                class="mt-4 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-                            >
-                                If assessment matters to your school, let’s
-                                talk.
-                            </h2>
-                            <p
-                                class="mt-4 text-sm font-normal text-muted-foreground sm:text-base"
-                            >
-                                Start with a teacher, a class, or a whole
-                                school.
+                            <p class="text-xs text-muted-foreground">
+                                Time saved on item grading
                             </p>
                         </div>
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            <Link
-                                v-if="$page.props.auth?.user"
-                                :href="dashboard().url"
-                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                        <div
+                            class="rv rv-pop space-y-1"
+                            :style="{ '--rv-i': 3 }"
+                        >
+                            <p
+                                class="font-sans text-3xl font-bold tracking-tight text-foreground"
                             >
-                                Open dashboard
-                                <ArrowRight
-                                    class="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                            <Link
-                                v-else-if="props.canRegister"
-                                :href="register().url"
-                                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand px-8 text-sm font-semibold text-white shadow-xs transition-all hover:bg-brand/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                                &lt; 2 hrs
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                Feedback dispatch speed
+                            </p>
+                        </div>
+                        <div
+                            class="rv rv-pop col-span-2 space-y-1 sm:col-span-1"
+                            :style="{ '--rv-i': 4 }"
+                        >
+                            <p
+                                class="font-sans text-3xl font-bold tracking-tight text-brand"
                             >
-                                Create free account
-                                <ArrowRight
-                                    class="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                            <Link
-                                :href="login().url"
-                                class="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-secondary/30 px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
-                            >
-                                Sign in
-                            </Link>
+                                100%
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                Teacher approval control
+                            </p>
                         </div>
                     </div>
-                </section>
-            </Motion>
+                </div>
+            </RevealGroup>
 
-            <Motion
-                :initial="
-                    effectiveReducedMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 24 }
-                "
-                :in-view="
-                    effectiveReducedMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, y: 0 }
-                "
-                :in-view-options="{ once: true, margin: '-80px' }"
-                :transition="revealTransition(0.28)"
+            <PricingSection
+                :auth="$page.props.auth"
+                :dashboard="() => dashboard().url"
+                :register="() => register().url"
+                :is-coarse-pointer="isLowEndDevice"
+                :prefers-reduced-motion="effectiveReducedMotion"
+            />
+
+            <RevealGroup
+                as="section"
+                id="faq"
+                :stagger="70"
+                class="welcome-faq scroll-mt-32 border-y border-border/70 py-20 sm:py-28"
+                aria-labelledby="faq-heading"
             >
-                <section
-                    aria-label="Built by KOAMISHIN collective"
-                    class="mt-16 text-center sm:mt-20"
+                <h2
+                    id="faq-heading"
+                    class="rv text-center font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+                    :style="{ '--rv-i': 0 }"
                 >
-                    <span
-                        class="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1 font-mono text-[11px] font-medium text-muted-foreground"
+                    Questions, answered.
+                </h2>
+                <div
+                    class="mx-auto mt-8 max-w-4xl divide-y divide-border/70 border-y border-border/70"
+                >
+                    <details
+                        v-for="(faq, index) in faqs"
+                        :key="faq.question"
+                        class="rv group py-5"
+                        :style="{ '--rv-i': index + 1 }"
                     >
-                        Open Source · Laravel 12 · AGPL-3.0
-                    </span>
-                    <p
-                        class="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
-                    >
-                        Built by the KOAMISHIN collective — crafted in the open,
-                        free to fork.
-                    </p>
-                    <div
-                        class="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row"
-                    >
-                        <a
-                            href="https://koamishin.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98]"
+                        <summary
+                            class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                         >
-                            Explore koamishin.com
+                            {{ faq.question }}
+                            <span
+                                class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
+                                aria-hidden="true"
+                                >+</span
+                            >
+                        </summary>
+                        <p
+                            class="max-w-3xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ faq.answer }}
+                        </p>
+                    </details>
+                </div>
+            </RevealGroup>
+
+            <RevealGroup
+                as="section"
+                id="contact"
+                class="welcome-cta relative mx-auto mt-16 w-full max-w-6xl overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-14 text-foreground shadow-xs sm:mt-24 sm:px-10 sm:py-20 lg:px-14 xl:max-w-7xl"
+                aria-labelledby="cta-heading"
+            >
+                <!-- Giant outline Echo watermark -->
+                <div
+                    class="rv pointer-events-none absolute -right-6 -bottom-16 z-0 origin-bottom-right scale-[1.8] opacity-[0.08] select-none sm:-bottom-20"
+                    :style="{ '--rv-i': 2 }"
+                    aria-hidden="true"
+                >
+                    <ChatAiOrb
+                        size="lg"
+                        variant="outline"
+                        state="micro"
+                        :delay="1500"
+                        color="var(--color-brand)"
+                    />
+                </div>
+
+                <div
+                    class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                >
+                    <div>
+                        <p
+                            class="rv font-mono text-xs font-medium tracking-wider text-brand uppercase"
+                            :style="{ '--rv-i': 0 }"
+                        >
+                            Get started
+                        </p>
+                        <h2
+                            id="cta-heading"
+                            class="rv mt-3 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+                            :style="{ '--rv-i': 1 }"
+                        >
+                            If assessment matters to your school, let’s talk.
+                        </h2>
+                        <p
+                            class="rv mt-4 text-sm font-normal text-muted-foreground sm:text-base"
+                            :style="{ '--rv-i': 2 }"
+                        >
+                            Start with a teacher, a class, or a whole school.
+                        </p>
+                    </div>
+                    <div
+                        class="rv rv-pop flex flex-col gap-3 sm:flex-row"
+                        :style="{ '--rv-i': 3 }"
+                    >
+                        <Link
+                            v-if="$page.props.auth?.user"
+                            :href="dashboard().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-sm font-semibold text-background shadow-xs transition-all hover:opacity-90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                        >
+                            Open dashboard
                             <ArrowRight class="h-4 w-4" aria-hidden="true" />
-                        </a>
-                        <a
-                            href="https://github.com/koamishin"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center rounded-full border border-border/80 bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
+                        </Link>
+                        <Link
+                            v-else-if="props.canRegister"
+                            :href="register().url"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-sm font-semibold text-background shadow-xs transition-all hover:opacity-90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
                         >
-                            GitHub collective
-                        </a>
+                            Create free account
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            :href="login().url"
+                            class="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                        >
+                            Sign in
+                        </Link>
                     </div>
-                </section>
-            </Motion>
+                </div>
+            </RevealGroup>
+
+            <RevealGroup
+                as="section"
+                aria-label="Built by KOAMISHIN collective"
+                class="mt-16 text-center sm:mt-20"
+            >
+                <span
+                    class="rv rv-pop inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1 font-mono text-[11px] font-medium text-muted-foreground"
+                    :style="{ '--rv-i': 0 }"
+                >
+                    Open Source · Laravel 12 · AGPL-3.0
+                </span>
+                <p
+                    class="rv mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+                    :style="{ '--rv-i': 1 }"
+                >
+                    Built by the KOAMISHIN collective — crafted in the open,
+                    free to fork.
+                </p>
+                <div
+                    class="rv mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row"
+                    :style="{ '--rv-i': 2 }"
+                >
+                    <a
+                        href="https://koamishin.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98]"
+                    >
+                        Explore koamishin.com
+                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                    </a>
+                    <a
+                        href="https://github.com/koamishin"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex min-h-11 items-center justify-center rounded-full border border-border/80 bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
+                    >
+                        GitHub collective
+                    </a>
+                </div>
+            </RevealGroup>
         </main>
 
         <WelcomeFooter />

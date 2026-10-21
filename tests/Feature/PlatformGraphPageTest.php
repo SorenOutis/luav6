@@ -3,6 +3,7 @@
 use App\Filament\Pages\PlatformGraph;
 use App\Models\User;
 use App\Support\GraphifyService;
+use Livewire\Livewire;
 
 it('allows super admins to access the platform graph page', function () {
     $superAdmin = User::factory()->superAdmin()->create();
@@ -12,6 +13,7 @@ it('allows super admins to access the platform graph page', function () {
         ->assertOk()
         ->assertSee('Platform Architecture Graph')
         ->assertSee('Interactive Network')
+        ->assertSee('Architecture Subsystems')
         ->assertSee('Community Tree');
 });
 
@@ -56,4 +58,45 @@ it('forbids non-super-admins from accessing the graphify raw view', function () 
 it('redirects unauthenticated users requesting the graphify raw view', function () {
     $this->get(route('admin.graphify.view', ['type' => 'network']))
         ->assertRedirect(route('login'));
+});
+
+it('allows super admin to browse organized architecture subsystems', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+
+    Livewire::actingAs($superAdmin)
+        ->test(PlatformGraph::class)
+        ->call('setTab', 'subsystems')
+        ->assertSet('activeTab', 'subsystems')
+        ->assertSee('Platform Architecture Domains')
+        ->assertSee('AI Studio & Echo Agent')
+        ->assertSee('Academic & Assessment Engine')
+        ->assertSee('Gamification & Season Economy')
+        ->assertSee('Filament Admin Studio');
+});
+
+it('filters architecture subsystems by domain and search term', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+
+    Livewire::actingAs($superAdmin)
+        ->test(PlatformGraph::class)
+        ->call('setTab', 'subsystems')
+        ->call('filterDomain', 'ai_studio')
+        ->assertSet('selectedDomain', 'ai_studio')
+        ->set('search', 'Tool')
+        ->assertSet('search', 'Tool')
+        ->call('inspectSubsystem', 6)
+        ->assertSet('inspectSubsystemId', 6)
+        ->call('closeInspection')
+        ->assertSet('inspectSubsystemId', null);
+});
+
+it('organizes communities into structured architectural subsystems', function () {
+    $subsystems = GraphifyService::organizeCommunities();
+
+    expect($subsystems)->toBeArray()->not->toBeEmpty();
+    expect($subsystems[0])->toHaveKeys(['id', 'name', 'domain', 'domain_label', 'node_count', 'hub']);
+
+    $summary = GraphifyService::getDomainSummary();
+    expect($summary)->toHaveKeys(['ai_studio', 'academic_assessments', 'gamification', 'admin_filament']);
+    expect($summary['ai_studio']['subsystems_count'])->toBeGreaterThan(0);
 });

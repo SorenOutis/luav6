@@ -3,12 +3,27 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = withDefaults(
     defineProps<{
-        size?: 'sm' | 'md' | 'lg' | 'status';
-        state?: 'idle' | 'listening' | 'thinking' | 'speaking' | 'asleep';
+        size?: 'sm' | 'md' | 'lg' | 'status' | 'inline';
+        state?:
+            | 'idle'
+            | 'listening'
+            | 'thinking'
+            | 'speaking'
+            | 'asleep'
+            | 'micro';
         animateIdle?: boolean;
         color?: string;
+        variant?: 'solid' | 'outline';
+        /** Stagger identical loops across multiple orbs on one page (ms). */
+        delay?: number;
     }>(),
-    { size: 'md', state: 'idle', animateIdle: false },
+    {
+        size: 'md',
+        state: 'idle',
+        animateIdle: false,
+        variant: 'solid',
+        delay: 0,
+    },
 );
 
 const root = ref<HTMLElement>();
@@ -20,6 +35,16 @@ let observer: IntersectionObserver | undefined;
 const motion = computed(() =>
     props.animateIdle && props.state === 'idle' ? 'welcome' : props.state,
 );
+const rootStyle = computed(() => {
+    const style: Record<string, string> = {};
+    if (props.color) {
+        style.color = props.color;
+    }
+    if (props.delay) {
+        style['--wolf-delay'] = `${props.delay}ms`;
+    }
+    return style;
+});
 
 function syncPlayback() {
     reducedMotion.value = motionQuery?.matches ?? false;
@@ -56,11 +81,13 @@ onBeforeUnmount(() => {
             'h-20 w-20': size === 'sm',
             'h-32 w-32': size === 'lg',
             'h-7 w-7': size === 'status',
+            'h-[1em] w-[1em]': size === 'inline',
             'is-paused': paused,
             'is-reduced': reducedMotion,
+            'is-outline': variant === 'outline',
         }"
         :data-motion="motion"
-        :style="color ? { color } : undefined"
+        :style="rootStyle"
         aria-hidden="true"
     >
         <svg
@@ -198,6 +225,26 @@ onBeforeUnmount(() => {
 
 [data-motion='asleep'] .wolf-head {
     opacity: 0.55;
+}
+
+/* ── Micro motion: calm idle presence for inline placements.
+   The delay variable staggers multiple orbs so they never loop in sync. ── */
+[data-motion='micro'] .wolf-head {
+    animation: wolf-micro 4.4s cubic-bezier(0.45, 0, 0.55, 1)
+        var(--wolf-delay, 0s) infinite !important;
+}
+[data-motion='micro'] .wolf-spark {
+    opacity: 1;
+    animation: wolf-spark-pulse 4.4s ease-in-out var(--wolf-delay, 0s) infinite !important;
+}
+
+/* ── Outline variant: stroke-only watermark for oversized placements ── */
+.is-outline svg path {
+    fill: none !important;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
 /* ── Reduced motion: static mark, no looping animation ── */
@@ -394,6 +441,30 @@ onBeforeUnmount(() => {
     }
     50% {
         transform: scaleY(0.92);
+    }
+}
+
+/* ── Keyframes: micro idle — a glance, not a morph ── */
+@keyframes wolf-micro {
+    0%,
+    100% {
+        transform: rotate(0deg) translateY(0);
+    }
+    28% {
+        transform: rotate(-2.5deg) translateY(-1.5px);
+    }
+    62% {
+        transform: rotate(2deg) translateY(0.5px);
+    }
+}
+
+@keyframes wolf-spark-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.86);
     }
 }
 </style>
