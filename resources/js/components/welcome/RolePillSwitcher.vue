@@ -49,10 +49,17 @@ const metrics: Record<RoleKey, { label: string; value: string }[]> = {
     ],
 };
 
-const activeKey = ref<RoleKey>('teacher');
-const activeIndex = computed(() =>
-    roles.findIndex((role) => role.key === activeKey.value),
-);
+/**
+ * The perspective tabs rotate on their own so the section never sits still:
+ * teacher → learner → school → teacher. Each slot is long enough for that
+ * panel's own beat to play out.
+ */
+const ROLE_DURATIONS = [8200, 6200, 6200];
+
+const roleLoop = useDemoLoop(ROLE_DURATIONS);
+
+const activeIndex = computed(() => roleLoop.phase.value);
+const activeKey = computed<RoleKey>(() => roles[activeIndex.value].key);
 
 /**
  * Scripted chat loop for the Teacher Command Center:
@@ -111,6 +118,38 @@ watch(
 
 const enabled = computed(() => !props.prefersReducedMotion);
 
+/**
+ * Restarts the teacher's script from its first frame, so every time the
+ * teacher perspective comes back the visitor sees the whole exchange.
+ */
+function replayScript() {
+    set(0);
+    stopTypewriter();
+    typedChars.value = 0;
+}
+
+/**
+ * The tabs rotate on their own. Reduced motion parks on the teacher
+ * perspective, which is where the section opens.
+ */
+watch(
+    [inView, enabled],
+    ([visible, isEnabled]) => {
+        if (!isEnabled) {
+            roleLoop.stop();
+            roleLoop.set(0);
+            return;
+        }
+
+        if (visible) {
+            roleLoop.start();
+        } else {
+            roleLoop.stop();
+        }
+    },
+    { immediate: true },
+);
+
 watch(
     [inView, enabled, activeKey],
     ([visible, isEnabled, key]) => {
@@ -123,6 +162,7 @@ watch(
         }
 
         if (visible && key === 'teacher') {
+            replayScript();
             start();
         } else {
             stop();
@@ -136,6 +176,11 @@ onMounted(() => {
         start();
     }
 });
+
+/** Picks a perspective by hand; the rotation resumes from here. */
+function selectRole(index: number) {
+    roleLoop.set(index);
+}
 
 function handleToggleApprove() {
     stopTypewriter();
@@ -199,7 +244,7 @@ onBeforeUnmount(() => {
                     aria-hidden="true"
                 ></span>
                 <button
-                    v-for="role in roles"
+                    v-for="(role, index) in roles"
                     :key="role.key"
                     type="button"
                     role="tab"
@@ -210,7 +255,7 @@ onBeforeUnmount(() => {
                             ? 'font-semibold text-background'
                             : 'text-muted-foreground hover:text-foreground'
                     "
-                    @click="activeKey = role.key"
+                    @click="selectRole(index)"
                 >
                     <component :is="role.icon" class="h-4 w-4" />
                     <span>{{ role.label }}</span>
@@ -529,7 +574,8 @@ onBeforeUnmount(() => {
                         >
                             <!-- Card Header -->
                             <div
-                                class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3.5 dark:border-[#2c2520]"
+                                class="rp-stagger flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3.5 dark:border-[#2c2520]"
+                                :style="{ '--i': 0 }"
                             >
                                 <div class="flex items-center gap-2.5">
                                     <div
@@ -566,7 +612,8 @@ onBeforeUnmount(() => {
                             <!-- Inner Blocks: Minimalist -->
                             <div class="mt-5 grid gap-3 sm:grid-cols-2">
                                 <div
-                                    class="rounded-2xl border border-border/70 bg-secondary/40 p-4 dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    class="rp-stagger rounded-2xl border border-border/70 bg-secondary/40 p-4 dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    :style="{ '--i': 1 }"
                                 >
                                     <div
                                         class="flex items-center justify-between text-xs"
@@ -606,7 +653,8 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <div
-                                    class="rounded-2xl border border-border/70 bg-secondary/40 p-4 dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    class="rp-stagger rounded-2xl border border-border/70 bg-secondary/40 p-4 dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    :style="{ '--i': 2 }"
                                 >
                                     <div
                                         class="flex items-center justify-between text-xs"
@@ -659,7 +707,8 @@ onBeforeUnmount(() => {
 
                             <!-- Bottom Action -->
                             <div
-                                class="mt-3.5 flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 px-4 py-2.5 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                class="rp-stagger mt-3.5 flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 px-4 py-2.5 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                :style="{ '--i': 3 }"
                             >
                                 <div class="flex items-center gap-2">
                                     <Award
@@ -740,7 +789,8 @@ onBeforeUnmount(() => {
                         >
                             <!-- Card Header -->
                             <div
-                                class="flex items-center justify-between border-b border-border/60 pb-3.5 dark:border-[#2c2520]"
+                                class="rp-stagger flex items-center justify-between border-b border-border/60 pb-3.5 dark:border-[#2c2520]"
+                                :style="{ '--i': 0 }"
                             >
                                 <div class="flex items-center gap-2.5">
                                     <div
@@ -764,7 +814,8 @@ onBeforeUnmount(() => {
                             <!-- Sections List: Clean & Minimal -->
                             <div class="mt-5 space-y-2.5">
                                 <div
-                                    class="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/5 p-3 text-xs dark:border-brand/20 dark:bg-brand/10"
+                                    class="rp-stagger flex items-center justify-between rounded-xl border border-brand/30 bg-brand/5 p-3 text-xs dark:border-brand/20 dark:bg-brand/10"
+                                    :style="{ '--i': 1 }"
                                 >
                                     <span class="font-medium text-foreground">
                                         Grade 8 Mathematics — Section Diamond
@@ -777,7 +828,8 @@ onBeforeUnmount(() => {
                                     </span>
                                 </div>
                                 <div
-                                    class="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 p-3 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    class="rp-stagger flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 p-3 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    :style="{ '--i': 2 }"
                                 >
                                     <span class="font-medium text-foreground">
                                         Grade 8 Mathematics — Section Ruby
@@ -789,7 +841,8 @@ onBeforeUnmount(() => {
                                     </span>
                                 </div>
                                 <div
-                                    class="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 p-3 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    class="rp-stagger flex items-center justify-between rounded-xl border border-border/70 bg-secondary/40 p-3 text-xs dark:border-[#2c2520] dark:bg-[#14100d]/70"
+                                    :style="{ '--i': 3 }"
                                 >
                                     <span class="font-medium text-foreground">
                                         Grade 7 Science — Section Sapphire
@@ -804,7 +857,8 @@ onBeforeUnmount(() => {
 
                             <!-- Bottom Info -->
                             <div
-                                class="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground dark:border-[#2c2520]"
+                                class="rp-stagger mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground dark:border-[#2c2520]"
+                                :style="{ '--i': 4 }"
                             >
                                 <span>
                                     Audit Log: 100% human-verified AI actions
@@ -844,6 +898,29 @@ onBeforeUnmount(() => {
     pointer-events: auto;
 }
 
+/* The panel contents stagger in every time their perspective comes up. The
+   animation only exists while the panel is active, so adding `is-active`
+   starts it from the top — that is what makes the rotation feel alive. */
+.rp-stagger {
+    animation: none;
+}
+
+.rp-panel.is-active .rp-stagger {
+    animation: rp-stagger-in 0.5s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes rp-stagger-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rp-thumb,
     .rp-panel {
@@ -852,6 +929,11 @@ onBeforeUnmount(() => {
 
     .rp-panel {
         transform: none;
+    }
+
+    .rp-stagger,
+    .rp-panel.is-active .rp-stagger {
+        animation: none !important;
     }
 }
 </style>

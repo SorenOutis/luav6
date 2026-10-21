@@ -2071,7 +2071,11 @@ html.theme-fade {
    Applied via the `data-low-end` attribute on <html> when the system
    detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
    The attribute is stamped by an inline boot script in app.blade.php so the
-   first paint already skips these effects — not only after the JS bundle loads. */
+   first paint already skips these effects — not only after the JS bundle loads.
+   The scripted pointer and the Enter key are excluded from the guard: the
+   cursor gliding to the next thread is the demo's story, and a pointer that
+   teleports reads as a bug. They are only excluded — the `revert` block below
+   rolls durations back to the UA default, which is instant, not restored. */
 /* prettier-ignore */
 html[data-low-end] *:not(
     .wolf-persona,
@@ -2079,7 +2083,10 @@ html[data-low-end] *:not(
     .merch-carousel-track,
     .merch-carousel-track *,
     .merch-card,
-    .merch-card *
+    .merch-card *,
+    .hdw-cursor,
+    .hdw-cursor *,
+    .hdw-enter
 ) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

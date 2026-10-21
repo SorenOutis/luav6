@@ -30,22 +30,27 @@
 
                 // Flag phones / low-end hardware before CSS + JS parse so the
                 // first paint already skips backdrop-filter and looping animations.
+                // Mirrors isLowEndDeviceFrom() in resources/js/lib/device.ts.
                 try {
                     var nav = navigator;
-                    var coarse = ('ontouchstart' in window)
-                        || (nav.maxTouchPoints > 0)
-                        || window.matchMedia('(pointer: coarse)').matches;
+                    // A touch laptop still has a mouse: only a coarse *primary*
+                    // pointer means phone or tablet.
+                    var primaryCoarse = window.matchMedia('(pointer: coarse)').matches;
+                    var touch = ('ontouchstart' in window) || (nav.maxTouchPoints > 0);
                     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                     var mem = nav.deviceMemory;
                     var cores = nav.hardwareConcurrency;
                     var conn = nav.connection && nav.connection.effectiveType;
-                    var lowEnd = reduced || coarse
-                        || (typeof mem === 'number' && mem <= 4)
-                        || (typeof cores === 'number' && cores <= 4)
+                    var desktop = window.innerWidth >= 1024;
+                    var lowEnd = reduced
+                        || primaryCoarse
                         || conn === 'slow-2g'
-                        || conn === '2g';
+                        || conn === '2g'
+                        || (!desktop
+                            && ((typeof mem === 'number' && mem <= 4)
+                                || (typeof cores === 'number' && cores <= 4)));
                     var updateTouchMobile = function() {
-                        var touchMobile = coarse && window.innerWidth < 1024;
+                        var touchMobile = (touch || primaryCoarse) && window.innerWidth < 1024;
                         document.documentElement.classList.toggle('touch-mobile', touchMobile);
                     };
                     updateTouchMobile();
