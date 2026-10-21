@@ -61,6 +61,10 @@ it('redirects unauthenticated users requesting the graphify raw view', function 
 });
 
 it('allows super admin to browse organized architecture subsystems', function () {
+    if (! GraphifyService::hasAnalysis()) {
+        $this->markTestSkipped('The graphify output is generated locally (php artisan graphify:generate) and is not committed.');
+    }
+
     $superAdmin = User::factory()->superAdmin()->create();
 
     Livewire::actingAs($superAdmin)
@@ -91,6 +95,10 @@ it('filters architecture subsystems by domain and search term', function () {
 });
 
 it('organizes communities into structured architectural subsystems', function () {
+    if (! GraphifyService::hasAnalysis()) {
+        $this->markTestSkipped('The graphify output is generated locally (php artisan graphify:generate) and is not committed.');
+    }
+
     $subsystems = GraphifyService::organizeCommunities();
 
     expect($subsystems)->toBeArray()->not->toBeEmpty();
