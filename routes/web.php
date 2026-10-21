@@ -24,6 +24,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CookiePolicyController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
@@ -128,6 +129,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('community', [CommunityController::class, 'index'])
+        ->middleware('student.page:community')
+        ->name('community.index');
 
     Route::get('calendar', CalendarController::class)
         ->middleware('student.page:calendar')
