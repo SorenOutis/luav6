@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
+use App\Ai\Support\AdminAssistantIntent;
 use App\Models\AiBudgetReservation;
 use App\Models\ChatSession;
 use App\Models\Season;
@@ -14,6 +15,7 @@ use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Ai\AiManager;
@@ -76,9 +78,11 @@ class ChatService
         private AiChatLogger $aiChatLogger,
         private ?AiInputGuardrailService $inputGuardrails = null,
         private ?AiOutputSanitizerService $outputSanitizer = null,
+        private ?EchoReplyGuard $replyGuard = null,
     ) {
         $this->inputGuardrails ??= app(AiInputGuardrailService::class);
         $this->outputSanitizer ??= app(AiOutputSanitizerService::class);
+        $this->replyGuard ??= app(EchoReplyGuard::class);
     }
 
     /**
@@ -364,7 +368,7 @@ class ChatService
      */
     public function buildUserContext(): string
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         if (! $user) {
             return 'The user is not logged in.';
@@ -819,9 +823,16 @@ class ChatService
         $agent->setUserContext($userContext);
         if ($agent instanceof AdminAssistantAgent) {
             $agent->setChatSessionId($chatSessionId);
+            $agent->setIntentGroups(AdminAssistantIntent::detect($message));
         }
 
-        return $agent->prompt($message, attachments: $attachments, provider: $provider, model: $model)->text;
+        $text = $agent->prompt($message, attachments: $attachments, provider: $provider, model: $model)->text;
+
+        if ($agent instanceof AdminAssistantAgent) {
+            $text = $this->guardAdminReply((string) $text, $chatSessionId);
+        }
+
+        return $text;
     }
 
     /**
@@ -848,25 +859,33 @@ class ChatService
         $agent = new $agentClass;
         $agent->setHistory($history);
         $agent->setUserContext($userContext);
+        $chatSessionId = $this->sessionIdFrom($loggingContext);
         if ($agent instanceof AdminAssistantAgent) {
-            $agent->setChatSessionId($this->sessionIdFrom($loggingContext));
+            $agent->setChatSessionId($chatSessionId);
+            $agent->setIntentGroups(AdminAssistantIntent::detect($message));
         }
 
         $inputTokens ??= AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext));
         $usage = app(AiUsageTracker::class);
+        $isAdminAgent = $agent instanceof AdminAssistantAgent;
         $stream = $agent
             ->stream($message, attachments: $attachments, provider: $provider, model: $model)
-            ->then(function ($response) use ($provider, $model, $inputTokens, $loggingContext, $startedAt, $reservation, $usage) {
+            ->then(function ($response) use ($provider, $model, $inputTokens, $loggingContext, $startedAt, $reservation, $usage, $isAdminAgent, $chatSessionId) {
+                $text = (string) $response->text;
+                if ($isAdminAgent) {
+                    $text = $this->guardAdminReply($text, $chatSessionId);
+                }
+
                 $usage->complete(
                     $reservation,
                     $provider,
                     $model,
                     'chat',
                     $inputTokens,
-                    AiUsageTracker::tokensFromChars(strlen((string) $response->text)),
+                    AiUsageTracker::tokensFromChars(strlen($text)),
                 );
 
-                $this->logCompletedResponse($loggingContext, (string) $response->text, $startedAt ?? hrtime(true), true);
+                $this->logCompletedResponse($loggingContext, $text, $startedAt ?? hrtime(true), true);
             });
 
         return $this->logStreamErrors(
@@ -876,6 +895,14 @@ class ChatService
             $reservation,
             $usage,
         );
+    }
+
+    private function guardAdminReply(string $text, ?int $chatSessionId): string
+    {
+        $staged = $this->replyGuard?->stagedActionForSession(Auth::user(), $chatSessionId);
+        $summary = $this->replyGuard?->stagedSummary($staged);
+
+        return $this->replyGuard?->enforce($text, $staged !== null, $summary) ?? $text;
     }
 
     /** @param array<string, mixed> $loggingContext */
