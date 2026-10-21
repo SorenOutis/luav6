@@ -132,8 +132,8 @@ it('finds students by partial first, middle, or last name in any word order', fu
 it('instructs the assistant to search students when the message is a bare name', function () {
     $instructions = (string) (new AdminAssistantAgent)->instructions();
 
-    expect($instructions)->toContain('is a student search request')
-        ->and($instructions)->toContain('call this tool immediately with only the name as `search`')
+    expect($instructions)->toContain('is a student search')
+        ->and($instructions)->toContain('call `students` immediately with only that name as `search`')
         ->and((string) (new StudentsTool)->description())->toContain("just a person's name or part of a name");
 });
 
@@ -205,7 +205,7 @@ it('stages an exam action even when the model injects confirm true and writes on
     $action = PendingAiAction::firstOrFail();
 
     expect($toolResult)->toContain('PENDING HUMAN APPROVAL')
-        ->not->toContain($action->public_id)
+        ->toContain($action->public_id)
         ->not->toContain(pendingAiActionNonce($action))
         ->and(Exam::count())->toBe(0)
         ->and($action->status)->toBe(PendingAiAction::STATUS_PENDING)
