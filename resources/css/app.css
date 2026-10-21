@@ -262,6 +262,134 @@
     --color-sidebar-border: #223a28;
 }
 
+/* ════════════════════════════════════════════════════
+   KOAMISHIN STUDIO SKIN — welcome + shop
+   The two public pages are one surface. Light is the shop
+   studio's cream. Dark keeps its original warm ground and puts
+   a warm near-black under every card sitting on it:
+
+     ground #1a1410   the page, unchanged
+     card   #14100d   one step below the page, same warm hue
+     raised #1e1813   secondary surfaces, popovers
+     line   #2c2520   the hairline, warmed to match
+
+   Welcome then drops its card fill onto the ground itself (see the
+   override below) so its cards are defined by hairlines alone; the
+   shop keeps the stage fill.
+
+   The hues are deliberately warm rather than the hero window's
+   near-blacks, which are blue-biased (blue over red) and read
+   cold on this ground.
+
+   `!important` is load-bearing. The theme presets below are
+   written as :root[data-theme-preset='…'].dark at (0,3,0),
+   and the CSS minifier strips a leading `:root` from a
+   descendant selector — which silently dropped this block to
+   (0,2,0) and let the preset win. Custom properties honour
+   `!important`, so the page palette is pinned regardless of
+   which preset is active. `.st-sheet` is listed separately
+   because the quick-view modal teleports to <body> and never
+   sits inside `.shop-root`.
+   ════════════════════════════════════════════════════ */
+.welcome-root,
+.shop-root,
+.st-sheet {
+    --color-background: #f5f0e8 !important;
+    --color-foreground: #1a1a1e !important;
+    --color-card: #faf7f2 !important;
+    --color-card-foreground: #1a1a1e !important;
+    --color-popover: #faf7f2 !important;
+    --color-popover-foreground: #1a1a1e !important;
+    --color-secondary: #ebe5dc !important;
+    --color-secondary-foreground: #1a1a1e !important;
+    --color-muted: #ebe5dc !important;
+    --color-muted-foreground: #68625a !important;
+    --color-accent: #ebe5dc !important;
+    --color-accent-foreground: #1a1a1e !important;
+    --color-border: #e0dbd3 !important;
+    --color-input: #e0dbd3 !important;
+}
+
+.dark .welcome-root,
+.dark .shop-root,
+.dark .st-sheet {
+    /* The page keeps its original warm ground. Only the cards drop below it,
+       and they stay on the same warm hue — the hero window's near-blacks are
+       blue-biased (B over R) and read cold against this ground. */
+    --color-background: #1a1410 !important;
+    --color-card: #14100d !important;
+    --color-secondary: #1e1813 !important;
+    --color-muted: #1e1813 !important;
+    --color-border: #2c2520 !important;
+    --color-input: #2c2520 !important;
+
+    --color-foreground: #f5f0eb !important;
+    --color-card-foreground: #f5f0eb !important;
+    --color-popover: #1e1813 !important;
+    --color-popover-foreground: #f5f0eb !important;
+    --color-secondary-foreground: #f5f0eb !important;
+    --color-muted-foreground: #a1968a !important;
+    --color-accent: #1e1813 !important;
+    --color-accent-foreground: #f5f0eb !important;
+}
+
+/* ── Welcome cards carry no fill of their own ──
+   The featured cards, the pricing tiers, the testimonial, and the
+   CTA all sit directly on the page ground — the beige in light, the
+   warm brown in dark — and are separated only by their hairline and
+   shadow. --color-secondary / --color-muted / --color-accent stay a
+   step above the ground so chips, pills, and badges keep their
+   presence inside an otherwise unfiled card.
+
+   The shop is deliberately excluded: its stage panel is the page's
+   main subject rather than a card on it, and needs its own fill. */
+.welcome-root {
+    --color-card: #f5f0e8 !important;
+    --color-card-foreground: #1a1a1e !important;
+}
+
+.dark .welcome-root {
+    --color-card: #1a1410 !important;
+    --color-card-foreground: #f5f0eb !important;
+}
+
+/* ════════════════════════════════════════════════════
+   MOCK APP SCREENS — hero demo window, feature previews
+   These are screenshots of the product, so they stay dark in
+   BOTH themes and cannot read the --color-* tokens, which flip
+   with the appearance. Instead they are pinned to the dark
+   palette's own tones so the screens are made of the same warm
+   material as the cards they sit on — the cool zinc near-blacks
+   they used to carry (#0B0C0E, #121319, #161720) read blue
+   against the warm ground.
+
+   The ramp runs deepest to lightest:
+     well < canvas < rail < chrome < raised
+   ════════════════════════════════════════════════════ */
+.welcome-root {
+    /* Surfaces */
+    --mock-well: #100d0a;
+    --mock-canvas: #14100d;
+    --mock-rail: #1a1410;
+    --mock-chrome: #1e1813;
+    --mock-raised: #241d17;
+
+    /* Ink, matched to the zinc steps it replaces */
+    --mock-ink: #f5f0eb;
+    --mock-ink-soft: #e4ded6;
+    --mock-ink-dim: #d3ccc2;
+    --mock-ink-mute: #a1968a;
+    --mock-ink-faint: #72695f;
+    --mock-ink-ghost: #524b44;
+
+    /* Hairlines and washes, warmed off the same ink */
+    --mock-edge: rgba(44, 37, 32, 0.85);
+    --mock-line: rgba(245, 240, 235, 0.1);
+    --mock-line-soft: rgba(245, 240, 235, 0.08);
+    --mock-wash: rgba(245, 240, 235, 0.04);
+    --mock-wash-strong: rgba(245, 240, 235, 0.06);
+}
+
 .theme-neutral-page,
 .global-loader {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -1943,7 +2071,11 @@ html.theme-fade {
    Applied via the `data-low-end` attribute on <html> when the system
    detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
    The attribute is stamped by an inline boot script in app.blade.php so the
-   first paint already skips these effects — not only after the JS bundle loads. */
+   first paint already skips these effects — not only after the JS bundle loads.
+   The scripted pointer and the Enter key are excluded from the guard: the
+   cursor gliding to the next thread is the demo's story, and a pointer that
+   teleports reads as a bug. They are only excluded — the `revert` block below
+   rolls durations back to the UA default, which is instant, not restored. */
 /* prettier-ignore */
 html[data-low-end] *:not(
     .wolf-persona,
@@ -1951,7 +2083,10 @@ html[data-low-end] *:not(
     .merch-carousel-track,
     .merch-carousel-track *,
     .merch-card,
-    .merch-card *
+    .merch-card *,
+    .hdw-cursor,
+    .hdw-cursor *,
+    .hdw-enter
 ) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -2008,9 +2143,192 @@ html[data-low-end] .welcome-defer {
     contain-intrinsic-size: auto 32rem;
 }
 
+.welcome-root {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+}
+
 .welcome-root a,
 .welcome-root button {
     touch-action: manipulation;
+}
+
+/* ════════════════════════════════════════════════════
+   WELCOME MOTION TOKENS
+   Shared easings and entrance primitives for the welcome
+   page, modeled on x.ai/bot's motion values. Base styles
+   are always the resting state so the reduced-motion and
+   low-end guards collapse cleanly to a static page.
+   ════════════════════════════════════════════════════ */
+:root {
+    --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.15);
+    --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+    --dur-hover: 260ms;
+    --dur-pop: 420ms;
+    --dur-reveal: 550ms;
+}
+
+.hero-word {
+    display: inline-block;
+    transform-origin: 50% 100%;
+    animation: hero-word-in 0.75s var(--ease-out-expo) both;
+    animation-delay: calc(var(--word-index, 0) * 60ms + 160ms);
+}
+
+@keyframes hero-word-in {
+    from {
+        opacity: 0;
+        transform: translateY(45%) rotateX(-40deg);
+        filter: blur(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg);
+        filter: blur(0);
+    }
+}
+
+.hero-rise {
+    animation: hero-rise-in 0.75s var(--ease-out-expo) both;
+    animation-delay: calc(var(--stagger-index, 0) * 110ms + 80ms);
+}
+
+@keyframes hero-rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+        filter: blur(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+.hero-window-in {
+    animation: hero-window-in 0.95s var(--ease-out-expo) both;
+    animation-delay: 500ms;
+}
+
+@keyframes hero-window-in {
+    from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.985);
+        filter: blur(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+.hero-orb-in {
+    display: inline-flex;
+    animation: hero-orb-in 0.6s var(--ease-pop) both;
+    animation-delay: 580ms;
+}
+
+@keyframes hero-orb-in {
+    from {
+        opacity: 0;
+        transform: scale(0.3) translateY(0.15em);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Shared demo primitives: typing dots + text caret. */
+.demo-dot {
+    animation: demo-dot 1.2s ease-in-out infinite;
+    animation-delay: calc(var(--dot-index, 0) * 160ms);
+}
+
+@keyframes demo-dot {
+    0%,
+    100% {
+        opacity: 0.25;
+        transform: translateY(0);
+    }
+    40% {
+        opacity: 1;
+        transform: translateY(-2px);
+    }
+}
+
+.demo-caret {
+    animation: demo-caret 0.9s steps(1) infinite;
+}
+
+@keyframes demo-caret {
+    50% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-word,
+    .hero-rise,
+    .hero-window-in,
+    .hero-orb-in,
+    .demo-dot,
+    .demo-caret {
+        animation: none;
+    }
+}
+
+/* ── Scroll-triggered per-content reveals (x.ai-style choreography) ──
+   RevealGroup adds `is-revealing` once the group intersects, which runs
+   the rv-in entrance on every child carrying `rv`. Stagger each child
+   with `--rv-i`; the group sets `--rv-stagger`. Variants shift the
+   entrance direction: `rv-down` (from above), `rv-nudge` (x-axis),
+   `rv-pop` (scale, for chips and pills). Unarmed — SSR, no-JS,
+   reduced motion, low-end — content is simply visible. */
+.rv-group.is-revealing .rv {
+    animation: rv-in 0.65s var(--ease-out-expo) both;
+    animation-delay: calc(var(--rv-i, 0) * var(--rv-stagger, 80ms));
+    --rv-from-transform: translateY(14px);
+    --rv-from-filter: blur(10px);
+}
+
+.rv-group.is-revealing .rv-down {
+    --rv-from-transform: translateY(-12px);
+}
+
+.rv-group.is-revealing .rv-nudge {
+    --rv-from-transform: translateX(-8px);
+    --rv-from-filter: none;
+}
+
+.rv-group.is-revealing .rv-pop {
+    --rv-from-transform: scale(0.82) translateY(4px);
+    --rv-from-filter: none;
+}
+
+@keyframes rv-in {
+    from {
+        opacity: 0;
+        filter: var(--rv-from-filter, blur(10px));
+        transform: var(--rv-from-transform, translateY(14px));
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rv-group.is-revealing .rv {
+        animation: none;
+    }
+}
+
+html[data-low-end] .rv-group.is-revealing .rv {
+    animation: none !important;
 }
 
 @media (pointer: coarse), (max-width: 767px) {

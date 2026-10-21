@@ -220,7 +220,7 @@ onMounted(() => {
     />
 
     <div
-        class="shop-root min-h-screen overflow-x-hidden bg-background font-sans text-[var(--st-ink)] selection:bg-[#d97757]/25"
+        class="shop-root min-h-screen overflow-x-hidden bg-background font-sans text-[var(--st-ink)] selection:bg-primary/20"
     >
         <WelcomeHeader
             :can-register="props.canRegister"
@@ -563,44 +563,3 @@ onMounted(() => {
 </template>
 
 <style scoped src="../components/shop/studio.css"></style>
-
-<style scoped>
-.shop-root {
-    --st-ink: #1a1a1e;
-    --st-ink-mute: #68625a;
-    --st-bg: var(--color-card, #faf7f2);
-    --st-tile: var(--color-secondary, #ebe5dc);
-    --st-hairline: rgba(29, 29, 31, 0.1);
-    --st-hairline-strong: rgba(29, 29, 31, 0.22);
-    --st-capsule-line: rgba(29, 29, 31, 0.24);
-    --st-accent: var(--color-brand, #d97757);
-    --st-accent-strong: #c4643f;
-    --st-accent-text: #a44a28;
-    --st-on-accent: #191008;
-    --st-ghost-hover: rgba(29, 29, 31, 0.05);
-    --st-stage-bg: var(--color-card, #faf7f2);
-    --st-well-bg: var(--color-secondary, #ebe5dc);
-    --st-panel-bg: var(--color-card, #faf7f2);
-    --st-pool-a: rgba(90, 74, 58, 0.035);
-    --st-pool-b: rgba(90, 74, 58, 0.1);
-}
-
-.dark .shop-root {
-    --st-ink: #f5f5f7;
-    --st-ink-mute: #a1a1a6;
-    --st-bg: #0b0b0d;
-    --st-tile: #1d1d1f;
-    --st-hairline: rgba(245, 245, 247, 0.12);
-    --st-hairline-strong: rgba(245, 245, 247, 0.26);
-    --st-capsule-line: rgba(245, 245, 247, 0.3);
-    --st-accent-strong: #e08a6d;
-    --st-accent-text: #d97757;
-    --st-on-accent: #17100c;
-    --st-ghost-hover: rgba(245, 245, 247, 0.08);
-    --st-stage-bg: #0b0b0d;
-    --st-well-bg: #0e0f11;
-    --st-panel-bg: rgba(19, 20, 22, 0.6);
-    --st-pool-a: rgba(245, 245, 247, 0.11);
-    --st-pool-b: rgba(245, 245, 247, 0.075);
-}
-</style>

@@ -91,6 +91,13 @@ const navItems = computed(() => {
 });
 
 const isMobileMenuOpen = ref(false);
+const isScrolled = ref(false);
+
+const handleScroll = () => {
+    if (typeof window !== 'undefined') {
+        isScrolled.value = window.scrollY > 16;
+    }
+};
 
 watch(isMobileMenuOpen, (open) => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -99,7 +106,15 @@ watch(isMobileMenuOpen, (open) => {
 // Ensure body scroll is restored if component unmounts while menu is open
 onBeforeUnmount(() => {
     document.body.style.overflow = '';
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('scroll', handleScroll);
+    }
 });
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+}
 
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false;
@@ -113,7 +128,12 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
 <template>
     <header
-        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-background/80 md:backdrop-blur-xl lg:px-16 lg:py-5"
+        class="sticky top-0 z-50 flex w-full items-center justify-between px-4 py-3 transition-all duration-300 sm:px-6 sm:py-3.5 md:backdrop-blur-xl lg:px-16"
+        :class="
+            isScrolled
+                ? 'border-b border-border/80 bg-background/85 shadow-[0_2px_12px_rgba(0,0,0,0.02)]'
+                : 'border-b border-transparent bg-background/50'
+        "
     >
         <Motion
             :initial="liteMotion ? false : { x: -20, opacity: 0 }"
@@ -333,7 +353,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-if="auth.user">
                 <Link
                     :href="dashboard()"
-                    class="hidden items-center gap-2 rounded-full border border-border/80 bg-card px-4 py-1.5 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98] lg:inline-flex"
+                    class="hidden items-center gap-2 rounded-full bg-foreground px-5 py-2 text-xs font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] lg:inline-flex"
                 >
                     Dashboard
                 </Link>
@@ -341,14 +361,14 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-else>
                 <Link
                     :href="login()"
-                    class="hidden text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
+                    class="hidden rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground lg:inline-flex dark:hover:bg-white/10"
                 >
                     Login
                 </Link>
                 <Link
                     v-if="canRegister"
                     :href="register()"
-                    class="hidden rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] lg:inline-flex"
+                    class="hidden rounded-full bg-foreground px-5 py-2 text-xs font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] lg:inline-flex"
                 >
                     Create free account
                 </Link>

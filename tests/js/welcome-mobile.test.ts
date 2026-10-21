@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
@@ -47,7 +47,7 @@ describe('welcome mobile performance', () => {
 
         expect(hero).toContain('Make every assessment count.');
         expect(hero).toContain('ChatAiOrb');
-        expect(hero).toContain('href="#interactive-echo"');
+        expect(hero).toContain('href="#how-it-works"');
         expect(hero).not.toContain('Interactive Demo');
         expect(hero).not.toContain('<AssessmentArtifact');
         expect(page).not.toContain('walkthroughUnlocked');
@@ -71,10 +71,39 @@ describe('welcome mobile performance', () => {
 
         expect(wrapper.classes()).toContain('lite-motion');
         expect(wrapper.findAll('.fragment-bar')).toHaveLength(0);
-        expect(wrapper.text()).toContain(
-            'Every assessment informs tomorrow’s lesson.',
-        );
+        expect(wrapper.text()).toContain('From first answer to next lesson.');
         wrapper.unmount();
+    });
+
+    it('cycles the feature mini-demos and parks them when motion is reduced', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(FeatureCards, {
+            global: { stubs: { Link: LinkStub, Motion: Passthrough } },
+        });
+
+        const demos = wrapper.findAll('[data-phase]');
+        expect(demos).toHaveLength(4);
+        expect(demos[0].attributes('data-phase')).toBe('0');
+
+        await vi.advanceTimersByTimeAsync(1500);
+        expect(
+            wrapper.findAll('[data-phase]')[0].attributes('data-phase'),
+        ).toBe('1');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+
+        const parked = mount(FeatureCards, {
+            props: { prefersReducedMotion: true },
+            global: { stubs: { Link: LinkStub, Motion: Passthrough } },
+        });
+        expect(
+            parked.findAll('[data-phase]')[0].attributes('data-phase'),
+        ).toBe('3');
+        expect(
+            parked.findAll('[data-phase]')[1].attributes('data-phase'),
+        ).toBe('2');
+        parked.unmount();
     });
 
     it('keeps the welcome page content practical and link-safe', () => {

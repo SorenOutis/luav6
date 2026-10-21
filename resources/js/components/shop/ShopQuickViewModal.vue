@@ -422,54 +422,10 @@ onUnmounted(() => {
 <style scoped src="./studio.css"></style>
 
 <style scoped>
+/* Palette lives in studio.css alongside the shop root, so the sheet and the
+   page can never drift apart. Only the sheet's own geometry stays here. */
 .st-sheet {
     max-height: 92vh;
-    --st-ink: #1a1a1e;
-    --st-ink-soft: rgba(26, 26, 30, 0.75);
-    --st-ink-mute: #68625a;
-    --st-bg: var(--color-card, #faf7f2);
-    --st-hairline: rgba(29, 29, 31, 0.12);
-    --st-hairline-strong: rgba(29, 29, 31, 0.26);
-    --st-capsule-line: rgba(29, 29, 31, 0.24);
-    --st-accent: var(--color-brand, #d97757);
-    --st-accent-strong: #c4643f;
-    --st-accent-text: #a44a28;
-    --st-on-accent: #191008;
-    --st-ghost-hover: rgba(29, 29, 31, 0.05);
-    --st-well-bg: var(--color-secondary, #ebe5dc);
-    --st-pool-a: rgba(90, 74, 58, 0.035);
-    --st-pool-b: rgba(90, 74, 58, 0.08);
-    --st-chip-bg: color-mix(
-        in srgb,
-        var(--color-card, #faf7f2) 90%,
-        transparent
-    );
-    --st-sheet-bg: color-mix(
-        in srgb,
-        var(--color-card, #faf7f2) 85%,
-        transparent
-    );
-    --st-sheet-shadow: 0 40px 120px rgba(24, 20, 16, 0.25);
-}
-
-.dark .st-sheet {
-    --st-ink: #f5f5f7;
-    --st-ink-soft: rgba(245, 245, 247, 0.76);
-    --st-ink-mute: #a1a1a6;
-    --st-bg: #0b0b0d;
-    --st-hairline: rgba(245, 245, 247, 0.14);
-    --st-hairline-strong: rgba(245, 245, 247, 0.28);
-    --st-capsule-line: rgba(245, 245, 247, 0.3);
-    --st-accent-strong: #e08a6d;
-    --st-accent-text: #d97757;
-    --st-on-accent: #17100c;
-    --st-ghost-hover: rgba(245, 245, 247, 0.08);
-    --st-well-bg: #0e0f11;
-    --st-pool-a: rgba(245, 245, 247, 0.11);
-    --st-pool-b: rgba(245, 245, 247, 0.075);
-    --st-chip-bg: rgba(11, 12, 13, 0.8);
-    --st-sheet-bg: rgba(29, 29, 31, 0.78);
-    --st-sheet-shadow: 0 40px 120px rgba(0, 0, 0, 0.55);
 }
 
 @supports (height: 100dvh) {

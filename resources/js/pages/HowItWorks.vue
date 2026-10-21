@@ -77,7 +77,7 @@ const steps = [
             'Because assessments pinpoint exact learning gaps, your teacher knows what to reteach tomorrow, keeping your entire class moving forward together.',
         details: [
             'Automated class mastery insights for targeted reteaching',
-            'DepEd-aligned formative milestones and review packets',
+            'Standards-aligned formative milestones and review packets',
             'Quarterly grade summaries with complete feedback history',
         ],
     },

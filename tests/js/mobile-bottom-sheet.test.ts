@@ -4,7 +4,7 @@
  * button and action buttons stay visible on mobile while the body scrolls.
  */
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { h, nextTick } from 'vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 
@@ -94,10 +94,15 @@ describe('MobileBottomSheet', () => {
 
         closeButton!.click();
 
-        // handleClose emits `close` from the gsap exit animation's onComplete
-        await new Promise((r) => setTimeout(r, 600));
-
-        expect(wrapper.emitted('close')).toHaveLength(1);
+        // handleClose emits `close` from the gsap exit animation's onComplete.
+        // Wait for the event rather than racing a fixed timer: the animation
+        // is ~550ms, so a 600ms budget flakes whenever the rAF ticker is late.
+        await vi.waitFor(
+            () => {
+                expect(wrapper.emitted('close')).toHaveLength(1);
+            },
+            { timeout: 5000, interval: 50 },
+        );
 
         wrapper.unmount();
     });

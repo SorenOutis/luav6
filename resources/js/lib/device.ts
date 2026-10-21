@@ -70,8 +70,13 @@ export function readDeviceSnapshot(): DeviceSnapshot {
         isMobile: isMobileViewport,
         isDesktop: window.innerWidth >= BREAKPOINT_DESKTOP,
         isTouchDevice,
-        isCoarsePointer:
-            isTouchDevice || window.matchMedia('(pointer: coarse)').matches,
+        /**
+         * The *primary* pointer is coarse — a phone or a tablet. A touch
+         * laptop still has a mouse, so `pointer` stays fine there even
+         * though `ontouchstart` exists; treating it as coarse used to flag
+         * every Windows laptop as low-end and freeze the whole site.
+         */
+        isCoarsePointer: window.matchMedia('(pointer: coarse)').matches,
         prefersReducedMotion: window.matchMedia(
             '(prefers-reduced-motion: reduce)',
         ).matches,
@@ -84,23 +89,21 @@ export function readDeviceSnapshot(): DeviceSnapshot {
 /**
  * Combined low-end signal. True when at least one heuristic says the
  * device should skip continuous animation / smooth-scroll / canvas work:
- * - Coarse pointer (touch / phone / tablet)
  * - prefers-reduced-motion
- * - ≤ 4 GB RAM (Chrome deviceMemory)
- * - ≤ 4 CPU cores
+ * - Coarse primary pointer (phone / tablet)
  * - Slow connection (2g / slow-2g)
+ * - ≤ 4 GB RAM (Chrome deviceMemory) or ≤ 4 CPU cores, on a screen small
+ *   enough to be a phone or tablet
+ *
+ * A full-size desktop window is never low-end on hardware alone: a 4-core
+ * laptop renders transitions and scroll reveals without breaking a sweat,
+ * and freezing the whole site for it costs more than it saves.
  */
 export function isLowEndDeviceFrom(snapshot: DeviceSnapshot): boolean {
-    if (snapshot.isCoarsePointer || snapshot.prefersReducedMotion) {
+    if (snapshot.prefersReducedMotion) {
         return true;
     }
-    if (snapshot.deviceMemory !== null && snapshot.deviceMemory <= 4) {
-        return true;
-    }
-    if (
-        snapshot.hardwareConcurrency !== null &&
-        snapshot.hardwareConcurrency <= 4
-    ) {
+    if (snapshot.isCoarsePointer) {
         return true;
     }
     if (
@@ -108,6 +111,17 @@ export function isLowEndDeviceFrom(snapshot: DeviceSnapshot): boolean {
         snapshot.connectionType === '2g'
     ) {
         return true;
+    }
+    if (!snapshot.isDesktop) {
+        if (snapshot.deviceMemory !== null && snapshot.deviceMemory <= 4) {
+            return true;
+        }
+        if (
+            snapshot.hardwareConcurrency !== null &&
+            snapshot.hardwareConcurrency <= 4
+        ) {
+            return true;
+        }
     }
     return false;
 }
