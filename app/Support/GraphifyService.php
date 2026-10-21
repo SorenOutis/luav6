@@ -20,6 +20,17 @@ class GraphifyService
             && File::exists(self::basePath('graph.json'));
     }
 
+    /**
+     * Whether the community analysis the architecture subsystems tab reads
+     * is present. The graphify output is generated locally and gitignored, so
+     * a fresh checkout (CI) does not have it.
+     */
+    public static function hasAnalysis(): bool
+    {
+        return File::exists(self::basePath('.graphify_analysis.json'))
+            && File::exists(self::basePath('graph.json'));
+    }
+
     public static function lastModified(): ?string
     {
         if (! File::exists(self::basePath('graph.html'))) {
