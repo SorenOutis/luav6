@@ -2116,12 +2116,6 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             >
                                 Community Lounge
                             </h1>
-                            <span
-                                v-if="props.workspace?.name"
-                                class="hidden rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline-flex"
-                            >
-                                {{ props.workspace.name }}
-                            </span>
                         </div>
                     </div>
                 </header>

@@ -292,7 +292,8 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             expect(wrapper.text()).toContain('Community Lounge');
-            expect(wrapper.text()).toContain('BSIT Department Workspace');
+            // Workspace pill badge is omitted from header
+            expect(wrapper.text()).not.toContain('BSIT Department Workspace');
 
             // Back button exists
             const backBtn = wrapper.find('[data-test="community-back-button"]');
