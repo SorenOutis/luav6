@@ -445,12 +445,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            // Mobile trigger button exists on the right side of the navigation bar
+            // Mobile trigger button exists on the right side of the navigation bar with tab styling
             const mobileTrigger = wrapper.find(
                 '[data-test="mobile-presence-drawer-trigger"]',
             );
             expect(mobileTrigger.exists()).toBe(true);
             expect(mobileTrigger.text()).toContain('Online');
+            expect(mobileTrigger.classes()).toContain('py-2.5');
+            expect(mobileTrigger.classes()).not.toContain('rounded-full');
 
             // Drawer is closed initially
             expect(
@@ -1298,6 +1300,76 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(savedTab.classes()).toContain('text-amber-600');
         });
 
+        it('switches tabs instantly with optimistic client-side filtering and cache', async () => {
+            const mockPosts = [
+                {
+                    id: 101,
+                    content: 'Section post',
+                    created_at: '10m ago',
+                    is_pinned: false,
+                    is_liked: false,
+                    is_bookmarked: false,
+                    likes_count: 0,
+                    comments_count: 0,
+                    author: {
+                        id: 2,
+                        name: 'Sarah Chen',
+                        handle: 'sarah.chen',
+                        is_same_section: true,
+                    },
+                    comments: [],
+                },
+                {
+                    id: 102,
+                    content: 'Saved post from other section',
+                    created_at: '20m ago',
+                    is_pinned: false,
+                    is_liked: false,
+                    is_bookmarked: true,
+                    likes_count: 0,
+                    comments_count: 0,
+                    author: {
+                        id: 3,
+                        name: 'Other Student',
+                        handle: 'other.student',
+                        is_same_section: false,
+                    },
+                    comments: [],
+                },
+            ];
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: mockPosts,
+                    currentTab: 'all',
+                },
+            });
+
+            expect(wrapper.findAll('article').length).toBe(2);
+
+            // Click My Section tab -> immediately filters without waiting for network
+            const sectionTab = wrapper.find('[data-test="community-tab-section"]');
+            await sectionTab.trigger('click');
+
+            expect(wrapper.findAll('article').length).toBe(1);
+            expect(wrapper.text()).toContain('Section post');
+            expect(wrapper.text()).not.toContain('Saved post from other section');
+
+            // Click Saved tab -> immediately filters bookmarked posts
+            const savedTab = wrapper.find('[data-test="community-tab-saved"]');
+            await savedTab.trigger('click');
+
+            expect(wrapper.findAll('article').length).toBe(1);
+            expect(wrapper.text()).toContain('Saved post from other section');
+
+            // Click Feed tab -> instantly restores full feed from cache
+            const allTab = wrapper.find('[data-test="community-tab-all"]');
+            await allTab.trigger('click');
+
+            expect(wrapper.findAll('article').length).toBe(2);
+        });
+
         it('renders reaction bar when viewing classmate story, and sends reaction on emoji click', async () => {
             mockAxiosPost.mockResolvedValueOnce({
                 data: {
@@ -1349,11 +1421,20 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
             expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
 
-            // Viewer should display reaction bar, play/pause button, and offset caption
+            // Viewer should display transparent glass reaction bar, play/pause button, and offset caption
             const reactionsBar = wrapper.find('[data-test="story-reactions-bar"]');
             expect(reactionsBar.exists()).toBe(true);
+            expect(reactionsBar.classes()).toContain('border-white/20');
+            expect(reactionsBar.classes()).toContain('bg-black/40');
             expect(wrapper.find('[data-test="viewer-reactions-count"]').exists()).toBe(false);
             expect(wrapper.find('[data-test="viewer-play-pause-button"]').exists()).toBe(true);
+
+            // All 6 outline reaction buttons exist and contain Lucide SVG icons
+            const reactionButtons = reactionsBar.findAll('button');
+            expect(reactionButtons.length).toBe(6);
+            for (const btn of reactionButtons) {
+                expect(btn.find('svg').exists()).toBe(true);
+            }
 
             const captionOverlay = wrapper.find('[data-test="story-caption-overlay"]');
             expect(captionOverlay.classes()).toContain('bottom-16');

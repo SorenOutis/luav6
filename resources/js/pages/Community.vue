@@ -10,12 +10,15 @@ import {
     ExternalLink,
     EyeOff,
     FileText,
+    Flame,
     GraduationCap,
     Heart,
     ImageIcon,
+    Laugh,
     Loader2,
     MessageCircle,
     MoreHorizontal,
+    PartyPopper,
     Pause,
     Pencil,
     Play,
@@ -31,6 +34,7 @@ import {
     Shield,
     ShieldCheck,
     Sparkles,
+    ThumbsUp,
     Trash2,
     UploadCloud,
     UserCheck,
@@ -197,15 +201,51 @@ const handleReturn = () => {
     }
 };
 
-// ─── Active Tab Filtering ────────────────────────────────────────────────────
+// ─── Active Tab Filtering & Client-Side Tab Cache ────────────────────────────
 const activeTab = ref<'all' | 'section' | 'saved'>(props.currentTab ?? 'all');
+const tabPostsCache = ref<Record<string, CommunityFeedPost[]>>({
+    [props.currentTab ?? 'all']: [...(props.posts ?? [])],
+});
 
 const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
+    if (activeTab.value === tab) {
+        return;
+    }
+
+    // Cache current tab state
+    tabPostsCache.value[activeTab.value] = [...localPosts.value];
     activeTab.value = tab;
+
+    // 1. Instant optimistic feed swap
+    if (tabPostsCache.value[tab]) {
+        localPosts.value = [...tabPostsCache.value[tab]];
+    } else {
+        const allPosts = tabPostsCache.value['all'] ?? localPosts.value;
+        if (tab === 'section') {
+            localPosts.value = allPosts.filter((p) =>
+                Boolean(p.author?.is_same_section),
+            );
+        } else if (tab === 'saved') {
+            localPosts.value = allPosts.filter((p) =>
+                Boolean(bookmarkedMap.value[String(p.id)] ?? p.is_bookmarked),
+            );
+        }
+    }
+
+    // 2. Background Inertia router visit to reconcile with server
     router.visit(`/community?tab=${tab}`, {
         preserveState: true,
         preserveScroll: true,
         only: ['posts', 'currentTab'],
+        onSuccess: (page) => {
+            const serverPosts = (page.props as any)?.posts;
+            if (Array.isArray(serverPosts)) {
+                tabPostsCache.value[tab] = [...serverPosts];
+                if (activeTab.value === tab) {
+                    localPosts.value = [...serverPosts];
+                }
+            }
+        },
     });
 };
 
@@ -350,7 +390,9 @@ const localPosts = ref<CommunityFeedPost[]>([...(props.posts ?? [])]);
 watch(
     () => props.posts,
     (newPosts) => {
-        localPosts.value = [...(newPosts ?? [])];
+        const list = [...(newPosts ?? [])];
+        localPosts.value = list;
+        tabPostsCache.value[activeTab.value] = list;
     },
     { immediate: true },
 );
@@ -489,23 +531,30 @@ const deletePost = async (post?: CommunityFeedPost | null) => {
     const target = post || postToDelete.value;
     if (!target || isDeletingPost.value) return;
 
+    const removeTargetFromStateAndCache = () => {
+        localPosts.value = localPosts.value.filter(
+            (p) => String(p.id) !== String(target.id),
+        );
+        for (const tabKey of Object.keys(tabPostsCache.value)) {
+            tabPostsCache.value[tabKey] = tabPostsCache.value[tabKey].filter(
+                (p) => String(p.id) !== String(target.id),
+            );
+        }
+    };
+
     isDeletingPost.value = true;
     try {
         await axios.delete(`/community/posts/${target.id}`, {
             headers: { Accept: 'application/json' },
         });
-        localPosts.value = localPosts.value.filter(
-            (p) => String(p.id) !== String(target.id),
-        );
+        removeTargetFromStateAndCache();
         postToDelete.value = null;
     } catch {
         router.delete(`/community/posts/${target.id}`, {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                localPosts.value = localPosts.value.filter(
-                    (p) => String(p.id) !== String(target.id),
-                );
+                removeTargetFromStateAndCache();
                 postToDelete.value = null;
             },
         });
@@ -897,6 +946,28 @@ const toggleBookmark = (postId: number | string) => {
     // 1. Immediate optimistic update
     bookmarkedMap.value[key] = nextBookmarked;
 
+    // Keep saved cache in sync
+    if (tabPostsCache.value['saved']) {
+        if (nextBookmarked) {
+            const postToAdd =
+                (tabPostsCache.value['all'] || localPosts.value).find(
+                    (p) => String(p.id) === key,
+                );
+            if (postToAdd && !tabPostsCache.value['saved'].some((p) => String(p.id) === key)) {
+                tabPostsCache.value['saved'] = [postToAdd, ...tabPostsCache.value['saved']];
+            }
+        } else {
+            tabPostsCache.value['saved'] = tabPostsCache.value['saved'].filter(
+                (p) => String(p.id) !== key,
+            );
+            if (activeTab.value === 'saved') {
+                localPosts.value = localPosts.value.filter(
+                    (p) => String(p.id) !== key,
+                );
+            }
+        }
+    }
+
     if (bookmarkDebounceTimers.value[key]) {
         clearTimeout(bookmarkDebounceTimers.value[key]);
     }
@@ -1116,6 +1187,7 @@ const submitPost = () => {
             composerForm.reset();
             clearComposerFile();
             isComposerOpen.value = false;
+            tabPostsCache.value = {};
         },
     });
 };
@@ -1456,6 +1528,20 @@ interface FlyingReaction {
     size: number;
     rotation: number;
 }
+
+const storyReactionOptions = [
+    { id: '❤️', label: 'Heart', icon: Heart },
+    { id: '🔥', label: 'Fire', icon: Flame },
+    { id: '👏', label: 'Clap', icon: ThumbsUp },
+    { id: '😂', label: 'Laugh', icon: Laugh },
+    { id: '😮', label: 'Wow', icon: Sparkles },
+    { id: '🎉', label: 'Party', icon: PartyPopper },
+] as const;
+
+const getReactionIcon = (id: string) => {
+    const found = storyReactionOptions.find((r) => r.id === id);
+    return found ? found.icon : Heart;
+};
 
 const flyingReactions = ref<FlyingReaction[]>([]);
 let nextReactionParticleId = 0;
@@ -2184,28 +2270,6 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 />
                             </button>
 
-                            <!-- Mobile Presence Trigger Button (Online Actives) -->
-                            <button
-                                type="button"
-                                data-test="mobile-presence-drawer-trigger"
-                                class="relative my-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 transition-all hover:bg-emerald-500/20 active:scale-95 lg:hidden dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
-                                aria-label="View online classmates"
-                                @click="isMobileDrawerOpen = true"
-                            >
-                                <span
-                                    class="relative flex h-2 w-2 shrink-0 items-center justify-center"
-                                    aria-hidden="true"
-                                >
-                                    <span
-                                        class="presence-beacon-ring absolute inline-flex h-full w-full rounded-full bg-emerald-500/40"
-                                    />
-                                    <span
-                                        class="presence-beacon-dot relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"
-                                    />
-                                </span>
-                                <span>{{ onlineCount }} Online</span>
-                            </button>
-
                             <button
                                 type="button"
                                 data-test="community-tab-section"
@@ -2231,6 +2295,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
                                 />
                             </button>
+
                             <button
                                 type="button"
                                 data-test="community-tab-saved"
@@ -2254,6 +2319,37 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 <span
                                     v-if="activeTab === 'saved'"
                                     class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-amber-500"
+                                />
+                            </button>
+
+                            <!-- Mobile Presence Drawer Trigger Tab (Online Actives) -->
+                            <button
+                                type="button"
+                                data-test="mobile-presence-drawer-trigger"
+                                class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors lg:hidden"
+                                :class="
+                                    isMobileDrawerOpen
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                "
+                                aria-label="View online classmates"
+                                @click="isMobileDrawerOpen = true"
+                            >
+                                <span
+                                    class="relative flex h-2 w-2 shrink-0 items-center justify-center"
+                                    aria-hidden="true"
+                                >
+                                    <span
+                                        class="presence-beacon-ring absolute inline-flex h-full w-full rounded-full bg-emerald-500/40"
+                                    />
+                                    <span
+                                        class="presence-beacon-dot relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                    />
+                                </span>
+                                <span>{{ onlineCount }} Online</span>
+                                <span
+                                    v-if="isMobileDrawerOpen"
+                                    class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
                                 />
                             </button>
                         </div>
@@ -4748,14 +4844,20 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     <div
                         v-for="particle in flyingReactions"
                         :key="particle.id"
-                        class="flying-reaction-item absolute bottom-16 select-none"
+                        class="flying-reaction-item pointer-events-none absolute bottom-16 select-none"
                         :style="{
                             left: `${particle.left}%`,
-                            fontSize: `${particle.size}px`,
                             '--particle-rot': `${particle.rotation}deg`,
                         }"
                     >
-                        {{ particle.emoji }}
+                        <component
+                            :is="getReactionIcon(particle.emoji)"
+                            class="stroke-[1.8] fill-white/10 text-white drop-shadow-md"
+                            :style="{
+                                width: `${particle.size}px`,
+                                height: `${particle.size}px`,
+                            }"
+                        />
                     </div>
                 </div>
 
@@ -4786,27 +4888,36 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <!-- Bottom Viewer Reactions Bar (when viewing classmate story) -->
                 <div
                     v-if="!activeStoryGroup?.is_self"
-                    class="absolute inset-x-3 bottom-3 z-30 flex items-center justify-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-md ring-1 ring-white/10"
+                    class="absolute inset-x-4 bottom-3.5 z-30 mx-auto flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 shadow-2xl backdrop-blur-md ring-1 ring-white/10"
                     data-test="story-reactions-bar"
                     @pointerdown.stop
                     @pointerup.stop
                     @click.stop
                 >
                     <button
-                        v-for="emoji in ['❤️', '🔥', '👏', '😂', '😮', '🎉']"
-                        :key="emoji"
+                        v-for="opt in storyReactionOptions"
+                        :key="opt.id"
                         type="button"
-                        class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-lg transition-transform hover:scale-125 active:scale-95"
+                        class="group relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-150 hover:scale-115 active:scale-95"
                         :class="
-                            currentStory.user_reaction === emoji
-                                ? 'bg-white/25 ring-2 ring-white/60 scale-110 shadow-sm'
-                                : 'hover:bg-white/15'
+                            currentStory.user_reaction === opt.id
+                                ? 'bg-white/20 ring-1.5 ring-white/70 scale-110 shadow-sm'
+                                : 'hover:bg-white/10'
                         "
-                        :title="`React with ${emoji}`"
-                        :data-test="`story-reaction-${emoji}`"
-                        @click.stop="handleStoryReaction(emoji)"
+                        :title="`React with ${opt.label}`"
+                        :aria-label="`React with ${opt.label}`"
+                        :data-test="`story-reaction-${opt.id}`"
+                        @click.stop="handleStoryReaction(opt.id)"
                     >
-                        <span>{{ emoji }}</span>
+                        <component
+                            :is="opt.icon"
+                            class="h-4.5 w-4.5 stroke-[1.8] fill-transparent transition-transform group-hover:scale-110"
+                            :class="
+                                currentStory.user_reaction === opt.id
+                                    ? 'text-white fill-white/10 stroke-[2]'
+                                    : 'text-white/85 group-hover:text-white'
+                            "
+                        />
                     </button>
                 </div>
             </div>
