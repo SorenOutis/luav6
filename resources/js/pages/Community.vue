@@ -628,9 +628,9 @@ const deleteComment = async (postId: number | string, comment: PostComment) => {
             headers: { Accept: 'application/json' },
         });
         if (localCommentsMap.value[postKey]) {
-            localCommentsMap.value[postKey] = localCommentsMap.value[postKey].filter(
-                (c) => String(c.id) !== commentKey,
-            );
+            localCommentsMap.value[postKey] = localCommentsMap.value[
+                postKey
+            ].filter((c) => String(c.id) !== commentKey);
         }
         commentsCountMap.value[postKey] = Math.max(
             0,
@@ -642,9 +642,9 @@ const deleteComment = async (postId: number | string, comment: PostComment) => {
             preserveState: true,
             onSuccess: () => {
                 if (localCommentsMap.value[postKey]) {
-                    localCommentsMap.value[postKey] = localCommentsMap.value[postKey].filter(
-                        (c) => String(c.id) !== commentKey,
-                    );
+                    localCommentsMap.value[postKey] = localCommentsMap.value[
+                        postKey
+                    ].filter((c) => String(c.id) !== commentKey);
                 }
                 commentsCountMap.value[postKey] = Math.max(
                     0,
@@ -949,12 +949,17 @@ const toggleBookmark = (postId: number | string) => {
     // Keep saved cache in sync
     if (tabPostsCache.value['saved']) {
         if (nextBookmarked) {
-            const postToAdd =
-                (tabPostsCache.value['all'] || localPosts.value).find(
-                    (p) => String(p.id) === key,
-                );
-            if (postToAdd && !tabPostsCache.value['saved'].some((p) => String(p.id) === key)) {
-                tabPostsCache.value['saved'] = [postToAdd, ...tabPostsCache.value['saved']];
+            const postToAdd = (
+                tabPostsCache.value['all'] || localPosts.value
+            ).find((p) => String(p.id) === key);
+            if (
+                postToAdd &&
+                !tabPostsCache.value['saved'].some((p) => String(p.id) === key)
+            ) {
+                tabPostsCache.value['saved'] = [
+                    postToAdd,
+                    ...tabPostsCache.value['saved'],
+                ];
             }
         } else {
             tabPostsCache.value['saved'] = tabPostsCache.value['saved'].filter(
@@ -1432,7 +1437,10 @@ const processStoryFile = (file: File) => {
                 storyUploadError.value = `Video is ${Math.round(duration)} seconds long. MyDay videos cannot exceed 30 seconds.`;
             } else {
                 storyMediaType.value = 'video';
-                storyDuration.value = Math.max(1, Math.min(30, Math.round(duration)));
+                storyDuration.value = Math.max(
+                    1,
+                    Math.min(30, Math.round(duration)),
+                );
                 storyMediaFile.value = file;
                 storyMediaPreview.value = URL.createObjectURL(file);
             }
@@ -2164,18 +2172,25 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 v-if="
                                                     story.isUser &&
                                                     story.hasStory &&
-                                                    story.storyGroup?.stories?.length
+                                                    story.storyGroup?.stories
+                                                        ?.length
                                                 "
                                             >
                                                 <video
                                                     v-if="
-                                                        story.storyGroup.stories[
-                                                            story.storyGroup.stories.length - 1
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
                                                         ].media_type === 'video'
                                                     "
                                                     :src="
-                                                        story.storyGroup.stories[
-                                                            story.storyGroup.stories.length - 1
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
                                                         ].media_url
                                                     "
                                                     class="h-full w-full object-cover"
@@ -2186,8 +2201,11 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 <img
                                                     v-else
                                                     :src="
-                                                        story.storyGroup.stories[
-                                                            story.storyGroup.stories.length - 1
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
                                                         ].media_url
                                                     "
                                                     :alt="story.name"
@@ -2669,13 +2687,18 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                             aria-label="Post options"
                                             data-test="post-options-button"
-                                            @click.stop="togglePostMenu(post.id)"
+                                            @click.stop="
+                                                togglePostMenu(post.id)
+                                            "
                                         >
                                             <MoreHorizontal class="h-4 w-4" />
                                         </button>
                                         <div
-                                            v-if="activePostMenuId === String(post.id)"
-                                            class="absolute right-0 top-full z-20 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
+                                            v-if="
+                                                activePostMenuId ===
+                                                String(post.id)
+                                            "
+                                            class="absolute top-full right-0 z-20 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
                                             data-test="post-options-menu"
                                         >
                                             <button
@@ -2730,14 +2753,18 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 class="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground select-none hover:text-foreground"
                                             >
                                                 <input
-                                                    v-model="editingPostIsAnonymous"
+                                                    v-model="
+                                                        editingPostIsAnonymous
+                                                    "
                                                     type="checkbox"
                                                     class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand"
                                                     data-test="post-edit-anonymous-checkbox"
                                                 />
                                                 <span>Post anonymously</span>
                                             </label>
-                                            <div class="flex items-center gap-2">
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
                                                 <button
                                                     type="button"
                                                     class="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -2902,9 +2929,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             <span
                                                 class="font-medium"
                                                 data-test="post-comments-count"
-                                            >{{
-                                                getPostCommentsCount(post)
-                                            }}</span>
+                                                >{{
+                                                    getPostCommentsCount(post)
+                                                }}</span
+                                            >
                                         </button>
 
                                         <!-- Share -->
@@ -3064,26 +3092,47 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                             }}
                                                         </button>
                                                         <div
-                                                            v-if="editingCommentId === String(comment.id)"
+                                                            v-if="
+                                                                editingCommentId ===
+                                                                String(
+                                                                    comment.id,
+                                                                )
+                                                            "
                                                             class="mt-1.5 space-y-1.5"
                                                             data-test="comment-edit-form"
                                                         >
                                                             <input
-                                                                v-model="editingCommentContent"
+                                                                v-model="
+                                                                    editingCommentContent
+                                                                "
                                                                 type="text"
                                                                 maxlength="1000"
                                                                 class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
                                                                 data-test="comment-edit-input"
-                                                                @keydown.enter.prevent="saveEditComment(comment)"
-                                                                @keydown.esc="cancelEditComment"
+                                                                @keydown.enter.prevent="
+                                                                    saveEditComment(
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                                @keydown.esc="
+                                                                    cancelEditComment
+                                                                "
                                                             />
-                                                            <div class="flex items-center gap-2">
+                                                            <div
+                                                                class="flex items-center gap-2"
+                                                            >
                                                                 <button
                                                                     type="button"
                                                                     class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
                                                                     data-test="save-comment-edit-button"
-                                                                    :disabled="isSavingComment"
-                                                                    @click="saveEditComment(comment)"
+                                                                    :disabled="
+                                                                        isSavingComment
+                                                                    "
+                                                                    @click="
+                                                                        saveEditComment(
+                                                                            comment,
+                                                                        )
+                                                                    "
                                                                 >
                                                                     Save
                                                                 </button>
@@ -3091,7 +3140,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                                     type="button"
                                                                     class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
                                                                     data-test="cancel-comment-edit-button"
-                                                                    @click="cancelEditComment"
+                                                                    @click="
+                                                                        cancelEditComment
+                                                                    "
                                                                 >
                                                                     Cancel
                                                                 </button>
@@ -3175,20 +3226,38 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                             </span>
                                                         </button>
                                                         <button
-                                                            v-if="canEditComment(comment)"
+                                                            v-if="
+                                                                canEditComment(
+                                                                    comment,
+                                                                )
+                                                            "
                                                             type="button"
                                                             class="cursor-pointer font-semibold hover:text-foreground"
                                                             data-test="comment-edit-button"
-                                                            @click="startEditComment(comment)"
+                                                            @click="
+                                                                startEditComment(
+                                                                    comment,
+                                                                )
+                                                            "
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
-                                                            v-if="canDeleteComment(post, comment)"
+                                                            v-if="
+                                                                canDeleteComment(
+                                                                    post,
+                                                                    comment,
+                                                                )
+                                                            "
                                                             type="button"
                                                             class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
                                                             data-test="comment-delete-button"
-                                                            @click="confirmDeleteComment(post.id, comment)"
+                                                            @click="
+                                                                confirmDeleteComment(
+                                                                    post.id,
+                                                                    comment,
+                                                                )
+                                                            "
                                                         >
                                                             Delete
                                                         </button>
@@ -3344,26 +3413,47 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                                             }}
                                                                         </button>
                                                                         <div
-                                                                            v-if="editingCommentId === String(reply.id)"
+                                                                            v-if="
+                                                                                editingCommentId ===
+                                                                                String(
+                                                                                    reply.id,
+                                                                                )
+                                                                            "
                                                                             class="mt-1.5 space-y-1.5"
                                                                             data-test="reply-edit-form"
                                                                         >
                                                                             <input
-                                                                                v-model="editingCommentContent"
+                                                                                v-model="
+                                                                                    editingCommentContent
+                                                                                "
                                                                                 type="text"
                                                                                 maxlength="1000"
                                                                                 class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
                                                                                 data-test="reply-edit-input"
-                                                                                @keydown.enter.prevent="saveEditComment(reply)"
-                                                                                @keydown.esc="cancelEditComment"
+                                                                                @keydown.enter.prevent="
+                                                                                    saveEditComment(
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                                @keydown.esc="
+                                                                                    cancelEditComment
+                                                                                "
                                                                             />
-                                                                            <div class="flex items-center gap-2">
+                                                                            <div
+                                                                                class="flex items-center gap-2"
+                                                                            >
                                                                                 <button
                                                                                     type="button"
                                                                                     class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
                                                                                     data-test="save-reply-edit-button"
-                                                                                    :disabled="isSavingComment"
-                                                                                    @click="saveEditComment(reply)"
+                                                                                    :disabled="
+                                                                                        isSavingComment
+                                                                                    "
+                                                                                    @click="
+                                                                                        saveEditComment(
+                                                                                            reply,
+                                                                                        )
+                                                                                    "
                                                                                 >
                                                                                     Save
                                                                                 </button>
@@ -3371,7 +3461,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                                                     type="button"
                                                                                     class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
                                                                                     data-test="cancel-reply-edit-button"
-                                                                                    @click="cancelEditComment"
+                                                                                    @click="
+                                                                                        cancelEditComment
+                                                                                    "
                                                                                 >
                                                                                     Cancel
                                                                                 </button>
@@ -3454,20 +3546,39 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                                             </span>
                                                                         </button>
                                                                         <button
-                                                                            v-if="canEditComment(reply)"
+                                                                            v-if="
+                                                                                canEditComment(
+                                                                                    reply,
+                                                                                )
+                                                                            "
                                                                             type="button"
                                                                             class="cursor-pointer font-semibold hover:text-foreground"
                                                                             data-test="reply-edit-button"
-                                                                            @click="startEditComment(reply)"
+                                                                            @click="
+                                                                                startEditComment(
+                                                                                    reply,
+                                                                                )
+                                                                            "
                                                                         >
                                                                             Edit
                                                                         </button>
                                                                         <button
-                                                                            v-if="canDeleteComment(post, reply)"
+                                                                            v-if="
+                                                                                canDeleteComment(
+                                                                                    post,
+                                                                                    reply,
+                                                                                )
+                                                                            "
                                                                             type="button"
                                                                             class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
                                                                             data-test="reply-delete-button"
-                                                                            @click="confirmDeleteReply(post.id, comment, reply)"
+                                                                            @click="
+                                                                                confirmDeleteReply(
+                                                                                    post.id,
+                                                                                    comment,
+                                                                                    reply,
+                                                                                )
+                                                                            "
                                                                         >
                                                                             Delete
                                                                         </button>
@@ -4320,7 +4431,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 @click="closeStoryModal"
             />
             <div
-                class="relative z-[170] max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border/70 bg-card p-5 sm:p-6 shadow-2xl"
+                class="relative z-[170] max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border/70 bg-card p-5 shadow-2xl sm:p-6"
             >
                 <div
                     class="mb-4 flex items-center justify-between border-b border-border/50 pb-3"
@@ -4385,7 +4496,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 Click or drag & drop photo or video
                             </p>
                             <p class="mt-0.5 text-[11px] text-muted-foreground">
-                                Images up to 10MB · MP4/WebM up to 30MB (max 30s)
+                                Images up to 10MB · MP4/WebM up to 30MB (max
+                                30s)
                             </p>
                         </div>
                     </div>
@@ -4393,7 +4505,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     <!-- WYSIWYG Story Canvas Live Preview -->
                     <div
                         v-else
-                        class="relative mx-auto flex aspect-[9/16] w-full max-w-[260px] sm:max-w-[280px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl ring-1 ring-black/40 select-none"
+                        class="relative mx-auto flex aspect-[9/16] w-full max-w-[260px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl ring-1 ring-black/40 select-none sm:max-w-[280px]"
                         data-test="story-live-preview"
                     >
                         <!-- Top Progress Bar Mockup -->
@@ -4421,14 +4533,19 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         :alt="currentUserName"
                                         class="h-full w-full object-cover"
                                     />
-                                    <span v-else>{{ currentUserInitials }}</span>
+                                    <span v-else>{{
+                                        currentUserInitials
+                                    }}</span>
                                 </div>
                                 <div class="leading-none">
                                     <div class="flex items-center gap-1">
-                                        <span class="text-[11px] font-bold drop-shadow">{{
-                                            currentUserName
-                                        }}</span>
-                                        <span class="text-[9px] text-white/70">· 24h</span>
+                                        <span
+                                            class="text-[11px] font-bold drop-shadow"
+                                            >{{ currentUserName }}</span
+                                        >
+                                        <span class="text-[9px] text-white/70"
+                                            >· 24h</span
+                                        >
                                     </div>
                                     <span class="text-[9px] text-white/70"
                                         >@{{ currentUserHandle }}</span
@@ -4453,7 +4570,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 <!-- Change / Remove Media Button -->
                                 <button
                                     type="button"
-                                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+                                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
                                     title="Change media"
                                     data-test="story-change-media"
                                     @click="clearStoryMedia"
@@ -4487,7 +4604,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <!-- Bottom Caption Overlay (Live WYSIWYG) -->
                         <div
                             v-if="storyCaption.trim()"
-                            class="absolute inset-x-3 bottom-3 z-30 max-h-24 overflow-y-auto rounded-2xl bg-black/65 p-2.5 text-center text-xs font-medium text-white shadow-lg backdrop-blur-md break-words"
+                            class="absolute inset-x-3 bottom-3 z-30 max-h-24 overflow-y-auto rounded-2xl bg-black/65 p-2.5 text-center text-xs font-medium break-words text-white shadow-lg backdrop-blur-md"
                             data-test="story-preview-caption"
                         >
                             {{ storyCaption }}
@@ -4499,9 +4616,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         v-if="storyMediaType === 'image' && storyMediaPreview"
                         class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-3 py-2"
                     >
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div
+                            class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                        >
                             <Clock class="h-3.5 w-3.5 text-brand" />
-                            <span class="font-medium text-foreground">Duration</span>
+                            <span class="font-medium text-foreground"
+                                >Duration</span
+                            >
                         </div>
                         <div
                             class="flex items-center gap-1"
@@ -4527,14 +4648,22 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- Video Duration Indicator -->
                     <div
-                        v-else-if="storyMediaType === 'video' && storyMediaPreview"
+                        v-else-if="
+                            storyMediaType === 'video' && storyMediaPreview
+                        "
                         class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-xs"
                     >
-                        <div class="flex items-center gap-1.5 text-muted-foreground">
+                        <div
+                            class="flex items-center gap-1.5 text-muted-foreground"
+                        >
                             <Clock class="h-3.5 w-3.5 text-brand" />
-                            <span class="font-medium text-foreground">Video Duration</span>
+                            <span class="font-medium text-foreground"
+                                >Video Duration</span
+                            >
                         </div>
-                        <span class="font-semibold text-foreground">{{ storyDuration }}s (auto)</span>
+                        <span class="font-semibold text-foreground"
+                            >{{ storyDuration }}s (auto)</span
+                        >
                     </div>
 
                     <!-- Caption Input -->
@@ -4684,7 +4813,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <button
                             type="button"
                             class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white/20 active:scale-95"
-                            :title="isStoryPaused ? 'Play story' : 'Pause story'"
+                            :title="
+                                isStoryPaused ? 'Play story' : 'Pause story'
+                            "
                             data-test="viewer-play-pause-button"
                             @pointerdown.stop
                             @pointerup.stop
@@ -4692,12 +4823,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         >
                             <Play
                                 v-if="isStoryPaused"
-                                class="h-3.5 w-3.5 fill-white ml-0.5"
+                                class="ml-0.5 h-3.5 w-3.5 fill-white"
                             />
-                            <Pause
-                                v-else
-                                class="h-3.5 w-3.5 fill-white"
-                            />
+                            <Pause v-else class="h-3.5 w-3.5 fill-white" />
                         </button>
 
                         <!-- Story options menu (own story) -->
@@ -4729,7 +4857,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <!-- Dropdown menu -->
                             <div
                                 v-if="isStoryOptionsOpen"
-                                class="absolute right-0 top-10 z-50 w-44 rounded-2xl border border-white/15 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur-md transition-all duration-150"
+                                class="absolute top-10 right-0 z-50 w-44 rounded-2xl border border-white/15 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur-md transition-all duration-150"
                                 data-test="viewer-story-options-menu"
                                 @pointerdown.stop
                                 @pointerup.stop
@@ -4794,7 +4922,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <!-- Toast banner in viewer -->
                 <div
                     v-if="featuredToast"
-                    class="absolute top-16 inset-x-4 z-40 rounded-xl bg-amber-500/95 px-3 py-2 text-center text-xs font-semibold text-black shadow-lg backdrop-blur-xs"
+                    class="absolute inset-x-4 top-16 z-40 rounded-xl bg-amber-500/95 px-3 py-2 text-center text-xs font-semibold text-black shadow-lg backdrop-blur-xs"
                     data-test="viewer-featured-toast"
                 >
                     {{ featuredToast }}
@@ -4846,7 +4974,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     >
                         <component
                             :is="getReactionIcon(particle.emoji)"
-                            class="stroke-[1.8] fill-white/10 text-white drop-shadow-md"
+                            class="fill-white/10 stroke-[1.8] text-white drop-shadow-md"
                             :style="{
                                 width: `${particle.size}px`,
                                 height: `${particle.size}px`,
@@ -4859,7 +4987,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <div
                     v-if="currentStory.caption"
                     class="absolute inset-x-3 z-30 rounded-2xl bg-black/60 p-3 text-center text-xs font-medium text-white backdrop-blur-md"
-                    :class="!activeStoryGroup?.is_self ? 'bottom-16' : 'bottom-14'"
+                    :class="
+                        !activeStoryGroup?.is_self ? 'bottom-16' : 'bottom-14'
+                    "
                     data-test="story-caption-overlay"
                 >
                     {{ currentStory.caption }}
@@ -4868,7 +4998,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <!-- Bottom Left Reactions Counter (own story) -->
                 <div
                     v-if="activeStoryGroup?.is_self"
-                    class="absolute left-3.5 bottom-3.5 z-30 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white/95 backdrop-blur-md ring-1 ring-white/15"
+                    class="absolute bottom-3.5 left-3.5 z-30 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white/95 ring-1 ring-white/15 backdrop-blur-md"
                     title="Story reactions"
                     data-test="viewer-reactions-count"
                     @pointerdown.stop
@@ -4882,7 +5012,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <!-- Bottom Viewer Reactions Bar (when viewing classmate story) -->
                 <div
                     v-if="!activeStoryGroup?.is_self"
-                    class="absolute inset-x-4 bottom-3.5 z-30 mx-auto flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 shadow-2xl backdrop-blur-md ring-1 ring-white/10"
+                    class="absolute inset-x-4 bottom-3.5 z-30 mx-auto flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 shadow-2xl ring-1 ring-white/10 backdrop-blur-md"
                     data-test="story-reactions-bar"
                     @pointerdown.stop
                     @pointerup.stop
@@ -4895,7 +5025,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         class="group relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-150 hover:scale-115 active:scale-95"
                         :class="
                             currentStory.user_reaction === opt.id
-                                ? 'bg-white/20 ring-1.5 ring-white/70 scale-110 shadow-sm'
+                                ? 'ring-1.5 scale-110 bg-white/20 shadow-sm ring-white/70'
                                 : 'hover:bg-white/10'
                         "
                         :title="`React with ${opt.label}`"
@@ -4905,10 +5035,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     >
                         <component
                             :is="opt.icon"
-                            class="h-4.5 w-4.5 stroke-[1.8] fill-transparent transition-transform group-hover:scale-110"
+                            class="h-4.5 w-4.5 fill-transparent stroke-[1.8] transition-transform group-hover:scale-110"
                             :class="
                                 currentStory.user_reaction === opt.id
-                                    ? 'text-white fill-white/10 stroke-[2]'
+                                    ? 'fill-white/10 stroke-[2] text-white'
                                     : 'text-white/85 group-hover:text-white'
                             "
                         />
@@ -4920,12 +5050,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
         <!-- Delete Post Confirmation Modal -->
         <div
             v-if="postToDelete"
-            class="fixed inset-0 z-[170] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            class="fixed inset-0 z-[170] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
             data-test="delete-post-modal"
             @click.self="cancelDeletePost"
         >
             <div
-                class="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-2xl space-y-4"
+                class="w-full max-w-sm space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-2xl"
             >
                 <div class="flex items-center gap-3 text-destructive">
                     <div
@@ -4943,7 +5073,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     </div>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                    This will permanently remove your post and all associated comments. This action cannot be undone.
+                    This will permanently remove your post and all associated
+                    comments. This action cannot be undone.
                 </p>
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <button
@@ -4974,12 +5105,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
         <!-- Delete Comment / Reply Confirmation Modal -->
         <div
             v-if="commentToDelete"
-            class="fixed inset-0 z-[170] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            class="fixed inset-0 z-[170] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
             data-test="delete-comment-modal"
             @click.self="cancelDeleteComment"
         >
             <div
-                class="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-2xl space-y-4"
+                class="w-full max-w-sm space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-2xl"
             >
                 <div class="flex items-center gap-3 text-destructive">
                     <div
@@ -5026,9 +5157,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         :disabled="
                             Boolean(
                                 commentToDelete &&
-                                    isDeletingComment[
-                                        String(commentToDelete.comment.id)
-                                    ],
+                                isDeletingComment[
+                                    String(commentToDelete.comment.id)
+                                ],
                             )
                         "
                         data-test="confirm-delete-comment-button"
@@ -5110,11 +5241,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
         opacity: 0;
     }
     15% {
-        transform: translateY(-40px) scale(1.15) rotate(var(--particle-rot, 0deg));
+        transform: translateY(-40px) scale(1.15)
+            rotate(var(--particle-rot, 0deg));
         opacity: 1;
     }
     100% {
-        transform: translateY(-340px) scale(0.9) rotate(var(--particle-rot, 0deg));
+        transform: translateY(-340px) scale(0.9)
+            rotate(var(--particle-rot, 0deg));
         opacity: 0;
     }
 }

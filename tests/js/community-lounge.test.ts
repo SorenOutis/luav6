@@ -8,7 +8,9 @@ const mockAxiosPost = vi.fn().mockResolvedValue({
     data: { is_liked: true, likes_count: 1, is_bookmarked: true },
 });
 const mockAxiosPut = vi.fn().mockResolvedValue({ data: {} });
-const mockAxiosDelete = vi.fn().mockResolvedValue({ data: { status: 'deleted' } });
+const mockAxiosDelete = vi
+    .fn()
+    .mockResolvedValue({ data: { status: 'deleted' } });
 let mockPageProps: Record<string, any> = {};
 let mockPrefersReducedMotion = false;
 
@@ -714,7 +716,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             const modal = wrapper.find('[data-test="profile-preview-modal"]');
             expect(modal.exists()).toBe(true);
             expect(modal.text()).toContain('Alex Rivera');
-            expect(modal.text()).not.toContain('This student posted anonymously');
+            expect(modal.text()).not.toContain(
+                'This student posted anonymously',
+            );
         });
 
         it('renders commenter avatar and handle, and opens profile modal on click', async () => {
@@ -769,7 +773,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            const commentHandle = wrapper.find('[data-test="comment-author-handle"]');
+            const commentHandle = wrapper.find(
+                '[data-test="comment-author-handle"]',
+            );
             expect(commentHandle.exists()).toBe(true);
             expect(commentHandle.text()).toContain('marcus.vance');
 
@@ -818,7 +824,8 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                                             parent_id: 201,
                                             author_name: 'David Kim',
                                             author_handle: 'david.kim',
-                                            content: 'Step 2 applies the subnet mask.',
+                                            content:
+                                                'Step 2 applies the subnet mask.',
                                             created_at: '8m ago',
                                             replies: [],
                                         },
@@ -831,26 +838,40 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Toggle button rendered with 1 reply
-            const toggleRepliesBtn = wrapper.find('[data-test="toggle-replies-button"]');
+            const toggleRepliesBtn = wrapper.find(
+                '[data-test="toggle-replies-button"]',
+            );
             expect(toggleRepliesBtn.exists()).toBe(true);
             expect(toggleRepliesBtn.text()).toContain('View 1 reply');
 
             // Replies container collapsed initially
-            expect(wrapper.find('[data-test="comment-replies-container"]').exists()).toBe(false);
+            expect(
+                wrapper
+                    .find('[data-test="comment-replies-container"]')
+                    .exists(),
+            ).toBe(false);
 
             // Expand replies
             await toggleRepliesBtn.trigger('click');
             expect(toggleRepliesBtn.text()).toContain('Hide replies');
 
-            const repliesContainer = wrapper.find('[data-test="comment-replies-container"]');
+            const repliesContainer = wrapper.find(
+                '[data-test="comment-replies-container"]',
+            );
             expect(repliesContainer.exists()).toBe(true);
             expect(repliesContainer.text()).toContain('david.kim');
-            expect(repliesContainer.text()).toContain('Step 2 applies the subnet mask.');
+            expect(repliesContainer.text()).toContain(
+                'Step 2 applies the subnet mask.',
+            );
 
             // Collapse replies
             await toggleRepliesBtn.trigger('click');
             expect(toggleRepliesBtn.text()).toContain('View 1 reply');
-            expect(wrapper.find('[data-test="comment-replies-container"]').exists()).toBe(false);
+            expect(
+                wrapper
+                    .find('[data-test="comment-replies-container"]')
+                    .exists(),
+            ).toBe(false);
         });
 
         it('sets replyingTo state when clicking Reply, shows indicator pill, and sends parent_id via JSON', async () => {
@@ -905,7 +926,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Replying-to pill not present initially
-            expect(wrapper.find('[data-test="replying-to-indicator"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="replying-to-indicator"]').exists(),
+            ).toBe(false);
 
             // Click reply button on comment
             const replyBtn = wrapper.find('[data-test="comment-reply-button"]');
@@ -913,12 +936,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await replyBtn.trigger('click');
 
             // Replying to indicator appears
-            const indicator = wrapper.find('[data-test="replying-to-indicator"]');
+            const indicator = wrapper.find(
+                '[data-test="replying-to-indicator"]',
+            );
             expect(indicator.exists()).toBe(true);
             expect(indicator.text()).toContain('Replying to @marcus.vance');
 
             // Type reply
-            const input = wrapper.find('input[placeholder="Reply to @marcus.vance…"]');
+            const input = wrapper.find(
+                'input[placeholder="Reply to @marcus.vance…"]',
+            );
             expect(input.exists()).toBe(true);
             await input.setValue('Got it, thank you!');
 
@@ -940,7 +967,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Replying indicator dismissed after submit
-            expect(wrapper.find('[data-test="replying-to-indicator"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="replying-to-indicator"]').exists(),
+            ).toBe(false);
         });
 
         it('optimistically toggles like on comment and reply with debounced background sync', async () => {
@@ -999,7 +1028,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Comment like button
-            const commentLikeBtn = wrapper.find('[data-test="comment-like-button"]');
+            const commentLikeBtn = wrapper.find(
+                '[data-test="comment-like-button"]',
+            );
             expect(commentLikeBtn.exists()).toBe(true);
 
             // Click like on comment (optimistic +1)
@@ -1017,10 +1048,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Expand replies to test reply like
-            const toggleRepliesBtn = wrapper.find('[data-test="toggle-replies-button"]');
+            const toggleRepliesBtn = wrapper.find(
+                '[data-test="toggle-replies-button"]',
+            );
             await toggleRepliesBtn.trigger('click');
 
-            const replyLikeBtn = wrapper.find('[data-test="reply-like-button"]');
+            const replyLikeBtn = wrapper.find(
+                '[data-test="reply-like-button"]',
+            );
             expect(replyLikeBtn.exists()).toBe(true);
 
             mockAxiosPost.mockResolvedValueOnce({
@@ -1048,14 +1083,18 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            expect(wrapper.find('[data-test="community-story-modal"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-modal"]').exists(),
+            ).toBe(false);
 
             const addStoryBtn = wrapper.find('button[title="Add to story"]');
             expect(addStoryBtn.exists()).toBe(true);
 
             await addStoryBtn.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-modal"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-modal"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('Create MyDay Story');
         });
 
@@ -1089,9 +1128,13 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(false);
 
-            const storyItems = wrapper.findAll('.group.flex.shrink-0.cursor-pointer');
+            const storyItems = wrapper.findAll(
+                '.group.flex.shrink-0.cursor-pointer',
+            );
             const sarahStoryItem = storyItems.find((item) =>
                 item.text().includes('Sarah'),
             );
@@ -1099,12 +1142,22 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
             await sarahStoryItem!.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('Sarah Chen');
             expect(wrapper.text()).toContain('Study session in lounge');
-            expect(wrapper.find('[data-test="viewer-author-avatar"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="viewer-author-handle"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="viewer-story-options-button"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="viewer-author-avatar"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="viewer-author-handle"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-button"]')
+                    .exists(),
+            ).toBe(false);
         });
 
         it('shows all section students in the top story tray whether they have active stories or not', () => {
@@ -1194,7 +1247,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // "Your story" should display the image preview
-            const previewImg = wrapper.find('[data-test="your-story-preview-image"]');
+            const previewImg = wrapper.find(
+                '[data-test="your-story-preview-image"]',
+            );
             expect(previewImg.exists()).toBe(true);
             expect(previewImg.attributes('src')).toBe('/storage/my-story.jpg');
 
@@ -1247,32 +1302,54 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 .find((item) => item.text().includes('Your story'));
             await yourStoryItem!.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
 
             // Left header shows clean "Your story" title without avatar or handle
-            expect(wrapper.find('[data-test="viewer-author-avatar"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="viewer-author-handle"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="viewer-author-avatar"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="viewer-author-handle"]').exists(),
+            ).toBe(false);
             expect(wrapper.text()).toContain('Your story');
             expect(wrapper.text()).not.toContain('@alex.rivera');
 
             // Viewer header has 3-dots options button; dropdown is closed initially
-            const optionsBtn = wrapper.find('[data-test="viewer-story-options-button"]');
+            const optionsBtn = wrapper.find(
+                '[data-test="viewer-story-options-button"]',
+            );
             expect(optionsBtn.exists()).toBe(true);
-            expect(wrapper.find('[data-test="viewer-story-options-menu"]').exists()).toBe(false);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-menu"]')
+                    .exists(),
+            ).toBe(false);
 
             // Open 3-dots options menu
             await optionsBtn.trigger('click');
-            expect(wrapper.find('[data-test="viewer-story-options-menu"]').exists()).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-menu"]')
+                    .exists(),
+            ).toBe(true);
 
-            const viewerAddBtn = wrapper.find('[data-test="viewer-add-story-button"]');
+            const viewerAddBtn = wrapper.find(
+                '[data-test="viewer-add-story-button"]',
+            );
             expect(viewerAddBtn.exists()).toBe(true);
 
             // Click Add to story from viewer options menu
             await viewerAddBtn.trigger('click');
 
             // Story viewer closes and story upload modal opens
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="community-story-modal"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-modal"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('Create MyDay Story');
         });
 
@@ -1285,7 +1362,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             const feedTab = wrapper.find('[data-test="community-tab-all"]');
-            const sectionTab = wrapper.find('[data-test="community-tab-section"]');
+            const sectionTab = wrapper.find(
+                '[data-test="community-tab-section"]',
+            );
             const savedTab = wrapper.find('[data-test="community-tab-saved"]');
 
             expect(feedTab.classes()).toContain('text-brand');
@@ -1313,10 +1392,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                     likes_count: 0,
                     comments_count: 0,
                     author: {
-                        id: 2,
+                        id: '2',
                         name: 'Sarah Chen',
                         handle: 'sarah.chen',
                         is_same_section: true,
+                        is_masked: false,
+                        is_following: false,
                     },
                     comments: [],
                 },
@@ -1330,10 +1411,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                     likes_count: 0,
                     comments_count: 0,
                     author: {
-                        id: 3,
+                        id: '3',
                         name: 'Other Student',
                         handle: 'other.student',
                         is_same_section: false,
+                        is_masked: false,
+                        is_following: false,
                     },
                     comments: [],
                 },
@@ -1350,12 +1433,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(wrapper.findAll('article').length).toBe(2);
 
             // Click My Section tab -> immediately filters without waiting for network
-            const sectionTab = wrapper.find('[data-test="community-tab-section"]');
+            const sectionTab = wrapper.find(
+                '[data-test="community-tab-section"]',
+            );
             await sectionTab.trigger('click');
 
             expect(wrapper.findAll('article').length).toBe(1);
             expect(wrapper.text()).toContain('Section post');
-            expect(wrapper.text()).not.toContain('Saved post from other section');
+            expect(wrapper.text()).not.toContain(
+                'Saved post from other section',
+            );
 
             // Click Saved tab -> immediately filters bookmarked posts
             const savedTab = wrapper.find('[data-test="community-tab-saved"]');
@@ -1420,15 +1507,23 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 .find((item) => item.text().includes('Sarah'));
             await sarahStoryItem!.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
 
             // Viewer should display transparent glass reaction bar, play/pause button, and offset caption
-            const reactionsBar = wrapper.find('[data-test="story-reactions-bar"]');
+            const reactionsBar = wrapper.find(
+                '[data-test="story-reactions-bar"]',
+            );
             expect(reactionsBar.exists()).toBe(true);
             expect(reactionsBar.classes()).toContain('border-white/20');
             expect(reactionsBar.classes()).toContain('bg-black/40');
-            expect(wrapper.find('[data-test="viewer-reactions-count"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="viewer-play-pause-button"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="viewer-reactions-count"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="viewer-play-pause-button"]').exists(),
+            ).toBe(true);
 
             // All 6 outline reaction buttons exist and contain Lucide SVG icons
             const reactionButtons = reactionsBar.findAll('button');
@@ -1437,11 +1532,15 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 expect(btn.find('svg').exists()).toBe(true);
             }
 
-            const captionOverlay = wrapper.find('[data-test="story-caption-overlay"]');
+            const captionOverlay = wrapper.find(
+                '[data-test="story-caption-overlay"]',
+            );
             expect(captionOverlay.classes()).toContain('bottom-16');
 
             // Click heart reaction
-            const heartReactionBtn = wrapper.find('[data-test="story-reaction-❤️"]');
+            const heartReactionBtn = wrapper.find(
+                '[data-test="story-reaction-❤️"]',
+            );
             expect(heartReactionBtn.exists()).toBe(true);
 
             await heartReactionBtn.trigger('click');
@@ -1492,17 +1591,25 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 .find((item) => item.text().includes('Your story'));
             await yourStoryItem!.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
 
             // Author views reaction counter at lower-left, views count, play/pause & options button, but no reaction bar
-            const reactionsCounter = wrapper.find('[data-test="viewer-reactions-count"]');
+            const reactionsCounter = wrapper.find(
+                '[data-test="viewer-reactions-count"]',
+            );
             expect(reactionsCounter.exists()).toBe(true);
             expect(reactionsCounter.text()).toContain('5');
             expect(reactionsCounter.classes()).toContain('bottom-3.5');
             expect(reactionsCounter.classes()).toContain('left-3.5');
 
-            expect(wrapper.find('[data-test="viewer-views-count"]').exists()).toBe(true);
-            const playPauseBtn = wrapper.find('[data-test="viewer-play-pause-button"]');
+            expect(
+                wrapper.find('[data-test="viewer-views-count"]').exists(),
+            ).toBe(true);
+            const playPauseBtn = wrapper.find(
+                '[data-test="viewer-play-pause-button"]',
+            );
             expect(playPauseBtn.exists()).toBe(true);
             expect(playPauseBtn.attributes('title')).toBe('Pause story');
 
@@ -1513,12 +1620,22 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await playPauseBtn.trigger('click');
             expect(playPauseBtn.attributes('title')).toBe('Pause story');
 
-            expect(wrapper.find('[data-test="viewer-story-options-button"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="viewer-add-story-button"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="story-reactions-bar"]').exists()).toBe(false);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-button"]')
+                    .exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="viewer-add-story-button"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="story-reactions-bar"]').exists(),
+            ).toBe(false);
 
             // Caption overlay is positioned at bottom-14 above the reactions counter when viewing own story
-            const captionOverlay = wrapper.find('[data-test="story-caption-overlay"]');
+            const captionOverlay = wrapper.find(
+                '[data-test="story-caption-overlay"]',
+            );
             expect(captionOverlay.classes()).toContain('bottom-14');
         });
 
@@ -1570,11 +1687,15 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await yourStoryItem!.trigger('click');
 
             // Open 3-dots options menu
-            const optionsBtn = wrapper.find('[data-test="viewer-story-options-button"]');
+            const optionsBtn = wrapper.find(
+                '[data-test="viewer-story-options-button"]',
+            );
             expect(optionsBtn.exists()).toBe(true);
             await optionsBtn.trigger('click');
 
-            const featureBtn = wrapper.find('[data-test="viewer-feature-story-button"]');
+            const featureBtn = wrapper.find(
+                '[data-test="viewer-feature-story-button"]',
+            );
             expect(featureBtn.exists()).toBe(true);
 
             await featureBtn.trigger('click');
@@ -1587,8 +1708,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             );
 
-            expect(wrapper.find('[data-test="viewer-featured-toast"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="viewer-story-options-menu"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="viewer-featured-toast"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-menu"]')
+                    .exists(),
+            ).toBe(false);
         });
 
         it('toggles options menu and dismisses with Escape without closing viewer', async () => {
@@ -1630,24 +1757,44 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 .find((item) => item.text().includes('Your story'));
             await yourStoryItem!.trigger('click');
 
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
 
-            const optionsBtn = wrapper.find('[data-test="viewer-story-options-button"]');
+            const optionsBtn = wrapper.find(
+                '[data-test="viewer-story-options-button"]',
+            );
             await optionsBtn.trigger('click');
-            expect(wrapper.find('[data-test="viewer-story-options-menu"]').exists()).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-menu"]')
+                    .exists(),
+            ).toBe(true);
 
             // Press Escape to dismiss options menu
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
             await wrapper.vm.$nextTick();
 
             // Menu is dismissed, but story viewer stays open
-            expect(wrapper.find('[data-test="viewer-story-options-menu"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="viewer-story-options-menu"]')
+                    .exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(true);
 
             // Pressing Escape again closes viewer
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
             await wrapper.vm.$nextTick();
-            expect(wrapper.find('[data-test="community-story-viewer"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-viewer"]').exists(),
+            ).toBe(false);
         });
     });
 
@@ -1660,12 +1807,18 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             // Open story modal
             const addStoryBtn = wrapper.find('button[title="Add to story"]');
             await addStoryBtn.trigger('click');
-            expect(wrapper.find('[data-test="community-story-modal"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="story-dropzone"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-story-modal"]').exists(),
+            ).toBe(true);
+            expect(wrapper.find('[data-test="story-dropzone"]').exists()).toBe(
+                true,
+            );
 
             // Simulate file selection
             const fileInput = wrapper.find('[data-test="story-file-input"]');
-            const file = new File(['image-bytes'], 'vacation.jpg', { type: 'image/jpeg' });
+            const file = new File(['image-bytes'], 'vacation.jpg', {
+                type: 'image/jpeg',
+            });
             Object.defineProperty(fileInput.element, 'files', {
                 value: [file],
                 writable: true,
@@ -1673,18 +1826,30 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await fileInput.trigger('change');
 
             // Now live preview canvas should be rendered
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="story-preview-duration-badge"]').text()).toContain('5s');
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="story-preview-duration-badge"]')
+                    .text(),
+            ).toContain('5s');
 
             // Caption overlay is not rendered when caption is empty
-            expect(wrapper.find('[data-test="story-preview-caption"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="story-preview-caption"]').exists(),
+            ).toBe(false);
 
             // Type caption in input
-            const captionInput = wrapper.find('[data-test="story-caption-input"]');
+            const captionInput = wrapper.find(
+                '[data-test="story-caption-input"]',
+            );
             await captionInput.setValue('Sunset from my dorm window ✨');
 
             // Live caption is displayed immediately in overlay
-            const liveCaption = wrapper.find('[data-test="story-preview-caption"]');
+            const liveCaption = wrapper.find(
+                '[data-test="story-preview-caption"]',
+            );
             expect(liveCaption.exists()).toBe(true);
             expect(liveCaption.text()).toBe('Sunset from my dorm window ✨');
 
@@ -1694,7 +1859,11 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await dur10Btn.trigger('click');
 
             // Badge updates to 10s
-            expect(wrapper.find('[data-test="story-preview-duration-badge"]').text()).toContain('10s');
+            expect(
+                wrapper
+                    .find('[data-test="story-preview-duration-badge"]')
+                    .text(),
+            ).toContain('10s');
         });
 
         it('handles drag-and-drop file upload to dropzone', async () => {
@@ -1708,7 +1877,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             const dropzone = wrapper.find('[data-test="story-dropzone"]');
             expect(dropzone.exists()).toBe(true);
 
-            const file = new File(['fake-png'], 'design.png', { type: 'image/png' });
+            const file = new File(['fake-png'], 'design.png', {
+                type: 'image/png',
+            });
             await dropzone.trigger('dragover');
             await dropzone.trigger('drop', {
                 dataTransfer: {
@@ -1716,7 +1887,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
         });
 
         it('clears preview and revokes blob URL when clicking change media or closing modal', async () => {
@@ -1737,16 +1910,24 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
             await fileInput.trigger('change');
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
 
             // Click change media button
-            const changeMediaBtn = wrapper.find('[data-test="story-change-media"]');
+            const changeMediaBtn = wrapper.find(
+                '[data-test="story-change-media"]',
+            );
             expect(changeMediaBtn.exists()).toBe(true);
             await changeMediaBtn.trigger('click');
 
             expect(revokeSpy).toHaveBeenCalled();
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="story-dropzone"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(false);
+            expect(wrapper.find('[data-test="story-dropzone"]').exists()).toBe(
+                true,
+            );
 
             revokeSpy.mockRestore();
         });
@@ -1769,31 +1950,44 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
             await fileInput.trigger('change');
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
 
             // Close modal via Cancel button
-            const cancelBtn = wrapper.findAll('button').find((btn) => btn.text() === 'Cancel');
+            const cancelBtn = wrapper
+                .findAll('button')
+                .find((btn) => btn.text() === 'Cancel');
             expect(cancelBtn?.exists()).toBe(true);
             await cancelBtn!.trigger('click');
 
             expect(revokeSpy).toHaveBeenCalled();
-            expect(wrapper.find('[data-test="community-story-modal"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-story-modal"]').exists(),
+            ).toBe(false);
 
             revokeSpy.mockRestore();
         });
 
         it('handles video file and displays auto duration badge', async () => {
             const origCreateElement = document.createElement.bind(document);
-            const createElSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: any) => {
-                const el = origCreateElement(tagName, options);
-                if (tagName === 'video') {
-                    queueMicrotask(() => {
-                        Object.defineProperty(el, 'duration', { value: 12, configurable: true });
-                        (el as any).onloadedmetadata?.(new Event('loadedmetadata'));
-                    });
-                }
-                return el;
-            });
+            const createElSpy = vi
+                .spyOn(document, 'createElement')
+                .mockImplementation((tagName: string, options?: any) => {
+                    const el = origCreateElement(tagName, options);
+                    if (tagName === 'video') {
+                        queueMicrotask(() => {
+                            Object.defineProperty(el, 'duration', {
+                                value: 12,
+                                configurable: true,
+                            });
+                            (el as any).onloadedmetadata?.(
+                                new Event('loadedmetadata'),
+                            );
+                        });
+                    }
+                    return el;
+                });
 
             const wrapper = mount(Community, {
                 props: { workspace: null },
@@ -1803,7 +1997,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await addStoryBtn.trigger('click');
 
             const fileInput = wrapper.find('[data-test="story-file-input"]');
-            const videoFile = new File(['video-data'], 'clip.mp4', { type: 'video/mp4' });
+            const videoFile = new File(['video-data'], 'clip.mp4', {
+                type: 'video/mp4',
+            });
             Object.defineProperty(fileInput.element, 'files', {
                 value: [videoFile],
                 writable: true,
@@ -1811,7 +2007,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await fileInput.trigger('change');
             await nextTick();
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('Video Duration');
             expect(wrapper.text()).toContain('12s (auto)');
             expect(wrapper.find('video').exists()).toBe(true);
@@ -1821,15 +2019,17 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
         it('falls back to 15s duration when video metadata loading fails', async () => {
             const origCreateElement = document.createElement.bind(document);
-            const createElSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: any) => {
-                const el = origCreateElement(tagName, options);
-                if (tagName === 'video') {
-                    queueMicrotask(() => {
-                        (el as any).onerror?.(new Event('error'));
-                    });
-                }
-                return el;
-            });
+            const createElSpy = vi
+                .spyOn(document, 'createElement')
+                .mockImplementation((tagName: string, options?: any) => {
+                    const el = origCreateElement(tagName, options);
+                    if (tagName === 'video') {
+                        queueMicrotask(() => {
+                            (el as any).onerror?.(new Event('error'));
+                        });
+                    }
+                    return el;
+                });
 
             const wrapper = mount(Community, {
                 props: { workspace: null },
@@ -1839,7 +2039,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await addStoryBtn.trigger('click');
 
             const fileInput = wrapper.find('[data-test="story-file-input"]');
-            const videoFile = new File(['video-data'], 'clip.mp4', { type: 'video/mp4' });
+            const videoFile = new File(['video-data'], 'clip.mp4', {
+                type: 'video/mp4',
+            });
             Object.defineProperty(fileInput.element, 'files', {
                 value: [videoFile],
                 writable: true,
@@ -1847,7 +2049,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await fileInput.trigger('change');
             await nextTick();
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('15s (auto)');
 
             createElSpy.mockRestore();
@@ -1855,16 +2059,23 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
         it('shows error if video duration exceeds 30 seconds', async () => {
             const origCreateElement = document.createElement.bind(document);
-            const createElSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: any) => {
-                const el = origCreateElement(tagName, options);
-                if (tagName === 'video') {
-                    queueMicrotask(() => {
-                        Object.defineProperty(el, 'duration', { value: 45, configurable: true });
-                        (el as any).onloadedmetadata?.(new Event('loadedmetadata'));
-                    });
-                }
-                return el;
-            });
+            const createElSpy = vi
+                .spyOn(document, 'createElement')
+                .mockImplementation((tagName: string, options?: any) => {
+                    const el = origCreateElement(tagName, options);
+                    if (tagName === 'video') {
+                        queueMicrotask(() => {
+                            Object.defineProperty(el, 'duration', {
+                                value: 45,
+                                configurable: true,
+                            });
+                            (el as any).onloadedmetadata?.(
+                                new Event('loadedmetadata'),
+                            );
+                        });
+                    }
+                    return el;
+                });
 
             const wrapper = mount(Community, {
                 props: { workspace: null },
@@ -1874,7 +2085,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await addStoryBtn.trigger('click');
 
             const fileInput = wrapper.find('[data-test="story-file-input"]');
-            const videoFile = new File(['video-data'], 'long.mp4', { type: 'video/mp4' });
+            const videoFile = new File(['video-data'], 'long.mp4', {
+                type: 'video/mp4',
+            });
             Object.defineProperty(fileInput.element, 'files', {
                 value: [videoFile],
                 writable: true,
@@ -1882,7 +2095,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             await fileInput.trigger('change');
             await nextTick();
 
-            expect(wrapper.find('[data-test="story-live-preview"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="story-live-preview"]').exists(),
+            ).toBe(false);
             expect(wrapper.text()).toContain('cannot exceed 30 seconds');
 
             createElSpy.mockRestore();
@@ -1933,8 +2148,15 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             };
 
             const posts = [
-                createSamplePost({ id: 1, author: { id: '1', name: 'Alex Rivera' } }),
-                createSamplePost({ id: 2, content: 'Bob post', author: { id: '2', name: 'Bob Vance' } }),
+                createSamplePost({
+                    id: 1,
+                    author: { id: '1', name: 'Alex Rivera' },
+                }),
+                createSamplePost({
+                    id: 2,
+                    content: 'Bob post',
+                    author: { id: '2', name: 'Bob Vance' },
+                }),
             ];
 
             const wrapper = mount(Community, {
@@ -1945,19 +2167,31 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(articles.length).toBe(2);
 
             // Owned post has options button
-            expect(articles[0].find('[data-test="post-options-button"]').exists()).toBe(true);
+            expect(
+                articles[0].find('[data-test="post-options-button"]').exists(),
+            ).toBe(true);
             // Other student post does not have options button
-            expect(articles[1].find('[data-test="post-options-button"]').exists()).toBe(false);
+            expect(
+                articles[1].find('[data-test="post-options-button"]').exists(),
+            ).toBe(false);
 
             // Options menu is initially hidden
-            expect(articles[0].find('[data-test="post-options-menu"]').exists()).toBe(false);
+            expect(
+                articles[0].find('[data-test="post-options-menu"]').exists(),
+            ).toBe(false);
 
             // Click options button to toggle menu
-            await articles[0].find('[data-test="post-options-button"]').trigger('click');
+            await articles[0]
+                .find('[data-test="post-options-button"]')
+                .trigger('click');
             const menu = articles[0].find('[data-test="post-options-menu"]');
             expect(menu.exists()).toBe(true);
-            expect(menu.find('[data-test="edit-post-button"]').exists()).toBe(true);
-            expect(menu.find('[data-test="delete-post-button"]').exists()).toBe(true);
+            expect(menu.find('[data-test="edit-post-button"]').exists()).toBe(
+                true,
+            );
+            expect(menu.find('[data-test="delete-post-button"]').exists()).toBe(
+                true,
+            );
 
             // Re-mount as admin: options button is rendered for other student post too
             mockPageProps = {
@@ -1967,8 +2201,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 props: { workspace: null, posts },
             });
             const adminArticles = adminWrapper.findAll('article');
-            expect(adminArticles[0].find('[data-test="post-options-button"]').exists()).toBe(true);
-            expect(adminArticles[1].find('[data-test="post-options-button"]').exists()).toBe(true);
+            expect(
+                adminArticles[0]
+                    .find('[data-test="post-options-button"]')
+                    .exists(),
+            ).toBe(true);
+            expect(
+                adminArticles[1]
+                    .find('[data-test="post-options-button"]')
+                    .exists(),
+            ).toBe(true);
         });
 
         it('updates post content via PUT /community/posts/{id} when editing post inline', async () => {
@@ -1983,15 +2225,21 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Open menu and click Edit
-            await wrapper.find('[data-test="post-options-button"]').trigger('click');
-            await wrapper.find('[data-test="edit-post-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="post-options-button"]')
+                .trigger('click');
+            await wrapper
+                .find('[data-test="edit-post-button"]')
+                .trigger('click');
 
             // Inline edit form is displayed
             const editForm = wrapper.find('[data-test="post-edit-form"]');
             expect(editForm.exists()).toBe(true);
 
             const textarea = wrapper.find('[data-test="post-edit-textarea"]');
-            expect((textarea.element as HTMLTextAreaElement).value).toBe('Initial text');
+            expect((textarea.element as HTMLTextAreaElement).value).toBe(
+                'Initial text',
+            );
 
             await textarea.setValue('Updated post content by author');
 
@@ -2006,7 +2254,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            await wrapper.find('[data-test="save-post-edit-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="save-post-edit-button"]')
+                .trigger('click');
 
             expect(mockAxiosPut).toHaveBeenCalledWith(
                 '/community/posts/10',
@@ -2020,8 +2270,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Edit form closed and updated content rendered in feed
-            expect(wrapper.find('[data-test="post-edit-form"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="post-content"]').text()).toBe('Updated post content by author');
+            expect(wrapper.find('[data-test="post-edit-form"]').exists()).toBe(
+                false,
+            );
+            expect(wrapper.find('[data-test="post-content"]').text()).toBe(
+                'Updated post content by author',
+            );
         });
 
         it('opens post delete modal and removes post via DELETE /community/posts/{id}', async () => {
@@ -2029,15 +2283,22 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 auth: { user: studentUser },
             };
 
-            const post = createSamplePost({ id: 20, content: 'Post to be deleted' });
+            const post = createSamplePost({
+                id: 20,
+                content: 'Post to be deleted',
+            });
 
             const wrapper = mount(Community, {
                 props: { workspace: null, posts: [post] },
             });
 
             // Open menu and click Delete
-            await wrapper.find('[data-test="post-options-button"]').trigger('click');
-            await wrapper.find('[data-test="delete-post-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="post-options-button"]')
+                .trigger('click');
+            await wrapper
+                .find('[data-test="delete-post-button"]')
+                .trigger('click');
 
             // Confirmation modal is open
             const modal = wrapper.find('[data-test="delete-post-modal"]');
@@ -2045,19 +2306,29 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(modal.text()).toContain('Delete Post');
 
             // Cancel deletion
-            await wrapper.find('[data-test="cancel-delete-post-button"]').trigger('click');
-            expect(wrapper.find('[data-test="delete-post-modal"]').exists()).toBe(false);
+            await wrapper
+                .find('[data-test="cancel-delete-post-button"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="delete-post-modal"]').exists(),
+            ).toBe(false);
             expect(wrapper.find('article').exists()).toBe(true);
 
             // Re-open and confirm deletion
-            await wrapper.find('[data-test="post-options-button"]').trigger('click');
-            await wrapper.find('[data-test="delete-post-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="post-options-button"]')
+                .trigger('click');
+            await wrapper
+                .find('[data-test="delete-post-button"]')
+                .trigger('click');
 
             mockAxiosDelete.mockResolvedValueOnce({
                 data: { status: 'deleted' },
             });
 
-            await wrapper.find('[data-test="confirm-delete-post-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="confirm-delete-post-button"]')
+                .trigger('click');
 
             expect(mockAxiosDelete).toHaveBeenCalledWith(
                 '/community/posts/20',
@@ -2067,7 +2338,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Modal closed and post removed from display
-            expect(wrapper.find('[data-test="delete-post-modal"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="delete-post-modal"]').exists(),
+            ).toBe(false);
             expect(wrapper.find('article').exists()).toBe(false);
         });
 
@@ -2132,29 +2405,51 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Expand replies on comment 101
-            await wrapper.find('[data-test="toggle-replies-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="toggle-replies-button"]')
+                .trigger('click');
 
             const comments = wrapper.findAll('[data-test="comment-item"]');
             expect(comments.length).toBe(2);
 
             // Owned comment 101 has edit & delete
-            expect(comments[0].find('[data-test="comment-edit-button"]').exists()).toBe(true);
-            expect(comments[0].find('[data-test="comment-delete-button"]').exists()).toBe(true);
+            expect(
+                comments[0].find('[data-test="comment-edit-button"]').exists(),
+            ).toBe(true);
+            expect(
+                comments[0]
+                    .find('[data-test="comment-delete-button"]')
+                    .exists(),
+            ).toBe(true);
 
             // Unowned comment 102 on another user's post does not have edit & delete
-            expect(comments[1].find('[data-test="comment-edit-button"]').exists()).toBe(false);
-            expect(comments[1].find('[data-test="comment-delete-button"]').exists()).toBe(false);
+            expect(
+                comments[1].find('[data-test="comment-edit-button"]').exists(),
+            ).toBe(false);
+            expect(
+                comments[1]
+                    .find('[data-test="comment-delete-button"]')
+                    .exists(),
+            ).toBe(false);
 
             const replies = wrapper.findAll('[data-test="reply-item"]');
             expect(replies.length).toBe(2);
 
             // Owned reply 201 has edit & delete
-            expect(replies[0].find('[data-test="reply-edit-button"]').exists()).toBe(true);
-            expect(replies[0].find('[data-test="reply-delete-button"]').exists()).toBe(true);
+            expect(
+                replies[0].find('[data-test="reply-edit-button"]').exists(),
+            ).toBe(true);
+            expect(
+                replies[0].find('[data-test="reply-delete-button"]').exists(),
+            ).toBe(true);
 
             // Unowned reply 202 on another user's post does not have edit & delete
-            expect(replies[1].find('[data-test="reply-edit-button"]').exists()).toBe(false);
-            expect(replies[1].find('[data-test="reply-delete-button"]').exists()).toBe(false);
+            expect(
+                replies[1].find('[data-test="reply-edit-button"]').exists(),
+            ).toBe(false);
+            expect(
+                replies[1].find('[data-test="reply-delete-button"]').exists(),
+            ).toBe(false);
         });
 
         it('allows post owner to delete comments and replies by others on their post while hiding edit button', async () => {
@@ -2199,17 +2494,27 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Expand replies on comment 101
-            await wrapper.find('[data-test="toggle-replies-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="toggle-replies-button"]')
+                .trigger('click');
 
             const comment = wrapper.find('[data-test="comment-item"]');
             // Post owner CAN delete Bob's comment, but CANNOT edit it
-            expect(comment.find('[data-test="comment-edit-button"]').exists()).toBe(false);
-            expect(comment.find('[data-test="comment-delete-button"]').exists()).toBe(true);
+            expect(
+                comment.find('[data-test="comment-edit-button"]').exists(),
+            ).toBe(false);
+            expect(
+                comment.find('[data-test="comment-delete-button"]').exists(),
+            ).toBe(true);
 
             const reply = wrapper.find('[data-test="reply-item"]');
             // Post owner CAN delete Carol's reply, but CANNOT edit it
-            expect(reply.find('[data-test="reply-edit-button"]').exists()).toBe(false);
-            expect(reply.find('[data-test="reply-delete-button"]').exists()).toBe(true);
+            expect(reply.find('[data-test="reply-edit-button"]').exists()).toBe(
+                false,
+            );
+            expect(
+                reply.find('[data-test="reply-delete-button"]').exists(),
+            ).toBe(true);
         });
 
         it('edits comment inline and saves via PUT /community/comments/{id}', async () => {
@@ -2238,13 +2543,17 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             // Click edit comment button
-            await wrapper.find('[data-test="comment-edit-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="comment-edit-button"]')
+                .trigger('click');
 
             const editForm = wrapper.find('[data-test="comment-edit-form"]');
             expect(editForm.exists()).toBe(true);
 
             const input = wrapper.find('[data-test="comment-edit-input"]');
-            expect((input.element as HTMLInputElement).value).toBe('Initial comment content');
+            expect((input.element as HTMLInputElement).value).toBe(
+                'Initial comment content',
+            );
 
             await input.setValue('Edited comment content via test');
 
@@ -2258,7 +2567,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            await wrapper.find('[data-test="save-comment-edit-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="save-comment-edit-button"]')
+                .trigger('click');
 
             expect(mockAxiosPut).toHaveBeenCalledWith(
                 '/community/comments/301',
@@ -2267,8 +2578,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Form closed, updated comment rendered
-            expect(wrapper.find('[data-test="comment-edit-form"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="comment-content"]').text()).toBe('Edited comment content via test');
+            expect(
+                wrapper.find('[data-test="comment-edit-form"]').exists(),
+            ).toBe(false);
+            expect(wrapper.find('[data-test="comment-content"]').text()).toBe(
+                'Edited comment content via test',
+            );
         });
 
         it('deletes comment and decrements counter by 1 plus its nested replies via DELETE /community/comments/{id}', async () => {
@@ -2313,16 +2628,24 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 props: { workspace: null, posts: [post] },
             });
 
-            expect(wrapper.find('[data-test="post-comments-count"]').text()).toBe('3');
-            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="post-comments-count"]').text(),
+            ).toBe('3');
+            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(
+                true,
+            );
 
             mockAxiosDelete.mockResolvedValueOnce({
                 data: { status: 'deleted' },
             });
 
-            await wrapper.find('[data-test="comment-delete-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="comment-delete-button"]')
+                .trigger('click');
 
-            expect(wrapper.find('[data-test="delete-comment-modal"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="delete-comment-modal"]').exists(),
+            ).toBe(true);
 
             await wrapper
                 .find('[data-test="confirm-delete-comment-button"]')
@@ -2334,8 +2657,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Comment removed and count decremented by 1 + 2 = 3
-            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="post-comments-count"]').text()).toBe('0');
+            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(
+                false,
+            );
+            expect(
+                wrapper.find('[data-test="post-comments-count"]').text(),
+            ).toBe('0');
         });
 
         it('closes delete confirmation modal on cancel click without deleting', async () => {
@@ -2363,13 +2690,23 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 props: { workspace: null, posts: [post] },
             });
 
-            await wrapper.find('[data-test="comment-delete-button"]').trigger('click');
-            expect(wrapper.find('[data-test="delete-comment-modal"]').exists()).toBe(true);
+            await wrapper
+                .find('[data-test="comment-delete-button"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="delete-comment-modal"]').exists(),
+            ).toBe(true);
 
-            await wrapper.find('[data-test="cancel-delete-comment-button"]').trigger('click');
-            expect(wrapper.find('[data-test="delete-comment-modal"]').exists()).toBe(false);
+            await wrapper
+                .find('[data-test="cancel-delete-comment-button"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="delete-comment-modal"]').exists(),
+            ).toBe(false);
             expect(mockAxiosDelete).not.toHaveBeenCalled();
-            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(true);
+            expect(wrapper.find('[data-test="comment-item"]').exists()).toBe(
+                true,
+            );
         });
 
         it('deletes threaded reply and decrements counter by 1 via DELETE /community/comments/{id}', async () => {
@@ -2408,19 +2745,29 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 props: { workspace: null, posts: [post] },
             });
 
-            expect(wrapper.find('[data-test="post-comments-count"]').text()).toBe('2');
+            expect(
+                wrapper.find('[data-test="post-comments-count"]').text(),
+            ).toBe('2');
 
             // Expand replies
-            await wrapper.find('[data-test="toggle-replies-button"]').trigger('click');
-            expect(wrapper.find('[data-test="reply-item"]').exists()).toBe(true);
+            await wrapper
+                .find('[data-test="toggle-replies-button"]')
+                .trigger('click');
+            expect(wrapper.find('[data-test="reply-item"]').exists()).toBe(
+                true,
+            );
 
             mockAxiosDelete.mockResolvedValueOnce({
                 data: { status: 'deleted' },
             });
 
-            await wrapper.find('[data-test="reply-delete-button"]').trigger('click');
+            await wrapper
+                .find('[data-test="reply-delete-button"]')
+                .trigger('click');
 
-            expect(wrapper.find('[data-test="delete-comment-modal"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="delete-comment-modal"]').exists(),
+            ).toBe(true);
 
             await wrapper
                 .find('[data-test="confirm-delete-comment-button"]')
@@ -2432,8 +2779,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
 
             // Reply removed and count decremented by 1
-            expect(wrapper.find('[data-test="reply-item"]').exists()).toBe(false);
-            expect(wrapper.find('[data-test="post-comments-count"]').text()).toBe('1');
+            expect(wrapper.find('[data-test="reply-item"]').exists()).toBe(
+                false,
+            );
+            expect(
+                wrapper.find('[data-test="post-comments-count"]').text(),
+            ).toBe('1');
         });
     });
 
@@ -2573,7 +2924,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            const section = wrapper.find('[data-test="featured-highlights-section"]');
+            const section = wrapper.find(
+                '[data-test="featured-highlights-section"]',
+            );
             expect(section.exists()).toBe(true);
             expect(section.text()).toContain('Featured');
             expect(section.text()).toContain('2/6');
@@ -2584,11 +2937,19 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(items[1].text()).toContain('Robotics Demo');
             expect(items[1].text()).toContain('Video');
 
-            expect(wrapper.find('[data-test="add-featured-trigger"]').exists()).toBe(true);
-            expect(wrapper.find('[data-test="add-featured-slot"]').exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="add-featured-trigger"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="add-featured-slot"]').exists(),
+            ).toBe(true);
 
-            await wrapper.find('[data-test="add-featured-trigger"]').trigger('click');
-            expect(wrapper.find('[data-test="add-featured-modal"]').exists()).toBe(true);
+            await wrapper
+                .find('[data-test="add-featured-trigger"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="add-featured-modal"]').exists(),
+            ).toBe(true);
             expect(wrapper.text()).toContain('Add to Featured');
         });
 
@@ -2613,7 +2974,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            expect(wrapper.find('[data-test="featured-lightbox"]').exists()).toBe(false);
+            expect(
+                wrapper.find('[data-test="featured-lightbox"]').exists(),
+            ).toBe(false);
 
             await wrapper.find('[data-test="featured-item"]').trigger('click');
 
@@ -2653,18 +3016,26 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 props: { profile: selfProfile },
             });
 
-            await wrapper.find('[data-test="add-featured-trigger"]').trigger('click');
-            expect(wrapper.find('[data-test="add-featured-modal"]').exists()).toBe(true);
+            await wrapper
+                .find('[data-test="add-featured-trigger"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="add-featured-modal"]').exists(),
+            ).toBe(true);
 
             // Switch to Story Archive tab
-            const archiveTab = wrapper.find('[data-test="featured-source-archive"]');
+            const archiveTab = wrapper.find(
+                '[data-test="featured-source-archive"]',
+            );
             expect(archiveTab.exists()).toBe(true);
             await archiveTab.trigger('click');
 
             // Wait for archive stories to load
             await flushPromises();
 
-            expect(mockAxiosGet).toHaveBeenCalledWith('/community/stories/archive');
+            expect(mockAxiosGet).toHaveBeenCalledWith(
+                '/community/stories/archive',
+            );
             expect(wrapper.text()).toContain('Archived Hackathon Photo');
             expect(wrapper.text()).toContain('Expired');
 
@@ -2675,10 +3046,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
             // Title input defaults to caption
             const titleInput = wrapper.find('input[type="text"]');
-            expect((titleInput.element as HTMLInputElement).value).toBe('Archived Hackathon Photo');
+            expect((titleInput.element as HTMLInputElement).value).toBe(
+                'Archived Hackathon Photo',
+            );
 
             // Save button should be enabled
-            const saveBtn = wrapper.find('[data-test="confirm-add-featured-button"]');
+            const saveBtn = wrapper.find(
+                '[data-test="confirm-add-featured-button"]',
+            );
             expect(saveBtn.attributes('disabled')).toBeUndefined();
         });
     });

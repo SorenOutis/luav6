@@ -409,7 +409,8 @@ const handleFeaturedFileChange = (e: Event) => {
 const handleUploadFeatured = () => {
     if (addFeaturedSource.value === 'archive') {
         if (!selectedArchivedStory.value) {
-            featuredUploadError.value = 'Please select a story from your archive.';
+            featuredUploadError.value =
+                'Please select a story from your archive.';
             return;
         }
 
@@ -420,7 +421,10 @@ const handleUploadFeatured = () => {
             '/community/profile/featured',
             {
                 story_id: selectedArchivedStory.value.id,
-                title: featuredTitle.value.trim() || selectedArchivedStory.value.caption || undefined,
+                title:
+                    featuredTitle.value.trim() ||
+                    selectedArchivedStory.value.caption ||
+                    undefined,
             },
             {
                 preserveScroll: true,
@@ -1490,10 +1494,14 @@ onBeforeUnmount(() => {
                                 <UploadCloud class="h-6 w-6" />
                             </div>
                             <div>
-                                <p class="text-xs font-semibold text-foreground">
+                                <p
+                                    class="text-xs font-semibold text-foreground"
+                                >
                                     Choose a photo or video
                                 </p>
-                                <p class="mt-0.5 text-[11px] text-muted-foreground">
+                                <p
+                                    class="mt-0.5 text-[11px] text-muted-foreground"
+                                >
                                     Images up to 10MB · MP4/WebM up to 30MB
                                 </p>
                             </div>
@@ -1546,18 +1554,24 @@ onBeforeUnmount(() => {
                             v-else-if="archivedStories.length === 0"
                             class="rounded-2xl border border-dashed border-border/80 bg-muted/20 p-8 text-center"
                         >
-                            <Clock class="mx-auto h-8 w-8 text-muted-foreground/60" />
-                            <p class="mt-2 text-xs font-semibold text-foreground">
+                            <Clock
+                                class="mx-auto h-8 w-8 text-muted-foreground/60"
+                            />
+                            <p
+                                class="mt-2 text-xs font-semibold text-foreground"
+                            >
                                 No stories in your archive yet
                             </p>
                             <p class="mt-0.5 text-[11px] text-muted-foreground">
-                                Stories you post are automatically preserved here even after their 24h expiration.
+                                Stories you post are automatically preserved
+                                here even after their 24h expiration.
                             </p>
                         </div>
 
                         <div v-else class="max-h-64 overflow-y-auto pr-1">
                             <p class="mb-2 text-[11px] text-muted-foreground">
-                                Select an active or expired story to pin to your featured highlights:
+                                Select an active or expired story to pin to your
+                                featured highlights:
                             </p>
                             <div class="grid grid-cols-3 gap-2">
                                 <div
@@ -1587,18 +1601,27 @@ onBeforeUnmount(() => {
                                         <div
                                             class="absolute inset-0 flex items-center justify-center bg-black/30"
                                         >
-                                            <Play class="h-4 w-4 fill-white text-white" />
+                                            <Play
+                                                class="h-4 w-4 fill-white text-white"
+                                            />
                                         </div>
                                     </div>
 
                                     <span
                                         class="absolute top-1 left-1 rounded bg-black/70 px-1 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs"
                                     >
-                                        {{ story.is_expired ? 'Expired' : 'Active' }}
+                                        {{
+                                            story.is_expired
+                                                ? 'Expired'
+                                                : 'Active'
+                                        }}
                                     </span>
 
                                     <div
-                                        v-if="selectedArchivedStory?.id === story.id"
+                                        v-if="
+                                            selectedArchivedStory?.id ===
+                                            story.id
+                                        "
                                         class="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-primary-foreground shadow-sm"
                                     >
                                         <Check class="h-3 w-3 stroke-[3]" />
