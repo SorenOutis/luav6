@@ -24,7 +24,11 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CommunityCommentController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\CommunityPostController;
+use App\Http\Controllers\CommunityProfileFeaturedController;
+use App\Http\Controllers\CommunityStoryController;
 use App\Http\Controllers\CookiePolicyController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
@@ -133,6 +137,63 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('community', [CommunityController::class, 'index'])
         ->middleware('student.page:community')
         ->name('community.index');
+    Route::get('community/presence', [CommunityController::class, 'presence'])
+        ->middleware('student.page:community')
+        ->name('community.presence');
+    Route::get('community/users/{user:public_id}/preview', [CommunityController::class, 'userPreview'])
+        ->middleware('student.page:community')
+        ->name('community.users.preview');
+    Route::get('community/u/{user:public_id}', [CommunityController::class, 'userProfile'])
+        ->middleware('student.page:community')
+        ->name('community.users.show');
+    Route::post('community/posts', [CommunityPostController::class, 'store'])
+        ->middleware('student.page:community')
+        ->name('community.posts.store');
+    Route::post('community/posts/{post}/like', [CommunityPostController::class, 'toggleLike'])
+        ->middleware('student.page:community')
+        ->name('community.posts.like');
+    Route::post('community/posts/{post}/bookmark', [CommunityPostController::class, 'toggleBookmark'])
+        ->middleware('student.page:community')
+        ->name('community.posts.bookmark');
+    Route::match(['put', 'patch'], 'community/posts/{post}', [CommunityPostController::class, 'update'])
+        ->middleware('student.page:community')
+        ->name('community.posts.update');
+    Route::delete('community/posts/{post}', [CommunityPostController::class, 'destroy'])
+        ->middleware('student.page:community')
+        ->name('community.posts.destroy');
+    Route::post('community/posts/{post}/comments', [CommunityCommentController::class, 'store'])
+        ->middleware('student.page:community')
+        ->name('community.posts.comments.store');
+    Route::post('community/comments/{comment}/like', [CommunityCommentController::class, 'toggleLike'])
+        ->middleware('student.page:community')
+        ->name('community.comments.like');
+    Route::match(['put', 'patch'], 'community/comments/{comment}', [CommunityCommentController::class, 'update'])
+        ->middleware('student.page:community')
+        ->name('community.comments.update');
+    Route::delete('community/comments/{comment}', [CommunityCommentController::class, 'destroy'])
+        ->middleware('student.page:community')
+        ->name('community.comments.destroy');
+    Route::post('community/stories', [CommunityStoryController::class, 'store'])
+        ->middleware('student.page:community')
+        ->name('community.stories.store');
+    Route::get('community/stories/archive', [CommunityStoryController::class, 'archive'])
+        ->middleware('student.page:community')
+        ->name('community.stories.archive');
+    Route::post('community/stories/{story}/view', [CommunityStoryController::class, 'view'])
+        ->middleware('student.page:community')
+        ->name('community.stories.view');
+    Route::post('community/stories/{story}/reactions', [CommunityStoryController::class, 'react'])
+        ->middleware('student.page:community')
+        ->name('community.stories.react');
+    Route::delete('community/stories/{story}', [CommunityStoryController::class, 'destroy'])
+        ->middleware('student.page:community')
+        ->name('community.stories.destroy');
+    Route::post('community/profile/featured', [CommunityProfileFeaturedController::class, 'store'])
+        ->middleware('student.page:community')
+        ->name('community.profile.featured.store');
+    Route::delete('community/profile/featured/{featured}', [CommunityProfileFeaturedController::class, 'destroy'])
+        ->middleware('student.page:community')
+        ->name('community.profile.featured.destroy');
 
     Route::get('calendar', CalendarController::class)
         ->middleware('student.page:calendar')

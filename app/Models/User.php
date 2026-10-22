@@ -13,6 +13,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
@@ -404,6 +405,31 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function profileMusicTrack(): BelongsTo
     {
         return $this->belongsTo(ProfileMusicTrack::class, 'profile_music_track_id');
+    }
+
+    public function communityPosts(): HasMany
+    {
+        return $this->hasMany(CommunityPost::class);
+    }
+
+    public function communityLikes(): HasMany
+    {
+        return $this->hasMany(CommunityPostLike::class);
+    }
+
+    public function communityBookmarks(): HasMany
+    {
+        return $this->hasMany(CommunityPostBookmark::class);
+    }
+
+    public function communityStories(): HasMany
+    {
+        return $this->hasMany(CommunityStory::class);
+    }
+
+    public function communityFeatured(): HasMany
+    {
+        return $this->hasMany(CommunityProfileFeatured::class)->orderBy('sort_order');
     }
 
     public function sections()

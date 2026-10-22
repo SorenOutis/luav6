@@ -68,6 +68,8 @@ trait BelongsToWorkspace
                 'ai_budget_events',
                 'ai_essay_feedback_drafts',
                 'ai_review_events',
+                'community_posts',
+                'community_stories',
             ], true);
 
             // Importers and tests may provide only the legacy creator. Resolve
