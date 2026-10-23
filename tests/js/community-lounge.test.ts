@@ -3169,7 +3169,7 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
     });
 
     describe('CommunityLocked.vue locked gate', () => {
-        it('renders the invite-only locked gate with student name and workspace name', () => {
+        it('renders the clean invite-only locked gate without workspace noise', () => {
             const wrapper = mount(CommunityLocked, {
                 props: {
                     workspaceName: 'Engineering Campus',
@@ -3180,9 +3180,8 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             });
 
             expect(wrapper.text()).toContain('Community Lounge is Invite-Only');
-            expect(wrapper.text()).toContain('Engineering Campus');
-            expect(wrapper.text()).toContain('Jordan Lee');
-            expect(wrapper.text()).toContain('jordan@school.edu');
+            expect(wrapper.text()).not.toContain('Engineering Campus');
+            expect(wrapper.text()).not.toContain('jordan@school.edu');
             expect(wrapper.find('input[type="text"]').exists()).toBe(true);
             expect(wrapper.find('button[type="submit"]').text()).toContain(
                 'Unlock Lounge',
