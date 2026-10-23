@@ -54,17 +54,7 @@ const debug = (...args: unknown[]) => {
     if (DEV) console.log(...args);
 };
 
-// Delay before the global loader appears, so in-button spinners are visible first.
-const GLOBAL_LOADER_DELAY_MS = 250;
 let pendingShowTimer: ReturnType<typeof setTimeout> | null = null;
-
-const showDeferred = (message: string) => {
-    if (pendingShowTimer) clearTimeout(pendingShowTimer);
-    pendingShowTimer = setTimeout(() => {
-        show(message);
-        pendingShowTimer = null;
-    }, GLOBAL_LOADER_DELAY_MS);
-};
 
 const cancelPendingShow = () => {
     if (pendingShowTimer) {
@@ -161,10 +151,10 @@ router.on('start', (event) => {
     );
 
     if (isAuthFlow) {
-        showDeferred('Signing in...');
+        show('Signing in...');
     } else if (isLogout) {
         clearUserStorage();
-        showDeferred('Signing out...');
+        show('Signing out...');
     }
 });
 

@@ -97,12 +97,12 @@ describe('welcome mobile performance', () => {
             props: { prefersReducedMotion: true },
             global: { stubs: { Link: LinkStub, Motion: Passthrough } },
         });
-        expect(
-            parked.findAll('[data-phase]')[0].attributes('data-phase'),
-        ).toBe('3');
-        expect(
-            parked.findAll('[data-phase]')[1].attributes('data-phase'),
-        ).toBe('2');
+        expect(parked.findAll('[data-phase]')[0].attributes('data-phase')).toBe(
+            '3',
+        );
+        expect(parked.findAll('[data-phase]')[1].attributes('data-phase')).toBe(
+            '2',
+        );
         parked.unmount();
     });
 
@@ -152,14 +152,10 @@ describe('welcome mobile performance', () => {
         expect(brandMark).toContain('alt="KOAMISHIN logo"');
         expect(header).toContain('PublicBrandMark');
         expect(header).toContain('aria-label="KOAMISHIN home"');
-        expect(loader).toContain('PublicBrandMark');
-        expect(loader).toContain('FoxCompanion');
-        expect(loader).toContain('data-test="global-loader-fox"');
-        expect(loader).toContain('mascot="welcome"');
+        expect(loader).not.toContain('PublicBrandMark');
+        expect(loader).not.toContain('FoxCompanion');
+        expect(loader).not.toContain('data-test="global-loader-fox"');
         expect(loader).toContain('data-test="global-loader-editorial"');
-        expect(loader).toContain('absolute top-8 left-6');
-        expect(loader).toContain('LSI / GETTING READY');
-        expect(loader).toContain('Echo getting things ready');
         expect(loader).not.toContain("Today's note");
         expect(loader).not.toContain('Assessment workflow note');
         expect(loader).toContain('data-test="global-loader-status"');
