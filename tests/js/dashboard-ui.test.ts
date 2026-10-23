@@ -202,6 +202,29 @@ describe('dashboard student shell', () => {
         expect(wrapper.findAll('.dash-metric')).toHaveLength(1);
         expect(text).not.toContain('Mo');
         expect(text).not.toContain('Tu');
+        wrapper.unmount();
+    });
+
+    it('renders horizontal compact streak card matching mobile reward proportion', () => {
+        const wrapper = mount(StreakCard, {
+            props: {
+                currentStreak: 5,
+                longestStreak: 30,
+                loginDates: [],
+                compact: true,
+            },
+        });
+
+        expect(wrapper.classes()).toContain('mobile-streak-card');
+        expect(wrapper.find('.mobile-streak-card__icon').exists()).toBe(true);
+        expect(wrapper.find('.mobile-streak-card__content').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Streak');
+        expect(wrapper.text()).toContain('5');
+        expect(wrapper.text()).toContain('days');
+        expect(wrapper.text()).not.toContain('Best:');
+        expect(wrapper.text()).not.toContain('Calendar');
+        expect(wrapper.findAll('.dash-metric')).toHaveLength(1);
+        wrapper.unmount();
     });
 
     it('shows only days left and the date on the season card', () => {

@@ -390,8 +390,7 @@
     --mock-wash-strong: rgba(245, 240, 235, 0.06);
 }
 
-.theme-neutral-page,
-.global-loader {
+.theme-neutral-page {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
     --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
     --font-mono:
@@ -429,14 +428,11 @@
 }
 
 .theme-neutral-page,
-.theme-neutral-page *,
-.global-loader,
-.global-loader * {
+.theme-neutral-page * {
     font-family: var(--font-sans) !important;
 }
 
-.dark .theme-neutral-page,
-.dark .global-loader {
+.dark .theme-neutral-page {
     --color-background: #1a1410;
     --color-foreground: #f5f0eb;
     --color-card: #221c18;
@@ -469,20 +465,12 @@
 .theme-neutral-page .rounded-xl,
 .theme-neutral-page .rounded-2xl,
 .theme-neutral-page .rounded-3xl,
-.global-loader .rounded-md,
-.global-loader .rounded-lg,
-.global-loader .rounded-xl,
-.global-loader .rounded-2xl,
-.global-loader .rounded-3xl,
-.theme-neutral-page .surface-card,
-.global-loader .surface-card {
+.theme-neutral-page .surface-card {
     border-radius: var(--radius-xl) !important;
 }
 
 .theme-neutral-page [class*='bg-card'],
-.theme-neutral-page .surface-card,
-.global-loader [class*='bg-card'],
-.global-loader .surface-card {
+.theme-neutral-page .surface-card {
     background-color: var(--color-card) !important;
     border-color: var(--color-border) !important;
     box-shadow: none !important;
@@ -4960,7 +4948,7 @@ html[data-low-end] .rv-group.is-revealing .rv {
 
 .mobile-dashboard-reward,
 .mobile-dashboard-streak-summary {
-    min-height: 6rem;
+    min-height: 4.5rem;
     padding: 0.75rem;
     border-radius: 1.1rem;
 }
@@ -5023,6 +5011,7 @@ html[data-low-end] .rv-group.is-revealing .rv {
     box-shadow: none !important;
 }
 
+.mobile-dashboard-streak-summary.mobile-streak-card,
 .mobile-dashboard-streak-summary .mobile-streak-card {
     display: grid !important;
     grid-template-columns: auto minmax(0, 1fr);
@@ -5032,10 +5021,13 @@ html[data-low-end] .rv-group.is-revealing .rv {
     padding: 0.75rem !important;
 }
 
+.mobile-dashboard-streak-summary.mobile-streak-card .mobile-streak-card__icon,
 .mobile-dashboard-streak-summary .mobile-streak-card__icon {
-    align-self: start;
+    align-self: center;
 }
 
+.mobile-dashboard-streak-summary.mobile-streak-card
+    .mobile-streak-card__content,
 .mobile-dashboard-streak-summary .mobile-streak-card__content {
     min-width: 0;
 }
@@ -5158,6 +5150,6 @@ html[data-low-end] .rv-group.is-revealing .rv {
 
     .mobile-dashboard-reward,
     .mobile-dashboard-streak-summary {
-        min-height: 5.75rem;
+        min-height: 4.5rem;
     }
 }
