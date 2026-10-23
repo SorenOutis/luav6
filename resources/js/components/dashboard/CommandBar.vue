@@ -195,7 +195,7 @@ const toggleList = () => {
                 <div
                     v-if="claimXp?.canClaim"
                     data-tour="dashboard-daily-reward"
-                    class="w-56 shrink-0 max-sm:hidden"
+                    class="shrink-0 max-sm:hidden"
                 >
                     <ClaimXpButton
                         :can-claim="claimXp.canClaim"
