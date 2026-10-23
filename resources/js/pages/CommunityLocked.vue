@@ -8,7 +8,6 @@ import {
     Loader2,
     Lock,
     ShieldAlert,
-    Sparkles,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -21,10 +20,10 @@ interface Props {
     hasPendingInvite?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    workspaceName: 'Your School',
-    studentName: 'Student',
-    studentEmail: '',
+withDefaults(defineProps<Props>(), {
+    workspaceName: null,
+    studentName: null,
+    studentEmail: null,
     hasPendingInvite: false,
 });
 
@@ -78,33 +77,26 @@ const handleUnlock = async () => {
             class="relative flex min-h-[calc(100vh-8rem)] items-center justify-center p-4 sm:p-6 lg:p-8"
         >
             <div
-                class="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-border/60 bg-card/95 p-6 shadow-2xl ring-1 ring-border/20 backdrop-blur-2xl sm:p-8 dark:border-white/10 dark:bg-zinc-900/95"
+                class="relative w-full max-w-[380px] overflow-hidden rounded-[26px] border border-border/60 bg-card/95 p-6 shadow-xl ring-1 ring-border/20 backdrop-blur-2xl sm:p-7 dark:border-white/10 dark:bg-zinc-900/95"
             >
                 <!-- Top specular light highlight -->
                 <div
                     class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
                 />
 
-                <!-- Lock Icon Badge (Apple squircle) -->
+                <!-- Lock Icon Badge -->
                 <div class="flex justify-center pt-1">
                     <div
-                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-muted/80 text-foreground shadow-sm ring-1 ring-border/60"
+                        class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/80 text-foreground shadow-xs ring-1 ring-border/60"
                     >
-                        <Lock class="h-6 w-6 stroke-[1.8]" />
+                        <Lock class="h-5 w-5 stroke-[1.8]" />
                     </div>
                 </div>
 
                 <!-- Title & Description -->
                 <div class="mt-4 text-center">
-                    <div
-                        class="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground"
-                    >
-                        <Sparkles class="h-3 w-3 text-brand" />
-                        <span>Invite Only</span>
-                    </div>
-
                     <h1
-                        class="mt-3 text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                        class="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
                     >
                         Community Lounge is Invite-Only
                     </h1>
@@ -112,45 +104,20 @@ const handleUnlock = async () => {
                     <p
                         class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
                     >
-                        Access to the lounge for
-                        <span class="font-medium text-foreground">{{
-                            props.workspaceName || 'your workspace'
-                        }}</span>
-                        is reserved for students with an active invitation link.
+                        Access is reserved for students with an active
+                        invitation.
                     </p>
-                </div>
-
-                <!-- Current User Identity Pill (Apple grouped cell) -->
-                <div
-                    class="mt-5 flex items-center justify-between rounded-xl border border-border/40 bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground"
-                >
-                    <span class="text-muted-foreground">Signed in as</span>
-                    <span class="truncate font-medium text-foreground">
-                        {{ props.studentName }}
-                        <span
-                            v-if="props.studentEmail"
-                            class="font-normal text-muted-foreground"
-                        >
-                            ({{ props.studentEmail }})
-                        </span>
-                    </span>
                 </div>
 
                 <!-- Input form -->
                 <form class="mt-5 space-y-3" @submit.prevent="handleUnlock">
-                    <label
-                        for="invite-code-input"
-                        class="block text-xs font-semibold text-foreground"
-                    >
-                        Enter Invite Code or Link
-                    </label>
-
                     <div class="relative">
                         <input
                             id="invite-code-input"
                             v-model="inviteCode"
                             type="text"
-                            placeholder="Paste invite link or token here..."
+                            placeholder="Paste invite link or code..."
+                            aria-label="Invite code or link"
                             class="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-sm text-foreground shadow-xs transition-all outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
                             autocomplete="off"
                             spellcheck="false"
@@ -178,7 +145,7 @@ const handleUnlock = async () => {
                     <button
                         type="submit"
                         :disabled="!inviteCode.trim() || isSubmitting"
-                        class="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm dark:bg-white dark:text-zinc-950"
+                        class="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-foreground text-xs font-semibold text-background shadow-xs transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm dark:bg-white dark:text-zinc-950"
                     >
                         <Loader2
                             v-if="isSubmitting"
@@ -192,16 +159,12 @@ const handleUnlock = async () => {
                 </form>
 
                 <!-- Footer guidance -->
-                <div class="mt-6 border-t border-border/50 pt-4 text-center">
-                    <p
-                        class="text-[11px] leading-relaxed text-muted-foreground sm:text-xs"
-                    >
-                        Don't have an invitation yet? Reach out to your
-                        instructor or administrator to generate your personal
-                        invite link.
+                <div class="mt-5 border-t border-border/50 pt-4 text-center">
+                    <p class="text-xs text-muted-foreground">
+                        Don't have an invite? Ask your instructor.
                     </p>
 
-                    <div class="mt-3.5 flex justify-center">
+                    <div class="mt-3 flex justify-center">
                         <Link
                             href="/dashboard"
                             class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-95"
