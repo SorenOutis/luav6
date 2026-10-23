@@ -29,6 +29,15 @@ class CommunityController extends Controller
         $viewer = $request->user();
         $workspace = $viewer?->currentWorkspace;
 
+        if (! $viewer?->hasLoungeAccess()) {
+            return Inertia::render('CommunityLocked', [
+                'workspaceName' => $workspace?->name,
+                'studentName' => $viewer?->name,
+                'studentEmail' => $viewer?->email,
+                'hasPendingInvite' => (bool) $viewer?->communityInvite()->exists(),
+            ]);
+        }
+
         // Record viewer presence with 120s RAM TTL and throttled DB write
         $this->recordPresence($viewer);
 
@@ -50,6 +59,8 @@ class CommunityController extends Controller
         // Active 24h stories tray
         $stories = $this->getActiveStoriesTray($viewer, $workspace, $section);
 
+        $isFirstTimeJoin = (bool) $request->session()->get('first_time_lounge_join', false);
+
         return Inertia::render('Community', [
             'workspace' => $workspace,
             'sectionName' => $section?->name ?? 'Your Section',
@@ -60,6 +71,7 @@ class CommunityController extends Controller
             'trendingTopics' => $trendingTopics,
             'currentTab' => $tab,
             'stories' => $stories,
+            'isFirstTimeJoin' => $isFirstTimeJoin,
         ]);
     }
 
@@ -69,6 +81,10 @@ class CommunityController extends Controller
     public function presence(Request $request): JsonResponse
     {
         $viewer = $request->user();
+        if (! $viewer?->hasLoungeAccess()) {
+            return response()->json(['error' => 'Lounge locked'], 403);
+        }
+
         $this->recordPresence($viewer);
 
         $section = $this->resolveViewerSection($viewer);
@@ -89,6 +105,7 @@ class CommunityController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $sharesSection = $user->sections()
             ->whereIn('sections.id', $viewer->sections()->pluck('sections.id'))
@@ -166,6 +183,15 @@ class CommunityController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+
+        if (! $viewer->hasLoungeAccess()) {
+            return Inertia::render('CommunityLocked', [
+                'workspaceName' => $viewer->currentWorkspace?->name,
+                'studentName' => $viewer->name,
+                'studentEmail' => $viewer->email,
+                'hasPendingInvite' => (bool) $viewer->communityInvite()->exists(),
+            ]);
+        }
 
         $this->recordPresence($viewer);
 

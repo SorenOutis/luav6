@@ -163,6 +163,7 @@ interface Props {
     trendingTopics?: TrendingTopic[];
     currentTab?: 'all' | 'section' | 'saved';
     stories?: UserStoryGroup[];
+    isFirstTimeJoin?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -198,6 +199,45 @@ const handleReturn = () => {
         curtainRef.value.wipeTo('/dashboard', 'to_dashboard');
     } else {
         router.visit('/dashboard', { preserveScroll: false });
+    }
+};
+
+// ─── First-Time Welcome Modal State ───────────────────────────────────────────
+const shouldShowWelcome = (): boolean => {
+    if (!props.isFirstTimeJoin) return false;
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const userId =
+                currentUser.value?.id ||
+                currentUser.value?.public_id ||
+                'default';
+            return !window.localStorage.getItem(
+                `community_lounge_welcome_seen_${userId}`,
+            );
+        }
+    } catch {
+        // fallback
+    }
+    return Boolean(props.isFirstTimeJoin);
+};
+
+const isWelcomeModalOpen = ref(shouldShowWelcome());
+
+const dismissWelcomeModal = () => {
+    isWelcomeModalOpen.value = false;
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const userId =
+                currentUser.value?.id ||
+                currentUser.value?.public_id ||
+                'default';
+            window.localStorage.setItem(
+                `community_lounge_welcome_seen_${userId}`,
+                'true',
+            );
+        }
+    } catch {
+        // ignore
     }
 };
 
@@ -1832,6 +1872,10 @@ const handleDeleteStory = async () => {
 };
 
 const handleStoryKeydown = (e: KeyboardEvent) => {
+    if (isWelcomeModalOpen.value && e.key === 'Escape') {
+        dismissWelcomeModal();
+        return;
+    }
     if (!isStoryViewerOpen.value) return;
     if (e.key === 'Escape') {
         if (isStoryOptionsOpen.value) {
@@ -2008,6 +2052,7 @@ watch(
         isProfileModalOpen,
         isStoryViewerOpen,
         isStoryModalOpen,
+        isWelcomeModalOpen,
         postToDelete,
         commentToDelete,
     ],
@@ -2016,6 +2061,7 @@ watch(
         modalOpen,
         storyViewerOpen,
         storyModalOpen,
+        welcomeOpen,
         postDeleteOpen,
         commentDeleteOpen,
     ]) => {
@@ -2025,6 +2071,7 @@ watch(
                 modalOpen ||
                 storyViewerOpen ||
                 storyModalOpen ||
+                welcomeOpen ||
                 Boolean(postDeleteOpen) ||
                 Boolean(commentDeleteOpen)
             ) {
@@ -5175,6 +5222,149 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             class="h-3.5 w-3.5 animate-spin"
                         />
                         <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- First-Time Member Welcome Modal (Apple-style What's New dialog) -->
+        <div
+            v-if="isWelcomeModalOpen"
+            class="fixed inset-0 z-[180] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-300"
+            data-test="welcome-modal"
+            @click.self="dismissWelcomeModal"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/60 backdrop-blur-md"
+                data-test="welcome-modal-backdrop"
+                @click="dismissWelcomeModal"
+            />
+
+            <div
+                class="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-border/60 bg-card/95 p-6 shadow-2xl ring-1 ring-border/20 backdrop-blur-2xl sm:p-7 dark:border-white/10 dark:bg-zinc-900/95"
+            >
+                <!-- Top specular light highlight -->
+                <div
+                    class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                />
+
+                <!-- Top close button -->
+                <button
+                    type="button"
+                    class="absolute top-4 right-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-95"
+                    aria-label="Close welcome modal"
+                    data-test="welcome-modal-close"
+                    @click="dismissWelcomeModal"
+                >
+                    <X class="h-3.5 w-3.5" />
+                </button>
+
+                <!-- Icon Badge (Apple squircle) -->
+                <div class="flex justify-center pt-1">
+                    <div
+                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-brand/10 text-brand ring-1 ring-brand/25 shadow-sm"
+                    >
+                        <Sparkles class="h-6 w-6 stroke-[1.8]" />
+                    </div>
+                </div>
+
+                <!-- Text Content -->
+                <div class="mt-4 text-center">
+                    <h2
+                        class="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                    >
+                        Welcome to the Community Lounge! 🎉
+                    </h2>
+
+                    <p
+                        class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                    >
+                        You're now an official member of the private student
+                        lounge. Connect with your section, share stories, and stay in the loop.
+                    </p>
+                </div>
+
+                <!-- Feature Highlights (Apple "What's New" row style) -->
+                <div class="mt-6 space-y-3.5 text-left">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Clock class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                24-Hour Stories
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                Share ephemeral photo and video moments with your section.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Users class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                Live Section Presence
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                See active classmates and stay connected across your classroom.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Heart class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                Threads & Reactions
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                Drop thoughts, react to classmates' updates, and join discussions.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons (Apple bottom bar) -->
+                <div class="mt-7 flex items-center gap-2.5 sm:gap-3">
+                    <button
+                        type="button"
+                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-muted/30 text-xs font-semibold text-muted-foreground transition-all duration-150 hover:bg-muted/70 hover:text-foreground active:scale-[0.98] sm:text-sm"
+                        data-test="welcome-modal-skip"
+                        @click="dismissWelcomeModal"
+                    >
+                        Skip
+                    </button>
+                    <button
+                        type="button"
+                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] dark:bg-white dark:text-zinc-950 sm:text-sm"
+                        data-test="welcome-modal-enter"
+                        @click="dismissWelcomeModal"
+                    >
+                        Enter Lounge
                     </button>
                 </div>
             </div>

@@ -26,6 +26,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CommunityCommentController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\CommunityInviteController;
 use App\Http\Controllers\CommunityPostController;
 use App\Http\Controllers\CommunityProfileFeaturedController;
 use App\Http\Controllers\CommunityStoryController;
@@ -87,6 +88,11 @@ Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'
     ->middleware('throttle:10,1')
     ->name('social.callback');
 
+// ─── Community Lounge Invites ──────────────────────────────────────────────
+Route::get('community/join/{token}', [CommunityInviteController::class, 'accept'])
+    ->middleware('student.page:community')
+    ->name('community.join');
+
 // ─── Crawler-facing routes ────────────────────────────────────────────────
 
 Route::get('/robots.txt', RobotsController::class);
@@ -137,6 +143,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('community', [CommunityController::class, 'index'])
         ->middleware('student.page:community')
         ->name('community.index');
+    Route::post('community/join-by-code', [CommunityInviteController::class, 'joinByCode'])
+        ->middleware('student.page:community')
+        ->name('community.join-by-code');
     Route::get('community/presence', [CommunityController::class, 'presence'])
         ->middleware('student.page:community')
         ->name('community.presence');

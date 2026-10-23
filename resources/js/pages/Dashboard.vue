@@ -100,9 +100,11 @@ const pausePolling = () => {
 
 const manualRefresh = () => {
     isRefreshing.value = true;
+    const minSpinPromise = new Promise((resolve) => setTimeout(resolve, 500));
     router.reload({
         only: POLL_PROPS,
-        onFinish: () => {
+        onFinish: async () => {
+            await minSpinPromise;
             isRefreshing.value = false;
         },
     });

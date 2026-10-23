@@ -21,6 +21,7 @@ class CommunityProfileFeaturedController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $currentCount = CommunityProfileFeatured::where('user_id', $viewer->id)->count();
         if ($currentCount >= 6) {
@@ -102,6 +103,7 @@ class CommunityProfileFeaturedController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
         abort_unless($viewer->id === $featured->user_id || $viewer->is_admin, 403);
 
         $featured->delete();

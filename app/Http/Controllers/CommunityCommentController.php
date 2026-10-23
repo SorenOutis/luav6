@@ -21,6 +21,7 @@ class CommunityCommentController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:1000'],
@@ -75,6 +76,7 @@ class CommunityCommentController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
         abort_unless($viewer->id === $comment->user_id || $viewer->is_admin, 403);
 
         $validated = $request->validate([
@@ -105,6 +107,7 @@ class CommunityCommentController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $post = $comment->post ?: CommunityPost::withoutGlobalScopes()->find($comment->post_id);
         $isPostOwner = $post && (int) $post->user_id === (int) $viewer->id;
@@ -126,6 +129,7 @@ class CommunityCommentController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $isLiked = false;
         DB::transaction(function () use ($viewer, $comment, &$isLiked) {

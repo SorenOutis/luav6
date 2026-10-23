@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router, usePage } from '@inertiajs/vue3';
 import {
     ArrowRight,
     ChevronDown,
@@ -7,10 +8,12 @@ import {
     Sparkles,
     Trophy,
     TrendingUp,
+    Users,
     X,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
+import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
@@ -158,7 +161,25 @@ const emit = defineEmits<{
     claimed: [];
     toggleLeaderboard: [];
     'update:leaderboardSectionId': [id: number];
+    'open-community': [];
 }>();
+
+const page = usePage();
+const curtainRef = ref<InstanceType<typeof CurtainWipeOverlay> | null>(null);
+
+const isCommunityDisabled = computed(() => {
+    const controls = (page.props as any).studentPageControls?.pages;
+    return controls?.community?.mode === 'disabled';
+});
+
+const handleOpenCommunity = () => {
+    emit('open-community');
+    if (curtainRef.value) {
+        curtainRef.value.wipeTo('/community', 'to_community');
+    } else {
+        router.visit('/community', { preserveScroll: false });
+    }
+};
 
 const firstAnnouncement = computed(() => props.announcements[0] ?? null);
 const initials = computed(() => getInitials(props.userName));
@@ -233,6 +254,17 @@ const seasonDateLabel = computed(() => {
             <div class="mobile-dashboard-greeting__topline">
                 <span class="mobile-dashboard-kicker">Your learning space</span>
                 <div class="mobile-dashboard-greeting__actions">
+                    <button
+                        v-if="!isCommunityDisabled"
+                        type="button"
+                        data-test="community-lounge-button"
+                        class="mobile-dashboard-icon-button cursor-pointer transition-all duration-200 hover:border-brand/40 hover:bg-brand/10 hover:text-brand"
+                        aria-label="Community Lounge"
+                        title="Open Community Lounge"
+                        @click="handleOpenCommunity"
+                    >
+                        <Users class="h-4 w-4 shrink-0 text-brand" />
+                    </button>
                     <button
                         type="button"
                         class="mobile-dashboard-join"
@@ -386,6 +418,7 @@ const seasonDateLabel = computed(() => {
                     :next-claim-at="claimXp.nextClaimAt"
                     :streak="userStats.streak"
                     :show-prompt="false"
+                    compact
                     @claimed="emit('claimed')"
                 />
             </div>
@@ -534,5 +567,12 @@ const seasonDateLabel = computed(() => {
             </div>
             <StreakHeatmap :login-dates="loginDates ?? []" />
         </section>
+
+        <CurtainWipeOverlay
+            ref="curtainRef"
+            title="Community Lounge"
+            subtitle="Entering workspace lounge..."
+            expected-mount-direction="to_dashboard"
+        />
     </div>
 </template>

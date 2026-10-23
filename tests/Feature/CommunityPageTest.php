@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CommunityComment;
+use App\Models\CommunityInvite;
 use App\Models\CommunityPost;
 use App\Models\CommunityProfileFeatured;
 use App\Models\CommunityStory;
@@ -16,6 +17,13 @@ beforeEach(function () {
     $this->workspace = Workspace::factory()->create();
     $this->student = User::factory()->create([
         'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'token' => 'initial-token',
+        'accepted_at' => now(),
     ]);
 });
 
@@ -571,6 +579,12 @@ it('records unique views on community story', function () {
     ]);
 
     $viewer = User::factory()->create(['current_workspace_id' => $this->workspace->id]);
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $viewer->id,
+        'token' => 'viewer-token-1',
+        'accepted_at' => now(),
+    ]);
 
     // First view: increments views_count
     $this->actingAs($viewer)
@@ -623,6 +637,12 @@ it('allows owner to delete their community story', function () {
 
 it('allows authenticated student to react to a community story and toggles on repeated tap', function () {
     $viewer = User::factory()->create();
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $viewer->id,
+        'token' => 'viewer-token-2',
+        'accepted_at' => now(),
+    ]);
     $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
     $viewer->sections()->attach($section);
     $this->student->sections()->attach($section);

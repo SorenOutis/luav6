@@ -84,7 +84,9 @@ vi.mock('@/components/dashboard/ClaimXpButton.vue', () => ({
 
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import CommandBar from '@/components/dashboard/CommandBar.vue';
+import MobileDashboard from '@/components/dashboard/MobileDashboard.vue';
 import Community from '@/pages/Community.vue';
+import CommunityLocked from '@/pages/CommunityLocked.vue';
 import CommunityProfile from '@/pages/CommunityProfile.vue';
 
 describe('Community Lounge & Curtain Wipe Flow', () => {
@@ -194,6 +196,114 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             const wrapper = mount(CommandBar, {
                 props: defaultProps,
             });
+
+            const button = wrapper.find(
+                '[data-test="community-lounge-button"]',
+            );
+            await button.trigger('click');
+
+            expect(mockRouterVisit).toHaveBeenCalledWith('/community', {
+                preserveScroll: false,
+            });
+        });
+    });
+
+    describe('MobileDashboard launcher button', () => {
+        const defaultMobileProps = {
+            userName: 'Alex',
+            userStats: {
+                level: 3,
+                currentXP: 120,
+                maxXPForLevel: 300,
+                totalXP: 120,
+                rank: 'Bronze',
+                rankNumber: 1,
+                totalPlayers: 10,
+                achievements: 2,
+                points: 50,
+                streak: 5,
+                longestStreak: 5,
+                joinedAt: '2025-01-01',
+            },
+            announcements: [],
+            timeBasedGreeting: 'Good morning',
+            greetingTheme: 'dawn',
+            isRefreshing: false,
+            claimXp: {
+                canClaim: false,
+                amount: 1,
+                nextClaimAt: null,
+            },
+            todayTasks: [],
+            sectionLeaderboards: [],
+            leaderboardExpanded: false,
+        };
+
+        const mountOptions = {
+            props: defaultMobileProps as any,
+            global: {
+                stubs: {
+                    LevelProgressCard: true,
+                    StreakCard: true,
+                    TodayPanel: true,
+                    FoxCompanion: true,
+                    ImprovedLeaderboard: true,
+                    StreakHeatmap: true,
+                    ClaimXpButton: true,
+                },
+            },
+        };
+
+        it('renders the community lounge button in the mobile dashboard greeting', () => {
+            const wrapper = mount(MobileDashboard, mountOptions);
+
+            const button = wrapper.find(
+                '[data-test="community-lounge-button"]',
+            );
+            expect(button.exists()).toBe(true);
+            expect(button.attributes('aria-label')).toBe('Community Lounge');
+        });
+
+        it('hides the launcher button when community page is disabled in student page controls', () => {
+            mockPageProps = {
+                studentPageControls: {
+                    pages: {
+                        community: {
+                            mode: 'disabled',
+                            label: 'Community Lounge',
+                        },
+                    },
+                },
+            };
+
+            const wrapper = mount(MobileDashboard, mountOptions);
+
+            const button = wrapper.find(
+                '[data-test="community-lounge-button"]',
+            );
+            expect(button.exists()).toBe(false);
+        });
+
+        it('triggers curtain wipe navigation to /community when clicked', async () => {
+            const wrapper = mount(MobileDashboard, mountOptions);
+
+            const button = wrapper.find(
+                '[data-test="community-lounge-button"]',
+            );
+            expect(button.exists()).toBe(true);
+
+            await button.trigger('click');
+
+            expect(wrapper.emitted('open-community')).toBeTruthy();
+
+            const overlay = wrapper.find('[data-test="curtain-wipe-overlay"]');
+            expect(overlay.exists()).toBe(true);
+        });
+
+        it('navigates immediately without transition when user prefers reduced motion', async () => {
+            mockPrefersReducedMotion = true;
+
+            const wrapper = mount(MobileDashboard, mountOptions);
 
             const button = wrapper.find(
                 '[data-test="community-lounge-button"]',
@@ -3055,6 +3165,251 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 '[data-test="confirm-add-featured-button"]',
             );
             expect(saveBtn.attributes('disabled')).toBeUndefined();
+        });
+    });
+
+    describe('CommunityLocked.vue locked gate', () => {
+        it('renders the invite-only locked gate with student name and workspace name', () => {
+            const wrapper = mount(CommunityLocked, {
+                props: {
+                    workspaceName: 'Engineering Campus',
+                    studentName: 'Jordan Lee',
+                    studentEmail: 'jordan@school.edu',
+                    hasPendingInvite: true,
+                },
+            });
+
+            expect(wrapper.text()).toContain('Community Lounge is Invite-Only');
+            expect(wrapper.text()).toContain('Engineering Campus');
+            expect(wrapper.text()).toContain('Jordan Lee');
+            expect(wrapper.text()).toContain('jordan@school.edu');
+            expect(wrapper.find('input[type="text"]').exists()).toBe(true);
+            expect(wrapper.find('button[type="submit"]').text()).toContain(
+                'Unlock Lounge',
+            );
+        });
+
+        it('submits invite code via POST /community/join-by-code and handles success', async () => {
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { status: 'unlocked' },
+            });
+
+            const wrapper = mount(CommunityLocked, {
+                props: {
+                    studentName: 'Jordan Lee',
+                },
+            });
+
+            const input = wrapper.find('input[type="text"]');
+            await input.setValue('INVITE-SECRET-123');
+
+            await wrapper.find('form').trigger('submit.prevent');
+
+            expect(mockAxiosPost).toHaveBeenCalledWith(
+                '/community/join-by-code',
+                {
+                    code: 'INVITE-SECRET-123',
+                },
+            );
+
+            await flushPromises();
+            expect(wrapper.text()).toContain('Lounge unlocked! Redirecting...');
+        });
+
+        it('displays error message when invite code fails verification', async () => {
+            mockAxiosPost.mockRejectedValueOnce({
+                response: {
+                    data: {
+                        message:
+                            'Invalid or expired invite code for your account.',
+                    },
+                },
+            });
+
+            const wrapper = mount(CommunityLocked, {
+                props: {
+                    studentName: 'Jordan Lee',
+                },
+            });
+
+            const input = wrapper.find('input[type="text"]');
+            await input.setValue('INVALID-CODE');
+
+            await wrapper.find('form').trigger('submit.prevent');
+            await flushPromises();
+
+            expect(wrapper.text()).toContain(
+                'Invalid or expired invite code for your account.',
+            );
+        });
+    });
+
+    describe('Community.vue first-time welcome popup modal', () => {
+        const testUser = {
+            id: 1,
+            public_id: 'usr_test_1',
+            name: 'Test Student',
+        };
+
+        beforeEach(() => {
+            window.localStorage.clear();
+            mockPageProps = {
+                auth: { user: testUser },
+                studentPageControls: {
+                    pages: {
+                        community: {
+                            mode: 'enabled',
+                            label: 'Community Lounge',
+                        },
+                    },
+                },
+            };
+        });
+
+        it('renders welcome modal when isFirstTimeJoin is true and not previously seen', () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            const modal = wrapper.find('[data-test="welcome-modal"]');
+            expect(modal.exists()).toBe(true);
+            expect(modal.text()).toContain(
+                'Welcome to the Community Lounge! 🎉',
+            );
+            expect(modal.text()).toContain(
+                'official member of the private student lounge',
+            );
+            expect(
+                wrapper.find('[data-test="welcome-modal-skip"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="welcome-modal-enter"]').exists(),
+            ).toBe(true);
+        });
+
+        it('does not render welcome modal when isFirstTimeJoin is false', () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: false,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
+        });
+
+        it('dismisses modal and saves to localStorage on Skip click', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                true,
+            );
+
+            await wrapper
+                .find('[data-test="welcome-modal-skip"]')
+                .trigger('click');
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
+            expect(
+                window.localStorage.getItem('community_lounge_welcome_seen_1'),
+            ).toBe('true');
+        });
+
+        it('dismisses modal and saves to localStorage on Enter Lounge click', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                true,
+            );
+
+            await wrapper
+                .find('[data-test="welcome-modal-enter"]')
+                .trigger('click');
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
+            expect(
+                window.localStorage.getItem('community_lounge_welcome_seen_1'),
+            ).toBe('true');
+        });
+
+        it('dismisses modal on close button or backdrop click', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                true,
+            );
+
+            await wrapper
+                .find('[data-test="welcome-modal-close"]')
+                .trigger('click');
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
+        });
+
+        it('dismisses modal when pressing Escape', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                true,
+            );
+
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
+        });
+
+        it('does not re-open modal if already marked as seen in localStorage', () => {
+            window.localStorage.setItem(
+                'community_lounge_welcome_seen_1',
+                'true',
+            );
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isFirstTimeJoin: true,
+                },
+            });
+
+            expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
+                false,
+            );
         });
     });
 });

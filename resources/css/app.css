@@ -2086,7 +2086,11 @@ html[data-low-end] *:not(
     .merch-card *,
     .hdw-cursor,
     .hdw-cursor *,
-    .hdw-enter
+    .hdw-enter,
+    .animate-spin,
+    .animate-spin *,
+    [class*='animate-spin'],
+    [class*='animate-spin'] *
 ) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

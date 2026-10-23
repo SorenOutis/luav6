@@ -23,6 +23,7 @@ class CommunityStoryController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $request->validate([
             'media' => ['required', 'file', 'max:30720', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov'],
@@ -84,6 +85,7 @@ class CommunityStoryController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $view = CommunityStoryView::firstOrCreate(
             [
@@ -112,6 +114,7 @@ class CommunityStoryController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $validated = $request->validate([
             'reaction' => ['nullable', 'string', 'max:32'],
@@ -159,6 +162,7 @@ class CommunityStoryController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
 
         $stories = CommunityStory::where('user_id', $viewer->id)
             ->withCount('views')
@@ -191,6 +195,7 @@ class CommunityStoryController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
         abort_unless($viewer->id === $story->user_id || $viewer->is_admin, 403);
 
         $story->delete();
