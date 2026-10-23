@@ -313,4 +313,14 @@ describe('dashboard student shell', () => {
         const fox = ruleBody(String.raw`\.mobile-dashboard-greeting__fox`);
         expect(fox).toContain('grid-column: 2');
     });
+
+    it('preserves loading spinners by excluding animate-spin from low-end animation suppression', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const lowEndGuard = css.match(/html\[data-low-end\]\s*\*:not\(([^)]*)\)/s)?.[1] ?? '';
+        expect(lowEndGuard).toContain('.animate-spin');
+        expect(lowEndGuard).toContain("[class*='animate-spin']");
+    });
 });

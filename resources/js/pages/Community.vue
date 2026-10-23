@@ -1,0 +1,5448 @@
+<script setup lang="ts">
+import { Head, router, useForm, usePage, usePoll } from '@inertiajs/vue3';
+import axios from 'axios';
+import {
+    ArrowLeft,
+    Bookmark,
+    Clock,
+    Code2,
+    Download,
+    ExternalLink,
+    EyeOff,
+    FileText,
+    Flame,
+    GraduationCap,
+    Heart,
+    ImageIcon,
+    Laugh,
+    Loader2,
+    MessageCircle,
+    MoreHorizontal,
+    PartyPopper,
+    Pause,
+    Pencil,
+    Play,
+    Plus,
+    ChevronDown,
+    ChevronUp,
+    CornerDownRight,
+    Eye,
+    Film,
+    RefreshCw,
+    Search,
+    Send,
+    Shield,
+    ShieldCheck,
+    Sparkles,
+    ThumbsUp,
+    Trash2,
+    UploadCloud,
+    UserCheck,
+    UserPlus,
+    Users,
+    X,
+} from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { BreadcrumbItem } from '@/types';
+
+export interface ClassmatePresence {
+    id: number | string;
+    public_id?: string;
+    name: string;
+    avatar?: string;
+    status: 'online' | 'idle' | 'offline';
+    role?: string;
+    activity?: string;
+    isCurrentUser?: boolean;
+}
+
+export interface PostComment {
+    id: number | string;
+    parent_id?: number | string | null;
+    content: string;
+    created_at: string;
+    author_id?: string | number;
+    author_public_id?: string | null;
+    author_name: string;
+    author_handle: string;
+    author_avatar?: string | null;
+    is_masked?: boolean;
+    section_name?: string;
+    likes_count?: number;
+    is_liked?: boolean;
+    replies?: PostComment[];
+}
+
+export interface PostAuthor {
+    id: string;
+    public_id?: string | null;
+    name: string;
+    handle: string;
+    avatar?: string | null;
+    is_same_section: boolean;
+    is_masked: boolean;
+    is_following: boolean;
+    section_name?: string;
+}
+
+export interface CommunityFeedPost {
+    id: number | string;
+    content: string;
+    created_at: string;
+    attachment_url?: string | null;
+    attachment_type?: string | null;
+    attachment_name?: string | null;
+    attachment_size?: number | null;
+    likes_count: number;
+    comments_count: number;
+    is_liked: boolean;
+    is_bookmarked: boolean;
+    author: PostAuthor;
+    comments: PostComment[];
+}
+
+export interface TrendingTopic {
+    tag: string;
+    name: string;
+    count: number;
+}
+
+interface Workspace {
+    id: number;
+    name: string;
+    public_id?: string;
+}
+
+export interface StoryItem {
+    id: number;
+    media_url: string;
+    media_type: 'image' | 'video';
+    duration_seconds: number;
+    caption?: string | null;
+    views_count: number;
+    reactions_count?: number;
+    user_reaction?: string | null;
+    is_reacted?: boolean;
+    created_at: string;
+    is_self?: boolean;
+}
+
+export interface UserStoryGroup {
+    user_id: number;
+    public_id?: string | null;
+    name: string;
+    handle: string;
+    avatar?: string | null;
+    is_self: boolean;
+    is_masked: boolean;
+    stories: StoryItem[];
+}
+
+export interface StoryTrayItem {
+    id: string;
+    name: string;
+    username: string;
+    initials: string;
+    avatar?: string | null;
+    isUser: boolean;
+    hasStory: boolean;
+    storyGroup?: UserStoryGroup | null;
+    status: 'online' | 'idle' | 'offline';
+    public_id?: string;
+}
+
+interface Props {
+    workspace?: Workspace | null;
+    sectionName?: string;
+    onlineClassmates?: ClassmatePresence[];
+    onlineCount?: number;
+    totalEnrolledCount?: number;
+    posts?: CommunityFeedPost[];
+    trendingTopics?: TrendingTopic[];
+    currentTab?: 'all' | 'section' | 'saved';
+    stories?: UserStoryGroup[];
+    isFirstTimeJoin?: boolean;
+}
+
+const props = defineProps<Props>();
+
+const page = usePage();
+const currentUser = computed(() => (page.props as any)?.auth?.user);
+const currentUserName = computed(() => currentUser.value?.name || 'You');
+const currentUserHandle = computed(() => {
+    if (!currentUser.value?.name) {
+        return 'you';
+    }
+    return strToHandle(currentUser.value.name);
+});
+const currentUserInitials = computed(() => getInitials(currentUserName.value));
+
+function strToHandle(name: string): string {
+    return strToClean(name).toLowerCase();
+}
+
+function strToClean(s: string): string {
+    return s.replace(/[^a-zA-Z0-9]/g, '.');
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Community Lounge', href: '/community' },
+];
+
+const curtainRef = ref<InstanceType<typeof CurtainWipeOverlay> | null>(null);
+
+const handleReturn = () => {
+    if (curtainRef.value) {
+        curtainRef.value.wipeTo('/dashboard', 'to_dashboard');
+    } else {
+        router.visit('/dashboard', { preserveScroll: false });
+    }
+};
+
+// ─── First-Time Welcome Modal State ───────────────────────────────────────────
+const shouldShowWelcome = (): boolean => {
+    if (!props.isFirstTimeJoin) return false;
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const userId =
+                currentUser.value?.id ||
+                currentUser.value?.public_id ||
+                'default';
+            return !window.localStorage.getItem(
+                `community_lounge_welcome_seen_${userId}`,
+            );
+        }
+    } catch {
+        // fallback
+    }
+    return Boolean(props.isFirstTimeJoin);
+};
+
+const isWelcomeModalOpen = ref(shouldShowWelcome());
+
+const dismissWelcomeModal = () => {
+    isWelcomeModalOpen.value = false;
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const userId =
+                currentUser.value?.id ||
+                currentUser.value?.public_id ||
+                'default';
+            window.localStorage.setItem(
+                `community_lounge_welcome_seen_${userId}`,
+                'true',
+            );
+        }
+    } catch {
+        // ignore
+    }
+};
+
+// ─── Active Tab Filtering & Client-Side Tab Cache ────────────────────────────
+const activeTab = ref<'all' | 'section' | 'saved'>(props.currentTab ?? 'all');
+const tabPostsCache = ref<Record<string, CommunityFeedPost[]>>({
+    [props.currentTab ?? 'all']: [...(props.posts ?? [])],
+});
+
+const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
+    if (activeTab.value === tab) {
+        return;
+    }
+
+    // Cache current tab state
+    tabPostsCache.value[activeTab.value] = [...localPosts.value];
+    activeTab.value = tab;
+
+    // 1. Instant optimistic feed swap
+    if (tabPostsCache.value[tab]) {
+        localPosts.value = [...tabPostsCache.value[tab]];
+    } else {
+        const allPosts = tabPostsCache.value['all'] ?? localPosts.value;
+        if (tab === 'section') {
+            localPosts.value = allPosts.filter((p) =>
+                Boolean(p.author?.is_same_section),
+            );
+        } else if (tab === 'saved') {
+            localPosts.value = allPosts.filter((p) =>
+                Boolean(bookmarkedMap.value[String(p.id)] ?? p.is_bookmarked),
+            );
+        }
+    }
+
+    // 2. Background Inertia router visit to reconcile with server
+    router.visit(`/community?tab=${tab}`, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['posts', 'currentTab'],
+        onSuccess: (page) => {
+            const serverPosts = (page.props as any)?.posts;
+            if (Array.isArray(serverPosts)) {
+                tabPostsCache.value[tab] = [...serverPosts];
+                if (activeTab.value === tab) {
+                    localPosts.value = [...serverPosts];
+                }
+            }
+        },
+    });
+};
+
+// ─── Section Online Presence & Mockup State ──────────────────────────────────
+const defaultClassmates: ClassmatePresence[] = [
+    {
+        id: 1,
+        public_id: 'default-alex',
+        name: 'You (Alex)',
+        status: 'online',
+        role: 'You',
+        activity: 'Active in Lounge',
+        isCurrentUser: true,
+    },
+    {
+        id: 2,
+        public_id: 'default-sarah',
+        name: 'Sarah Chen',
+        status: 'online',
+        role: 'Class Officer',
+        activity: 'Reviewing Midterms',
+    },
+    {
+        id: 3,
+        public_id: 'default-marcus',
+        name: 'Marcus Vance',
+        status: 'online',
+        activity: 'Networking Assignment #3',
+    },
+    {
+        id: 4,
+        public_id: 'default-chloe',
+        name: 'Chloe Santos',
+        status: 'idle',
+        role: 'Section Rep',
+        activity: 'In Library Hub (idle 12m)',
+    },
+    {
+        id: 5,
+        public_id: 'default-devon',
+        name: 'Devon Ray',
+        status: 'idle',
+        activity: 'Studying Dijkstra algorithm',
+    },
+    {
+        id: 6,
+        public_id: 'default-elena',
+        name: 'Elena Rostova',
+        status: 'offline',
+        activity: 'Last seen 2h ago',
+    },
+];
+
+const sectionDisplayName = computed(
+    () => props.sectionName?.trim() || 'BSIT 3-A',
+);
+
+const classmatesList = computed<ClassmatePresence[]>(() =>
+    props.onlineClassmates !== undefined
+        ? props.onlineClassmates
+        : defaultClassmates,
+);
+
+const onlineCount = computed(
+    () =>
+        props.onlineCount ??
+        classmatesList.value.filter((c) => c.status === 'online').length,
+);
+
+const totalEnrolledCount = computed(
+    () => props.totalEnrolledCount ?? classmatesList.value.length,
+);
+
+const classmateSearch = ref('');
+
+const filteredClassmates = computed(() => {
+    const q = classmateSearch.value.trim().toLowerCase();
+    if (!q) {
+        return classmatesList.value;
+    }
+    return classmatesList.value.filter(
+        (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.role && c.role.toLowerCase().includes(q)) ||
+            (c.activity && c.activity.toLowerCase().includes(q)),
+    );
+});
+
+const getInitials = (name: string): string => {
+    const trimmed = name.trim();
+    if (trimmed.startsWith('You (')) {
+        const inner = trimmed.match(/\((.*?)\)/)?.[1] || '';
+        if (inner) {
+            return inner.slice(0, 2).toUpperCase();
+        }
+    }
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+        return '?';
+    }
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const isRefreshingPresence = ref(false);
+
+const handleRefreshPresence = () => {
+    if (isRefreshingPresence.value) {
+        return;
+    }
+    isRefreshingPresence.value = true;
+    if (typeof router.reload === 'function') {
+        router.reload({
+            only: ['onlineClassmates', 'onlineCount'],
+            onFinish: () => {
+                isRefreshingPresence.value = false;
+            },
+        });
+    }
+    setTimeout(() => {
+        isRefreshingPresence.value = false;
+    }, 600);
+};
+
+// Polling: refresh presence every 15s without full page reload.
+// Server caches data in RAM (15s TTL) and throttles DB writes to once per 3m.
+try {
+    if (typeof usePoll === 'function') {
+        usePoll(15000, {
+            only: ['onlineClassmates', 'onlineCount'],
+        });
+    }
+} catch {
+    // Ignore in non-Inertia or test environments
+}
+
+// ─── Dynamic Feed Posts ─────────────────────────────────────────────────────
+const localPosts = ref<CommunityFeedPost[]>([...(props.posts ?? [])]);
+
+watch(
+    () => props.posts,
+    (newPosts) => {
+        const list = [...(newPosts ?? [])];
+        localPosts.value = list;
+        tabPostsCache.value[activeTab.value] = list;
+    },
+    { immediate: true },
+);
+
+const displayPosts = computed<CommunityFeedPost[]>(() => {
+    return localPosts.value;
+});
+
+// ─── Post & Comment Ownership / Moderation Helpers ──────────────────────────
+const canManagePost = (post: CommunityFeedPost): boolean => {
+    if (!currentUser.value) return false;
+    if (Boolean(currentUser.value.is_admin)) return true;
+    return (
+        post.author?.id !== undefined &&
+        post.author?.id !== null &&
+        String(post.author.id) === String(currentUser.value.id)
+    );
+};
+
+const canEditComment = (comment: PostComment): boolean => {
+    if (!currentUser.value) return false;
+    if (Boolean(currentUser.value.is_admin)) return true;
+    return (
+        comment.author_id !== undefined &&
+        comment.author_id !== null &&
+        comment.author_id !== '' &&
+        String(comment.author_id) === String(currentUser.value.id)
+    );
+};
+
+const canDeleteComment = (
+    post: CommunityFeedPost,
+    comment: PostComment,
+): boolean => {
+    if (!currentUser.value) return false;
+    if (Boolean(currentUser.value.is_admin)) return true;
+
+    const isCommentAuthor =
+        comment.author_id !== undefined &&
+        comment.author_id !== null &&
+        comment.author_id !== '' &&
+        String(comment.author_id) === String(currentUser.value.id);
+
+    const isPostOwner =
+        post.author?.id !== undefined &&
+        post.author?.id !== null &&
+        post.author?.id !== '' &&
+        String(post.author.id) === String(currentUser.value.id);
+
+    return isCommentAuthor || isPostOwner;
+};
+
+// ─── Post Actions & Management (Edit / Delete) ──────────────────────────────
+const activePostMenuId = ref<string | null>(null);
+const editingPostId = ref<string | null>(null);
+const editingPostContent = ref<string>('');
+const editingPostIsAnonymous = ref<boolean>(false);
+const isSavingPost = ref<boolean>(false);
+const postToDelete = ref<CommunityFeedPost | null>(null);
+const isDeletingPost = ref<boolean>(false);
+
+const togglePostMenu = (postId: number | string) => {
+    const key = String(postId);
+    activePostMenuId.value = activePostMenuId.value === key ? null : key;
+};
+
+const startEditPost = (post: CommunityFeedPost) => {
+    activePostMenuId.value = null;
+    editingPostId.value = String(post.id);
+    editingPostContent.value = post.content;
+    editingPostIsAnonymous.value = Boolean(post.author?.is_masked);
+};
+
+const cancelEditPost = () => {
+    editingPostId.value = null;
+    editingPostContent.value = '';
+    editingPostIsAnonymous.value = false;
+};
+
+const saveEditPost = async (post: CommunityFeedPost) => {
+    const content = editingPostContent.value.trim();
+    if (!content || isSavingPost.value) return;
+
+    isSavingPost.value = true;
+    try {
+        const res = await axios.put(
+            `/community/posts/${post.id}`,
+            {
+                content,
+                is_anonymous: editingPostIsAnonymous.value,
+            },
+            {
+                headers: { Accept: 'application/json' },
+            },
+        );
+        if (res.data?.post) {
+            post.content = res.data.post.content;
+            if (typeof res.data.post.is_anonymous === 'boolean') {
+                post.author.is_masked = res.data.post.is_anonymous;
+            }
+        } else {
+            post.content = content;
+        }
+        cancelEditPost();
+    } catch {
+        router.put(
+            `/community/posts/${post.id}`,
+            {
+                content,
+                is_anonymous: editingPostIsAnonymous.value,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    post.content = content;
+                    cancelEditPost();
+                },
+            },
+        );
+    } finally {
+        isSavingPost.value = false;
+    }
+};
+
+const confirmDeletePost = (post: CommunityFeedPost) => {
+    activePostMenuId.value = null;
+    postToDelete.value = post;
+};
+
+const cancelDeletePost = () => {
+    postToDelete.value = null;
+};
+
+const deletePost = async (post?: CommunityFeedPost | null) => {
+    const target = post || postToDelete.value;
+    if (!target || isDeletingPost.value) return;
+
+    const removeTargetFromStateAndCache = () => {
+        localPosts.value = localPosts.value.filter(
+            (p) => String(p.id) !== String(target.id),
+        );
+        for (const tabKey of Object.keys(tabPostsCache.value)) {
+            tabPostsCache.value[tabKey] = tabPostsCache.value[tabKey].filter(
+                (p) => String(p.id) !== String(target.id),
+            );
+        }
+    };
+
+    isDeletingPost.value = true;
+    try {
+        await axios.delete(`/community/posts/${target.id}`, {
+            headers: { Accept: 'application/json' },
+        });
+        removeTargetFromStateAndCache();
+        postToDelete.value = null;
+    } catch {
+        router.delete(`/community/posts/${target.id}`, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                removeTargetFromStateAndCache();
+                postToDelete.value = null;
+            },
+        });
+    } finally {
+        isDeletingPost.value = false;
+    }
+};
+
+// ─── Comment & Reply Management (Edit / Delete) ─────────────────────────────
+const editingCommentId = ref<string | null>(null);
+const editingCommentContent = ref<string>('');
+const isSavingComment = ref<boolean>(false);
+const isDeletingComment = ref<Record<string, boolean>>({});
+
+const startEditComment = (comment: PostComment) => {
+    editingCommentId.value = String(comment.id);
+    editingCommentContent.value = comment.content;
+};
+
+const cancelEditComment = () => {
+    editingCommentId.value = null;
+    editingCommentContent.value = '';
+};
+
+const saveEditComment = async (comment: PostComment) => {
+    const content = editingCommentContent.value.trim();
+    if (!content || isSavingComment.value) return;
+
+    isSavingComment.value = true;
+    try {
+        const res = await axios.put(
+            `/community/comments/${comment.id}`,
+            { content },
+            { headers: { Accept: 'application/json' } },
+        );
+        if (res.data?.comment?.content) {
+            comment.content = res.data.comment.content;
+        } else {
+            comment.content = content;
+        }
+        cancelEditComment();
+    } catch {
+        router.put(
+            `/community/comments/${comment.id}`,
+            { content },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    comment.content = content;
+                    cancelEditComment();
+                },
+            },
+        );
+    } finally {
+        isSavingComment.value = false;
+    }
+};
+
+const deleteComment = async (postId: number | string, comment: PostComment) => {
+    const postKey = String(postId);
+    const commentKey = String(comment.id);
+    if (isDeletingComment.value[commentKey]) return;
+
+    isDeletingComment.value[commentKey] = true;
+    const repliesCount = comment.replies?.length ?? 0;
+    const totalRemoved = 1 + repliesCount;
+
+    try {
+        await axios.delete(`/community/comments/${comment.id}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (localCommentsMap.value[postKey]) {
+            localCommentsMap.value[postKey] = localCommentsMap.value[
+                postKey
+            ].filter((c) => String(c.id) !== commentKey);
+        }
+        commentsCountMap.value[postKey] = Math.max(
+            0,
+            (commentsCountMap.value[postKey] ?? 0) - totalRemoved,
+        );
+    } catch {
+        router.delete(`/community/comments/${comment.id}`, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (localCommentsMap.value[postKey]) {
+                    localCommentsMap.value[postKey] = localCommentsMap.value[
+                        postKey
+                    ].filter((c) => String(c.id) !== commentKey);
+                }
+                commentsCountMap.value[postKey] = Math.max(
+                    0,
+                    (commentsCountMap.value[postKey] ?? 0) - totalRemoved,
+                );
+            },
+        });
+    } finally {
+        delete isDeletingComment.value[commentKey];
+    }
+};
+
+const deleteReply = async (
+    postId: number | string,
+    parentComment: PostComment,
+    reply: PostComment,
+) => {
+    const postKey = String(postId);
+    const replyKey = String(reply.id);
+    if (isDeletingComment.value[replyKey]) return;
+
+    isDeletingComment.value[replyKey] = true;
+    try {
+        await axios.delete(`/community/comments/${reply.id}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (parentComment.replies) {
+            parentComment.replies = parentComment.replies.filter(
+                (r) => String(r.id) !== replyKey,
+            );
+        }
+        commentsCountMap.value[postKey] = Math.max(
+            0,
+            (commentsCountMap.value[postKey] ?? 0) - 1,
+        );
+    } catch {
+        router.delete(`/community/comments/${reply.id}`, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (parentComment.replies) {
+                    parentComment.replies = parentComment.replies.filter(
+                        (r) => String(r.id) !== replyKey,
+                    );
+                }
+                commentsCountMap.value[postKey] = Math.max(
+                    0,
+                    (commentsCountMap.value[postKey] ?? 0) - 1,
+                );
+            },
+        });
+    } finally {
+        delete isDeletingComment.value[replyKey];
+    }
+};
+
+interface CommentToDeleteTarget {
+    postId: number | string;
+    comment: PostComment;
+    parentComment?: PostComment | null;
+    isReply: boolean;
+}
+
+const commentToDelete = ref<CommentToDeleteTarget | null>(null);
+
+const confirmDeleteComment = (
+    postId: number | string,
+    comment: PostComment,
+) => {
+    commentToDelete.value = {
+        postId,
+        comment,
+        isReply: false,
+    };
+};
+
+const confirmDeleteReply = (
+    postId: number | string,
+    parentComment: PostComment,
+    reply: PostComment,
+) => {
+    commentToDelete.value = {
+        postId,
+        comment: reply,
+        parentComment,
+        isReply: true,
+    };
+};
+
+const cancelDeleteComment = () => {
+    commentToDelete.value = null;
+};
+
+const handleConfirmDeleteComment = async () => {
+    if (!commentToDelete.value) return;
+    const target = commentToDelete.value;
+    if (target.isReply && target.parentComment) {
+        await deleteReply(target.postId, target.parentComment, target.comment);
+    } else {
+        await deleteComment(target.postId, target.comment);
+    }
+    commentToDelete.value = null;
+};
+
+// ─── Interactive Social Likes & Bookmarks (Optimistic + Debounced) ───────────
+const likedMap = ref<Record<string, boolean>>({});
+const likesCountMap = ref<Record<string, number>>({});
+const bookmarkedMap = ref<Record<string, boolean>>({});
+
+// Server truth tracking for debouncing
+const serverLikedMap = ref<Record<string, boolean>>({});
+const serverBookmarkedMap = ref<Record<string, boolean>>({});
+const likeDebounceTimers = ref<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+);
+const bookmarkDebounceTimers = ref<
+    Record<string, ReturnType<typeof setTimeout>>
+>({});
+const isHeartBouncing = ref<Record<string, boolean>>({});
+const localCommentsMap = ref<Record<string, PostComment[]>>({});
+const commentsCountMap = ref<Record<string, number>>({});
+
+// ─── Comment & Reply Likes State ─────────────────────────────────────────────
+const commentLikedMap = ref<Record<string, boolean>>({});
+const commentLikesCountMap = ref<Record<string, number>>({});
+const serverCommentLikedMap = ref<Record<string, boolean>>({});
+const commentLikeDebounceTimers = ref<
+    Record<string, ReturnType<typeof setTimeout>>
+>({});
+const isCommentHeartBouncing = ref<Record<string, boolean>>({});
+
+const initCommentReactions = (comments?: PostComment[]) => {
+    if (!comments) {
+        return;
+    }
+    for (const c of comments) {
+        const cKey = String(c.id);
+        if (commentLikedMap.value[cKey] === undefined) {
+            commentLikedMap.value[cKey] = Boolean(c.is_liked);
+            commentLikesCountMap.value[cKey] = c.likes_count ?? 0;
+            serverCommentLikedMap.value[cKey] = Boolean(c.is_liked);
+        }
+        if (c.replies?.length) {
+            initCommentReactions(c.replies);
+        }
+    }
+};
+
+const isCommentLiked = (commentId: number | string) =>
+    commentLikedMap.value[String(commentId)] ?? false;
+
+const getCommentLikesCount = (commentId: number | string) =>
+    commentLikesCountMap.value[String(commentId)] ?? 0;
+
+const toggleCommentLike = (commentId: number | string) => {
+    const key = String(commentId);
+    const prevLiked = commentLikedMap.value[key] ?? false;
+    const prevCount = commentLikesCountMap.value[key] ?? 0;
+    const nextLiked = !prevLiked;
+
+    // 1. Immediate optimistic client update (0ms visual latency)
+    commentLikedMap.value[key] = nextLiked;
+    commentLikesCountMap.value[key] = Math.max(
+        0,
+        prevCount + (nextLiked ? 1 : -1),
+    );
+
+    // 2. Tactile bounce animation
+    if (nextLiked) {
+        isCommentHeartBouncing.value[key] = true;
+        setTimeout(() => {
+            isCommentHeartBouncing.value[key] = false;
+        }, 350);
+    }
+
+    // 3. Clear existing debounce timer
+    if (commentLikeDebounceTimers.value[key]) {
+        clearTimeout(commentLikeDebounceTimers.value[key]);
+    }
+
+    // 4. Debounce network sync by 350ms to prevent spamming server
+    commentLikeDebounceTimers.value[key] = setTimeout(async () => {
+        delete commentLikeDebounceTimers.value[key];
+
+        if (commentLikedMap.value[key] === serverCommentLikedMap.value[key]) {
+            return;
+        }
+
+        try {
+            const res = await axios.post(
+                `/community/comments/${commentId}/like`,
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            if (res.data && typeof res.data.is_liked === 'boolean') {
+                serverCommentLikedMap.value[key] = res.data.is_liked;
+                commentLikedMap.value[key] = res.data.is_liked;
+                if (typeof res.data.likes_count === 'number') {
+                    commentLikesCountMap.value[key] = res.data.likes_count;
+                }
+            }
+        } catch {
+            // Rollback on network failure
+            commentLikedMap.value[key] =
+                serverCommentLikedMap.value[key] ?? prevLiked;
+            commentLikesCountMap.value[key] = prevCount;
+        }
+    }, 350);
+};
+
+watch(
+    displayPosts,
+    (posts) => {
+        for (const post of posts) {
+            const key = String(post.id);
+            if (likedMap.value[key] === undefined) {
+                likedMap.value[key] = Boolean(post.is_liked);
+                likesCountMap.value[key] = post.likes_count ?? 0;
+                serverLikedMap.value[key] = Boolean(post.is_liked);
+            }
+            if (bookmarkedMap.value[key] === undefined) {
+                bookmarkedMap.value[key] = Boolean(post.is_bookmarked);
+                serverBookmarkedMap.value[key] = Boolean(post.is_bookmarked);
+            }
+            if (localCommentsMap.value[key] === undefined) {
+                localCommentsMap.value[key] = post.comments
+                    ? JSON.parse(JSON.stringify(post.comments))
+                    : [];
+                commentsCountMap.value[key] = post.comments_count ?? 0;
+            }
+            initCommentReactions(post.comments);
+        }
+    },
+    { immediate: true },
+);
+
+const isPostLiked = (postId: number | string) =>
+    likedMap.value[String(postId)] ?? false;
+const getPostLikesCount = (postId: number | string) =>
+    likesCountMap.value[String(postId)] ?? 0;
+const isPostBookmarked = (postId: number | string) =>
+    bookmarkedMap.value[String(postId)] ?? false;
+
+const toggleLike = (postId: number | string) => {
+    const key = String(postId);
+    const prevLiked = likedMap.value[key] ?? false;
+    const prevCount = likesCountMap.value[key] ?? 0;
+    const nextLiked = !prevLiked;
+
+    // 1. Immediate optimistic client update (0ms visual latency)
+    likedMap.value[key] = nextLiked;
+    likesCountMap.value[key] = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+
+    // 2. Tactile bounce animation
+    isHeartBouncing.value[key] = true;
+    setTimeout(() => {
+        isHeartBouncing.value[key] = false;
+    }, 350);
+
+    // 3. Clear existing debounce timer
+    if (likeDebounceTimers.value[key]) {
+        clearTimeout(likeDebounceTimers.value[key]);
+    }
+
+    // 4. Debounce network sync by 350ms to prevent spamming server
+    likeDebounceTimers.value[key] = setTimeout(async () => {
+        delete likeDebounceTimers.value[key];
+
+        // If user rapidly clicked like then unlike, net state hasn't changed from server: skip request
+        if (likedMap.value[key] === serverLikedMap.value[key]) {
+            return;
+        }
+
+        try {
+            const res = await axios.post(
+                `/community/posts/${postId}/like`,
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            if (res.data) {
+                serverLikedMap.value[key] = Boolean(res.data.is_liked);
+                if (typeof res.data.likes_count === 'number') {
+                    likesCountMap.value[key] = res.data.likes_count;
+                }
+            }
+        } catch {
+            // Rollback on network failure
+            likedMap.value[key] = serverLikedMap.value[key] ?? prevLiked;
+            likesCountMap.value[key] = prevCount;
+        }
+    }, 350);
+};
+
+const toggleBookmark = (postId: number | string) => {
+    const key = String(postId);
+    const prevBookmarked = bookmarkedMap.value[key] ?? false;
+    const nextBookmarked = !prevBookmarked;
+
+    // 1. Immediate optimistic update
+    bookmarkedMap.value[key] = nextBookmarked;
+
+    // Keep saved cache in sync
+    if (tabPostsCache.value['saved']) {
+        if (nextBookmarked) {
+            const postToAdd = (
+                tabPostsCache.value['all'] || localPosts.value
+            ).find((p) => String(p.id) === key);
+            if (
+                postToAdd &&
+                !tabPostsCache.value['saved'].some((p) => String(p.id) === key)
+            ) {
+                tabPostsCache.value['saved'] = [
+                    postToAdd,
+                    ...tabPostsCache.value['saved'],
+                ];
+            }
+        } else {
+            tabPostsCache.value['saved'] = tabPostsCache.value['saved'].filter(
+                (p) => String(p.id) !== key,
+            );
+            if (activeTab.value === 'saved') {
+                localPosts.value = localPosts.value.filter(
+                    (p) => String(p.id) !== key,
+                );
+            }
+        }
+    }
+
+    if (bookmarkDebounceTimers.value[key]) {
+        clearTimeout(bookmarkDebounceTimers.value[key]);
+    }
+
+    // 2. Debounce network sync by 350ms
+    bookmarkDebounceTimers.value[key] = setTimeout(async () => {
+        delete bookmarkDebounceTimers.value[key];
+
+        if (bookmarkedMap.value[key] === serverBookmarkedMap.value[key]) {
+            return;
+        }
+
+        try {
+            const res = await axios.post(
+                `/community/posts/${postId}/bookmark`,
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            if (res.data) {
+                serverBookmarkedMap.value[key] = Boolean(
+                    res.data.is_bookmarked,
+                );
+            }
+        } catch {
+            // Rollback on network failure
+            bookmarkedMap.value[key] =
+                serverBookmarkedMap.value[key] ?? prevBookmarked;
+        }
+    }, 350);
+};
+
+onBeforeUnmount(() => {
+    for (const timer of Object.values(likeDebounceTimers.value)) {
+        clearTimeout(timer);
+    }
+    for (const timer of Object.values(bookmarkDebounceTimers.value)) {
+        clearTimeout(timer);
+    }
+    for (const timer of Object.values(commentLikeDebounceTimers.value)) {
+        clearTimeout(timer);
+    }
+});
+
+// ─── Quick Comments & Threaded Replies State ────────────────────────────────
+const expandedComments = ref<Record<string, boolean>>({});
+const commentInputs = ref<Record<string, string>>({});
+const isSubmittingComment = ref<Record<string, boolean>>({});
+const replyingTo = ref<
+    Record<string, { id: number | string; author_handle: string } | null>
+>({});
+const expandedReplies = ref<Record<string, boolean>>({});
+const commentInputRefs = ref<Record<string, HTMLInputElement | null>>({});
+
+const toggleComments = (postId: number | string) => {
+    const key = String(postId);
+    expandedComments.value[key] = !expandedComments.value[key];
+};
+
+const getPostComments = (post: CommunityFeedPost): PostComment[] => {
+    const key = String(post.id);
+    return localCommentsMap.value[key] ?? post.comments ?? [];
+};
+
+const getPostCommentsCount = (post: CommunityFeedPost): number => {
+    const key = String(post.id);
+    return commentsCountMap.value[key] ?? post.comments_count ?? 0;
+};
+
+const setReplyingTo = (
+    postId: number | string,
+    comment: { id: number | string; author_handle: string },
+) => {
+    const key = String(postId);
+    replyingTo.value[key] = {
+        id: comment.id,
+        author_handle: comment.author_handle,
+    };
+    setTimeout(() => {
+        commentInputRefs.value[key]?.focus();
+    }, 50);
+};
+
+const cancelReply = (postId: number | string) => {
+    const key = String(postId);
+    replyingTo.value[key] = null;
+};
+
+const toggleReplies = (commentId: number | string) => {
+    const key = String(commentId);
+    expandedReplies.value[key] = !expandedReplies.value[key];
+};
+
+const handleAddComment = async (postId: number | string) => {
+    const key = String(postId);
+    const content = (commentInputs.value[key] || '').trim();
+    if (!content || isSubmittingComment.value[key]) {
+        return;
+    }
+
+    const replyTarget = replyingTo.value[key];
+    const parentId = replyTarget?.id ?? null;
+
+    isSubmittingComment.value[key] = true;
+    commentInputs.value[key] = '';
+    replyingTo.value[key] = null;
+
+    try {
+        const response = await axios.post(
+            `/community/posts/${postId}/comments`,
+            {
+                content,
+                parent_id: parentId,
+            },
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+            },
+        );
+
+        const newComment = response.data?.comment;
+        if (newComment) {
+            const newKey = String(newComment.id);
+            commentLikedMap.value[newKey] = false;
+            commentLikesCountMap.value[newKey] = 0;
+            serverCommentLikedMap.value[newKey] = false;
+            if (!localCommentsMap.value[key]) {
+                const post = displayPosts.value.find(
+                    (p) => String(p.id) === key,
+                );
+                localCommentsMap.value[key] = post?.comments
+                    ? JSON.parse(JSON.stringify(post.comments))
+                    : [];
+            }
+            if (response.data.comments_count !== undefined) {
+                commentsCountMap.value[key] = response.data.comments_count;
+            } else {
+                commentsCountMap.value[key] =
+                    (commentsCountMap.value[key] ?? 0) + 1;
+            }
+
+            if (parentId) {
+                const parent = localCommentsMap.value[key].find(
+                    (c) => String(c.id) === String(parentId),
+                );
+                if (parent) {
+                    if (!parent.replies) {
+                        parent.replies = [];
+                    }
+                    parent.replies.push(newComment);
+                    expandedReplies.value[String(parentId)] = true;
+                } else {
+                    localCommentsMap.value[key].push(newComment);
+                }
+            } else {
+                localCommentsMap.value[key].push(newComment);
+            }
+        }
+    } catch {
+        router.post(
+            `/community/posts/${postId}/comments`,
+            { content, parent_id: parentId },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    } finally {
+        isSubmittingComment.value[key] = false;
+    }
+};
+
+// ─── Post Composer Form ──────────────────────────────────────────────────────
+const isComposerOpen = ref(false);
+const composerFile = ref<File | null>(null);
+const composerFilePreview = ref<string | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const composerForm = useForm({
+    content: '',
+    is_anonymous: false,
+    attachment: null as File | null,
+});
+
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        composerFile.value = file;
+        composerForm.attachment = file;
+
+        if (file.type.startsWith('image/')) {
+            composerFilePreview.value = URL.createObjectURL(file);
+        } else {
+            composerFilePreview.value = null;
+        }
+    }
+};
+
+const clearComposerFile = () => {
+    composerFile.value = null;
+    composerFilePreview.value = null;
+    composerForm.attachment = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+const submitPost = () => {
+    if (!composerForm.content.trim()) {
+        return;
+    }
+
+    composerForm.post('/community/posts', {
+        preserveScroll: true,
+        onSuccess: () => {
+            composerForm.reset();
+            clearComposerFile();
+            isComposerOpen.value = false;
+            tabPostsCache.value = {};
+        },
+    });
+};
+
+// ─── Stories / Classmate Presence Bar (Instagram Style) ──────────────────────
+const userStoryGroup = computed<UserStoryGroup | null>(() => {
+    return props.stories?.find((g) => g.is_self) ?? null;
+});
+
+const classmateStoryGroups = computed<UserStoryGroup[]>(() => {
+    return props.stories?.filter((g) => !g.is_self) ?? [];
+});
+
+const storyTrayItems = computed<StoryTrayItem[]>(() => {
+    const items: StoryTrayItem[] = [];
+
+    // 1. Current user ("Your story")
+    const myGroup = userStoryGroup.value;
+    const hasMyStory = Boolean(myGroup && myGroup.stories.length > 0);
+    items.push({
+        id: 'you',
+        name: 'Your story',
+        username: currentUserHandle.value,
+        initials: currentUserInitials.value,
+        avatar: currentUser.value?.avatar ? currentUser.value.avatar : null,
+        isUser: true,
+        hasStory: hasMyStory,
+        storyGroup: myGroup,
+        status: 'online',
+        public_id: currentUser.value?.public_id,
+    });
+
+    const seenUserIds = new Set<string>();
+    if (currentUser.value?.id) {
+        seenUserIds.add(String(currentUser.value.id));
+    }
+    if (userStoryGroup.value) {
+        seenUserIds.add(String(userStoryGroup.value.user_id));
+    }
+
+    // 2. All students in section (whether they have stories or not)
+    const sectionClassmates = classmatesList.value.filter(
+        (c) =>
+            !c.isCurrentUser &&
+            String(c.id) !== String(currentUser.value?.id) &&
+            !(
+                userStoryGroup.value &&
+                String(c.id) === String(userStoryGroup.value.user_id)
+            ),
+    );
+
+    const classmateTrayItems: StoryTrayItem[] = [];
+    for (const classmate of sectionClassmates) {
+        const cId = String(classmate.id);
+        seenUserIds.add(cId);
+
+        const group =
+            classmateStoryGroups.value.find(
+                (g) =>
+                    (String(g.user_id) === cId ||
+                        (Boolean(g.public_id) &&
+                            Boolean(classmate.public_id) &&
+                            g.public_id === classmate.public_id) ||
+                        (Boolean(g.name) &&
+                            Boolean(classmate.name) &&
+                            g.name.trim().toLowerCase() ===
+                                classmate.name.trim().toLowerCase())) &&
+                    g.stories &&
+                    g.stories.length > 0,
+            ) || null;
+
+        if (group) {
+            seenUserIds.add(String(group.user_id));
+        }
+
+        classmateTrayItems.push({
+            id: 'classmate-' + cId,
+            name: (group?.name || classmate.name).split(' ')[0],
+            username: group?.handle || strToHandle(classmate.name),
+            initials: getInitials(group?.name || classmate.name),
+            avatar: group?.avatar || classmate.avatar,
+            isUser: false,
+            hasStory: Boolean(group && group.stories.length > 0),
+            storyGroup: group,
+            status: classmate.status || 'offline',
+            public_id: group?.public_id || classmate.public_id || undefined,
+        });
+    }
+
+    // Sort: students with active stories first, then remainder by presence status (online > idle > offline)
+    classmateTrayItems.sort((a, b) => {
+        if (a.hasStory !== b.hasStory) {
+            return a.hasStory ? -1 : 1;
+        }
+        const p: Record<string, number> = { online: 0, idle: 1, offline: 2 };
+        return (p[a.status] ?? 3) - (p[b.status] ?? 3);
+    });
+
+    items.push(...classmateTrayItems);
+
+    // 3. Any additional story groups from outside section with active stories
+    for (const group of classmateStoryGroups.value) {
+        const gId = String(group.user_id);
+        if (
+            seenUserIds.has(gId) ||
+            !group.stories ||
+            group.stories.length === 0
+        ) {
+            continue;
+        }
+        seenUserIds.add(gId);
+        items.push({
+            id: 'story-group-' + group.user_id,
+            name: group.name.split(' ')[0],
+            username: group.handle,
+            initials: getInitials(group.name),
+            avatar: group.avatar,
+            isUser: false,
+            hasStory: true,
+            storyGroup: group,
+            status: 'online',
+            public_id: group.public_id || undefined,
+        });
+    }
+
+    return items;
+});
+
+const handleStoryClick = (story: StoryTrayItem) => {
+    if (story.isUser) {
+        if (
+            story.hasStory &&
+            story.storyGroup &&
+            story.storyGroup.stories.length > 0
+        ) {
+            openStoryViewer(story.storyGroup);
+        } else {
+            openStoryModal();
+        }
+        return;
+    }
+
+    if (
+        story.hasStory &&
+        story.storyGroup &&
+        story.storyGroup.stories.length > 0
+    ) {
+        openStoryViewer(story.storyGroup);
+        return;
+    }
+
+    openProfileModal({
+        public_id: story.public_id,
+        name: story.name,
+        handle: story.username,
+        section_name: sectionDisplayName.value,
+    });
+};
+
+// ─── MyDay / Community Story Upload Modal State ──────────────────────────────
+const isStoryModalOpen = ref(false);
+const isStoryDragOver = ref(false);
+const storyFileInputRef = ref<HTMLInputElement | null>(null);
+const storyMediaFile = ref<File | null>(null);
+const storyMediaPreview = ref<string | null>(null);
+const storyMediaType = ref<'image' | 'video'>('image');
+const storyDuration = ref<number>(5);
+const storyCaption = ref<string>('');
+const storyUploadError = ref<string | null>(null);
+const isSubmittingStory = ref<boolean>(false);
+
+const clearStoryMedia = () => {
+    if (
+        storyMediaPreview.value &&
+        storyMediaPreview.value.startsWith('blob:') &&
+        typeof URL !== 'undefined' &&
+        typeof URL.revokeObjectURL === 'function'
+    ) {
+        URL.revokeObjectURL(storyMediaPreview.value);
+    }
+    storyMediaFile.value = null;
+    storyMediaPreview.value = null;
+    storyUploadError.value = null;
+    if (storyFileInputRef.value) {
+        storyFileInputRef.value.value = '';
+    }
+};
+
+const openStoryModal = () => {
+    clearStoryMedia();
+    storyCaption.value = '';
+    storyUploadError.value = null;
+    storyMediaType.value = 'image';
+    storyDuration.value = 5;
+    isStoryDragOver.value = false;
+    isStoryModalOpen.value = true;
+};
+
+const closeStoryModal = () => {
+    clearStoryMedia();
+    isStoryModalOpen.value = false;
+    storyCaption.value = '';
+    storyUploadError.value = null;
+    isStoryDragOver.value = false;
+    isSubmittingStory.value = false;
+};
+
+const processStoryFile = (file: File) => {
+    storyUploadError.value = null;
+    const isVideo =
+        file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name);
+    const isImg = file.type.startsWith('image/');
+
+    if (!isVideo && !isImg) {
+        storyUploadError.value =
+            'Please select a photo (JPG, PNG, WebP, GIF) or video (MP4, WebM, MOV).';
+        return;
+    }
+
+    if (isImg && file.size > 10 * 1024 * 1024) {
+        storyUploadError.value = 'Photo exceeds 10MB limit.';
+        return;
+    }
+
+    if (isVideo && file.size > 30 * 1024 * 1024) {
+        storyUploadError.value = 'Video exceeds 30MB limit.';
+        return;
+    }
+
+    clearStoryMedia();
+
+    if (isVideo) {
+        const objectUrl = URL.createObjectURL(file);
+        const tempVideo = document.createElement('video');
+        tempVideo.preload = 'metadata';
+        tempVideo.src = objectUrl;
+        tempVideo.onloadedmetadata = () => {
+            URL.revokeObjectURL(objectUrl);
+            const duration = tempVideo.duration;
+            if (duration > 30.5) {
+                clearStoryMedia();
+                storyUploadError.value = `Video is ${Math.round(duration)} seconds long. MyDay videos cannot exceed 30 seconds.`;
+            } else {
+                storyMediaType.value = 'video';
+                storyDuration.value = Math.max(
+                    1,
+                    Math.min(30, Math.round(duration)),
+                );
+                storyMediaFile.value = file;
+                storyMediaPreview.value = URL.createObjectURL(file);
+            }
+        };
+        tempVideo.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            storyMediaType.value = 'video';
+            storyDuration.value = 15;
+            storyMediaFile.value = file;
+            storyMediaPreview.value = URL.createObjectURL(file);
+        };
+    } else {
+        storyMediaType.value = 'image';
+        storyDuration.value = 5;
+        storyMediaFile.value = file;
+        storyMediaPreview.value = URL.createObjectURL(file);
+    }
+};
+
+const handleStoryFileChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    processStoryFile(file);
+};
+
+const handleStoryDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    isStoryDragOver.value = true;
+};
+
+const handleStoryDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    isStoryDragOver.value = false;
+};
+
+const handleStoryDrop = (e: DragEvent) => {
+    e.preventDefault();
+    isStoryDragOver.value = false;
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+        processStoryFile(file);
+    }
+};
+
+const handleUploadStory = () => {
+    if (!storyMediaFile.value) {
+        storyUploadError.value = 'Please select a photo or video to share.';
+        return;
+    }
+
+    isSubmittingStory.value = true;
+    storyUploadError.value = null;
+
+    const formData = new FormData();
+    formData.append('media', storyMediaFile.value);
+    formData.append('duration_seconds', String(storyDuration.value));
+    if (storyCaption.value.trim()) {
+        formData.append('caption', storyCaption.value.trim());
+    }
+
+    router.post('/community/stories', formData, {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            closeStoryModal();
+        },
+        onError: (errs) => {
+            storyUploadError.value =
+                (Object.values(errs)[0] as string) || 'Failed to upload story.';
+            isSubmittingStory.value = false;
+        },
+        onFinish: () => {
+            isSubmittingStory.value = false;
+        },
+    });
+};
+
+// ─── Full-Screen Story Viewer (Instagram / Facebook MyDay Style) ─────────────
+const isStoryViewerOpen = ref(false);
+const activeStoryGroup = ref<UserStoryGroup | null>(null);
+const currentStoryIndex = ref(0);
+const storyProgress = ref(0);
+const isStoryPaused = ref(false);
+const isDeletingStory = ref(false);
+const storyVideoRef = ref<HTMLVideoElement | null>(null);
+let storyTimer: ReturnType<typeof setInterval> | null = null;
+
+interface FlyingReaction {
+    id: number;
+    emoji: string;
+    left: number;
+    size: number;
+    rotation: number;
+}
+
+const storyReactionOptions = [
+    { id: '❤️', label: 'Heart', icon: Heart },
+    { id: '🔥', label: 'Fire', icon: Flame },
+    { id: '👏', label: 'Clap', icon: ThumbsUp },
+    { id: '😂', label: 'Laugh', icon: Laugh },
+    { id: '😮', label: 'Wow', icon: Sparkles },
+    { id: '🎉', label: 'Party', icon: PartyPopper },
+] as const;
+
+const getReactionIcon = (id: string) => {
+    const found = storyReactionOptions.find((r) => r.id === id);
+    return found ? found.icon : Heart;
+};
+
+const flyingReactions = ref<FlyingReaction[]>([]);
+let nextReactionParticleId = 0;
+
+const triggerFlyingReactions = (emoji: string) => {
+    const burstCount = 6;
+    for (let i = 0; i < burstCount; i++) {
+        const particleId = ++nextReactionParticleId;
+        const particle: FlyingReaction = {
+            id: particleId,
+            emoji,
+            left: 20 + Math.random() * 60,
+            size: 22 + Math.floor(Math.random() * 14),
+            rotation: -25 + Math.random() * 50,
+        };
+        flyingReactions.value.push(particle);
+        setTimeout(() => {
+            flyingReactions.value = flyingReactions.value.filter(
+                (p) => p.id !== particleId,
+            );
+        }, 1200);
+    }
+};
+
+const handleStoryReaction = async (emoji: string) => {
+    const story = currentStory.value;
+    if (!story) return;
+
+    triggerFlyingReactions(emoji);
+
+    const prevReaction = story.user_reaction;
+    const prevIsReacted = story.is_reacted;
+    const prevCount = story.reactions_count ?? 0;
+
+    const isSame = prevReaction === emoji;
+    story.user_reaction = isSame ? null : emoji;
+    story.is_reacted = !isSame;
+    story.reactions_count = Math.max(
+        0,
+        prevCount + (isSame ? -1 : prevReaction ? 0 : 1),
+    );
+
+    try {
+        const response = await axios.post(
+            `/community/stories/${story.id}/reactions`,
+            { reaction: emoji },
+        );
+        if (response.data) {
+            story.reactions_count = response.data.reactions_count;
+            story.user_reaction = response.data.user_reaction;
+            story.is_reacted = response.data.is_reacted;
+        }
+    } catch {
+        story.user_reaction = prevReaction;
+        story.is_reacted = prevIsReacted;
+        story.reactions_count = prevCount;
+    }
+};
+
+const isFeaturingStory = ref(false);
+const featuredToast = ref<string | null>(null);
+
+const handleFeatureStoryFromViewer = async () => {
+    const story = currentStory.value;
+    if (!story || isFeaturingStory.value) return;
+
+    isFeaturingStory.value = true;
+    try {
+        await axios.post('/community/profile/featured', {
+            story_id: story.id,
+            title: story.caption || undefined,
+        });
+        featuredToast.value = 'Pinned to your Profile Featured highlights!';
+        setTimeout(() => {
+            featuredToast.value = null;
+        }, 3000);
+    } catch {
+        featuredToast.value = 'Could not pin story to Featured.';
+        setTimeout(() => {
+            featuredToast.value = null;
+        }, 3000);
+    } finally {
+        isFeaturingStory.value = false;
+    }
+};
+
+const currentStory = computed<StoryItem | null>(() => {
+    if (!activeStoryGroup.value || !activeStoryGroup.value.stories.length) {
+        return null;
+    }
+    return activeStoryGroup.value.stories[currentStoryIndex.value] || null;
+});
+
+const allActiveStoryGroups = computed<UserStoryGroup[]>(() => {
+    const list: UserStoryGroup[] = [];
+    if (userStoryGroup.value && userStoryGroup.value.stories.length > 0) {
+        list.push(userStoryGroup.value);
+    }
+    for (const g of classmateStoryGroups.value) {
+        if (g.stories.length > 0) {
+            list.push(g);
+        }
+    }
+    return list;
+});
+
+const openStoryModalFromViewer = () => {
+    stopStoryPlayback();
+    isStoryOptionsOpen.value = false;
+    isStoryViewerOpen.value = false;
+    openStoryModal();
+};
+
+const openStoryViewer = (group: UserStoryGroup, startIndex = 0) => {
+    if (!group || !group.stories.length) return;
+    activeStoryGroup.value = group;
+    currentStoryIndex.value = Math.max(
+        0,
+        Math.min(startIndex, group.stories.length - 1),
+    );
+    isStoryOptionsOpen.value = false;
+    isStoryViewerOpen.value = true;
+    startStoryPlayback();
+};
+
+const closeStoryViewer = () => {
+    stopStoryPlayback();
+    isStoryViewerOpen.value = false;
+    isStoryOptionsOpen.value = false;
+    activeStoryGroup.value = null;
+    currentStoryIndex.value = 0;
+    storyProgress.value = 0;
+    flyingReactions.value = [];
+    featuredToast.value = null;
+};
+
+const startStoryPlayback = () => {
+    stopStoryPlayback();
+    storyProgress.value = 0;
+    isStoryPaused.value = false;
+
+    const story = currentStory.value;
+    if (!story) return;
+
+    // Record unique view via background API call
+    axios.post(`/community/stories/${story.id}/view`).catch(() => {});
+
+    const totalSeconds =
+        story.duration_seconds || (story.media_type === 'video' ? 15 : 5);
+    const tickInterval = 50; // ms
+    const stepIncrement = (tickInterval / (totalSeconds * 1000)) * 100;
+
+    storyTimer = setInterval(() => {
+        if (isStoryPaused.value) return;
+
+        storyProgress.value += stepIncrement;
+        if (storyProgress.value >= 100) {
+            storyProgress.value = 100;
+            goToNextStory();
+        }
+    }, tickInterval);
+};
+
+const stopStoryPlayback = () => {
+    if (storyTimer) {
+        clearInterval(storyTimer);
+        storyTimer = null;
+    }
+};
+
+const goToNextStory = () => {
+    if (!activeStoryGroup.value) return;
+
+    flyingReactions.value = [];
+    isStoryOptionsOpen.value = false;
+    if (currentStoryIndex.value < activeStoryGroup.value.stories.length - 1) {
+        currentStoryIndex.value++;
+        startStoryPlayback();
+    } else {
+        const groups = allActiveStoryGroups.value;
+        const currentGroupIdx = groups.findIndex(
+            (g) => g.user_id === activeStoryGroup.value?.user_id,
+        );
+        if (currentGroupIdx !== -1 && currentGroupIdx < groups.length - 1) {
+            activeStoryGroup.value = groups[currentGroupIdx + 1];
+            currentStoryIndex.value = 0;
+            startStoryPlayback();
+        } else {
+            closeStoryViewer();
+        }
+    }
+};
+
+const goToPreviousStory = () => {
+    if (!activeStoryGroup.value) return;
+
+    flyingReactions.value = [];
+    isStoryOptionsOpen.value = false;
+    if (currentStoryIndex.value > 0) {
+        currentStoryIndex.value--;
+        startStoryPlayback();
+    } else {
+        const groups = allActiveStoryGroups.value;
+        const currentGroupIdx = groups.findIndex(
+            (g) => g.user_id === activeStoryGroup.value?.user_id,
+        );
+        if (currentGroupIdx > 0) {
+            const prevGroup = groups[currentGroupIdx - 1];
+            activeStoryGroup.value = prevGroup;
+            currentStoryIndex.value = prevGroup.stories.length - 1;
+            startStoryPlayback();
+        } else {
+            startStoryPlayback();
+        }
+    }
+};
+
+const pauseStory = () => {
+    isStoryPaused.value = true;
+    if (storyVideoRef.value && !storyVideoRef.value.paused) {
+        storyVideoRef.value.pause();
+    }
+};
+
+const resumeStory = () => {
+    isStoryPaused.value = false;
+    if (storyVideoRef.value && storyVideoRef.value.paused) {
+        storyVideoRef.value.play().catch(() => {});
+    }
+};
+
+const togglePlayPause = () => {
+    if (isStoryPaused.value) {
+        resumeStory();
+    } else {
+        pauseStory();
+    }
+};
+
+const isStoryOptionsOpen = ref(false);
+
+const toggleStoryOptions = () => {
+    isStoryOptionsOpen.value = !isStoryOptionsOpen.value;
+    if (isStoryOptionsOpen.value) {
+        pauseStory();
+    } else {
+        resumeStory();
+    }
+};
+
+const handleDeleteStory = async () => {
+    const story = currentStory.value;
+    if (!story || isDeletingStory.value) return;
+
+    isDeletingStory.value = true;
+    try {
+        await axios.delete(`/community/stories/${story.id}`);
+        if (activeStoryGroup.value) {
+            activeStoryGroup.value.stories =
+                activeStoryGroup.value.stories.filter((s) => s.id !== story.id);
+            if (activeStoryGroup.value.stories.length === 0) {
+                closeStoryViewer();
+            } else {
+                if (
+                    currentStoryIndex.value >=
+                    activeStoryGroup.value.stories.length
+                ) {
+                    currentStoryIndex.value =
+                        activeStoryGroup.value.stories.length - 1;
+                }
+                startStoryPlayback();
+            }
+        }
+        router.reload({ only: ['stories'] });
+    } catch {
+        // keep view open
+    } finally {
+        isDeletingStory.value = false;
+    }
+};
+
+const handleStoryKeydown = (e: KeyboardEvent) => {
+    if (isWelcomeModalOpen.value && e.key === 'Escape') {
+        dismissWelcomeModal();
+        return;
+    }
+    if (!isStoryViewerOpen.value) return;
+    if (e.key === 'Escape') {
+        if (isStoryOptionsOpen.value) {
+            isStoryOptionsOpen.value = false;
+            resumeStory();
+            return;
+        }
+        closeStoryViewer();
+    } else if (e.key === 'ArrowLeft') {
+        goToPreviousStory();
+    } else if (e.key === 'ArrowRight') {
+        goToNextStory();
+    } else if (e.key === ' ') {
+        e.preventDefault();
+        if (isStoryPaused.value) {
+            resumeStory();
+        } else {
+            pauseStory();
+        }
+    }
+};
+
+// ─── Instagram Profile Preview Modal ─────────────────────────────────────────
+export interface ProfileModalData {
+    is_masked: boolean;
+    is_self?: boolean;
+    public_id?: string | null;
+    name: string;
+    handle: string;
+    avatar?: string | null;
+    bio?: string;
+    level?: number;
+    section_name?: string;
+    can_follow?: boolean;
+    is_following?: boolean;
+    followers_count?: number;
+    following_count?: number;
+    posts_count?: number;
+    likes_received?: number;
+    recent_posts?: Array<{
+        id: number | string;
+        content: string;
+        created_at: string;
+        likes_count: number;
+        comments_count: number;
+    }>;
+}
+
+const isProfileModalOpen = ref(false);
+const isLoadingProfile = ref(false);
+const activeProfile = ref<ProfileModalData | null>(null);
+
+const openProfileModal = async (userRef: {
+    public_id?: string | null;
+    name?: string;
+    is_masked?: boolean;
+    avatar?: string | null;
+    handle?: string;
+    section_name?: string;
+}) => {
+    const isSelfUser =
+        (Boolean(currentUser.value?.public_id) &&
+            userRef.public_id === currentUser.value?.public_id) ||
+        (userRef.name === currentUserName.value && !userRef.is_masked);
+
+    // If masked student and NOT self: show identity shield modal
+    if (!isSelfUser && (userRef.is_masked || !userRef.public_id)) {
+        activeProfile.value = {
+            is_masked: true,
+            is_self: false,
+            name: userRef.name || 'Student',
+            handle: userRef.handle || 'student.masked',
+            avatar: null,
+            bio: 'This student posted anonymously or belongs to another section. Real identity details are shielded to protect classroom privacy.',
+            section_name: userRef.section_name || 'Other Section',
+            can_follow: false,
+            is_following: false,
+            followers_count: 0,
+            following_count: 0,
+            posts_count: 0,
+            likes_received: 0,
+            recent_posts: [],
+        };
+        isProfileModalOpen.value = true;
+        return;
+    }
+
+    // Unmasked classmate or self: fetch profile preview
+    isLoadingProfile.value = true;
+    isProfileModalOpen.value = true;
+
+    const targetPublicId =
+        userRef.public_id || (isSelfUser ? currentUser.value?.public_id : null);
+
+    // Optimistic fallback while fetching
+    activeProfile.value = {
+        is_masked: false,
+        is_self: isSelfUser,
+        public_id: targetPublicId,
+        name: isSelfUser ? currentUserName.value : userRef.name || 'Classmate',
+        handle: isSelfUser
+            ? currentUserHandle.value
+            : userRef.handle || strToHandle(userRef.name || 'classmate'),
+        avatar:
+            userRef.avatar || (isSelfUser ? currentUser.value?.avatar : null),
+        bio: '',
+        level: 1,
+        section_name: userRef.section_name || sectionDisplayName.value,
+        can_follow: !isSelfUser,
+        is_following: false,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        likes_received: 0,
+        recent_posts: [],
+    };
+
+    if (!targetPublicId) {
+        isLoadingProfile.value = false;
+        return;
+    }
+
+    try {
+        const res = await fetch(`/community/users/${targetPublicId}/preview`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (res.ok) {
+            const data = await res.json();
+            activeProfile.value = data;
+        }
+    } catch {
+        // Keep optimistic data
+    } finally {
+        isLoadingProfile.value = false;
+    }
+};
+
+const handleToggleFollow = () => {
+    if (!activeProfile.value?.public_id || !activeProfile.value.can_follow) {
+        return;
+    }
+
+    const publicId = activeProfile.value.public_id;
+    const currentlyFollowing = activeProfile.value.is_following ?? false;
+
+    // Optimistic UI toggle
+    activeProfile.value.is_following = !currentlyFollowing;
+    activeProfile.value.followers_count = Math.max(
+        0,
+        (activeProfile.value.followers_count ?? 0) +
+            (currentlyFollowing ? -1 : 1),
+    );
+
+    if (currentlyFollowing) {
+        router.delete(`/u/${publicId}/follow`, {
+            preserveScroll: true,
+            preserveState: true,
+        });
+    } else {
+        router.post(
+            `/u/${publicId}/follow`,
+            {},
+            { preserveScroll: true, preserveState: true },
+        );
+    }
+};
+
+// ─── Mobile Drawer State ─────────────────────────────────────────────────────
+const isMobileDrawerOpen = ref(false);
+
+watch(
+    [
+        isMobileDrawerOpen,
+        isProfileModalOpen,
+        isStoryViewerOpen,
+        isStoryModalOpen,
+        isWelcomeModalOpen,
+        postToDelete,
+        commentToDelete,
+    ],
+    ([
+        drawerOpen,
+        modalOpen,
+        storyViewerOpen,
+        storyModalOpen,
+        welcomeOpen,
+        postDeleteOpen,
+        commentDeleteOpen,
+    ]) => {
+        if (typeof document !== 'undefined') {
+            if (
+                drawerOpen ||
+                modalOpen ||
+                storyViewerOpen ||
+                storyModalOpen ||
+                welcomeOpen ||
+                Boolean(postDeleteOpen) ||
+                Boolean(commentDeleteOpen)
+            ) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+    },
+);
+
+const handleDocumentClick = (e: MouseEvent) => {
+    if (activePostMenuId.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="post-options-menu"]') &&
+            !target.closest('[data-test="post-options-button"]')
+        ) {
+            activePostMenuId.value = null;
+        }
+    }
+    if (isStoryOptionsOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="viewer-story-options-menu"]') &&
+            !target.closest('[data-test="viewer-story-options-button"]')
+        ) {
+            isStoryOptionsOpen.value = false;
+            resumeStory();
+        }
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleStoryKeydown);
+    window.addEventListener('click', handleDocumentClick);
+}
+
+onBeforeUnmount(() => {
+    clearStoryMedia();
+    stopStoryPlayback();
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleStoryKeydown);
+        window.removeEventListener('click', handleDocumentClick);
+    }
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+    }
+});
+
+// ─── Trending Topics ─────────────────────────────────────────────────────────
+const defaultTrendingTopics: TrendingTopic[] = [
+    { tag: 'midterm-exam', name: 'MidtermExam', count: 28 },
+    { tag: 'networking-lab', name: 'NetworkingLab', count: 14 },
+    { tag: 'review-notes', name: 'ReviewNotes', count: 9 },
+    { tag: 'dijkstra', name: 'DijkstraAlgorithm', count: 6 },
+    { tag: 'study-group', name: 'StudyGroup', count: 4 },
+];
+
+const trendingTopics = computed<TrendingTopic[]>(() => {
+    if (props.trendingTopics !== undefined) {
+        return props.trendingTopics;
+    }
+    return defaultTrendingTopics;
+});
+</script>
+
+<template>
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <Head title="Community Lounge" />
+
+        <div class="relative min-h-[calc(100vh-4rem)] p-3 sm:p-5 lg:p-6">
+            <div class="mx-auto max-w-6xl">
+                <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
+                <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
+                <header
+                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4"
+                >
+                    <div class="flex items-center gap-3">
+                        <button
+                            type="button"
+                            data-test="community-back-button"
+                            class="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-2xs backdrop-blur-xs transition hover:bg-muted"
+                            @click="handleReturn"
+                        >
+                            <ArrowLeft class="h-3.5 w-3.5" />
+                            <span>Back to Dashboard</span>
+                        </button>
+
+                        <div class="h-4 w-px bg-border/60" />
+
+                        <div class="flex items-center gap-2">
+                            <h1
+                                class="text-base font-bold tracking-tight text-foreground sm:text-lg"
+                            >
+                                Community Lounge
+                            </h1>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- ═══ 2-Column Social Feed Layout ═══ -->
+                <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+                    <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
+                    <main class="space-y-5 lg:col-span-7 xl:col-span-8">
+                        <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
+                        <section
+                            aria-label="Classmate Stories"
+                            class="flex scrollbar-none items-center gap-4 overflow-x-auto rounded-2xl border border-border/50 bg-card/60 p-3.5 pb-3 shadow-2xs backdrop-blur-xs"
+                        >
+                            <!-- Story Item -->
+                            <div
+                                v-for="story in storyTrayItems"
+                                :key="story.id"
+                                class="group flex shrink-0 cursor-pointer flex-col items-center gap-1.5 select-none"
+                                @click="handleStoryClick(story)"
+                            >
+                                <div class="relative">
+                                    <!-- Story Ring: Instagram gradient for active stories -->
+                                    <div
+                                        class="flex h-14 w-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105 active:scale-95"
+                                        :class="[
+                                            story.isUser
+                                                ? story.hasStory
+                                                    ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2.5px]'
+                                                    : 'border-2 border-dashed border-border/80 p-0.5'
+                                                : story.hasStory
+                                                  ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2.5px]'
+                                                  : 'border-2 border-border/70 p-0.5',
+                                        ]"
+                                    >
+                                        <!-- Inner Avatar Circle -->
+                                        <div
+                                            class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-background text-xs font-bold"
+                                            :class="
+                                                story.isUser && !story.hasStory
+                                                    ? 'bg-brand/15 text-brand'
+                                                    : 'bg-muted text-foreground'
+                                            "
+                                        >
+                                            <!-- User active story thumbnail preview -->
+                                            <template
+                                                v-if="
+                                                    story.isUser &&
+                                                    story.hasStory &&
+                                                    story.storyGroup?.stories
+                                                        ?.length
+                                                "
+                                            >
+                                                <video
+                                                    v-if="
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
+                                                        ].media_type === 'video'
+                                                    "
+                                                    :src="
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
+                                                        ].media_url
+                                                    "
+                                                    class="h-full w-full object-cover"
+                                                    data-test="your-story-preview-video"
+                                                    preload="metadata"
+                                                    muted
+                                                />
+                                                <img
+                                                    v-else
+                                                    :src="
+                                                        story.storyGroup
+                                                            .stories[
+                                                            story.storyGroup
+                                                                .stories
+                                                                .length - 1
+                                                        ].media_url
+                                                    "
+                                                    :alt="story.name"
+                                                    class="h-full w-full object-cover"
+                                                    data-test="your-story-preview-image"
+                                                />
+                                            </template>
+                                            <img
+                                                v-else-if="story.avatar"
+                                                :src="story.avatar"
+                                                :alt="story.name"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <span v-else>{{
+                                                story.initials
+                                            }}</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Plus badge on user story -->
+                                    <button
+                                        v-if="story.isUser"
+                                        type="button"
+                                        class="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-brand text-[10px] font-bold text-primary-foreground shadow-xs transition-transform hover:scale-110 active:scale-95"
+                                        title="Add to story"
+                                        @click.stop="openStoryModal"
+                                    >
+                                        <Plus class="h-2.5 w-2.5 stroke-[3]" />
+                                    </button>
+
+                                    <!-- Online Green Beacon on classmates -->
+                                    <span
+                                        v-else-if="story.status === 'online'"
+                                        class="absolute right-0.5 bottom-0.5 flex h-3 w-3 items-center justify-center rounded-full border-2 border-background bg-emerald-500 shadow-2xs"
+                                        title="Active now"
+                                    />
+                                </div>
+
+                                <span
+                                    class="max-w-[64px] truncate text-[11px] font-medium tracking-tight text-muted-foreground group-hover:text-foreground"
+                                >
+                                    {{ story.name }}
+                                </span>
+                            </div>
+                        </section>
+
+                        <!-- ─── Threads Style Feed Filter Tabs ─────────────────────── -->
+                        <div
+                            class="flex items-center justify-around gap-1 border-b border-border/40 text-xs font-semibold sm:justify-start sm:gap-6"
+                        >
+                            <button
+                                type="button"
+                                data-test="community-tab-all"
+                                class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors"
+                                :class="
+                                    activeTab === 'all'
+                                        ? 'text-brand'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                "
+                                @click="handleTabChange('all')"
+                            >
+                                <FileText
+                                    class="h-3.5 w-3.5 transition-colors group-hover:text-foreground"
+                                    :class="
+                                        activeTab === 'all'
+                                            ? 'text-brand'
+                                            : 'text-muted-foreground/70 group-hover:text-foreground'
+                                    "
+                                />
+                                <span>Feed</span>
+                                <span
+                                    v-if="activeTab === 'all'"
+                                    class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand"
+                                />
+                            </button>
+
+                            <button
+                                type="button"
+                                data-test="community-tab-section"
+                                class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors"
+                                :class="
+                                    activeTab === 'section'
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                "
+                                @click="handleTabChange('section')"
+                            >
+                                <Users
+                                    class="h-3.5 w-3.5 transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+                                    :class="
+                                        activeTab === 'section'
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-muted-foreground/70 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                                    "
+                                />
+                                <span>My Section</span>
+                                <span
+                                    v-if="activeTab === 'section'"
+                                    class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
+                                />
+                            </button>
+
+                            <button
+                                type="button"
+                                data-test="community-tab-saved"
+                                class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors"
+                                :class="
+                                    activeTab === 'saved'
+                                        ? 'text-amber-600 dark:text-amber-400'
+                                        : 'text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400'
+                                "
+                                @click="handleTabChange('saved')"
+                            >
+                                <Bookmark
+                                    class="h-3.5 w-3.5 transition-colors group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                                    :class="
+                                        activeTab === 'saved'
+                                            ? 'text-amber-600 dark:text-amber-400'
+                                            : 'text-muted-foreground/70 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                    "
+                                />
+                                <span>Saved</span>
+                                <span
+                                    v-if="activeTab === 'saved'"
+                                    class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-amber-500"
+                                />
+                            </button>
+
+                            <!-- Mobile Presence Drawer Trigger Tab (Online Actives) -->
+                            <button
+                                type="button"
+                                data-test="mobile-presence-drawer-trigger"
+                                class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors lg:hidden"
+                                :class="
+                                    isMobileDrawerOpen
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                "
+                                aria-label="View online classmates"
+                                @click="isMobileDrawerOpen = true"
+                            >
+                                <span
+                                    class="relative flex h-2 w-2 shrink-0 items-center justify-center"
+                                    aria-hidden="true"
+                                >
+                                    <span
+                                        class="presence-beacon-ring absolute inline-flex h-full w-full rounded-full bg-emerald-500/40"
+                                    />
+                                    <span
+                                        class="presence-beacon-dot relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                    />
+                                </span>
+                                <span>{{ onlineCount }} Online</span>
+                                <span
+                                    v-if="isMobileDrawerOpen"
+                                    class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
+                                />
+                            </button>
+                        </div>
+
+                        <!-- ─── Feed Container ─────────────────────────────────────── -->
+                        <div
+                            class="space-y-5"
+                            data-test="community-feed-container"
+                        >
+                            <!-- Instagram / Threads Composer Row -->
+                            <div
+                                class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs transition-colors hover:border-border"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <!-- User Avatar -->
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                    >
+                                        {{ currentUserInitials }}
+                                    </div>
+
+                                    <!-- Input Row -->
+                                    <div class="min-w-0 flex-1">
+                                        <div
+                                            v-if="
+                                                !isComposerOpen &&
+                                                !composerForm.content
+                                            "
+                                            class="w-full cursor-text rounded-full border border-border/60 bg-muted/40 px-4 py-2 text-xs text-muted-foreground transition-all hover:border-border hover:bg-muted/60"
+                                            @click="isComposerOpen = true"
+                                        >
+                                            Share learning tips, ask questions,
+                                            or start a discussion...
+                                        </div>
+
+                                        <div v-else class="space-y-2">
+                                            <textarea
+                                                v-model="composerForm.content"
+                                                rows="2"
+                                                placeholder="Share learning tips, ask questions, or start a discussion..."
+                                                class="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background focus:outline-none"
+                                            />
+                                        </div>
+
+                                        <!-- Attachment Preview if selected -->
+                                        <div
+                                            v-if="composerFile"
+                                            class="mt-2.5 flex items-center justify-between rounded-xl border border-border/60 bg-muted/40 p-2 text-xs"
+                                        >
+                                            <div
+                                                class="flex min-w-0 items-center gap-2"
+                                            >
+                                                <img
+                                                    v-if="composerFilePreview"
+                                                    :src="composerFilePreview"
+                                                    alt="Preview"
+                                                    class="h-10 w-10 rounded-lg object-cover"
+                                                />
+                                                <FileText
+                                                    v-else
+                                                    class="h-6 w-6 text-brand"
+                                                />
+                                                <span
+                                                    class="truncate font-medium text-foreground"
+                                                >
+                                                    {{ composerFile.name }}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer text-muted-foreground hover:text-foreground"
+                                                @click="clearComposerFile"
+                                            >
+                                                <X class="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <!-- Hidden file input -->
+                                        <input
+                                            ref="fileInputRef"
+                                            type="file"
+                                            class="hidden"
+                                            @change="handleFileSelect"
+                                        />
+
+                                        <!-- Composer Action Tray -->
+                                        <div
+                                            class="mt-3 flex items-center justify-between border-t border-border/30 pt-2.5 text-xs"
+                                        >
+                                            <div
+                                                class="flex items-center gap-1 text-muted-foreground"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
+                                                    title="Attach photo or document"
+                                                    @click="
+                                                        fileInputRef?.click()
+                                                    "
+                                                >
+                                                    <ImageIcon
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
+                                                    title="Attach code snippet or file"
+                                                    @click="
+                                                        fileInputRef?.click()
+                                                    "
+                                                >
+                                                    <Code2
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                </button>
+
+                                                <!-- Anonymous Toggle -->
+                                                <label
+                                                    class="ml-2 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <input
+                                                        v-model="
+                                                            composerForm.is_anonymous
+                                                        "
+                                                        type="checkbox"
+                                                        class="h-3 w-3 rounded border-border text-brand focus:ring-0"
+                                                    />
+                                                    <span
+                                                        >Post anonymously</span
+                                                    >
+                                                </label>
+                                            </div>
+
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <span
+                                                    class="hidden text-[11px] text-muted-foreground sm:inline-flex"
+                                                >
+                                                    {{
+                                                        composerForm.is_anonymous
+                                                            ? 'Identity hidden from everyone'
+                                                            : 'Identity masked outside section'
+                                                    }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    :disabled="
+                                                        !composerForm.content.trim() ||
+                                                        composerForm.processing
+                                                    "
+                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    @click="submitPost"
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            composerForm.processing
+                                                        "
+                                                        class="h-3 w-3 animate-spin"
+                                                    />
+                                                    <span>Post</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ─── Empty Feed State ───────────────────────────────────── -->
+                            <div
+                                v-if="displayPosts.length === 0"
+                                class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/40 p-12 text-center"
+                            >
+                                <div
+                                    class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                                >
+                                    <MessageCircle class="h-6 w-6" />
+                                </div>
+                                <h3
+                                    class="mt-4 text-sm font-semibold text-foreground"
+                                >
+                                    {{
+                                        activeTab === 'saved'
+                                            ? 'No saved posts yet'
+                                            : activeTab === 'section'
+                                              ? 'No posts in your section yet'
+                                              : 'No posts yet'
+                                    }}
+                                </h3>
+                                <p
+                                    class="mt-1 max-w-sm text-xs text-muted-foreground"
+                                >
+                                    {{
+                                        activeTab === 'saved'
+                                            ? 'Posts you bookmark will appear here for easy reference.'
+                                            : activeTab === 'section'
+                                              ? 'Be the first from your section to share a question or update!'
+                                              : 'The lounge is quiet. Share a question, study tip, or resource to start the conversation.'
+                                    }}
+                                </p>
+                                <button
+                                    v-if="activeTab !== 'saved'"
+                                    type="button"
+                                    class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-opacity hover:opacity-90 active:scale-95"
+                                    @click="isComposerOpen = true"
+                                >
+                                    <Plus class="h-3.5 w-3.5" />
+                                    <span>Create Post</span>
+                                </button>
+                            </div>
+
+                            <!-- ─── Post Cards List ────────────────────────────────────── -->
+                            <article
+                                v-for="post in displayPosts"
+                                :key="post.id"
+                                class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xs transition-colors hover:border-border"
+                            >
+                                <!-- Post Header -->
+                                <div
+                                    class="flex items-center justify-between p-4 pb-3"
+                                >
+                                    <div class="flex items-center gap-2.5">
+                                        <!-- Avatar -->
+                                        <div
+                                            class="relative shrink-0 cursor-pointer"
+                                            @click="
+                                                openProfileModal({
+                                                    public_id:
+                                                        post.author.public_id,
+                                                    name: post.author.name,
+                                                    handle: post.author.handle,
+                                                    is_masked:
+                                                        post.author.is_masked,
+                                                    section_name:
+                                                        post.author
+                                                            .section_name,
+                                                })
+                                            "
+                                        >
+                                            <div
+                                                v-if="post.author.is_masked"
+                                                class="flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-muted text-xs font-semibold text-muted-foreground"
+                                            >
+                                                <EyeOff class="h-4 w-4" />
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2px]"
+                                            >
+                                                <div
+                                                    class="flex h-full w-full items-center justify-center rounded-full border-2 border-card bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                                                >
+                                                    {{
+                                                        getInitials(
+                                                            post.author.name,
+                                                        )
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <span
+                                                v-if="!post.author.is_masked"
+                                                class="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500"
+                                                title="Online"
+                                            />
+                                        </div>
+
+                                        <div class="min-w-0">
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <span
+                                                    class="cursor-pointer text-xs font-bold text-foreground hover:underline"
+                                                    data-test="post-author-handle"
+                                                    @click="
+                                                        openProfileModal({
+                                                            public_id:
+                                                                post.author
+                                                                    .public_id,
+                                                            name: post.author
+                                                                .name,
+                                                            handle: post.author
+                                                                .handle,
+                                                            is_masked:
+                                                                post.author
+                                                                    .is_masked,
+                                                            section_name:
+                                                                post.author
+                                                                    .section_name,
+                                                        })
+                                                    "
+                                                >
+                                                    {{ post.author.handle }}
+                                                </span>
+                                                <span
+                                                    class="text-[10px] text-muted-foreground"
+                                                    >•</span
+                                                >
+                                                <span
+                                                    class="text-xs font-medium text-muted-foreground"
+                                                >
+                                                    {{ post.author.name }}
+                                                </span>
+                                            </div>
+                                            <p
+                                                class="text-[11px] text-muted-foreground"
+                                            >
+                                                {{
+                                                    post.author.section_name ||
+                                                    sectionDisplayName
+                                                }}
+                                                · {{ post.created_at }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-if="canManagePost(post)"
+                                        class="relative"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            aria-label="Post options"
+                                            data-test="post-options-button"
+                                            @click.stop="
+                                                togglePostMenu(post.id)
+                                            "
+                                        >
+                                            <MoreHorizontal class="h-4 w-4" />
+                                        </button>
+                                        <div
+                                            v-if="
+                                                activePostMenuId ===
+                                                String(post.id)
+                                            "
+                                            class="absolute top-full right-0 z-20 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
+                                            data-test="post-options-menu"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted"
+                                                data-test="edit-post-button"
+                                                @click="startEditPost(post)"
+                                            >
+                                                <Pencil class="h-3.5 w-3.5" />
+                                                <span>Edit</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                                                data-test="delete-post-button"
+                                                @click="confirmDeletePost(post)"
+                                            >
+                                                <Trash2 class="h-3.5 w-3.5" />
+                                                <span>Delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button
+                                        v-else
+                                        type="button"
+                                        class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        aria-label="Post options"
+                                    >
+                                        <MoreHorizontal class="h-4 w-4" />
+                                    </button>
+                                </div>
+
+                                <!-- Post Text Content -->
+                                <div class="px-4 pb-3">
+                                    <div
+                                        v-if="editingPostId === String(post.id)"
+                                        class="space-y-3 rounded-xl border border-border/80 bg-muted/20 p-3"
+                                        data-test="post-edit-form"
+                                    >
+                                        <textarea
+                                            v-model="editingPostContent"
+                                            rows="3"
+                                            maxlength="2000"
+                                            class="w-full resize-none rounded-lg border border-border/70 bg-background p-2.5 text-xs text-foreground focus:border-brand focus:outline-none sm:text-[13px]"
+                                            placeholder="Edit your post..."
+                                            data-test="post-edit-textarea"
+                                        ></textarea>
+                                        <div
+                                            class="flex flex-wrap items-center justify-between gap-2"
+                                        >
+                                            <label
+                                                class="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground select-none hover:text-foreground"
+                                            >
+                                                <input
+                                                    v-model="
+                                                        editingPostIsAnonymous
+                                                    "
+                                                    type="checkbox"
+                                                    class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand"
+                                                    data-test="post-edit-anonymous-checkbox"
+                                                />
+                                                <span>Post anonymously</span>
+                                            </label>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                    data-test="cancel-post-edit-button"
+                                                    @click="cancelEditPost"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand/90 disabled:opacity-50"
+                                                    :disabled="
+                                                        isSavingPost ||
+                                                        !editingPostContent.trim()
+                                                    "
+                                                    data-test="save-post-edit-button"
+                                                    @click="saveEditPost(post)"
+                                                >
+                                                    <Loader2
+                                                        v-if="isSavingPost"
+                                                        class="h-3.5 w-3.5 animate-spin"
+                                                    />
+                                                    <span>Save</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p
+                                        v-else
+                                        class="text-xs leading-relaxed text-foreground/90 sm:text-[13px]"
+                                        data-test="post-content"
+                                    >
+                                        {{ post.content }}
+                                    </p>
+                                </div>
+
+                                <!-- Post Attachment (Image or File) -->
+                                <div
+                                    v-if="post.attachment_url"
+                                    class="px-4 pb-3"
+                                >
+                                    <!-- Image Preview -->
+                                    <div
+                                        v-if="post.attachment_type === 'image'"
+                                        class="overflow-hidden rounded-xl border border-border/50"
+                                    >
+                                        <img
+                                            :src="post.attachment_url"
+                                            :alt="
+                                                post.attachment_name ||
+                                                'Post attachment'
+                                            "
+                                            class="max-h-96 w-full object-cover"
+                                        />
+                                    </div>
+
+                                    <!-- Document / File Card -->
+                                    <div
+                                        v-else
+                                        class="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 p-3 transition-colors hover:border-border hover:bg-muted/50"
+                                    >
+                                        <div
+                                            class="flex min-w-0 items-center gap-3"
+                                        >
+                                            <div
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500"
+                                            >
+                                                <FileText class="h-5 w-5" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p
+                                                    class="truncate text-xs font-semibold text-foreground group-hover:text-brand"
+                                                >
+                                                    {{
+                                                        post.attachment_name ||
+                                                        'Attachment File'
+                                                    }}
+                                                </p>
+                                                <p
+                                                    class="text-[11px] text-muted-foreground"
+                                                >
+                                                    {{
+                                                        post.attachment_size
+                                                            ? Math.round(
+                                                                  post.attachment_size /
+                                                                      1024,
+                                                              ) + ' KB'
+                                                            : 'Document'
+                                                    }}
+                                                    ·
+                                                    {{
+                                                        post.author
+                                                            .section_name ||
+                                                        'Class File'
+                                                    }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            v-if="post.attachment_url !== '#'"
+                                            :href="post.attachment_url"
+                                            download
+                                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-all hover:bg-foreground hover:text-background"
+                                            title="Download preview"
+                                        >
+                                            <Download class="h-3.5 w-3.5" />
+                                        </a>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-all hover:bg-foreground hover:text-background"
+                                            title="Download preview"
+                                        >
+                                            <Download class="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Instagram Action Bar -->
+                                <div
+                                    class="flex items-center justify-between border-t border-border/40 px-4 py-2.5"
+                                >
+                                    <div class="flex items-center gap-4">
+                                        <!-- Heart / Like -->
+                                        <button
+                                            type="button"
+                                            class="group inline-flex cursor-pointer items-center gap-1.5 text-xs transition-colors"
+                                            :class="
+                                                isPostLiked(post.id)
+                                                    ? 'text-rose-500'
+                                                    : 'text-muted-foreground hover:text-foreground'
+                                            "
+                                            data-test="post-like-button"
+                                            @click="toggleLike(post.id)"
+                                        >
+                                            <Heart
+                                                class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
+                                                :class="{
+                                                    'fill-rose-500':
+                                                        isPostLiked(post.id),
+                                                    'scale-125 duration-150':
+                                                        isHeartBouncing[
+                                                            String(post.id)
+                                                        ],
+                                                }"
+                                            />
+                                            <span class="font-medium">{{
+                                                getPostLikesCount(post.id)
+                                            }}</span>
+                                        </button>
+
+                                        <!-- Comment -->
+                                        <button
+                                            type="button"
+                                            class="group inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                            data-test="post-comments-toggle-button"
+                                            @click="toggleComments(post.id)"
+                                        >
+                                            <MessageCircle
+                                                class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
+                                            />
+                                            <span
+                                                class="font-medium"
+                                                data-test="post-comments-count"
+                                                >{{
+                                                    getPostCommentsCount(post)
+                                                }}</span
+                                            >
+                                        </button>
+
+                                        <!-- Share -->
+                                        <button
+                                            type="button"
+                                            class="group inline-flex cursor-pointer items-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                            aria-label="Share post"
+                                        >
+                                            <Send
+                                                class="h-4 w-4 -rotate-12 transition-transform group-hover:scale-115 active:scale-90"
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <!-- Bookmark -->
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                                        :class="{
+                                            'text-foreground': isPostBookmarked(
+                                                post.id,
+                                            ),
+                                        }"
+                                        data-test="post-bookmark-button"
+                                        aria-label="Save post"
+                                        @click="toggleBookmark(post.id)"
+                                    >
+                                        <Bookmark
+                                            class="h-4 w-4"
+                                            :class="{
+                                                'fill-foreground':
+                                                    isPostBookmarked(post.id),
+                                            }"
+                                        />
+                                    </button>
+                                </div>
+
+                                <!-- Instagram Social Proof / Comments Feed -->
+                                <div
+                                    class="space-y-2 border-t border-border/30 bg-muted/15 px-4 py-2.5 text-xs"
+                                >
+                                    <p
+                                        v-if="getPostLikesCount(post.id) > 0"
+                                        class="text-[11px] text-muted-foreground"
+                                    >
+                                        <span
+                                            class="font-semibold text-foreground"
+                                            >{{
+                                                getPostLikesCount(post.id)
+                                            }}</span
+                                        >
+                                        {{
+                                            getPostLikesCount(post.id) === 1
+                                                ? 'like'
+                                                : 'likes'
+                                        }}
+                                    </p>
+
+                                    <!-- View all comments toggle -->
+                                    <button
+                                        v-if="getPostCommentsCount(post) > 1"
+                                        type="button"
+                                        class="cursor-pointer text-[11px] text-muted-foreground hover:underline"
+                                        @click="toggleComments(post.id)"
+                                    >
+                                        {{
+                                            expandedComments[String(post.id)]
+                                                ? 'Hide comments'
+                                                : `View all ${getPostCommentsCount(post)} comments`
+                                        }}
+                                    </button>
+
+                                    <!-- Comments list -->
+                                    <div class="space-y-3 pt-1">
+                                        <div
+                                            v-for="comment in getPostComments(
+                                                post,
+                                            )"
+                                            :key="comment.id"
+                                            class="text-[11px] text-foreground/90"
+                                            data-test="comment-item"
+                                        >
+                                            <div
+                                                class="flex items-start gap-2.5"
+                                            >
+                                                <!-- Commenter Avatar -->
+                                                <button
+                                                    type="button"
+                                                    class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
+                                                    data-test="comment-avatar"
+                                                    @click="
+                                                        openProfileModal({
+                                                            public_id:
+                                                                comment.author_public_id,
+                                                            name: comment.author_name,
+                                                            handle: comment.author_handle,
+                                                            avatar: comment.author_avatar,
+                                                            is_masked:
+                                                                comment.is_masked,
+                                                            section_name:
+                                                                comment.section_name,
+                                                        })
+                                                    "
+                                                >
+                                                    <img
+                                                        v-if="
+                                                            comment.author_avatar &&
+                                                            !comment.is_masked
+                                                        "
+                                                        :src="
+                                                            comment.author_avatar
+                                                        "
+                                                        :alt="
+                                                            comment.author_name
+                                                        "
+                                                        class="h-6 w-6 rounded-full object-cover"
+                                                    />
+                                                    <div
+                                                        v-else
+                                                        class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-[10px] font-bold text-brand select-none"
+                                                    >
+                                                        {{
+                                                            getInitials(
+                                                                comment.author_name,
+                                                            )
+                                                        }}
+                                                    </div>
+                                                </button>
+
+                                                <!-- Comment Body & Thread -->
+                                                <div class="min-w-0 flex-1">
+                                                    <div
+                                                        class="leading-relaxed"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="cursor-pointer font-semibold text-foreground hover:underline"
+                                                            data-test="comment-author-handle"
+                                                            @click="
+                                                                openProfileModal(
+                                                                    {
+                                                                        public_id:
+                                                                            comment.author_public_id,
+                                                                        name: comment.author_name,
+                                                                        handle: comment.author_handle,
+                                                                        avatar: comment.author_avatar,
+                                                                        is_masked:
+                                                                            comment.is_masked,
+                                                                        section_name:
+                                                                            comment.section_name,
+                                                                    },
+                                                                )
+                                                            "
+                                                        >
+                                                            {{
+                                                                comment.author_handle
+                                                            }}
+                                                        </button>
+                                                        <div
+                                                            v-if="
+                                                                editingCommentId ===
+                                                                String(
+                                                                    comment.id,
+                                                                )
+                                                            "
+                                                            class="mt-1.5 space-y-1.5"
+                                                            data-test="comment-edit-form"
+                                                        >
+                                                            <input
+                                                                v-model="
+                                                                    editingCommentContent
+                                                                "
+                                                                type="text"
+                                                                maxlength="1000"
+                                                                class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
+                                                                data-test="comment-edit-input"
+                                                                @keydown.enter.prevent="
+                                                                    saveEditComment(
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                                @keydown.esc="
+                                                                    cancelEditComment
+                                                                "
+                                                            />
+                                                            <div
+                                                                class="flex items-center gap-2"
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
+                                                                    data-test="save-comment-edit-button"
+                                                                    :disabled="
+                                                                        isSavingComment
+                                                                    "
+                                                                    @click="
+                                                                        saveEditComment(
+                                                                            comment,
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                    data-test="cancel-comment-edit-button"
+                                                                    @click="
+                                                                        cancelEditComment
+                                                                    "
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            v-else
+                                                            class="ml-1.5 text-muted-foreground"
+                                                            data-test="comment-content"
+                                                            >{{
+                                                                comment.content
+                                                            }}</span
+                                                        >
+                                                    </div>
+
+                                                    <!-- Comment Meta (time + reply button + like reaction + edit/delete) -->
+                                                    <div
+                                                        class="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground"
+                                                    >
+                                                        <span>{{
+                                                            comment.created_at
+                                                        }}</span>
+                                                        <button
+                                                            type="button"
+                                                            class="cursor-pointer font-semibold hover:text-foreground"
+                                                            data-test="comment-reply-button"
+                                                            @click="
+                                                                setReplyingTo(
+                                                                    post.id,
+                                                                    comment,
+                                                                )
+                                                            "
+                                                        >
+                                                            Reply
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                                                            :class="{
+                                                                'text-rose-500 hover:text-rose-600':
+                                                                    isCommentLiked(
+                                                                        comment.id,
+                                                                    ),
+                                                            }"
+                                                            data-test="comment-like-button"
+                                                            aria-label="Like comment"
+                                                            @click="
+                                                                toggleCommentLike(
+                                                                    comment.id,
+                                                                )
+                                                            "
+                                                        >
+                                                            <Heart
+                                                                class="h-3 w-3 transition-transform active:scale-75"
+                                                                :class="{
+                                                                    'fill-rose-500 text-rose-500':
+                                                                        isCommentLiked(
+                                                                            comment.id,
+                                                                        ),
+                                                                    'scale-125 duration-150':
+                                                                        isCommentHeartBouncing[
+                                                                            String(
+                                                                                comment.id,
+                                                                            )
+                                                                        ],
+                                                                }"
+                                                            />
+                                                            <span
+                                                                v-if="
+                                                                    getCommentLikesCount(
+                                                                        comment.id,
+                                                                    ) > 0
+                                                                "
+                                                                class="font-medium"
+                                                            >
+                                                                {{
+                                                                    getCommentLikesCount(
+                                                                        comment.id,
+                                                                    )
+                                                                }}
+                                                            </span>
+                                                        </button>
+                                                        <button
+                                                            v-if="
+                                                                canEditComment(
+                                                                    comment,
+                                                                )
+                                                            "
+                                                            type="button"
+                                                            class="cursor-pointer font-semibold hover:text-foreground"
+                                                            data-test="comment-edit-button"
+                                                            @click="
+                                                                startEditComment(
+                                                                    comment,
+                                                                )
+                                                            "
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            v-if="
+                                                                canDeleteComment(
+                                                                    post,
+                                                                    comment,
+                                                                )
+                                                            "
+                                                            type="button"
+                                                            class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
+                                                            data-test="comment-delete-button"
+                                                            @click="
+                                                                confirmDeleteComment(
+                                                                    post.id,
+                                                                    comment,
+                                                                )
+                                                            "
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+
+                                                    <!-- View / Hide Threaded Replies Button -->
+                                                    <div
+                                                        v-if="
+                                                            comment.replies &&
+                                                            comment.replies
+                                                                .length > 0
+                                                        "
+                                                        class="mt-1.5"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                            data-test="toggle-replies-button"
+                                                            @click="
+                                                                toggleReplies(
+                                                                    comment.id,
+                                                                )
+                                                            "
+                                                        >
+                                                            <span
+                                                                class="inline-block h-px w-3 bg-muted-foreground/40"
+                                                            ></span>
+                                                            <span>{{
+                                                                expandedReplies[
+                                                                    String(
+                                                                        comment.id,
+                                                                    )
+                                                                ]
+                                                                    ? 'Hide replies'
+                                                                    : `View ${comment.replies.length} ${
+                                                                          comment
+                                                                              .replies
+                                                                              .length ===
+                                                                          1
+                                                                              ? 'reply'
+                                                                              : 'replies'
+                                                                      }`
+                                                            }}</span>
+                                                            <ChevronUp
+                                                                v-if="
+                                                                    expandedReplies[
+                                                                        String(
+                                                                            comment.id,
+                                                                        )
+                                                                    ]
+                                                                "
+                                                                class="h-3 w-3"
+                                                            />
+                                                            <ChevronDown
+                                                                v-else
+                                                                class="h-3 w-3"
+                                                            />
+                                                        </button>
+
+                                                        <!-- Threaded Nested Replies Tree -->
+                                                        <div
+                                                            v-if="
+                                                                expandedReplies[
+                                                                    String(
+                                                                        comment.id,
+                                                                    )
+                                                                ]
+                                                            "
+                                                            class="mt-2 space-y-2 border-l-2 border-border/50 pl-3"
+                                                            data-test="comment-replies-container"
+                                                        >
+                                                            <div
+                                                                v-for="reply in comment.replies"
+                                                                :key="reply.id"
+                                                                class="flex items-start gap-2 text-[11px]"
+                                                                data-test="reply-item"
+                                                            >
+                                                                <!-- Reply Author Avatar -->
+                                                                <button
+                                                                    type="button"
+                                                                    class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
+                                                                    data-test="reply-avatar"
+                                                                    @click="
+                                                                        openProfileModal(
+                                                                            {
+                                                                                public_id:
+                                                                                    reply.author_public_id,
+                                                                                name: reply.author_name,
+                                                                                handle: reply.author_handle,
+                                                                                avatar: reply.author_avatar,
+                                                                                is_masked:
+                                                                                    reply.is_masked,
+                                                                                section_name:
+                                                                                    reply.section_name,
+                                                                            },
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    <img
+                                                                        v-if="
+                                                                            reply.author_avatar &&
+                                                                            !reply.is_masked
+                                                                        "
+                                                                        :src="
+                                                                            reply.author_avatar
+                                                                        "
+                                                                        :alt="
+                                                                            reply.author_name
+                                                                        "
+                                                                        class="h-5 w-5 rounded-full object-cover"
+                                                                    />
+                                                                    <div
+                                                                        v-else
+                                                                        class="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-[9px] font-bold text-brand select-none"
+                                                                    >
+                                                                        {{
+                                                                            getInitials(
+                                                                                reply.author_name,
+                                                                            )
+                                                                        }}
+                                                                    </div>
+                                                                </button>
+
+                                                                <!-- Reply Body -->
+                                                                <div
+                                                                    class="min-w-0 flex-1"
+                                                                >
+                                                                    <div
+                                                                        class="leading-relaxed"
+                                                                    >
+                                                                        <button
+                                                                            type="button"
+                                                                            class="cursor-pointer font-semibold text-foreground hover:underline"
+                                                                            data-test="reply-author-handle"
+                                                                            @click="
+                                                                                openProfileModal(
+                                                                                    {
+                                                                                        public_id:
+                                                                                            reply.author_public_id,
+                                                                                        name: reply.author_name,
+                                                                                        handle: reply.author_handle,
+                                                                                        avatar: reply.author_avatar,
+                                                                                        is_masked:
+                                                                                            reply.is_masked,
+                                                                                        section_name:
+                                                                                            reply.section_name,
+                                                                                    },
+                                                                                )
+                                                                            "
+                                                                        >
+                                                                            {{
+                                                                                reply.author_handle
+                                                                            }}
+                                                                        </button>
+                                                                        <div
+                                                                            v-if="
+                                                                                editingCommentId ===
+                                                                                String(
+                                                                                    reply.id,
+                                                                                )
+                                                                            "
+                                                                            class="mt-1.5 space-y-1.5"
+                                                                            data-test="reply-edit-form"
+                                                                        >
+                                                                            <input
+                                                                                v-model="
+                                                                                    editingCommentContent
+                                                                                "
+                                                                                type="text"
+                                                                                maxlength="1000"
+                                                                                class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
+                                                                                data-test="reply-edit-input"
+                                                                                @keydown.enter.prevent="
+                                                                                    saveEditComment(
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                                @keydown.esc="
+                                                                                    cancelEditComment
+                                                                                "
+                                                                            />
+                                                                            <div
+                                                                                class="flex items-center gap-2"
+                                                                            >
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
+                                                                                    data-test="save-reply-edit-button"
+                                                                                    :disabled="
+                                                                                        isSavingComment
+                                                                                    "
+                                                                                    @click="
+                                                                                        saveEditComment(
+                                                                                            reply,
+                                                                                        )
+                                                                                    "
+                                                                                >
+                                                                                    Save
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                                    data-test="cancel-reply-edit-button"
+                                                                                    @click="
+                                                                                        cancelEditComment
+                                                                                    "
+                                                                                >
+                                                                                    Cancel
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <span
+                                                                            v-else
+                                                                            class="ml-1.5 text-muted-foreground"
+                                                                            data-test="reply-content"
+                                                                            >{{
+                                                                                reply.content
+                                                                            }}</span
+                                                                        >
+                                                                    </div>
+                                                                    <div
+                                                                        class="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground"
+                                                                    >
+                                                                        <span>{{
+                                                                            reply.created_at
+                                                                        }}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="cursor-pointer font-semibold hover:text-foreground"
+                                                                            data-test="nested-reply-button"
+                                                                            @click="
+                                                                                setReplyingTo(
+                                                                                    post.id,
+                                                                                    comment,
+                                                                                )
+                                                                            "
+                                                                        >
+                                                                            Reply
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                                                                            :class="{
+                                                                                'text-rose-500 hover:text-rose-600':
+                                                                                    isCommentLiked(
+                                                                                        reply.id,
+                                                                                    ),
+                                                                            }"
+                                                                            data-test="reply-like-button"
+                                                                            aria-label="Like reply"
+                                                                            @click="
+                                                                                toggleCommentLike(
+                                                                                    reply.id,
+                                                                                )
+                                                                            "
+                                                                        >
+                                                                            <Heart
+                                                                                class="h-3 w-3 transition-transform active:scale-75"
+                                                                                :class="{
+                                                                                    'fill-rose-500 text-rose-500':
+                                                                                        isCommentLiked(
+                                                                                            reply.id,
+                                                                                        ),
+                                                                                    'scale-125 duration-150':
+                                                                                        isCommentHeartBouncing[
+                                                                                            String(
+                                                                                                reply.id,
+                                                                                            )
+                                                                                        ],
+                                                                                }"
+                                                                            />
+                                                                            <span
+                                                                                v-if="
+                                                                                    getCommentLikesCount(
+                                                                                        reply.id,
+                                                                                    ) >
+                                                                                    0
+                                                                                "
+                                                                                class="font-medium"
+                                                                            >
+                                                                                {{
+                                                                                    getCommentLikesCount(
+                                                                                        reply.id,
+                                                                                    )
+                                                                                }}
+                                                                            </span>
+                                                                        </button>
+                                                                        <button
+                                                                            v-if="
+                                                                                canEditComment(
+                                                                                    reply,
+                                                                                )
+                                                                            "
+                                                                            type="button"
+                                                                            class="cursor-pointer font-semibold hover:text-foreground"
+                                                                            data-test="reply-edit-button"
+                                                                            @click="
+                                                                                startEditComment(
+                                                                                    reply,
+                                                                                )
+                                                                            "
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            v-if="
+                                                                                canDeleteComment(
+                                                                                    post,
+                                                                                    reply,
+                                                                                )
+                                                                            "
+                                                                            type="button"
+                                                                            class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
+                                                                            data-test="reply-delete-button"
+                                                                            @click="
+                                                                                confirmDeleteReply(
+                                                                                    post.id,
+                                                                                    comment,
+                                                                                    reply,
+                                                                                )
+                                                                            "
+                                                                        >
+                                                                            Delete
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Replying to Indicator Pill -->
+                                    <div
+                                        v-if="replyingTo[String(post.id)]"
+                                        class="mt-2 flex items-center justify-between rounded-md bg-muted/60 px-2.5 py-1 text-[11px] text-muted-foreground"
+                                        data-test="replying-to-indicator"
+                                    >
+                                        <div
+                                            class="flex items-center gap-1.5 truncate"
+                                        >
+                                            <CornerDownRight
+                                                class="h-3 w-3 shrink-0 text-brand"
+                                            />
+                                            <span class="truncate">
+                                                Replying to
+                                                <span
+                                                    class="font-semibold text-foreground"
+                                                    >@{{
+                                                        replyingTo[
+                                                            String(post.id)
+                                                        ]?.author_handle
+                                                    }}</span
+                                                >
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="cursor-pointer p-0.5 text-muted-foreground hover:text-foreground"
+                                            data-test="cancel-reply-button"
+                                            aria-label="Cancel reply"
+                                            @click="cancelReply(post.id)"
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Quick comment input -->
+                                    <div
+                                        class="mt-2 flex items-center justify-between border-t border-border/20 pt-1"
+                                    >
+                                        <input
+                                            :ref="
+                                                (el) => {
+                                                    commentInputRefs[
+                                                        String(post.id)
+                                                    ] =
+                                                        el as HTMLInputElement | null;
+                                                }
+                                            "
+                                            v-model="
+                                                commentInputs[String(post.id)]
+                                            "
+                                            type="text"
+                                            :placeholder="
+                                                replyingTo[String(post.id)]
+                                                    ? `Reply to @${replyingTo[String(post.id)]?.author_handle}…`
+                                                    : 'Add a comment…'
+                                            "
+                                            class="w-full bg-transparent text-[11px] placeholder:text-muted-foreground/60 focus:outline-none"
+                                            @keydown.enter.prevent="
+                                                handleAddComment(post.id)
+                                            "
+                                        />
+                                        <button
+                                            type="button"
+                                            :disabled="
+                                                !commentInputs[
+                                                    String(post.id)
+                                                ]?.trim() ||
+                                                isSubmittingComment[
+                                                    String(post.id)
+                                                ]
+                                            "
+                                            class="cursor-pointer text-[11px] font-semibold text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
+                                            data-test="post-comment-button"
+                                            @click="handleAddComment(post.id)"
+                                        >
+                                            {{
+                                                isSubmittingComment[
+                                                    String(post.id)
+                                                ]
+                                                    ? 'Posting…'
+                                                    : 'Post'
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </main>
+
+                    <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
+                    <aside
+                        class="hidden space-y-6 lg:sticky lg:top-6 lg:col-span-5 lg:block xl:col-span-4"
+                    >
+                        <!-- Instagram Profile Snippet at top of rail -->
+                        <div class="flex items-center justify-between px-1">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                >
+                                    {{ currentUserInitials }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p
+                                        class="text-xs font-bold text-foreground"
+                                    >
+                                        {{ currentUserHandle }}
+                                    </p>
+                                    <p
+                                        class="truncate text-[11px] text-muted-foreground"
+                                    >
+                                        {{ currentUserName }} ·
+                                        {{ sectionDisplayName }}
+                                    </p>
+                                </div>
+                            </div>
+                            <span
+                                class="cursor-pointer text-[11px] font-semibold text-brand hover:underline"
+                            >
+                                You
+                            </span>
+                        </div>
+
+                        <!-- Card 1: Section Online Presence / Classmates Rail -->
+                        <div
+                            data-test="section-presence-card"
+                            class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs"
+                        >
+                            <!-- Instagram 'Suggested for you' style header -->
+                            <div
+                                class="flex items-center justify-between border-b border-border/40 pb-3"
+                            >
+                                <div>
+                                    <h2
+                                        class="text-xs font-bold tracking-tight text-foreground uppercase"
+                                    >
+                                        {{ sectionDisplayName }}
+                                    </h2>
+                                    <p
+                                        class="text-[11px] text-muted-foreground"
+                                    >
+                                        Classroom Presence
+                                    </p>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        <span
+                                            class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                        />
+                                        {{ onlineCount }} Online ·
+                                        {{ totalEnrolledCount }} Enrolled
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        :class="{
+                                            'opacity-60': isRefreshingPresence,
+                                        }"
+                                        title="Refresh presence"
+                                        @click="handleRefreshPresence"
+                                    >
+                                        <RefreshCw
+                                            class="h-3 w-3"
+                                            :class="{
+                                                'animate-spin':
+                                                    isRefreshingPresence,
+                                            }"
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sleek Search Input -->
+                            <div class="relative mt-3">
+                                <Search
+                                    class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                                />
+                                <input
+                                    v-model="classmateSearch"
+                                    type="text"
+                                    placeholder="Search classmates..."
+                                    class="h-8 w-full rounded-xl border border-border/60 bg-muted/40 pr-8 pl-8.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background focus:outline-none"
+                                />
+                                <button
+                                    v-if="classmateSearch"
+                                    type="button"
+                                    class="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                                    aria-label="Clear search"
+                                    @click="classmateSearch = ''"
+                                >
+                                    <X class="h-3 w-3" />
+                                </button>
+                            </div>
+
+                            <!-- Classmate Member List -->
+                            <div class="mt-3 divide-y divide-border/30">
+                                <div
+                                    v-for="member in filteredClassmates"
+                                    :key="member.id"
+                                    class="group flex cursor-pointer items-center justify-between gap-3 py-2.5 first:pt-1 last:pb-1"
+                                    @click="
+                                        openProfileModal({
+                                            public_id: member.public_id,
+                                            name: member.name,
+                                        })
+                                    "
+                                >
+                                    <div
+                                        class="flex min-w-0 items-center gap-2.5"
+                                    >
+                                        <!-- Avatar -->
+                                        <div class="relative shrink-0">
+                                            <div
+                                                class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold select-none"
+                                                :class="[
+                                                    member.isCurrentUser
+                                                        ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
+                                                        : member.status ===
+                                                            'online'
+                                                          ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/30 dark:text-emerald-400'
+                                                          : member.status ===
+                                                              'idle'
+                                                            ? 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/30 dark:text-amber-400'
+                                                            : 'bg-muted text-muted-foreground ring-1 ring-border',
+                                                ]"
+                                            >
+                                                {{ getInitials(member.name) }}
+                                            </div>
+                                            <span
+                                                class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-card"
+                                                :class="{
+                                                    'bg-emerald-500':
+                                                        member.status ===
+                                                        'online',
+                                                    'bg-amber-500':
+                                                        member.status ===
+                                                        'idle',
+                                                    'bg-muted-foreground/30':
+                                                        member.status ===
+                                                        'offline',
+                                                }"
+                                            />
+                                        </div>
+
+                                        <div class="min-w-0">
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <p
+                                                    class="truncate text-xs font-semibold text-foreground group-hover:underline"
+                                                >
+                                                    {{ member.name }}
+                                                </p>
+                                                <span
+                                                    v-if="member.role"
+                                                    class="py-0.2 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground"
+                                                >
+                                                    {{ member.role }}
+                                                </span>
+                                            </div>
+                                            <p
+                                                v-if="member.activity"
+                                                class="truncate text-[10px] text-muted-foreground"
+                                            >
+                                                {{ member.activity }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Status beacon or follow action -->
+                                    <span
+                                        v-if="member.status === 'online'"
+                                        class="shrink-0 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        Active
+                                    </span>
+                                    <span
+                                        v-else-if="member.status === 'idle'"
+                                        class="shrink-0 text-[10px] text-amber-600 dark:text-amber-400"
+                                    >
+                                        Idle
+                                    </span>
+                                </div>
+
+                                <!-- Empty search state -->
+                                <div
+                                    v-if="filteredClassmates.length === 0"
+                                    data-test="classmates-empty-state"
+                                    class="py-6 text-center text-xs text-muted-foreground"
+                                >
+                                    <p>
+                                        {{
+                                            classmateSearch
+                                                ? 'No classmates match your search.'
+                                                : 'No classmates enrolled or online yet.'
+                                        }}
+                                    </p>
+                                    <button
+                                        v-if="classmateSearch"
+                                        type="button"
+                                        class="mt-1 cursor-pointer text-[11px] font-medium text-brand hover:underline"
+                                        @click="classmateSearch = ''"
+                                    >
+                                        Clear search
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Privacy Note -->
+                            <div
+                                data-test="section-privacy-note"
+                                class="mt-3.5 flex items-start gap-2 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-[11px] leading-relaxed text-muted-foreground"
+                            >
+                                <ShieldCheck
+                                    class="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                />
+                                <span>
+                                    Real names are visible only to classmates in
+                                    your section. Other sections cannot see this
+                                    presence list.
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Trending in Section (Clean Hashtag Feed) -->
+                        <div
+                            data-test="section-topics-card"
+                            class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs"
+                        >
+                            <div class="flex items-center justify-between pb-2">
+                                <h3
+                                    class="text-xs font-bold tracking-tight text-foreground uppercase"
+                                >
+                                    Trending in Section
+                                </h3>
+                                <span class="text-[10px] text-muted-foreground"
+                                    >This week</span
+                                >
+                            </div>
+
+                            <div class="mt-2 divide-y divide-border/30">
+                                <div
+                                    v-for="topic in trendingTopics"
+                                    :key="topic.tag"
+                                    class="flex cursor-pointer items-center justify-between py-2 text-xs transition-colors hover:text-brand"
+                                >
+                                    <div>
+                                        <p
+                                            class="font-semibold text-foreground"
+                                        >
+                                            #{{ topic.name }}
+                                        </p>
+                                        <p
+                                            class="text-[10px] text-muted-foreground"
+                                        >
+                                            {{ topic.count }} discussions
+                                        </p>
+                                    </div>
+                                    <span
+                                        class="text-[10px] text-muted-foreground"
+                                        >Trending</span
+                                    >
+                                </div>
+                                <div
+                                    v-if="trendingTopics.length === 0"
+                                    class="py-4 text-center text-xs text-muted-foreground"
+                                >
+                                    No trending tags yet
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Lounge Guidelines -->
+                        <div
+                            data-test="section-guidelines-card"
+                            class="rounded-2xl border border-border/60 bg-card p-4 text-xs shadow-2xs"
+                        >
+                            <div
+                                class="flex items-center gap-1.5 font-semibold text-foreground"
+                            >
+                                <Shield
+                                    class="h-3.5 w-3.5 text-muted-foreground"
+                                />
+                                <span>Lounge Guidelines</span>
+                            </div>
+                            <ul
+                                class="mt-2 space-y-1.5 text-[11px] leading-normal text-muted-foreground"
+                            >
+                                <li class="flex items-start gap-1.5">
+                                    <span
+                                        class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground"
+                                    />
+                                    <span>
+                                        Identity boundary: Real name visible
+                                        only to
+                                        {{ sectionDisplayName }} classmates.
+                                    </span>
+                                </li>
+                                <li class="flex items-start gap-1.5">
+                                    <span
+                                        class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground"
+                                    />
+                                    <span>
+                                        Follow university honor code for
+                                        assignments and exams.
+                                    </span>
+                                </li>
+                                <li class="flex items-start gap-1.5">
+                                    <span
+                                        class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground"
+                                    />
+                                    <span>
+                                        Helpful peer reviews and constructive
+                                        collaboration are encouraged.
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Instagram-style Micro Footer -->
+                        <footer
+                            class="space-y-1 px-1 text-[11px] leading-relaxed text-muted-foreground/60 select-none"
+                        >
+                            <p>
+                                Guidelines • Honor Code • Privacy • Terms •
+                                Workspace Help
+                            </p>
+                            <p>© 2026 LSI ENGINE • COMMUNITY LOUNGE</p>
+                        </footer>
+                    </aside>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Mobile Section Online Presence Drawer ═══ -->
+        <div v-if="isMobileDrawerOpen" class="fixed inset-0 z-[120] lg:hidden">
+            <transition name="drawer-fade" appear>
+                <div
+                    class="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                    data-test="mobile-presence-drawer-backdrop"
+                    @click="isMobileDrawerOpen = false"
+                />
+            </transition>
+
+            <transition name="drawer-slide" appear>
+                <div
+                    data-test="mobile-presence-drawer"
+                    class="fixed inset-x-0 bottom-0 z-[130] flex max-h-[85vh] flex-col rounded-t-[28px] border-t border-border/70 bg-card p-5 shadow-2xl backdrop-blur-2xl"
+                    style="
+                        padding-bottom: calc(
+                            env(safe-area-inset-bottom) + 1.25rem
+                        );
+                    "
+                >
+                    <div
+                        class="mx-auto -mt-1 mb-3.5 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25"
+                    />
+
+                    <!-- Drawer Header -->
+                    <div
+                        class="flex shrink-0 items-center justify-between gap-2 border-b border-border/40 pb-3"
+                    >
+                        <div>
+                            <h2
+                                class="text-sm font-bold tracking-tight text-foreground"
+                            >
+                                {{ sectionDisplayName }}
+                            </h2>
+                            <p class="text-[10px] text-muted-foreground">
+                                Classroom Presence
+                            </p>
+                        </div>
+
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <span
+                                class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+                            >
+                                {{ onlineCount }} Online ·
+                                {{ totalEnrolledCount }} Enrolled
+                            </span>
+                            <button
+                                type="button"
+                                class="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg border border-border/60 text-muted-foreground"
+                                :class="{
+                                    'opacity-60': isRefreshingPresence,
+                                }"
+                                title="Refresh presence"
+                                @click="handleRefreshPresence"
+                            >
+                                <RefreshCw
+                                    class="h-3 w-3"
+                                    :class="{
+                                        'animate-spin': isRefreshingPresence,
+                                    }"
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                data-test="mobile-presence-drawer-close"
+                                class="ml-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                                aria-label="Close drawer"
+                                @click="isMobileDrawerOpen = false"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Input inside Drawer -->
+                    <div class="relative mt-3.5 shrink-0">
+                        <Search
+                            class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <input
+                            v-model="classmateSearch"
+                            type="text"
+                            placeholder="Search classmates..."
+                            class="h-8 w-full rounded-xl border border-border/60 bg-muted/40 pr-8 pl-8.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                        />
+                        <button
+                            v-if="classmateSearch"
+                            type="button"
+                            class="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                            aria-label="Clear search"
+                            @click="classmateSearch = ''"
+                        >
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Member List -->
+                    <div
+                        class="mt-3.5 min-h-0 flex-1 divide-y divide-border/30 overflow-y-auto overscroll-contain pr-0.5"
+                    >
+                        <div
+                            v-for="member in filteredClassmates"
+                            :key="'mobile-' + member.id"
+                            class="flex cursor-pointer items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                            @click="
+                                isMobileDrawerOpen = false;
+                                openProfileModal({
+                                    public_id: member.public_id,
+                                    name: member.name,
+                                });
+                            "
+                        >
+                            <div class="relative shrink-0">
+                                <div
+                                    class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold select-none"
+                                    :class="[
+                                        member.isCurrentUser
+                                            ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
+                                            : member.status === 'online'
+                                              ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/30 dark:text-emerald-400'
+                                              : member.status === 'idle'
+                                                ? 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/30 dark:text-amber-400'
+                                                : 'bg-muted text-muted-foreground ring-1 ring-border',
+                                    ]"
+                                >
+                                    {{ getInitials(member.name) }}
+                                </div>
+                                <span
+                                    class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-card"
+                                    :class="{
+                                        'bg-emerald-500':
+                                            member.status === 'online',
+                                        'bg-amber-500':
+                                            member.status === 'idle',
+                                        'bg-muted-foreground/30':
+                                            member.status === 'offline',
+                                    }"
+                                />
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span
+                                        class="truncate text-xs font-semibold text-foreground"
+                                    >
+                                        {{ member.name }}
+                                    </span>
+                                    <span
+                                        v-if="member.role"
+                                        class="py-0.2 rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground"
+                                    >
+                                        {{ member.role }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="member.activity"
+                                    class="truncate text-[11px] text-muted-foreground"
+                                >
+                                    {{ member.activity }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div
+                            v-if="filteredClassmates.length === 0"
+                            class="py-6 text-center text-xs text-muted-foreground"
+                        >
+                            <p>
+                                {{
+                                    classmateSearch
+                                        ? 'No classmates match your search.'
+                                        : 'No classmates enrolled or online yet.'
+                                }}
+                            </p>
+                            <button
+                                v-if="classmateSearch"
+                                type="button"
+                                class="mt-1 cursor-pointer text-[11px] font-medium text-brand hover:underline"
+                                @click="classmateSearch = ''"
+                            >
+                                Clear search
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Reassurance Footnote -->
+                    <div
+                        class="mt-3.5 flex shrink-0 items-start gap-2 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-[11px] leading-relaxed text-muted-foreground"
+                    >
+                        <ShieldCheck
+                            class="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                        />
+                        <span>
+                            Real names are visible only to classmates in your
+                            section. Other sections cannot see this presence
+                            list.
+                        </span>
+                    </div>
+                </div>
+            </transition>
+        </div>
+
+        <!-- ═══ Instagram Profile Preview Modal ═══ -->
+        <div
+            v-if="isProfileModalOpen"
+            class="fixed inset-0 z-[150] flex items-center justify-center p-4"
+            data-test="profile-preview-modal"
+        >
+            <div
+                class="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                @click="isProfileModalOpen = false"
+            />
+
+            <div
+                class="relative z-[160] w-full max-w-sm overflow-hidden rounded-3xl border border-border/70 bg-card shadow-2xl backdrop-blur-2xl"
+            >
+                <!-- Top Cover Header -->
+                <div
+                    class="relative h-24 bg-gradient-to-r from-brand/30 via-[#e6a875]/25 to-brand/10"
+                >
+                    <button
+                        type="button"
+                        class="absolute top-3 right-3 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition-opacity hover:opacity-80"
+                        @click="isProfileModalOpen = false"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="px-5 pt-0 pb-6 text-center">
+                    <!-- Avatar circle centered overlapping header -->
+                    <div class="-mt-12 mb-3 inline-block">
+                        <div
+                            class="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-card bg-muted text-xl font-bold text-foreground shadow-lg"
+                        >
+                            <EyeOff
+                                v-if="activeProfile?.is_masked"
+                                class="h-8 w-8 text-muted-foreground"
+                            />
+                            <span v-else>
+                                {{
+                                    getInitials(
+                                        activeProfile?.name || 'Student',
+                                    )
+                                }}
+                            </span>
+                            <span
+                                v-if="!activeProfile?.is_masked"
+                                class="absolute right-1 bottom-1 h-3.5 w-3.5 rounded-full border-2 border-card bg-emerald-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- User Identity -->
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <h3 class="text-base font-bold text-foreground">
+                                {{ activeProfile?.name }}
+                            </h3>
+                            <span
+                                v-if="activeProfile?.level"
+                                class="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold text-brand"
+                            >
+                                Lv. {{ activeProfile.level }}
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-muted-foreground">
+                            @{{ activeProfile?.handle }} ·
+                            {{ activeProfile?.section_name }}
+                        </p>
+                    </div>
+
+                    <!-- Bio -->
+                    <p class="mt-3 text-xs leading-relaxed text-foreground/80">
+                        {{ activeProfile?.bio }}
+                    </p>
+
+                    <!-- Stats Row (Instagram Style) -->
+                    <div
+                        v-if="!activeProfile?.is_masked"
+                        class="mt-4 grid grid-cols-4 items-center rounded-2xl border border-border/50 bg-muted/30 py-2.5 text-center text-xs"
+                    >
+                        <div>
+                            <span class="block font-bold text-foreground">{{
+                                activeProfile?.posts_count ?? 0
+                            }}</span>
+                            <span class="text-[10px] text-muted-foreground"
+                                >Posts</span
+                            >
+                        </div>
+                        <div class="border-l border-border/50">
+                            <span class="block font-bold text-foreground">{{
+                                activeProfile?.likes_received ?? 0
+                            }}</span>
+                            <span class="text-[10px] text-muted-foreground"
+                                >Likes</span
+                            >
+                        </div>
+                        <div class="border-l border-border/50">
+                            <span class="block font-bold text-foreground">{{
+                                activeProfile?.followers_count ?? 0
+                            }}</span>
+                            <span class="text-[10px] text-muted-foreground"
+                                >Followers</span
+                            >
+                        </div>
+                        <div class="border-l border-border/50">
+                            <span class="block font-bold text-foreground">{{
+                                activeProfile?.following_count ?? 0
+                            }}</span>
+                            <span class="text-[10px] text-muted-foreground"
+                                >Following</span
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-5 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <!-- Follow / Following button -->
+                            <button
+                                v-if="activeProfile?.can_follow"
+                                type="button"
+                                class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-all active:scale-95"
+                                :class="
+                                    activeProfile.is_following
+                                        ? 'border border-border/80 bg-card text-foreground hover:bg-muted'
+                                        : 'bg-brand text-primary-foreground hover:opacity-90'
+                                "
+                                @click="handleToggleFollow"
+                            >
+                                <UserCheck
+                                    v-if="activeProfile.is_following"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <UserPlus v-else class="h-3.5 w-3.5" />
+                                <span>{{
+                                    activeProfile.is_following
+                                        ? 'Following'
+                                        : 'Follow'
+                                }}</span>
+                            </button>
+
+                            <!-- View Community Lounge Profile Link -->
+                            <a
+                                v-if="activeProfile?.public_id"
+                                :href="
+                                    '/community/u/' + activeProfile.public_id
+                                "
+                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border/80 bg-card py-2 text-xs font-semibold text-foreground transition-all hover:bg-muted active:scale-95"
+                            >
+                                <span>Lounge Profile</span>
+                                <ExternalLink class="h-3 w-3" />
+                            </a>
+                        </div>
+
+                        <!-- Secondary Switcher: Academic Learning Platform Profile -->
+                        <div
+                            v-if="
+                                activeProfile?.public_id &&
+                                !activeProfile?.is_masked
+                            "
+                            class="pt-0.5"
+                        >
+                            <a
+                                :href="'/u/' + activeProfile.public_id"
+                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                            >
+                                <GraduationCap class="h-3 w-3 text-brand" />
+                                <span>Academic Profile (Courses & Badges)</span>
+                                <ExternalLink class="h-2.5 w-2.5 opacity-60" />
+                            </a>
+                        </div>
+
+                        <!-- Dismiss for masked -->
+                        <button
+                            v-if="activeProfile?.is_masked"
+                            type="button"
+                            class="w-full cursor-pointer rounded-full bg-muted py-2 text-xs font-semibold text-foreground hover:bg-muted/80"
+                            @click="isProfileModalOpen = false"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ MyDay Story Upload Modal ═══ -->
+        <!-- ═══ Create MyDay Story Modal (Instagram / Snapchat Style WYSIWYG) ═══ -->
+        <div
+            v-if="isStoryModalOpen"
+            class="fixed inset-0 z-[160] flex items-center justify-center p-4"
+            data-test="community-story-modal"
+        >
+            <div
+                class="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+                @click="closeStoryModal"
+            />
+            <div
+                class="relative z-[170] max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border/70 bg-card p-5 shadow-2xl sm:p-6"
+            >
+                <div
+                    class="mb-4 flex items-center justify-between border-b border-border/50 pb-3"
+                >
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-xl bg-brand/15 text-brand"
+                        >
+                            <Sparkles class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-foreground">
+                                Create MyDay Story
+                            </h2>
+                            <p class="text-[11px] text-muted-foreground">
+                                Expires automatically in 24 hours
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        @click="closeStoryModal"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Hidden file input -->
+                    <input
+                        ref="storyFileInputRef"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        class="hidden"
+                        data-test="story-file-input"
+                        @change="handleStoryFileChange"
+                    />
+
+                    <!-- Drag & Drop / Select placeholder -->
+                    <div
+                        v-if="!storyMediaPreview"
+                        :class="[
+                            'group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition-all',
+                            isStoryDragOver
+                                ? 'border-brand bg-brand/10 ring-2 ring-brand/30'
+                                : 'border-border/80 bg-muted/20 hover:border-brand/60 hover:bg-brand/5',
+                        ]"
+                        data-test="story-dropzone"
+                        @dragover.prevent="handleStoryDragOver"
+                        @dragleave.prevent="handleStoryDragLeave"
+                        @drop.prevent="handleStoryDrop"
+                        @click="storyFileInputRef?.click()"
+                    >
+                        <div
+                            class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-brand/20 group-hover:text-brand"
+                        >
+                            <UploadCloud class="h-6 w-6" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-foreground">
+                                Click or drag & drop photo or video
+                            </p>
+                            <p class="mt-0.5 text-[11px] text-muted-foreground">
+                                Images up to 10MB · MP4/WebM up to 30MB (max
+                                30s)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- WYSIWYG Story Canvas Live Preview -->
+                    <div
+                        v-else
+                        class="relative mx-auto flex aspect-[9/16] w-full max-w-[260px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl ring-1 ring-black/40 select-none sm:max-w-[280px]"
+                        data-test="story-live-preview"
+                    >
+                        <!-- Top Progress Bar Mockup -->
+                        <div
+                            class="absolute inset-x-3 top-3 z-30 flex items-center gap-1"
+                        >
+                            <div
+                                class="h-1 flex-1 overflow-hidden rounded-full bg-white/40"
+                            >
+                                <div class="h-full w-full bg-white" />
+                            </div>
+                        </div>
+
+                        <!-- Top Story Header: Author, Duration Badge, Replace Action -->
+                        <div
+                            class="absolute inset-x-3 top-6 z-30 flex items-center justify-between text-white"
+                        >
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-zinc-800 text-[10px] font-bold text-white"
+                                >
+                                    <img
+                                        v-if="currentUser?.avatar"
+                                        :src="currentUser.avatar"
+                                        :alt="currentUserName"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <span v-else>{{
+                                        currentUserInitials
+                                    }}</span>
+                                </div>
+                                <div class="leading-none">
+                                    <div class="flex items-center gap-1">
+                                        <span
+                                            class="text-[11px] font-bold drop-shadow"
+                                            >{{ currentUserName }}</span
+                                        >
+                                        <span class="text-[9px] text-white/70"
+                                            >· 24h</span
+                                        >
+                                    </div>
+                                    <span class="text-[9px] text-white/70"
+                                        >@{{ currentUserHandle }}</span
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                <!-- Duration Badge -->
+                                <div
+                                    class="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-xs"
+                                    data-test="story-preview-duration-badge"
+                                >
+                                    <Film
+                                        v-if="storyMediaType === 'video'"
+                                        class="h-3 w-3"
+                                    />
+                                    <ImageIcon v-else class="h-3 w-3" />
+                                    <span>{{ storyDuration }}s</span>
+                                </div>
+
+                                <!-- Change / Remove Media Button -->
+                                <button
+                                    type="button"
+                                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+                                    title="Change media"
+                                    data-test="story-change-media"
+                                    @click="clearStoryMedia"
+                                >
+                                    <X class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Center Media Rendering -->
+                        <div
+                            class="relative flex h-full w-full items-center justify-center bg-black"
+                        >
+                            <img
+                                v-if="storyMediaType === 'image'"
+                                :src="storyMediaPreview"
+                                alt="Story preview"
+                                class="h-full w-full object-contain"
+                            />
+                            <video
+                                v-else
+                                :src="storyMediaPreview"
+                                class="h-full w-full object-contain"
+                                autoplay
+                                playsinline
+                                muted
+                                loop
+                            />
+                        </div>
+
+                        <!-- Bottom Caption Overlay (Live WYSIWYG) -->
+                        <div
+                            v-if="storyCaption.trim()"
+                            class="absolute inset-x-3 bottom-3 z-30 max-h-24 overflow-y-auto rounded-2xl bg-black/65 p-2.5 text-center text-xs font-medium break-words text-white shadow-lg backdrop-blur-md"
+                            data-test="story-preview-caption"
+                        >
+                            {{ storyCaption }}
+                        </div>
+                    </div>
+
+                    <!-- Photo Duration Selector (Segmented Chips) -->
+                    <div
+                        v-if="storyMediaType === 'image' && storyMediaPreview"
+                        class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-3 py-2"
+                    >
+                        <div
+                            class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                        >
+                            <Clock class="h-3.5 w-3.5 text-brand" />
+                            <span class="font-medium text-foreground"
+                                >Duration</span
+                            >
+                        </div>
+                        <div
+                            class="flex items-center gap-1"
+                            data-test="story-duration-selector"
+                        >
+                            <button
+                                v-for="dur in [3, 5, 10, 15]"
+                                :key="dur"
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-lg px-2.5 py-1 text-xs font-semibold transition',
+                                    storyDuration === dur
+                                        ? 'bg-brand text-primary-foreground shadow-xs'
+                                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
+                                ]"
+                                :data-test="`story-duration-${dur}`"
+                                @click="storyDuration = dur"
+                            >
+                                {{ dur }}s
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Video Duration Indicator -->
+                    <div
+                        v-else-if="
+                            storyMediaType === 'video' && storyMediaPreview
+                        "
+                        class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-xs"
+                    >
+                        <div
+                            class="flex items-center gap-1.5 text-muted-foreground"
+                        >
+                            <Clock class="h-3.5 w-3.5 text-brand" />
+                            <span class="font-medium text-foreground"
+                                >Video Duration</span
+                            >
+                        </div>
+                        <span class="font-semibold text-foreground"
+                            >{{ storyDuration }}s (auto)</span
+                        >
+                    </div>
+
+                    <!-- Caption Input -->
+                    <div>
+                        <label
+                            class="mb-1 block text-[11px] font-semibold text-foreground"
+                        >
+                            Caption (optional)
+                        </label>
+                        <input
+                            v-model="storyCaption"
+                            type="text"
+                            maxlength="255"
+                            placeholder="Add a caption to your story..."
+                            class="w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                            data-test="story-caption-input"
+                        />
+                    </div>
+
+                    <!-- Upload Error Banner -->
+                    <div
+                        v-if="storyUploadError"
+                        class="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-medium text-rose-600 dark:text-rose-400"
+                    >
+                        {{ storyUploadError }}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                        <button
+                            type="button"
+                            class="cursor-pointer rounded-xl border border-border/70 px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                            @click="closeStoryModal"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            :disabled="!storyMediaFile || isSubmittingStory"
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-brand px-5 py-2 text-xs font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:opacity-50"
+                            @click="handleUploadStory"
+                        >
+                            <Loader2
+                                v-if="isSubmittingStory"
+                                class="h-3.5 w-3.5 animate-spin"
+                            />
+                            <span>{{
+                                isSubmittingStory
+                                    ? 'Sharing...'
+                                    : 'Share to MyDay'
+                            }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Full-Screen Story Viewer (Instagram / Facebook Style) ═══ -->
+        <div
+            v-if="isStoryViewerOpen && currentStory"
+            class="fixed inset-0 z-[180] flex items-center justify-center bg-black/95 select-none"
+            data-test="community-story-viewer"
+        >
+            <div
+                class="relative flex h-full max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-zinc-950 shadow-2xl ring-1 ring-white/10"
+                @pointerdown="pauseStory"
+                @pointerup="resumeStory"
+            >
+                <!-- Segmented Progress Bar -->
+                <div
+                    class="absolute inset-x-3 top-3 z-30 flex items-center gap-1"
+                >
+                    <div
+                        v-for="(_, idx) in activeStoryGroup?.stories"
+                        :key="idx"
+                        class="h-1 flex-1 overflow-hidden rounded-full bg-white/30 backdrop-blur-xs"
+                    >
+                        <div
+                            class="h-full bg-white transition-all duration-75 ease-linear"
+                            :style="{
+                                width:
+                                    idx < currentStoryIndex
+                                        ? '100%'
+                                        : idx === currentStoryIndex
+                                          ? `${storyProgress}%`
+                                          : '0%',
+                            }"
+                        />
+                    </div>
+                </div>
+
+                <!-- Header: Author & Controls -->
+                <div
+                    class="absolute inset-x-3 top-6 z-30 flex items-center justify-between text-white"
+                >
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            v-if="!activeStoryGroup?.is_self"
+                            class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-zinc-800 text-xs font-bold text-white"
+                            data-test="viewer-author-avatar"
+                        >
+                            <img
+                                v-if="activeStoryGroup?.avatar"
+                                :src="activeStoryGroup.avatar"
+                                :alt="activeStoryGroup.name"
+                                class="h-full w-full object-cover"
+                            />
+                            <span v-else>{{
+                                activeStoryGroup?.name
+                                    ?.slice(0, 2)
+                                    .toUpperCase()
+                            }}</span>
+                        </div>
+                        <div class="leading-tight">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold drop-shadow">{{
+                                    activeStoryGroup?.is_self
+                                        ? 'Your story'
+                                        : activeStoryGroup?.name
+                                }}</span>
+                                <span class="text-[10px] text-white/70"
+                                    >· {{ currentStory.created_at }}</span
+                                >
+                            </div>
+                            <span
+                                v-if="!activeStoryGroup?.is_self"
+                                class="text-[10px] text-white/70"
+                                data-test="viewer-author-handle"
+                                >@{{ activeStoryGroup?.handle }}</span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Views counter -->
+                        <div
+                            v-if="activeStoryGroup?.is_self"
+                            class="flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-xs"
+                            title="Views"
+                            data-test="viewer-views-count"
+                        >
+                            <Eye class="h-3 w-3" />
+                            <span>{{ currentStory.views_count }}</span>
+                        </div>
+
+                        <!-- Play / Pause toggle button -->
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white/20 active:scale-95"
+                            :title="
+                                isStoryPaused ? 'Play story' : 'Pause story'
+                            "
+                            data-test="viewer-play-pause-button"
+                            @pointerdown.stop
+                            @pointerup.stop
+                            @click.stop="togglePlayPause"
+                        >
+                            <Play
+                                v-if="isStoryPaused"
+                                class="ml-0.5 h-3.5 w-3.5 fill-white"
+                            />
+                            <Pause v-else class="h-3.5 w-3.5 fill-white" />
+                        </button>
+
+                        <!-- Story options menu (own story) -->
+                        <div
+                            v-if="activeStoryGroup?.is_self"
+                            class="relative"
+                            @pointerdown.stop
+                            @pointerup.stop
+                        >
+                            <button
+                                type="button"
+                                class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white/20 active:scale-95"
+                                title="Story options"
+                                data-test="viewer-story-options-button"
+                                @click.stop="toggleStoryOptions"
+                            >
+                                <MoreHorizontal class="h-4 w-4" />
+                            </button>
+
+                            <!-- Click-outside invisible backdrop -->
+                            <div
+                                v-if="isStoryOptionsOpen"
+                                class="fixed inset-0 z-40"
+                                @pointerdown.stop
+                                @pointerup.stop
+                                @click.stop="toggleStoryOptions"
+                            />
+
+                            <!-- Dropdown menu -->
+                            <div
+                                v-if="isStoryOptionsOpen"
+                                class="absolute top-10 right-0 z-50 w-44 rounded-2xl border border-white/15 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur-md transition-all duration-150"
+                                data-test="viewer-story-options-menu"
+                                @pointerdown.stop
+                                @pointerup.stop
+                                @click.stop
+                            >
+                                <button
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-white transition hover:bg-white/15"
+                                    data-test="viewer-add-story-button"
+                                    @click.stop="
+                                        isStoryOptionsOpen = false;
+                                        openStoryModalFromViewer();
+                                    "
+                                >
+                                    <Plus class="h-4 w-4 text-emerald-400" />
+                                    <span>Add to story</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-white transition hover:bg-white/15 disabled:opacity-50"
+                                    data-test="viewer-feature-story-button"
+                                    :disabled="isFeaturingStory"
+                                    @click.stop="
+                                        isStoryOptionsOpen = false;
+                                        resumeStory();
+                                        handleFeatureStoryFromViewer();
+                                    "
+                                >
+                                    <Sparkles class="h-4 w-4 text-amber-400" />
+                                    <span>Add to Featured</span>
+                                </button>
+
+                                <div class="my-1 border-t border-white/10" />
+
+                                <button
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-400 transition hover:bg-rose-500/20"
+                                    data-test="viewer-delete-story-button"
+                                    @click.stop="
+                                        isStoryOptionsOpen = false;
+                                        handleDeleteStory();
+                                    "
+                                >
+                                    <Trash2 class="h-4 w-4" />
+                                    <span>Delete story</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Close button -->
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white/20"
+                            @click.stop="closeStoryViewer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Toast banner in viewer -->
+                <div
+                    v-if="featuredToast"
+                    class="absolute inset-x-4 top-16 z-40 rounded-xl bg-amber-500/95 px-3 py-2 text-center text-xs font-semibold text-black shadow-lg backdrop-blur-xs"
+                    data-test="viewer-featured-toast"
+                >
+                    {{ featuredToast }}
+                </div>
+
+                <!-- Center Media -->
+                <div
+                    class="relative flex h-full w-full items-center justify-center bg-black"
+                >
+                    <img
+                        v-if="currentStory.media_type === 'image'"
+                        :src="currentStory.media_url"
+                        alt="Story content"
+                        class="h-full w-full object-contain"
+                    />
+                    <video
+                        v-else
+                        ref="storyVideoRef"
+                        :src="currentStory.media_url"
+                        class="h-full w-full object-contain"
+                        autoplay
+                        playsinline
+                        muted
+                    />
+
+                    <!-- Left / Right Click Nav Zones -->
+                    <div
+                        class="absolute inset-y-0 left-0 z-10 w-1/3 cursor-pointer"
+                        @click.stop="goToPreviousStory"
+                    />
+                    <div
+                        class="absolute inset-y-0 right-0 z-10 w-2/3 cursor-pointer"
+                        @click.stop="goToNextStory"
+                    />
+                </div>
+
+                <!-- Floating Reaction Particles Overlay -->
+                <div
+                    class="pointer-events-none absolute inset-0 z-40 overflow-hidden"
+                >
+                    <div
+                        v-for="particle in flyingReactions"
+                        :key="particle.id"
+                        class="flying-reaction-item pointer-events-none absolute bottom-16 select-none"
+                        :style="{
+                            left: `${particle.left}%`,
+                            '--particle-rot': `${particle.rotation}deg`,
+                        }"
+                    >
+                        <component
+                            :is="getReactionIcon(particle.emoji)"
+                            class="fill-white/10 stroke-[1.8] text-white drop-shadow-md"
+                            :style="{
+                                width: `${particle.size}px`,
+                                height: `${particle.size}px`,
+                            }"
+                        />
+                    </div>
+                </div>
+
+                <!-- Bottom Caption Overlay -->
+                <div
+                    v-if="currentStory.caption"
+                    class="absolute inset-x-3 z-30 rounded-2xl bg-black/60 p-3 text-center text-xs font-medium text-white backdrop-blur-md"
+                    :class="
+                        !activeStoryGroup?.is_self ? 'bottom-16' : 'bottom-14'
+                    "
+                    data-test="story-caption-overlay"
+                >
+                    {{ currentStory.caption }}
+                </div>
+
+                <!-- Bottom Left Reactions Counter (own story) -->
+                <div
+                    v-if="activeStoryGroup?.is_self"
+                    class="absolute bottom-3.5 left-3.5 z-30 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white/95 ring-1 ring-white/15 backdrop-blur-md"
+                    title="Story reactions"
+                    data-test="viewer-reactions-count"
+                    @pointerdown.stop
+                    @pointerup.stop
+                    @click.stop
+                >
+                    <Heart class="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+                    <span>{{ currentStory.reactions_count ?? 0 }}</span>
+                </div>
+
+                <!-- Bottom Viewer Reactions Bar (when viewing classmate story) -->
+                <div
+                    v-if="!activeStoryGroup?.is_self"
+                    class="absolute inset-x-4 bottom-3.5 z-30 mx-auto flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 shadow-2xl ring-1 ring-white/10 backdrop-blur-md"
+                    data-test="story-reactions-bar"
+                    @pointerdown.stop
+                    @pointerup.stop
+                    @click.stop
+                >
+                    <button
+                        v-for="opt in storyReactionOptions"
+                        :key="opt.id"
+                        type="button"
+                        class="group relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-150 hover:scale-115 active:scale-95"
+                        :class="
+                            currentStory.user_reaction === opt.id
+                                ? 'ring-1.5 scale-110 bg-white/20 shadow-sm ring-white/70'
+                                : 'hover:bg-white/10'
+                        "
+                        :title="`React with ${opt.label}`"
+                        :aria-label="`React with ${opt.label}`"
+                        :data-test="`story-reaction-${opt.id}`"
+                        @click.stop="handleStoryReaction(opt.id)"
+                    >
+                        <component
+                            :is="opt.icon"
+                            class="h-4.5 w-4.5 fill-transparent stroke-[1.8] transition-transform group-hover:scale-110"
+                            :class="
+                                currentStory.user_reaction === opt.id
+                                    ? 'fill-white/10 stroke-[2] text-white'
+                                    : 'text-white/85 group-hover:text-white'
+                            "
+                        />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Post Confirmation Modal -->
+        <div
+            v-if="postToDelete"
+            class="fixed inset-0 z-[170] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+            data-test="delete-post-modal"
+            @click.self="cancelDeletePost"
+        >
+            <div
+                class="w-full max-w-sm space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-2xl"
+            >
+                <div class="flex items-center gap-3 text-destructive">
+                    <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10"
+                    >
+                        <Trash2 class="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground">
+                            Delete Post
+                        </h3>
+                        <p class="text-xs text-muted-foreground">
+                            Are you sure you want to delete this post?
+                        </p>
+                    </div>
+                </div>
+                <p class="text-xs text-muted-foreground">
+                    This will permanently remove your post and all associated
+                    comments. This action cannot be undone.
+                </p>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button
+                        type="button"
+                        class="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+                        data-test="cancel-delete-post-button"
+                        @click="cancelDeletePost"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-white hover:bg-destructive/90 disabled:opacity-50"
+                        :disabled="isDeletingPost"
+                        data-test="confirm-delete-post-button"
+                        @click="deletePost(postToDelete)"
+                    >
+                        <Loader2
+                            v-if="isDeletingPost"
+                            class="h-3.5 w-3.5 animate-spin"
+                        />
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Comment / Reply Confirmation Modal -->
+        <div
+            v-if="commentToDelete"
+            class="fixed inset-0 z-[170] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+            data-test="delete-comment-modal"
+            @click.self="cancelDeleteComment"
+        >
+            <div
+                class="w-full max-w-sm space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-2xl"
+            >
+                <div class="flex items-center gap-3 text-destructive">
+                    <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10"
+                    >
+                        <Trash2 class="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground">
+                            {{
+                                commentToDelete.isReply
+                                    ? 'Delete Reply'
+                                    : 'Delete Comment'
+                            }}
+                        </h3>
+                        <p class="text-xs text-muted-foreground">
+                            {{
+                                commentToDelete.isReply
+                                    ? 'Are you sure you want to delete this reply?'
+                                    : 'Are you sure you want to delete this comment?'
+                            }}
+                        </p>
+                    </div>
+                </div>
+                <p class="text-xs text-muted-foreground">
+                    {{
+                        commentToDelete.isReply
+                            ? 'This reply will be permanently removed. This action cannot be undone.'
+                            : 'This comment and any threaded replies will be permanently removed. This action cannot be undone.'
+                    }}
+                </p>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button
+                        type="button"
+                        class="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+                        data-test="cancel-delete-comment-button"
+                        @click="cancelDeleteComment"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-white hover:bg-destructive/90 disabled:opacity-50"
+                        :disabled="
+                            Boolean(
+                                commentToDelete &&
+                                isDeletingComment[
+                                    String(commentToDelete.comment.id)
+                                ],
+                            )
+                        "
+                        data-test="confirm-delete-comment-button"
+                        @click="handleConfirmDeleteComment"
+                    >
+                        <Loader2
+                            v-if="
+                                commentToDelete &&
+                                isDeletingComment[
+                                    String(commentToDelete.comment.id)
+                                ]
+                            "
+                            class="h-3.5 w-3.5 animate-spin"
+                        />
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- First-Time Member Welcome Modal (Apple-style What's New dialog) -->
+        <div
+            v-if="isWelcomeModalOpen"
+            class="fixed inset-0 z-[180] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-300"
+            data-test="welcome-modal"
+            @click.self="dismissWelcomeModal"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/60 backdrop-blur-md"
+                data-test="welcome-modal-backdrop"
+                @click="dismissWelcomeModal"
+            />
+
+            <div
+                class="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-border/60 bg-card/95 p-6 shadow-2xl ring-1 ring-border/20 backdrop-blur-2xl sm:p-7 dark:border-white/10 dark:bg-zinc-900/95"
+            >
+                <!-- Top specular light highlight -->
+                <div
+                    class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                />
+
+                <!-- Top close button -->
+                <button
+                    type="button"
+                    class="absolute top-4 right-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-95"
+                    aria-label="Close welcome modal"
+                    data-test="welcome-modal-close"
+                    @click="dismissWelcomeModal"
+                >
+                    <X class="h-3.5 w-3.5" />
+                </button>
+
+                <!-- Icon Badge (Apple squircle) -->
+                <div class="flex justify-center pt-1">
+                    <div
+                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-brand/10 text-brand shadow-sm ring-1 ring-brand/25"
+                    >
+                        <Sparkles class="h-6 w-6 stroke-[1.8]" />
+                    </div>
+                </div>
+
+                <!-- Text Content -->
+                <div class="mt-4 text-center">
+                    <h2
+                        class="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                    >
+                        Welcome to the Community Lounge! 🎉
+                    </h2>
+
+                    <p
+                        class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                    >
+                        You're now an official member of the private student
+                        lounge. Connect with your section, share stories, and
+                        stay in the loop.
+                    </p>
+                </div>
+
+                <!-- Feature Highlights (Apple "What's New" row style) -->
+                <div class="mt-6 space-y-3.5 text-left">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Clock class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                24-Hour Stories
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                Share ephemeral photo and video moments with
+                                your section.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Users class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                Live Section Presence
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                See active classmates and stay connected across
+                                your classroom.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/70 text-foreground ring-1 ring-border/60"
+                        >
+                            <Heart class="h-4 w-4 stroke-[1.8]" />
+                        </div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                            <p
+                                class="text-xs font-semibold text-foreground sm:text-sm"
+                            >
+                                Threads & Reactions
+                            </p>
+                            <p
+                                class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
+                            >
+                                Drop thoughts, react to classmates' updates, and
+                                join discussions.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons (Apple bottom bar) -->
+                <div class="mt-7 flex items-center gap-2.5 sm:gap-3">
+                    <button
+                        type="button"
+                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-muted/30 text-xs font-semibold text-muted-foreground transition-all duration-150 hover:bg-muted/70 hover:text-foreground active:scale-[0.98] sm:text-sm"
+                        data-test="welcome-modal-skip"
+                        @click="dismissWelcomeModal"
+                    >
+                        Skip
+                    </button>
+                    <button
+                        type="button"
+                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] sm:text-sm dark:bg-white dark:text-zinc-950"
+                        data-test="welcome-modal-enter"
+                        @click="dismissWelcomeModal"
+                    >
+                        Enter Lounge
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Curtain Wipe Overlay -->
+        <CurtainWipeOverlay
+            ref="curtainRef"
+            title="Dashboard"
+            subtitle="Returning to dashboard..."
+            expected-mount-direction="to_community"
+        />
+    </AppLayout>
+</template>
+
+<style scoped>
+.presence-beacon-dot {
+    animation: presenceBreathe 2.4s ease-in-out infinite;
+}
+
+.presence-beacon-ring {
+    animation: presenceRing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes presenceBreathe {
+    0%,
+    100% {
+        transform: scale(0.9);
+        opacity: 0.9;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+}
+
+@keyframes presenceRing {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.8;
+    }
+    70%,
+    100% {
+        transform: scale(2.2);
+        opacity: 0;
+    }
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+.flying-reaction-item {
+    animation: floatUpFade 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes floatUpFade {
+    0% {
+        transform: translateY(0) scale(0.6) rotate(0deg);
+        opacity: 0;
+    }
+    15% {
+        transform: translateY(-40px) scale(1.15)
+            rotate(var(--particle-rot, 0deg));
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-340px) scale(0.9)
+            rotate(var(--particle-rot, 0deg));
+        opacity: 0;
+    }
+}
+</style>

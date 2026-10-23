@@ -13,14 +13,22 @@ import {
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useMobile } from '@/composables/useMobile';
 
-const props = defineProps<{
-    canClaim: boolean;
-    amount: number;
-    baseXp?: number;
-    nextClaimAt: string | null;
-    streak: number;
-    showPrompt?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        canClaim: boolean;
+        amount: number;
+        baseXp?: number;
+        nextClaimAt: string | null;
+        streak: number;
+        showPrompt?: boolean;
+        compact?: boolean;
+    }>(),
+    {
+        baseXp: 1,
+        showPrompt: false,
+        compact: false,
+    },
+);
 
 // Configurable base XP (Platform Settings); anything above it is streak bonus.
 const base = computed(() => props.baseXp ?? 1);
@@ -292,12 +300,18 @@ async function handleClaim() {
     }
 
     try {
-        const { data } = await axios.post<{
-            claimed: boolean;
-            amount: number;
-            total_xp: number;
-            streak: number;
-        }>('/api/claim-xp', undefined, { timeout: 15000 });
+        const minSpinPromise = new Promise((resolve) =>
+            setTimeout(resolve, prefersReducedMotion.value ? 0 : 400),
+        );
+        const [{ data }] = await Promise.all([
+            axios.post<{
+                claimed: boolean;
+                amount: number;
+                total_xp: number;
+                streak: number;
+            }>('/api/claim-xp', undefined, { timeout: 15000 }),
+            minSpinPromise,
+        ]);
 
         if (data.claimed) {
             claimedAmount.value = data.amount;
@@ -410,7 +424,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="relative">
+    <div
+        class="relative"
+        :class="{ 'flex h-full flex-col justify-between': compact }"
+    >
         <ResponsiveModal
             v-model="showClaimModal"
             title="Your daily XP reward is ready"
@@ -573,9 +590,91 @@ onBeforeUnmount(() => {
             </span>
         </div>
 
+        <!-- Compact Claimed State (e.g. Mobile Dashboard grid) -->
+        <div
+            v-if="compact && claimState === 'claimed'"
+            class="flex h-full w-full min-w-0 flex-col justify-between gap-2.5 text-left"
+        >
+            <div class="flex items-center justify-between">
+                <div class="dash-icon-well bg-[#4D9375]/15 text-[#4D9375]">
+                    <Check class="h-5 w-5" />
+                </div>
+            </div>
+            <div class="flex min-w-0 flex-1 flex-col justify-end">
+                <p class="dash-label text-[#4D9375]">Claimed</p>
+                <p
+                    class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
+                >
+                    +{{ claimedAmount || amount }}
+                    <span class="text-[11px] font-medium text-muted-foreground"
+                        >XP</span
+                    >
+                </p>
+                <p
+                    v-if="countdownText"
+                    class="mt-1 flex items-center gap-1 truncate text-[11px] font-medium text-muted-foreground"
+                    :title="countdownText"
+                >
+                    <Clock class="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                    <span class="truncate">{{
+                        countdownText.replace(/^Next claim in\s+/i, '')
+                    }}</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Compact Idle / Claiming State (e.g. Mobile Dashboard grid) -->
+        <button
+            v-else-if="
+                compact && (claimState === 'idle' || claimState === 'claiming')
+            "
+            ref="buttonRef"
+            type="button"
+            @click="handleClaim"
+            :disabled="claimState === 'claiming'"
+            class="group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-2.5 text-left transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+        >
+            <div class="flex items-center justify-between">
+                <div class="dash-icon-well bg-brand/15 text-brand">
+                    <Gift v-if="claimState === 'idle'" class="h-5 w-5" />
+                    <div
+                        v-else
+                        class="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"
+                    />
+                </div>
+                <div
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10"
+                >
+                    <Sparkles class="h-3.5 w-3.5 text-brand" />
+                </div>
+            </div>
+
+            <div class="flex min-w-0 flex-1 flex-col justify-end">
+                <p class="dash-label text-brand">Daily reward</p>
+                <p
+                    class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
+                >
+                    <span v-if="claimState === 'claiming'">Claiming…</span>
+                    <template v-else>
+                        +{{ amount }}
+                        <span
+                            class="text-[11px] font-medium text-muted-foreground"
+                            >XP</span
+                        >
+                    </template>
+                </p>
+                <p
+                    class="mt-1 flex items-center gap-1 text-[11px] font-medium text-brand"
+                >
+                    <span v-if="claimState === 'claiming'">Please wait</span>
+                    <span v-else>Tap to claim →</span>
+                </p>
+            </div>
+        </button>
+
         <!-- Claim button -->
         <button
-            v-if="claimState === 'idle' || claimState === 'claiming'"
+            v-else-if="claimState === 'idle' || claimState === 'claiming'"
             ref="buttonRef"
             @click="handleClaim"
             :disabled="claimState === 'claiming'"

@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\BelongsToWorkspace;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
+
+class CommunityPost extends Model
+{
+    use BelongsToWorkspace, HasFactory;
+
+    protected $fillable = [
+        'workspace_id',
+        'user_id',
+        'section_id',
+        'content',
+        'attachment_url',
+        'attachment_type',
+        'attachment_name',
+        'attachment_size',
+        'is_anonymous',
+        'likes_count',
+        'comments_count',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_anonymous' => 'boolean',
+            'likes_count' => 'integer',
+            'comments_count' => 'integer',
+            'attachment_size' => 'integer',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (CommunityPost $post): void {
+            if ($post->attachment_url) {
+                Storage::disk('public')->delete($post->attachment_url);
+            }
+        });
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
+    }
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(CommunityPostLike::class, 'post_id');
+    }
+
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(CommunityPostBookmark::class, 'post_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(CommunityComment::class, 'post_id');
+    }
+}
