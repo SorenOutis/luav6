@@ -88,7 +88,7 @@ const handleUnlock = async () => {
                 <!-- Lock Icon Badge (Apple squircle) -->
                 <div class="flex justify-center pt-1">
                     <div
-                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-muted/80 text-foreground ring-1 ring-border/60 shadow-sm"
+                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-muted/80 text-foreground shadow-sm ring-1 ring-border/60"
                     >
                         <Lock class="h-6 w-6 stroke-[1.8]" />
                     </div>
@@ -151,7 +151,7 @@ const handleUnlock = async () => {
                             v-model="inviteCode"
                             type="text"
                             placeholder="Paste invite link or token here..."
-                            class="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-sm text-foreground placeholder:text-muted-foreground shadow-xs transition-all outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                            class="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-sm text-foreground shadow-xs transition-all outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
                             autocomplete="off"
                             spellcheck="false"
                         />
@@ -178,7 +178,7 @@ const handleUnlock = async () => {
                     <button
                         type="submit"
                         :disabled="!inviteCode.trim() || isSubmitting"
-                        class="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-zinc-950 sm:text-sm"
+                        class="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm dark:bg-white dark:text-zinc-950"
                     >
                         <Loader2
                             v-if="isSubmitting"

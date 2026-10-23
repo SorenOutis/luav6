@@ -5263,7 +5263,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 <!-- Icon Badge (Apple squircle) -->
                 <div class="flex justify-center pt-1">
                     <div
-                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-brand/10 text-brand ring-1 ring-brand/25 shadow-sm"
+                        class="flex h-13 w-13 items-center justify-center rounded-2xl bg-brand/10 text-brand shadow-sm ring-1 ring-brand/25"
                     >
                         <Sparkles class="h-6 w-6 stroke-[1.8]" />
                     </div>
@@ -5281,7 +5281,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         class="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
                     >
                         You're now an official member of the private student
-                        lounge. Connect with your section, share stories, and stay in the loop.
+                        lounge. Connect with your section, share stories, and
+                        stay in the loop.
                     </p>
                 </div>
 
@@ -5302,7 +5303,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <p
                                 class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
                             >
-                                Share ephemeral photo and video moments with your section.
+                                Share ephemeral photo and video moments with
+                                your section.
                             </p>
                         </div>
                     </div>
@@ -5322,7 +5324,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <p
                                 class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
                             >
-                                See active classmates and stay connected across your classroom.
+                                See active classmates and stay connected across
+                                your classroom.
                             </p>
                         </div>
                     </div>
@@ -5342,7 +5345,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <p
                                 class="text-[11px] leading-normal text-muted-foreground sm:text-xs"
                             >
-                                Drop thoughts, react to classmates' updates, and join discussions.
+                                Drop thoughts, react to classmates' updates, and
+                                join discussions.
                             </p>
                         </div>
                     </div>
@@ -5360,7 +5364,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     </button>
                     <button
                         type="button"
-                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] dark:bg-white dark:text-zinc-950 sm:text-sm"
+                        class="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] sm:text-sm dark:bg-white dark:text-zinc-950"
                         data-test="welcome-modal-enter"
                         @click="dismissWelcomeModal"
                     >

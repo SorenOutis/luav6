@@ -426,7 +426,7 @@ onBeforeUnmount(() => {
 <template>
     <div
         class="relative"
-        :class="{ 'h-full flex flex-col justify-between': compact }"
+        :class="{ 'flex h-full flex-col justify-between': compact }"
     >
         <ResponsiveModal
             v-model="showClaimModal"
@@ -600,28 +600,34 @@ onBeforeUnmount(() => {
                     <Check class="h-5 w-5" />
                 </div>
             </div>
-            <div class="flex-1 min-w-0 flex flex-col justify-end">
+            <div class="flex min-w-0 flex-1 flex-col justify-end">
                 <p class="dash-label text-[#4D9375]">Claimed</p>
                 <p
-                    class="dash-metric flex items-baseline gap-1 text-[19px] font-semibold leading-none text-foreground"
+                    class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
                 >
                     +{{ claimedAmount || amount }}
-                    <span class="text-[11px] font-medium text-muted-foreground">XP</span>
+                    <span class="text-[11px] font-medium text-muted-foreground"
+                        >XP</span
+                    >
                 </p>
                 <p
                     v-if="countdownText"
-                    class="mt-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground truncate"
+                    class="mt-1 flex items-center gap-1 truncate text-[11px] font-medium text-muted-foreground"
                     :title="countdownText"
                 >
                     <Clock class="h-3 w-3 shrink-0 text-muted-foreground/70" />
-                    <span class="truncate">{{ countdownText.replace(/^Next claim in\s+/i, '') }}</span>
+                    <span class="truncate">{{
+                        countdownText.replace(/^Next claim in\s+/i, '')
+                    }}</span>
                 </p>
             </div>
         </div>
 
         <!-- Compact Idle / Claiming State (e.g. Mobile Dashboard grid) -->
         <button
-            v-else-if="compact && (claimState === 'idle' || claimState === 'claiming')"
+            v-else-if="
+                compact && (claimState === 'idle' || claimState === 'claiming')
+            "
             ref="buttonRef"
             type="button"
             @click="handleClaim"
@@ -636,23 +642,30 @@ onBeforeUnmount(() => {
                         class="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"
                     />
                 </div>
-                <div class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10">
+                <div
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10"
+                >
                     <Sparkles class="h-3.5 w-3.5 text-brand" />
                 </div>
             </div>
 
-            <div class="min-w-0 flex-1 flex flex-col justify-end">
+            <div class="flex min-w-0 flex-1 flex-col justify-end">
                 <p class="dash-label text-brand">Daily reward</p>
                 <p
-                    class="dash-metric flex items-baseline gap-1 text-[19px] font-semibold leading-none text-foreground"
+                    class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
                 >
                     <span v-if="claimState === 'claiming'">Claiming…</span>
                     <template v-else>
                         +{{ amount }}
-                        <span class="text-[11px] font-medium text-muted-foreground">XP</span>
+                        <span
+                            class="text-[11px] font-medium text-muted-foreground"
+                            >XP</span
+                        >
                     </template>
                 </p>
-                <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-brand">
+                <p
+                    class="mt-1 flex items-center gap-1 text-[11px] font-medium text-brand"
+                >
                     <span v-if="claimState === 'claiming'">Please wait</span>
                     <span v-else>Tap to claim →</span>
                 </p>
