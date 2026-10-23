@@ -17,9 +17,10 @@ class SecurityHeaders
         $response = $next($request);
 
         $isGraphify = $request->routeIs('admin.graphify.*');
+        $canEmbedInFrame = $isGraphify || $request->routeIs('library.file');
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', $isGraphify ? 'SAMEORIGIN' : 'DENY');
+        $response->headers->set('X-Frame-Options', $canEmbedInFrame ? 'SAMEORIGIN' : 'DENY');
         $response->headers->set('Referrer-Policy', (string) config('security.referrer_policy'));
         $response->headers->set('Permissions-Policy', (string) config('security.permissions_policy'));
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
@@ -43,12 +44,13 @@ class SecurityHeaders
     {
         $nonce = Vite::cspNonce();
         $isGraphify = $request->routeIs('admin.graphify.*');
+        $canEmbedInFrame = $isGraphify || $request->routeIs('library.file');
 
         $directives = [
             "default-src 'self'",
             "base-uri 'self'",
-            "object-src 'none'",
-            'frame-ancestors '.($isGraphify ? "'self'" : "'none'"),
+            'object-src '.($canEmbedInFrame ? "'self'" : "'none'"),
+            'frame-ancestors '.($canEmbedInFrame ? "'self'" : "'none'"),
             "form-action 'self'",
             "script-src 'self' ".($isGraphify ? "'unsafe-inline' https://unpkg.com" : "'nonce-{$nonce}' https://js.pusher.com"),
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",

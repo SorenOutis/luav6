@@ -101,10 +101,14 @@ it('blocks download when is_downloadable is false but allows preview', function 
     $student = User::factory()->create();
     $student->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
 
-    // Preview (inline) should succeed
-    $this->actingAs($student)
-        ->get(route('library.file', $material).'?download=0')
-        ->assertOk();
+    // Preview (inline) should succeed and allow embedding in same-origin iframe
+    $response = $this->actingAs($student)
+        ->get(route('library.file', $material).'?download=0');
+
+    $response->assertOk()
+        ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+    expect($response->headers->get('content-disposition'))->toContain('inline');
+    expect($response->headers->get('content-type'))->toContain('application/pdf');
 
     // Download should be blocked
     $this->actingAs($student)
