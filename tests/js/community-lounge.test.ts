@@ -4,6 +4,7 @@ import { defineComponent, h, nextTick } from 'vue';
 
 const mockRouterVisit = vi.fn();
 const mockRouterGet = vi.fn();
+const mockRouterPost = vi.fn();
 const mockAxiosGet = vi.fn().mockResolvedValue({ data: {} });
 const mockAxiosPost = vi.fn().mockResolvedValue({
     data: { is_liked: true, likes_count: 1, is_bookmarked: true },
@@ -40,7 +41,7 @@ vi.mock('@inertiajs/vue3', () => ({
         visit: (...args: any[]) => mockRouterVisit(...args),
         get: (...args: any[]) => mockRouterGet(...args),
         reload: vi.fn(),
-        post: vi.fn(),
+        post: (...args: any[]) => mockRouterPost(...args),
         delete: vi.fn(),
     },
     usePage: () => ({
@@ -517,13 +518,12 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             const secondSectionBtn = menu.findAll('button')[1];
             await secondSectionBtn.trigger('click');
 
-            expect(mockRouterGet).toHaveBeenCalledWith(
-                '/community',
+            expect(mockRouterPost).toHaveBeenCalledWith(
+                '/community/section',
                 expect.objectContaining({ section_id: 20 }),
                 expect.objectContaining({
                     preserveState: true,
                     preserveScroll: true,
-                    replace: true,
                 }),
             );
         });

@@ -154,6 +154,21 @@ it('allows student with multiple sections to choose a section in presence and fe
             'sectionName' => 'Computer Networking',
             'sectionId' => $sectionB->id,
         ]);
+
+    $this->actingAs($this->student)
+        ->post(route('community.section.select'), ['section_id' => $sectionA->id])
+        ->assertRedirect();
+
+    expect(session('community_active_section_id'))->toBe($sectionA->id);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('sectionName', 'Computer Application')
+            ->where('currentSectionId', $sectionA->id)
+        );
 });
 
 it('allows authenticated student to create a community post', function () {
