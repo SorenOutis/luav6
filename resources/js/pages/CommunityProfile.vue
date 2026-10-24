@@ -605,14 +605,16 @@ onBeforeUnmount(() => {
                 >
                     <!-- Cover Banner (VisionOS Soft Gradient) -->
                     <div
-                        class="relative h-28 bg-gradient-to-r from-brand/20 via-primary/10 to-brand/10 sm:h-32"
+                        class="relative h-20 bg-gradient-to-r from-brand/20 via-primary/10 to-brand/10 sm:h-24"
                     >
                         <div
                             class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"
                         />
-                        <div class="absolute top-3 right-3 sm:top-4 sm:right-4">
+                        <div
+                            class="absolute top-2.5 right-3 sm:top-3 sm:right-4"
+                        >
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-background/70 px-2.5 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-md"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-background/70 px-2 py-0.5 text-[9.5px] font-semibold text-foreground backdrop-blur-md"
                             >
                                 <Sparkles class="h-3 w-3 text-brand" />
                                 <span>Community Lounge Persona</span>
@@ -621,17 +623,15 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Header Content -->
-                    <div class="relative px-5 pb-4 sm:px-6">
+                    <div class="relative px-4 pb-3 sm:px-6">
                         <div
-                            class="flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between"
+                            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4"
                         >
                             <!-- Avatar & Presence Beacon -->
-                            <div
-                                class="-mt-10 flex flex-col items-center gap-3 sm:-mt-12 sm:flex-row sm:items-end"
-                            >
+                            <div class="relative -mt-7 shrink-0 sm:-mt-8">
                                 <div class="relative">
                                     <div
-                                        class="h-20 w-20 overflow-hidden rounded-2xl border-4 border-card bg-muted shadow-md ring-1 ring-border/50 sm:h-24 sm:w-24"
+                                        class="h-16 w-16 overflow-hidden rounded-2xl border-4 border-card bg-muted shadow-md ring-1 ring-border/50 sm:h-20 sm:w-20"
                                     >
                                         <img
                                             v-if="profile.avatar"
@@ -641,7 +641,7 @@ onBeforeUnmount(() => {
                                         />
                                         <div
                                             v-else
-                                            class="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/20 to-primary/20 text-xl font-black text-brand"
+                                            class="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/20 to-primary/20 text-lg font-black text-brand"
                                         >
                                             {{ getInitials(profile.name) }}
                                         </div>
@@ -649,7 +649,7 @@ onBeforeUnmount(() => {
 
                                     <!-- Presence Badge on Avatar -->
                                     <span
-                                        class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card shadow-xs"
+                                        class="absolute -right-1 -bottom-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-card shadow-xs"
                                         :class="
                                             profile.presence_status === 'online'
                                                 ? 'bg-emerald-500'
@@ -669,13 +669,16 @@ onBeforeUnmount(() => {
                                         />
                                     </span>
                                 </div>
+                            </div>
 
-                                <div class="text-center sm:text-left">
-                                    <div
-                                        class="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start"
-                                    >
+                            <!-- Identity & Info Column -->
+                            <div class="min-w-0 flex-1 space-y-1.5">
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
+                                    <div class="flex items-center gap-2">
                                         <h1
-                                            class="text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                                            class="text-base font-bold tracking-tight text-foreground sm:text-lg"
                                         >
                                             {{ profile.name }}
                                         </h1>
@@ -686,164 +689,147 @@ onBeforeUnmount(() => {
                                             Lv. {{ profile.level }}
                                         </span>
                                     </div>
-                                    <p
-                                        class="text-xs font-medium text-muted-foreground"
-                                    >
-                                        @{{ profile.handle }} ·
-                                        {{ profile.section_name }}
-                                    </p>
+
+                                    <!-- Action Buttons -->
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            v-if="profile.can_follow"
+                                            type="button"
+                                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold shadow-xs transition-all active:scale-95"
+                                            :class="
+                                                isFollowingState
+                                                    ? 'border border-border/80 bg-card text-foreground hover:bg-muted'
+                                                    : 'bg-brand text-primary-foreground hover:opacity-90'
+                                            "
+                                            @click="handleToggleFollow"
+                                        >
+                                            <UserCheck
+                                                v-if="isFollowingState"
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            <UserPlus
+                                                v-else
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            <span>{{
+                                                isFollowingState
+                                                    ? 'Following'
+                                                    : 'Follow'
+                                            }}</span>
+                                        </button>
+
+                                        <span
+                                            v-if="profile.is_self"
+                                            class="inline-flex items-center rounded-full border border-border/80 bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+                                        >
+                                            Your Lounge Profile
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex items-center gap-2">
-                                <button
-                                    v-if="profile.can_follow"
-                                    type="button"
-                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95"
-                                    :class="
-                                        isFollowingState
-                                            ? 'border border-border/80 bg-card text-foreground hover:bg-muted'
-                                            : 'bg-brand text-primary-foreground hover:opacity-90'
-                                    "
-                                    @click="handleToggleFollow"
-                                >
-                                    <UserCheck
-                                        v-if="isFollowingState"
-                                        class="h-3.5 w-3.5"
-                                    />
-                                    <UserPlus v-else class="h-3.5 w-3.5" />
-                                    <span>{{
-                                        isFollowingState
-                                            ? 'Following'
-                                            : 'Follow'
-                                    }}</span>
-                                </button>
-
-                                <span
-                                    v-if="profile.is_self"
-                                    class="inline-flex items-center rounded-full border border-border/80 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground"
-                                >
-                                    Your Lounge Profile
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Bio & Presence Beacon Row -->
-                        <div class="mt-3 space-y-1.5">
-                            <p
-                                class="max-w-2xl text-xs leading-relaxed text-foreground/80"
-                            >
-                                {{ profile.bio }}
-                            </p>
-
-                            <!-- Live Presence Beacon Pill -->
-                            <div class="flex items-center gap-2 pt-0.5 text-xs">
-                                <span
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground"
+                                <div
+                                    class="flex flex-wrap items-center gap-2 text-xs"
                                 >
                                     <span
-                                        class="h-1.5 w-1.5 rounded-full"
-                                        :class="
-                                            profile.presence_status === 'online'
-                                                ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                                                : profile.presence_status ===
-                                                    'idle'
-                                                  ? 'bg-amber-500'
-                                                  : 'bg-zinc-400'
-                                        "
-                                    />
-                                    <span>{{
-                                        profile.presence_activity || 'Offline'
+                                        class="font-medium text-muted-foreground"
+                                    >
+                                        @{{ profile.handle }}
+                                    </span>
+                                    <span class="text-muted-foreground">·</span>
+                                    <span class="text-muted-foreground">{{
+                                        profile.section_name
                                     }}</span>
-                                </span>
+                                    <span class="text-muted-foreground">·</span>
+                                    <!-- Live Presence Beacon Pill -->
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                                    >
+                                        <span
+                                            class="h-1.5 w-1.5 rounded-full"
+                                            :class="
+                                                profile.presence_status ===
+                                                'online'
+                                                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                                                    : profile.presence_status ===
+                                                        'idle'
+                                                      ? 'bg-amber-500'
+                                                      : 'bg-zinc-400'
+                                            "
+                                        />
+                                        <span>{{
+                                            profile.presence_activity ||
+                                            'Offline'
+                                        }}</span>
+                                    </span>
+                                </div>
 
-                                <span class="text-muted-foreground">·</span>
-                                <span class="text-[11px] text-muted-foreground"
-                                    >Section: {{ profile.section_name }}</span
+                                <p
+                                    v-if="profile.bio"
+                                    class="max-w-2xl text-xs leading-relaxed text-foreground/80"
                                 >
+                                    {{ profile.bio }}
+                                </p>
                             </div>
                         </div>
 
-                        <!-- Instagram Style Stats Counter Grid -->
+                        <!-- Instagram Style Stats Counter Strip -->
                         <div
-                            class="mt-4 grid grid-cols-4 divide-x divide-border/60 rounded-xl border border-border/60 bg-muted/20 py-2 text-center"
+                            class="mt-2.5 flex items-center justify-around rounded-xl border border-border/60 bg-muted/20 py-1.5 text-center text-xs sm:justify-start sm:gap-6 sm:px-4"
                         >
-                            <div class="px-2">
-                                <span
-                                    class="block text-sm font-bold text-foreground sm:text-base"
-                                >
-                                    {{ profile.posts_count }}
-                                </span>
-                                <span
-                                    class="text-[10px] font-medium text-muted-foreground"
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-foreground">{{
+                                    profile.posts_count
+                                }}</span>
+                                <span class="text-[10px] text-muted-foreground"
                                     >Lounge Posts</span
                                 >
                             </div>
-                            <div class="px-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-foreground">{{
+                                    profile.likes_received
+                                }}</span>
                                 <span
-                                    class="block text-sm font-bold text-foreground sm:text-base"
+                                    class="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
                                 >
-                                    {{ profile.likes_received }}
-                                </span>
-                                <span
-                                    class="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
-                                >
-                                    <Heart class="h-3 w-3 text-rose-500" />
+                                    <Heart class="h-2.5 w-2.5 text-rose-500" />
                                     <span>Likes</span>
                                 </span>
                             </div>
-                            <div class="px-2">
-                                <span
-                                    class="block text-sm font-bold text-foreground sm:text-base"
-                                >
-                                    {{ followersCountState }}
-                                </span>
-                                <span
-                                    class="text-[10px] font-medium text-muted-foreground"
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-foreground">{{
+                                    followersCountState
+                                }}</span>
+                                <span class="text-[10px] text-muted-foreground"
                                     >Followers</span
                                 >
                             </div>
-                            <div class="px-2">
-                                <span
-                                    class="block text-sm font-bold text-foreground sm:text-base"
-                                >
-                                    {{ profile.following_count }}
-                                </span>
-                                <span
-                                    class="text-[10px] font-medium text-muted-foreground"
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-foreground">{{
+                                    profile.following_count
+                                }}</span>
+                                <span class="text-[10px] text-muted-foreground"
                                     >Following</span
                                 >
                             </div>
                         </div>
 
-                        <!-- Notice: Distinct from Academic Profile -->
+                        <!-- Notice: Distinct from Academic Profile (Single-line compact strip) -->
                         <div
-                            class="mt-3.5 flex flex-col items-start justify-between gap-2 rounded-xl border border-border/50 bg-gradient-to-r from-brand/5 via-card to-transparent px-3.5 py-2.5 sm:flex-row sm:items-center"
+                            class="mt-2 flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 px-3 py-1.5 text-xs"
                         >
-                            <div class="space-y-0.5">
-                                <div
-                                    class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
+                            <div
+                                class="flex items-center gap-1.5 text-muted-foreground"
+                            >
+                                <GraduationCap class="h-3.5 w-3.5 text-brand" />
+                                <span
+                                    class="text-[11px] font-medium text-foreground"
+                                    >Student Learning Platform Profile</span
                                 >
-                                    <GraduationCap
-                                        class="h-3.5 w-3.5 text-brand"
-                                    />
-                                    <span
-                                        >Student Learning Platform Profile</span
-                                    >
-                                </div>
-                                <p
-                                    class="text-[11px] leading-snug text-muted-foreground"
-                                >
-                                    Academic grades, enrolled courses, quest
-                                    badges, and seasonal XP belong to the
-                                    learning platform profile.
-                                </p>
                             </div>
                             <Link
                                 v-if="profile.public_id"
                                 :href="'/u/' + profile.public_id"
-                                class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/80 bg-card px-3 py-1 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-muted active:scale-95"
+                                class="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-brand transition-colors hover:underline"
                             >
                                 <span>Switch to Academic Profile</span>
                                 <ExternalLink class="h-3 w-3 opacity-70" />
