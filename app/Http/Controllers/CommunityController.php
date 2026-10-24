@@ -406,17 +406,15 @@ class CommunityController extends Controller
     }
 
     /**
-     * Get section or community presence data with a 15-second RAM cache.
+     * Get section presence data with a 15-second RAM cache.
+     * Only displays enrolled students joined in the viewer's section.
      * Over 95% of background polling calls hit memory, keeping DB CPU near 0%.
      *
      * @return array{classmates: array, onlineCount: int, totalEnrolled: int}
      */
     private function getSectionPresenceData(?Section $section, ?User $viewer): array
     {
-        $workspace = $viewer?->currentWorkspace;
-        $workspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
-
-        if (! $workspaceId && ! $section) {
+        if (! $section) {
             return [
                 'classmates' => [],
                 'onlineCount' => 0,
@@ -424,25 +422,11 @@ class CommunityController extends Controller
             ];
         }
 
-        $cacheKey = $workspaceId
-            ? "workspace:{$workspaceId}:presence_data"
-            : "section:{$section->id}:presence_data";
+        $cacheKey = "section:{$section->id}:presence_data";
 
-        $data = Cache::remember($cacheKey, 15, function () use ($section, $workspaceId): array {
-            $query = User::query()->where('is_admin', false);
-
-            if ($workspaceId) {
-                $query->where(function ($sub) use ($workspaceId) {
-                    $sub->whereHas('workspaces', fn ($q) => $q->whereKey($workspaceId))
-                        ->orWhereHas('sections', fn ($q) => $q->where('sections.workspace_id', $workspaceId))
-                        ->orWhere('users.current_workspace_id', $workspaceId);
-                });
-            } else {
-                $query->whereHas('sections', fn ($q) => $q->whereKey($section->id));
-            }
-
-            $members = $query
-                ->with(['sections' => fn ($q) => $q->select(['sections.id', 'sections.name'])])
+        $data = Cache::remember($cacheKey, 15, function () use ($section): array {
+            $members = $section->users()
+                ->where('is_admin', false)
                 ->select(['users.id', 'users.public_id', 'users.name', 'users.avatar', 'users.last_seen_at'])
                 ->get();
 
@@ -476,7 +460,6 @@ class CommunityController extends Controller
                     'public_id' => (string) $member->public_id,
                     'name' => $member->name,
                     'avatar' => $member->avatar ? PublicFileUrl::resolve($member->avatar) : null,
-                    'section_name' => $member->sections->first()?->name,
                     'status' => $status,
                     'activity' => $activity,
                 ];
@@ -496,7 +479,7 @@ class CommunityController extends Controller
             return [
                 'classmates' => $classmates,
                 'onlineCount' => $onlineCount,
-                'totalEnrolled' => count($classmates),
+                'totalEnrolled' => $section->users()->where('is_admin', false)->count(),
             ];
         });
 
