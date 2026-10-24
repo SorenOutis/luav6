@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityPost;
 use App\Models\CommunityPostBookmark;
 use App\Models\CommunityPostLike;
+use App\Models\Section;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,7 +33,10 @@ class CommunityPostController extends Controller
             'attachment' => ['nullable', 'file', 'max:15360'],
         ]);
 
-        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $workspaceId = app(WorkspaceContext::class)->id()
+            ?? $viewer->current_workspace_id
+            ?? $viewer->currentWorkspace?->id
+            ?? $viewer->workspaces()->first()?->id;
 
         $section = null;
         if (! empty($validated['section_id'])) {
@@ -44,6 +48,12 @@ class CommunityPostController extends Controller
         if (! $section) {
             $section = $viewer->sections()
                 ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                ->first();
+        }
+
+        if (! $section && $viewer->is_admin) {
+            $section = Section::query()
+                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
                 ->first();
         }
 
