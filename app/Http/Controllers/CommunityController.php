@@ -11,6 +11,7 @@ use App\Models\Workspace;
 use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -43,7 +44,8 @@ class CommunityController extends Controller
 
         // Determine viewer's active section
         $availableSections = $this->getAvailableSections($viewer, $workspace);
-        $section = $this->resolveViewerSection($viewer, $request->query('section_id'));
+        $requestedSectionId = $request->query('section_id') ?? $request->session()->get('community_active_section_id');
+        $section = $this->resolveViewerSection($viewer, $requestedSectionId);
 
         // Fetch section presence list (cached in RAM for 15s to prevent DB overload)
         $presenceData = $this->getSectionPresenceData($section, $viewer);
@@ -90,7 +92,8 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
-        $section = $this->resolveViewerSection($viewer, $request->query('section_id'));
+        $requestedSectionId = $request->query('section_id') ?? $request->session()->get('community_active_section_id');
+        $section = $this->resolveViewerSection($viewer, $requestedSectionId);
         $presenceData = $this->getSectionPresenceData($section, $viewer);
 
         return response()->json([
@@ -100,6 +103,24 @@ class CommunityController extends Controller
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
         ]);
+    }
+
+    /**
+     * Switch the active section in session without query string in URL.
+     */
+    public function selectSection(Request $request): RedirectResponse
+    {
+        $viewer = $request->user();
+        abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
+
+        $validated = $request->validate([
+            'section_id' => ['required', 'integer'],
+        ]);
+
+        $request->session()->put('community_active_section_id', (int) $validated['section_id']);
+
+        return back();
     }
 
     /**

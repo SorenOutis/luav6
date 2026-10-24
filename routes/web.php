@@ -143,6 +143,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('community', [CommunityController::class, 'index'])
         ->middleware('student.page:community')
         ->name('community.index');
+    Route::post('community/section', [CommunityController::class, 'selectSection'])
+        ->middleware('student.page:community')
+        ->name('community.section.select');
     Route::post('community/join-by-code', [CommunityInviteController::class, 'joinByCode'])
         ->middleware('student.page:community')
         ->name('community.join-by-code');

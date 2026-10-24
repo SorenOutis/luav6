@@ -43,7 +43,7 @@ import {
     Users,
     X,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
@@ -369,6 +369,25 @@ watch(
     },
 );
 
+const copiedPostId = ref<number | string | null>(null);
+
+const handleSharePost = async (post: CommunityFeedPost) => {
+    try {
+        const url = `${window.location.origin}/community#post-${post.id}`;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(url);
+        }
+        copiedPostId.value = post.id;
+        setTimeout(() => {
+            if (copiedPostId.value === post.id) {
+                copiedPostId.value = null;
+            }
+        }, 2000);
+    } catch {
+        // Fallback
+    }
+};
+
 const selectSection = (sectionId: number) => {
     isSectionDropdownOpen.value = false;
     isMobileSectionDropdownOpen.value = false;
@@ -377,32 +396,37 @@ const selectSection = (sectionId: number) => {
     selectedSectionId.value = sectionId;
     isRefreshingPresence.value = true;
 
-    if (typeof router.get === 'function') {
-        const queryParams: Record<string, any> = {
-            section_id: sectionId,
-        };
-        if (activeTab.value && activeTab.value !== 'all') {
-            queryParams.tab = activeTab.value;
-        }
-
-        router.get('/community', queryParams, {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            only: [
-                'onlineClassmates',
-                'onlineCount',
-                'totalEnrolledCount',
-                'sectionName',
-                'currentSectionId',
-                'stories',
-            ],
-            onFinish: () => {
-                isRefreshingPresence.value = false;
+    if (typeof router.post === 'function') {
+        router.post(
+            '/community/section',
+            { section_id: sectionId },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                only: [
+                    'onlineClassmates',
+                    'onlineCount',
+                    'totalEnrolledCount',
+                    'sectionName',
+                    'currentSectionId',
+                    'stories',
+                ],
+                onFinish: () => {
+                    isRefreshingPresence.value = false;
+                },
             },
-        });
+        );
     }
 };
+
+onMounted(() => {
+    if (
+        typeof window !== 'undefined' &&
+        window.location.search.includes('section_id=')
+    ) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+});
 
 const classmatesList = computed<ClassmatePresence[]>(() =>
     props.onlineClassmates !== undefined
@@ -3172,15 +3196,32 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             >
                                         </button>
 
-                                        <!-- Share -->
+                                        <!-- Share / Copy Link -->
                                         <button
                                             type="button"
-                                            class="group inline-flex cursor-pointer items-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                            class="group inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                            :title="
+                                                copiedPostId === post.id
+                                                    ? 'Link copied!'
+                                                    : 'Share post (Copy link)'
+                                            "
                                             aria-label="Share post"
+                                            @click="handleSharePost(post)"
                                         >
+                                            <Check
+                                                v-if="copiedPostId === post.id"
+                                                class="animate-in zoom-in-75 h-4 w-4 text-emerald-500 duration-200"
+                                            />
                                             <Send
+                                                v-else
                                                 class="h-4 w-4 -rotate-12 transition-transform group-hover:scale-115 active:scale-90"
                                             />
+                                            <span
+                                                v-if="copiedPostId === post.id"
+                                                class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                            >
+                                                Copied!
+                                            </span>
                                         </button>
                                     </div>
 
