@@ -416,10 +416,6 @@ const onlineCount = computed(
         classmatesList.value.filter((c) => c.status === 'online').length,
 );
 
-const totalEnrolledCount = computed(
-    () => props.totalEnrolledCount ?? classmatesList.value.length,
-);
-
 const classmateSearch = ref('');
 
 const filteredClassmates = computed(() => {
@@ -1255,10 +1251,16 @@ const composerFile = ref<File | null>(null);
 const composerFilePreview = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
-const composerForm = useForm({
+const composerForm = useForm<{
+    content: string;
+    is_anonymous: boolean;
+    section_id: number | null;
+    attachment: File | null;
+}>({
     content: '',
     is_anonymous: false,
-    attachment: null as File | null,
+    section_id: null,
+    attachment: null,
 });
 
 const handleFileSelect = (event: Event) => {
@@ -1289,6 +1291,8 @@ const submitPost = () => {
     if (!composerForm.content.trim()) {
         return;
     }
+
+    composerForm.section_id = selectedSectionId.value;
 
     composerForm.post('/community/posts', {
         preserveScroll: true,
@@ -2569,9 +2573,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 <div class="flex items-start gap-3">
                                     <!-- User Avatar -->
                                     <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
                                     >
-                                        {{ currentUserInitials }}
+                                        <img
+                                            v-if="currentUser?.avatar"
+                                            :src="currentUser.avatar"
+                                            :alt="currentUserName"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <span v-else>
+                                            {{ currentUserInitials }}
+                                        </span>
                                     </div>
 
                                     <!-- Input Row -->
@@ -2785,6 +2797,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         post.author.public_id,
                                                     name: post.author.name,
                                                     handle: post.author.handle,
+                                                    avatar:
+                                                        post.author.avatar ||
+                                                        (String(
+                                                            post.author.id,
+                                                        ) ===
+                                                            String(
+                                                                currentUser?.id,
+                                                            ) &&
+                                                        currentUser?.avatar
+                                                            ? currentUser.avatar
+                                                            : null),
                                                     is_masked:
                                                         post.author.is_masked,
                                                     section_name:
@@ -2804,13 +2827,36 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2px]"
                                             >
                                                 <div
-                                                    class="flex h-full w-full items-center justify-center rounded-full border-2 border-card bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                                                    class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-card bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
                                                 >
-                                                    {{
-                                                        getInitials(
-                                                            post.author.name,
-                                                        )
-                                                    }}
+                                                    <img
+                                                        v-if="
+                                                            post.author
+                                                                .avatar ||
+                                                            (String(
+                                                                post.author.id,
+                                                            ) ===
+                                                                String(
+                                                                    currentUser?.id,
+                                                                ) &&
+                                                                currentUser?.avatar)
+                                                        "
+                                                        :src="
+                                                            post.author
+                                                                .avatar ||
+                                                            currentUser?.avatar
+                                                        "
+                                                        :alt="post.author.name"
+                                                        class="h-full w-full object-cover"
+                                                    />
+                                                    <span v-else>
+                                                        {{
+                                                            getInitials(
+                                                                post.author
+                                                                    .name,
+                                                            )
+                                                        }}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <span
@@ -4009,22 +4055,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     >
                                         {{ sectionDisplayName }}
                                     </h2>
-                                    <p
-                                        class="text-[11px] text-muted-foreground"
-                                    >
-                                        Classroom Presence
-                                    </p>
                                 </div>
 
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                        class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
                                     >
                                         <span
                                             class="h-1.5 w-1.5 rounded-full bg-emerald-500"
                                         />
-                                        {{ onlineCount }} Online ·
-                                        {{ totalEnrolledCount }} Enrolled
+                                        {{ onlineCount }} Online
                                     </span>
                                     <button
                                         type="button"
@@ -4428,8 +4468,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <span
                                 class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
                             >
-                                {{ onlineCount }} Online ·
-                                {{ totalEnrolledCount }} Enrolled
+                                <span
+                                    class="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                />
+                                {{ onlineCount }} Online
                             </span>
                             <button
                                 type="button"

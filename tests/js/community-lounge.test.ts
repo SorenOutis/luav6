@@ -470,7 +470,7 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(presenceCard.exists()).toBe(true);
             expect(presenceCard.text()).toContain('BSIT 3-A');
             expect(presenceCard.text()).toContain('Online');
-            expect(presenceCard.text()).toContain('Enrolled');
+            expect(presenceCard.text()).not.toContain('Classroom Presence');
 
             // Classmates mockup rendered
             expect(presenceCard.text()).toContain('Sarah Chen');

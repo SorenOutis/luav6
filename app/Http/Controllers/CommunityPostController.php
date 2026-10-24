@@ -28,13 +28,24 @@ class CommunityPostController extends Controller
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:2000'],
             'is_anonymous' => ['sometimes', 'boolean'],
+            'section_id' => ['nullable', 'integer'],
             'attachment' => ['nullable', 'file', 'max:15360'],
         ]);
 
         $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
-        $section = $viewer->sections()
-            ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
-            ->first();
+
+        $section = null;
+        if (! empty($validated['section_id'])) {
+            $section = Section::query()
+                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                ->find($validated['section_id']);
+        }
+
+        if (! $section) {
+            $section = $viewer->sections()
+                ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                ->first();
+        }
 
         $attachmentUrl = null;
         $attachmentType = null;
