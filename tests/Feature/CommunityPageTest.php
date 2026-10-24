@@ -125,6 +125,37 @@ it('returns cached json presence data from presence polling endpoint', function 
         ]);
 });
 
+it('allows student with multiple sections to choose a section in presence and feed', function () {
+    $sectionA = Section::factory()->create([
+        'name' => 'Computer Application',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $sectionB = Section::factory()->create([
+        'name' => 'Computer Networking',
+        'workspace_id' => $this->workspace->id,
+    ]);
+
+    $this->student->sections()->attach([$sectionA->id, $sectionB->id]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index', ['section_id' => $sectionB->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('sectionName', 'Computer Networking')
+            ->where('currentSectionId', $sectionB->id)
+            ->has('availableSections', 2)
+        );
+
+    $this->actingAs($this->student)
+        ->get(route('community.presence', ['section_id' => $sectionB->id]))
+        ->assertOk()
+        ->assertJson([
+            'sectionName' => 'Computer Networking',
+            'sectionId' => $sectionB->id,
+        ]);
+});
+
 it('allows authenticated student to create a community post', function () {
     $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
     $this->student->sections()->attach($section);

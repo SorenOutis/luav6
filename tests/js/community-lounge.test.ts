@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
 
 const mockRouterVisit = vi.fn();
+const mockRouterGet = vi.fn();
 const mockAxiosGet = vi.fn().mockResolvedValue({ data: {} });
 const mockAxiosPost = vi.fn().mockResolvedValue({
     data: { is_liked: true, likes_count: 1, is_bookmarked: true },
@@ -37,6 +38,7 @@ vi.mock('@inertiajs/vue3', () => ({
     }),
     router: {
         visit: (...args: any[]) => mockRouterVisit(...args),
+        get: (...args: any[]) => mockRouterGet(...args),
         reload: vi.fn(),
         post: vi.fn(),
         delete: vi.fn(),
@@ -484,6 +486,74 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(privacyNote.text()).toContain(
                 'Real names are visible only to classmates in your section',
             );
+        });
+
+        it('renders section switcher dropdown when multiple sections are available and triggers section selection', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    sectionName: 'Computer Application (2026)',
+                    currentSectionId: 10,
+                    availableSections: [
+                        { id: 10, name: 'Computer Application (2026)' },
+                        { id: 20, name: 'Computer Networking 1 (2026)' },
+                    ],
+                },
+            });
+
+            const trigger = wrapper.find(
+                '[data-test="section-dropdown-trigger"]',
+            );
+            expect(trigger.exists()).toBe(true);
+            expect(trigger.text()).toContain('Computer Application (2026)');
+
+            // Open dropdown
+            await trigger.trigger('click');
+            const menu = wrapper.find('[data-test="section-dropdown-menu"]');
+            expect(menu.exists()).toBe(true);
+            expect(menu.text()).toContain('Computer Networking 1 (2026)');
+
+            // Select another section
+            const secondSectionBtn = menu.findAll('button')[1];
+            await secondSectionBtn.trigger('click');
+
+            expect(mockRouterGet).toHaveBeenCalledWith(
+                '/community',
+                expect.objectContaining({ section_id: 20 }),
+                expect.objectContaining({
+                    preserveState: true,
+                    preserveScroll: true,
+                    replace: true,
+                }),
+            );
+        });
+
+        it('renders current user avatar photo and dynamic section in sidebar profile snippet', () => {
+            mockPageProps = {
+                auth: {
+                    user: {
+                        name: 'ad min',
+                        public_id: 'usr_admin_123',
+                        avatar: 'https://example.com/admin.jpg',
+                    },
+                },
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    sectionName: 'Computer Application (2026)',
+                },
+            });
+
+            const aside = wrapper.find('aside');
+            expect(aside.exists()).toBe(true);
+            expect(aside.text()).toContain('ad min');
+            expect(aside.text()).toContain('Computer Application (2026)');
+
+            const img = aside.find('img');
+            expect(img.exists()).toBe(true);
+            expect(img.attributes('src')).toBe('https://example.com/admin.jpg');
         });
 
         it('filters classmates list dynamically via search input', async () => {
