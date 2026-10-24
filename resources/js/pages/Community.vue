@@ -4,6 +4,7 @@ import axios from 'axios';
 import {
     ArrowLeft,
     Bookmark,
+    Check,
     Clock,
     Code2,
     Download,
@@ -154,9 +155,16 @@ export interface StoryTrayItem {
     public_id?: string;
 }
 
+export interface AvailableSection {
+    id: number;
+    name: string;
+}
+
 interface Props {
     workspace?: Workspace | null;
     sectionName?: string;
+    currentSectionId?: number | null;
+    availableSections?: AvailableSection[];
     onlineClassmates?: ClassmatePresence[];
     onlineCount?: number;
     totalEnrolledCount?: number;
@@ -344,6 +352,58 @@ const sectionDisplayName = computed(
     () => props.sectionName?.trim() || 'BSIT 3-A',
 );
 
+const selectedSectionId = ref<number | null>(
+    props.currentSectionId ?? props.availableSections?.[0]?.id ?? null,
+);
+
+const isSectionDropdownOpen = ref(false);
+const isMobileSectionDropdownOpen = ref(false);
+const sectionDropdownRef = ref<HTMLElement | null>(null);
+
+watch(
+    () => props.currentSectionId,
+    (newId) => {
+        if (newId !== undefined && newId !== null) {
+            selectedSectionId.value = newId;
+        }
+    },
+);
+
+const selectSection = (sectionId: number) => {
+    isSectionDropdownOpen.value = false;
+    isMobileSectionDropdownOpen.value = false;
+    if (selectedSectionId.value === sectionId) return;
+
+    selectedSectionId.value = sectionId;
+    isRefreshingPresence.value = true;
+
+    if (typeof router.get === 'function') {
+        const queryParams: Record<string, any> = {
+            section_id: sectionId,
+        };
+        if (activeTab.value && activeTab.value !== 'all') {
+            queryParams.tab = activeTab.value;
+        }
+
+        router.get('/community', queryParams, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: [
+                'onlineClassmates',
+                'onlineCount',
+                'totalEnrolledCount',
+                'sectionName',
+                'currentSectionId',
+                'stories',
+            ],
+            onFinish: () => {
+                isRefreshingPresence.value = false;
+            },
+        });
+    }
+};
+
 const classmatesList = computed<ClassmatePresence[]>(() =>
     props.onlineClassmates !== undefined
         ? props.onlineClassmates
@@ -354,10 +414,6 @@ const onlineCount = computed(
     () =>
         props.onlineCount ??
         classmatesList.value.filter((c) => c.status === 'online').length,
-);
-
-const totalEnrolledCount = computed(
-    () => props.totalEnrolledCount ?? classmatesList.value.length,
 );
 
 const classmateSearch = ref('');
@@ -402,7 +458,10 @@ const handleRefreshPresence = () => {
     isRefreshingPresence.value = true;
     if (typeof router.reload === 'function') {
         router.reload({
-            only: ['onlineClassmates', 'onlineCount'],
+            data: selectedSectionId.value
+                ? { section_id: selectedSectionId.value }
+                : undefined,
+            only: ['onlineClassmates', 'onlineCount', 'totalEnrolledCount'],
             onFinish: () => {
                 isRefreshingPresence.value = false;
             },
@@ -1192,10 +1251,16 @@ const composerFile = ref<File | null>(null);
 const composerFilePreview = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
-const composerForm = useForm({
+const composerForm = useForm<{
+    content: string;
+    is_anonymous: boolean;
+    section_id: number | null;
+    attachment: File | null;
+}>({
     content: '',
     is_anonymous: false,
-    attachment: null as File | null,
+    section_id: null,
+    attachment: null,
 });
 
 const handleFileSelect = (event: Event) => {
@@ -1226,6 +1291,8 @@ const submitPost = () => {
     if (!composerForm.content.trim()) {
         return;
     }
+
+    composerForm.section_id = selectedSectionId.value;
 
     composerForm.post('/community/posts', {
         preserveScroll: true,
@@ -1389,6 +1456,7 @@ const handleStoryClick = (story: StoryTrayItem) => {
         public_id: story.public_id,
         name: story.name,
         handle: story.username,
+        avatar: story.avatar,
         section_name: sectionDisplayName.value,
     });
 };
@@ -2154,6 +2222,16 @@ watch(
 );
 
 const handleDocumentClick = (e: MouseEvent) => {
+    if (isSectionDropdownOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="section-dropdown-menu"]') &&
+            !target.closest('[data-test="section-dropdown-trigger"]')
+        ) {
+            isSectionDropdownOpen.value = false;
+        }
+    }
     if (activePostMenuId.value) {
         const target = e.target as HTMLElement | null;
         if (
@@ -2495,9 +2573,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 <div class="flex items-start gap-3">
                                     <!-- User Avatar -->
                                     <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
                                     >
-                                        {{ currentUserInitials }}
+                                        <img
+                                            v-if="currentUser?.avatar"
+                                            :src="currentUser.avatar"
+                                            :alt="currentUserName"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <span v-else>
+                                            {{ currentUserInitials }}
+                                        </span>
                                     </div>
 
                                     <!-- Input Row -->
@@ -2711,6 +2797,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         post.author.public_id,
                                                     name: post.author.name,
                                                     handle: post.author.handle,
+                                                    avatar:
+                                                        post.author.avatar ||
+                                                        (String(
+                                                            post.author.id,
+                                                        ) ===
+                                                            String(
+                                                                currentUser?.id,
+                                                            ) &&
+                                                        currentUser?.avatar
+                                                            ? currentUser.avatar
+                                                            : null),
                                                     is_masked:
                                                         post.author.is_masked,
                                                     section_name:
@@ -2730,13 +2827,36 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2px]"
                                             >
                                                 <div
-                                                    class="flex h-full w-full items-center justify-center rounded-full border-2 border-card bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                                                    class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-card bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
                                                 >
-                                                    {{
-                                                        getInitials(
-                                                            post.author.name,
-                                                        )
-                                                    }}
+                                                    <img
+                                                        v-if="
+                                                            post.author
+                                                                .avatar ||
+                                                            (String(
+                                                                post.author.id,
+                                                            ) ===
+                                                                String(
+                                                                    currentUser?.id,
+                                                                ) &&
+                                                                currentUser?.avatar)
+                                                        "
+                                                        :src="
+                                                            post.author
+                                                                .avatar ||
+                                                            currentUser?.avatar
+                                                        "
+                                                        :alt="post.author.name"
+                                                        class="h-full w-full object-cover"
+                                                    />
+                                                    <span v-else>
+                                                        {{
+                                                            getInitials(
+                                                                post.author
+                                                                    .name,
+                                                            )
+                                                        }}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <span
@@ -3804,12 +3924,30 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         class="hidden space-y-6 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
-                        <div class="flex items-center justify-between px-1">
+                        <div
+                            class="flex cursor-pointer items-center justify-between px-1"
+                            @click="
+                                openProfileModal({
+                                    public_id: currentUser?.public_id,
+                                    name: currentUserName,
+                                    avatar: currentUser?.avatar,
+                                    section_name: sectionDisplayName,
+                                })
+                            "
+                        >
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-11 w-11 items-center justify-center rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                    class="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
                                 >
-                                    {{ currentUserInitials }}
+                                    <img
+                                        v-if="currentUser?.avatar"
+                                        :src="currentUser.avatar"
+                                        :alt="currentUserName"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <span v-else>
+                                        {{ currentUserInitials }}
+                                    </span>
                                 </div>
                                 <div class="min-w-0">
                                     <p
@@ -3841,28 +3979,92 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <div
                                 class="flex items-center justify-between border-b border-border/40 pb-3"
                             >
-                                <div>
-                                    <h2
-                                        class="text-xs font-bold tracking-tight text-foreground uppercase"
+                                <div
+                                    v-if="
+                                        availableSections &&
+                                        availableSections.length > 1
+                                    "
+                                    ref="sectionDropdownRef"
+                                    class="relative min-w-0 flex-1 pr-2"
+                                >
+                                    <button
+                                        type="button"
+                                        class="group flex cursor-pointer items-center gap-1.5 text-left text-xs font-bold tracking-tight text-foreground uppercase transition-colors hover:text-brand"
+                                        data-test="section-dropdown-trigger"
+                                        @click.stop="
+                                            isSectionDropdownOpen =
+                                                !isSectionDropdownOpen
+                                        "
                                     >
-                                        {{ sectionDisplayName }}
-                                    </h2>
+                                        <span class="max-w-[170px] truncate">{{
+                                            sectionDisplayName
+                                        }}</span>
+                                        <ChevronDown
+                                            class="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-brand"
+                                            :class="{
+                                                'rotate-180':
+                                                    isSectionDropdownOpen,
+                                            }"
+                                        />
+                                    </button>
                                     <p
                                         class="text-[11px] text-muted-foreground"
                                     >
                                         Classroom Presence
                                     </p>
+
+                                    <!-- Section switcher popover -->
+                                    <div
+                                        v-if="isSectionDropdownOpen"
+                                        data-test="section-dropdown-menu"
+                                        class="absolute top-full left-0 z-50 mt-1.5 w-64 rounded-xl border border-border/80 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md"
+                                    >
+                                        <div
+                                            class="px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                                        >
+                                            Switch Section
+                                        </div>
+                                        <button
+                                            v-for="sec in availableSections"
+                                            :key="sec.id"
+                                            type="button"
+                                            class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors"
+                                            :class="
+                                                sec.id === selectedSectionId
+                                                    ? 'bg-brand/10 font-semibold text-brand'
+                                                    : 'text-foreground hover:bg-muted'
+                                            "
+                                            @click.stop="selectSection(sec.id)"
+                                        >
+                                            <span class="truncate">{{
+                                                sec.name
+                                            }}</span>
+                                            <Check
+                                                v-if="
+                                                    sec.id === selectedSectionId
+                                                "
+                                                class="h-3.5 w-3.5 shrink-0 text-brand"
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div v-else class="min-w-0 flex-1 pr-2">
+                                    <h2
+                                        class="truncate text-xs font-bold tracking-tight text-foreground uppercase"
+                                    >
+                                        {{ sectionDisplayName }}
+                                    </h2>
                                 </div>
 
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                        class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
                                     >
                                         <span
                                             class="h-1.5 w-1.5 rounded-full bg-emerald-500"
                                         />
-                                        {{ onlineCount }} Online ·
-                                        {{ totalEnrolledCount }} Enrolled
+                                        {{ onlineCount }} Online
                                     </span>
                                     <button
                                         type="button"
@@ -4192,9 +4394,68 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     <div
                         class="flex shrink-0 items-center justify-between gap-2 border-b border-border/40 pb-3"
                     >
-                        <div>
+                        <div
+                            v-if="
+                                availableSections &&
+                                availableSections.length > 1
+                            "
+                            class="relative min-w-0 flex-1"
+                        >
+                            <button
+                                type="button"
+                                class="group flex cursor-pointer items-center gap-1.5 text-left text-sm font-bold tracking-tight text-foreground hover:text-brand"
+                                @click="
+                                    isMobileSectionDropdownOpen =
+                                        !isMobileSectionDropdownOpen
+                                "
+                            >
+                                <span class="max-w-[160px] truncate">{{
+                                    sectionDisplayName
+                                }}</span>
+                                <ChevronDown
+                                    class="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform"
+                                    :class="{
+                                        'rotate-180':
+                                            isMobileSectionDropdownOpen,
+                                    }"
+                                />
+                            </button>
+                            <p class="text-[10px] text-muted-foreground">
+                                Classroom Presence
+                            </p>
+
+                            <!-- Mobile Section Switcher -->
+                            <div
+                                v-if="isMobileSectionDropdownOpen"
+                                class="absolute top-full left-0 z-50 mt-1 w-60 rounded-xl border border-border/80 bg-popover p-1.5 shadow-xl backdrop-blur-md"
+                            >
+                                <button
+                                    v-for="sec in availableSections"
+                                    :key="'mobile-sec-' + sec.id"
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors"
+                                    :class="
+                                        sec.id === selectedSectionId
+                                            ? 'bg-brand/10 font-semibold text-brand'
+                                            : 'text-foreground hover:bg-muted'
+                                    "
+                                    @click="
+                                        isMobileSectionDropdownOpen = false;
+                                        selectSection(sec.id);
+                                    "
+                                >
+                                    <span class="truncate">{{ sec.name }}</span>
+                                    <Check
+                                        v-if="sec.id === selectedSectionId"
+                                        class="h-3.5 w-3.5 shrink-0 text-brand"
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-else class="min-w-0 flex-1">
                             <h2
-                                class="text-sm font-bold tracking-tight text-foreground"
+                                class="truncate text-sm font-bold tracking-tight text-foreground"
                             >
                                 {{ sectionDisplayName }}
                             </h2>
@@ -4207,8 +4468,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <span
                                 class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
                             >
-                                {{ onlineCount }} Online ·
-                                {{ totalEnrolledCount }} Enrolled
+                                <span
+                                    class="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                />
+                                {{ onlineCount }} Online
                             </span>
                             <button
                                 type="button"

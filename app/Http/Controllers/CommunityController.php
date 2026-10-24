@@ -42,7 +42,8 @@ class CommunityController extends Controller
         $this->recordPresence($viewer);
 
         // Determine viewer's active section
-        $section = $this->resolveViewerSection($viewer);
+        $availableSections = $this->getAvailableSections($viewer, $workspace);
+        $section = $this->resolveViewerSection($viewer, $request->query('section_id'));
 
         // Fetch section presence list (cached in RAM for 15s to prevent DB overload)
         $presenceData = $this->getSectionPresenceData($section, $viewer);
@@ -64,6 +65,8 @@ class CommunityController extends Controller
         return Inertia::render('Community', [
             'workspace' => $workspace,
             'sectionName' => $section?->name ?? 'Your Section',
+            'currentSectionId' => $section?->id,
+            'availableSections' => $availableSections,
             'onlineClassmates' => $presenceData['classmates'],
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
@@ -87,11 +90,12 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
-        $section = $this->resolveViewerSection($viewer);
+        $section = $this->resolveViewerSection($viewer, $request->query('section_id'));
         $presenceData = $this->getSectionPresenceData($section, $viewer);
 
         return response()->json([
             'sectionName' => $section?->name ?? 'Your Section',
+            'sectionId' => $section?->id,
             'onlineClassmates' => $presenceData['classmates'],
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
@@ -392,7 +396,7 @@ class CommunityController extends Controller
     /**
      * Resolve the viewer's current section in this workspace.
      */
-    private function resolveViewerSection(?User $user): ?Section
+    private function resolveViewerSection(?User $user, $requestedSectionId = null): ?Section
     {
         if (! $user) {
             return null;
@@ -400,9 +404,70 @@ class CommunityController extends Controller
 
         $workspaceId = app(WorkspaceContext::class)->id();
 
+        if ($requestedSectionId) {
+            if ($user->is_admin) {
+                $section = Section::query()
+                    ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                    ->whereKey($requestedSectionId)
+                    ->first();
+                if ($section) {
+                    return $section;
+                }
+            } else {
+                $section = $user->sections()
+                    ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                    ->where('sections.id', $requestedSectionId)
+                    ->first();
+                if ($section) {
+                    return $section;
+                }
+            }
+        }
+
+        if ($user->is_admin) {
+            return $user->sections()
+                ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                ->first()
+                ?? Section::query()
+                    ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                    ->first();
+        }
+
         return $user->sections()
             ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
             ->first();
+    }
+
+    /**
+     * Get available sections for section switcher in presence rail.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function getAvailableSections(?User $viewer, ?Workspace $workspace): array
+    {
+        if (! $viewer) {
+            return [];
+        }
+
+        $workspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
+
+        if ($viewer->is_admin) {
+            return Section::query()
+                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($s) => ['id' => (int) $s->id, 'name' => (string) $s->name])
+                ->values()
+                ->all();
+        }
+
+        return $viewer->sections()
+            ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+            ->orderBy('sections.name')
+            ->get(['sections.id', 'sections.name'])
+            ->map(fn ($s) => ['id' => (int) $s->id, 'name' => (string) $s->name])
+            ->values()
+            ->all();
     }
 
     /**
