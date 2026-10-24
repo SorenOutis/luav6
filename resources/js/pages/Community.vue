@@ -1964,6 +1964,23 @@ const profileHasActiveStory = computed(() => {
     );
 });
 
+const handleClassmatesWheel = (event: WheelEvent) => {
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el) return;
+
+    const canScrollDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    const canScrollUp = el.scrollTop > 0;
+
+    if (
+        (event.deltaY > 0 && canScrollDown) ||
+        (event.deltaY < 0 && canScrollUp)
+    ) {
+        el.scrollTop += event.deltaY;
+        event.preventDefault();
+        event.stopPropagation();
+    }
+};
+
 const handleProfileAvatarClick = () => {
     if (profileStoryGroup.value && profileStoryGroup.value.stories.length > 0) {
         isProfileModalOpen.value = false;
@@ -2198,16 +2215,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Community Lounge" />
 
-        <div
-            class="relative flex min-h-[calc(100vh-4rem)] flex-col p-3 sm:p-5 lg:h-[calc(100vh-3.5rem)] lg:min-h-0 lg:overflow-hidden lg:p-6"
-        >
-            <div
-                class="mx-auto flex h-full w-full max-w-6xl flex-col lg:overflow-hidden"
-            >
+        <div class="relative min-h-[calc(100vh-4rem)] p-3 sm:p-5 lg:p-6">
+            <div class="mx-auto max-w-6xl">
                 <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
                 <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
                 <header
-                    class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3 sm:pb-4"
+                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4"
                 >
                     <div class="flex items-center gap-3">
                         <button
@@ -2233,13 +2246,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 </header>
 
                 <!-- ═══ 2-Column Social Feed Layout ═══ -->
-                <div
-                    class="grid min-h-0 flex-1 grid-cols-1 items-start gap-6 pt-3 sm:gap-8 sm:pt-4 lg:grid-cols-12 lg:overflow-hidden"
-                >
+                <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
-                    <main
-                        class="h-full space-y-5 lg:col-span-7 lg:scrollbar-thin lg:overflow-y-auto lg:pr-2 xl:col-span-8"
-                    >
+                    <main class="space-y-5 lg:col-span-7 xl:col-span-8">
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
                             aria-label="Classmate Stories"
@@ -3792,7 +3801,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden h-full space-y-4 overflow-y-auto pr-1 lg:col-span-5 lg:block lg:scrollbar-thin xl:col-span-4"
+                        class="hidden space-y-6 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
                         <div class="flex items-center justify-between px-1">
@@ -3899,7 +3908,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                             <!-- Classmate Member List -->
                             <div
-                                class="mt-3 max-h-[380px] scrollbar-thin divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1"
+                                class="mt-3 max-h-[380px] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1"
+                                @wheel="handleClassmatesWheel"
                             >
                                 <div
                                     v-for="member in filteredClassmates"
@@ -4252,7 +4262,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- Scrollable Member List -->
                     <div
-                        class="mt-3.5 min-h-0 flex-1 divide-y divide-border/30 overflow-y-auto overscroll-contain pr-0.5"
+                        class="mt-3.5 min-h-0 flex-1 scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-0.5"
                     >
                         <div
                             v-for="member in filteredClassmates"
