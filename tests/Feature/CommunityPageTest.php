@@ -164,6 +164,7 @@ it('allows authenticated student to create a community post', function () {
         ->post(route('community.posts.store'), [
             'content' => 'Studying for the network design quiz! #NetworkingLab',
             'is_anonymous' => false,
+            'section_id' => $section->id,
         ])
         ->assertRedirect();
 
