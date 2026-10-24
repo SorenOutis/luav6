@@ -2317,12 +2317,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Community Lounge" />
 
-        <div class="relative min-h-[calc(100vh-4rem)] p-3 sm:p-5 lg:p-6">
+        <div class="relative min-h-[calc(100vh-4rem)] p-2.5 sm:p-3.5 lg:p-4">
             <div class="mx-auto max-w-6xl">
                 <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
                 <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
                 <header
-                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4"
+                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5 sm:pb-3"
                 >
                     <div class="flex items-center gap-3">
                         <button
@@ -2348,32 +2348,36 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 </header>
 
                 <!-- ═══ 2-Column Social Feed Layout ═══ -->
-                <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+                <div
+                    class="grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-5 xl:gap-6"
+                >
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
-                    <main class="space-y-5 lg:col-span-7 xl:col-span-8">
+                    <main
+                        class="space-y-3.5 sm:space-y-4 lg:col-span-7 xl:col-span-8"
+                    >
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
                             aria-label="Classmate Stories"
-                            class="flex scrollbar-none items-center gap-4 overflow-x-auto rounded-2xl border border-border/50 bg-card/60 p-3.5 pb-3 shadow-2xs backdrop-blur-xs"
+                            class="flex scrollbar-none items-center gap-3 overflow-x-auto rounded-xl border border-border/50 bg-card/60 p-2.5 pb-2 shadow-2xs backdrop-blur-xs"
                         >
                             <!-- Story Item -->
                             <div
                                 v-for="story in storyTrayItems"
                                 :key="story.id"
-                                class="group flex shrink-0 cursor-pointer flex-col items-center gap-1.5 select-none"
+                                class="group flex shrink-0 cursor-pointer flex-col items-center gap-1 select-none"
                                 @click="handleStoryClick(story)"
                             >
                                 <div class="relative">
                                     <!-- Story Ring: Instagram gradient for active stories -->
                                     <div
-                                        class="flex h-14 w-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105 active:scale-95"
+                                        class="flex h-11 w-11 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105 active:scale-95 sm:h-12 sm:w-12"
                                         :class="[
                                             story.isUser
                                                 ? story.hasStory
-                                                    ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2.5px]'
+                                                    ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2px]'
                                                     : 'border-2 border-dashed border-border/80 p-0.5'
                                                 : story.hasStory
-                                                  ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2.5px]'
+                                                  ? 'bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[2px]'
                                                   : 'border-2 border-border/70 p-0.5',
                                         ]"
                                     >
@@ -2448,23 +2452,23 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     <button
                                         v-if="story.isUser"
                                         type="button"
-                                        class="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-brand text-[10px] font-bold text-primary-foreground shadow-xs transition-transform hover:scale-110 active:scale-95"
+                                        class="absolute -right-0.5 -bottom-0.5 flex h-3.5 w-3.5 cursor-pointer items-center justify-center rounded-full bg-brand text-[9px] font-bold text-primary-foreground shadow-xs transition-transform hover:scale-110 active:scale-95"
                                         title="Add to story"
                                         @click.stop="openStoryModal"
                                     >
-                                        <Plus class="h-2.5 w-2.5 stroke-[3]" />
+                                        <Plus class="h-2 w-2 stroke-[3]" />
                                     </button>
 
                                     <!-- Online Green Beacon on classmates -->
                                     <span
                                         v-else-if="story.status === 'online'"
-                                        class="absolute right-0.5 bottom-0.5 flex h-3 w-3 items-center justify-center rounded-full border-2 border-background bg-emerald-500 shadow-2xs"
+                                        class="absolute right-0.5 bottom-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 border-background bg-emerald-500 shadow-2xs"
                                         title="Active now"
                                     />
                                 </div>
 
                                 <span
-                                    class="max-w-[64px] truncate text-[11px] font-medium tracking-tight text-muted-foreground group-hover:text-foreground"
+                                    class="max-w-[54px] truncate text-[10px] font-medium tracking-tight text-muted-foreground group-hover:text-foreground"
                                 >
                                     {{ story.name }}
                                 </span>
@@ -2508,16 +2512,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 :class="
                                     activeTab === 'section'
                                         ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                        : 'text-muted-foreground hover:text-foreground'
                                 "
                                 @click="handleTabChange('section')"
                             >
                                 <Users
-                                    class="h-3.5 w-3.5 transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+                                    class="h-3.5 w-3.5 transition-colors group-hover:text-foreground"
                                     :class="
                                         activeTab === 'section'
                                             ? 'text-emerald-600 dark:text-emerald-400'
-                                            : 'text-muted-foreground/70 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                                            : 'text-muted-foreground/70 group-hover:text-foreground'
                                     "
                                 />
                                 <span>My Section</span>
@@ -2534,16 +2538,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 :class="
                                     activeTab === 'saved'
                                         ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400'
+                                        : 'text-muted-foreground hover:text-foreground'
                                 "
                                 @click="handleTabChange('saved')"
                             >
                                 <Bookmark
-                                    class="h-3.5 w-3.5 transition-colors group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                                    class="h-3.5 w-3.5 transition-colors group-hover:text-foreground"
                                     :class="
                                         activeTab === 'saved'
-                                            ? 'text-amber-600 dark:text-amber-400'
-                                            : 'text-muted-foreground/70 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                            ? 'fill-amber-500 text-amber-600 dark:text-amber-400'
+                                            : 'text-muted-foreground/70 group-hover:text-foreground'
                                     "
                                 />
                                 <span>Saved</span>
@@ -2553,7 +2557,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 />
                             </button>
 
-                            <!-- Mobile Presence Drawer Trigger Tab (Online Actives) -->
+                            <!-- Mobile Classroom Presence Button in Tabs row -->
                             <button
                                 type="button"
                                 data-test="mobile-presence-drawer-trigger"
@@ -2587,17 +2591,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                         <!-- ─── Feed Container ─────────────────────────────────────── -->
                         <div
-                            class="space-y-5"
+                            class="space-y-3.5 sm:space-y-4"
                             data-test="community-feed-container"
                         >
                             <!-- Instagram / Threads Composer Row -->
                             <div
-                                class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs transition-colors hover:border-border"
+                                class="rounded-xl border border-border/60 bg-card p-3 shadow-2xs transition-colors hover:border-border"
                             >
-                                <div class="flex items-start gap-3">
+                                <div class="flex items-start gap-2.5">
                                     <!-- User Avatar -->
                                     <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
                                     >
                                         <img
                                             v-if="currentUser?.avatar"
@@ -3962,7 +3966,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden space-y-6 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
+                        class="hidden space-y-3.5 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
                         <div
@@ -3976,9 +3980,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 })
                             "
                         >
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2.5">
                                 <div
-                                    class="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                                    class="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
                                 >
                                     <img
                                         v-if="currentUser?.avatar"
@@ -4014,11 +4018,11 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <!-- Card 1: Section Online Presence / Classmates Rail -->
                         <div
                             data-test="section-presence-card"
-                            class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs"
+                            class="rounded-xl border border-border/60 bg-card p-3 shadow-2xs sm:p-3.5"
                         >
                             <!-- Instagram 'Suggested for you' style header -->
                             <div
-                                class="flex items-center justify-between border-b border-border/40 pb-3"
+                                class="flex items-center justify-between border-b border-border/40 pb-2"
                             >
                                 <div
                                     v-if="
@@ -4128,20 +4132,20 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             </div>
 
                             <!-- Sleek Search Input -->
-                            <div class="relative mt-3">
+                            <div class="relative mt-2">
                                 <Search
-                                    class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                                    class="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
                                 />
                                 <input
                                     v-model="classmateSearch"
                                     type="text"
                                     placeholder="Search classmates..."
-                                    class="h-8 w-full rounded-xl border border-border/60 bg-muted/40 pr-8 pl-8.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background focus:outline-none"
+                                    class="h-7 w-full rounded-lg border border-border/60 bg-muted/40 pr-7 pl-7.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background focus:outline-none"
                                 />
                                 <button
                                     v-if="classmateSearch"
                                     type="button"
-                                    class="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                                    class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                                     aria-label="Clear search"
                                     @click="classmateSearch = ''"
                                 >
@@ -4151,13 +4155,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                             <!-- Classmate Member List -->
                             <div
-                                class="mt-3 max-h-[380px] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1"
+                                class="mt-2 max-h-[240px] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1 sm:max-h-[280px]"
                                 @wheel="handleClassmatesWheel"
                             >
                                 <div
                                     v-for="member in filteredClassmates"
                                     :key="member.id"
-                                    class="group flex cursor-pointer items-center justify-between gap-3 py-2.5 first:pt-1 last:pb-1"
+                                    class="group flex cursor-pointer items-center justify-between gap-2.5 py-1.5 first:pt-1 last:pb-0.5"
                                     @click="
                                         openProfileModal({
                                             public_id: member.public_id,
@@ -4168,12 +4172,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     "
                                 >
                                     <div
-                                        class="flex min-w-0 items-center gap-2.5"
+                                        class="flex min-w-0 items-center gap-2"
                                     >
                                         <!-- Avatar -->
                                         <div class="relative shrink-0">
                                             <div
-                                                class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-semibold select-none"
+                                                class="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full text-xs font-semibold select-none"
                                                 :class="[
                                                     member.isCurrentUser
                                                         ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
@@ -4284,15 +4288,14 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <!-- Privacy Note -->
                             <div
                                 data-test="section-privacy-note"
-                                class="mt-3.5 flex items-start gap-2 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-[11px] leading-relaxed text-muted-foreground"
+                                class="mt-2 flex items-start gap-1.5 rounded-lg border border-border/40 bg-muted/20 p-2 text-[10px] leading-snug text-muted-foreground"
                             >
                                 <ShieldCheck
-                                    class="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                    class="mt-0.5 h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400"
                                 />
                                 <span>
                                     Real names are visible only to classmates in
-                                    your section. Other sections cannot see this
-                                    presence list.
+                                    your section.
                                 </span>
                             </div>
                         </div>
@@ -4300,24 +4303,26 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <!-- Card 2: Trending in Section (Clean Hashtag Feed) -->
                         <div
                             data-test="section-topics-card"
-                            class="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs"
+                            class="rounded-xl border border-border/60 bg-card p-3 shadow-2xs"
                         >
-                            <div class="flex items-center justify-between pb-2">
+                            <div
+                                class="flex items-center justify-between pb-1.5"
+                            >
                                 <h3
                                     class="text-xs font-bold tracking-tight text-foreground uppercase"
                                 >
                                     Trending in Section
                                 </h3>
-                                <span class="text-[10px] text-muted-foreground"
+                                <span class="text-[9.5px] text-muted-foreground"
                                     >This week</span
                                 >
                             </div>
 
-                            <div class="mt-2 divide-y divide-border/30">
+                            <div class="mt-1.5 divide-y divide-border/30">
                                 <div
                                     v-for="topic in trendingTopics"
                                     :key="topic.tag"
-                                    class="flex cursor-pointer items-center justify-between py-2 text-xs transition-colors hover:text-brand"
+                                    class="flex cursor-pointer items-center justify-between py-1.5 text-xs transition-colors hover:text-brand"
                                 >
                                     <div>
                                         <p
