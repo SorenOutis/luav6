@@ -155,6 +155,10 @@ class CommunityController extends Controller
 
         $userSection = $user->sections()->first();
 
+        $hasActiveStories = CommunityStory::active()
+            ->where('user_id', $user->id)
+            ->exists();
+
         return response()->json([
             'is_masked' => false,
             'is_self' => $isSelf,
@@ -162,6 +166,7 @@ class CommunityController extends Controller
             'name' => $user->name,
             'handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $user->name)),
             'avatar' => $user->avatar ? PublicFileUrl::resolve($user->avatar) : null,
+            'has_active_stories' => $hasActiveStories,
             'bio' => $user->bio ?: 'Student · Learning in Lounge',
             'level' => (int) ($user->level ?? 1),
             'section_name' => $userSection?->name ?? 'Your Section',
@@ -401,14 +406,17 @@ class CommunityController extends Controller
     }
 
     /**
-     * Get section presence data with a 15-second RAM cache.
+     * Get section or community presence data with a 15-second RAM cache.
      * Over 95% of background polling calls hit memory, keeping DB CPU near 0%.
      *
      * @return array{classmates: array, onlineCount: int, totalEnrolled: int}
      */
     private function getSectionPresenceData(?Section $section, ?User $viewer): array
     {
-        if (! $section) {
+        $workspace = $viewer?->currentWorkspace;
+        $workspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
+
+        if (! $workspaceId && ! $section) {
             return [
                 'classmates' => [],
                 'onlineCount' => 0,
@@ -416,13 +424,26 @@ class CommunityController extends Controller
             ];
         }
 
-        $cacheKey = "section:{$section->id}:presence_data";
+        $cacheKey = $workspaceId
+            ? "workspace:{$workspaceId}:presence_data"
+            : "section:{$section->id}:presence_data";
 
-        $data = Cache::remember($cacheKey, 15, function () use ($section): array {
-            $members = $section->users()
-                ->where('is_admin', false)
+        $data = Cache::remember($cacheKey, 15, function () use ($section, $workspaceId): array {
+            $query = User::query()->where('is_admin', false);
+
+            if ($workspaceId) {
+                $query->where(function ($sub) use ($workspaceId) {
+                    $sub->whereHas('workspaces', fn ($q) => $q->whereKey($workspaceId))
+                        ->orWhereHas('sections', fn ($q) => $q->where('sections.workspace_id', $workspaceId))
+                        ->orWhere('users.current_workspace_id', $workspaceId);
+                });
+            } else {
+                $query->whereHas('sections', fn ($q) => $q->whereKey($section->id));
+            }
+
+            $members = $query
+                ->with(['sections' => fn ($q) => $q->select(['sections.id', 'sections.name'])])
                 ->select(['users.id', 'users.public_id', 'users.name', 'users.avatar', 'users.last_seen_at'])
-                ->limit(60)
                 ->get();
 
             $now = now()->timestamp;
@@ -455,22 +476,27 @@ class CommunityController extends Controller
                     'public_id' => (string) $member->public_id,
                     'name' => $member->name,
                     'avatar' => $member->avatar ? PublicFileUrl::resolve($member->avatar) : null,
+                    'section_name' => $member->sections->first()?->name,
                     'status' => $status,
                     'activity' => $activity,
                 ];
             }
 
-            // Sort: online first, then idle, then offline
+            // Sort: online first, then idle, then offline; within same status: alphabetical by name
             usort($classmates, function ($a, $b) {
                 $p = ['online' => 0, 'idle' => 1, 'offline' => 2];
+                $statusDiff = ($p[$a['status']] ?? 3) <=> ($p[$b['status']] ?? 3);
+                if ($statusDiff !== 0) {
+                    return $statusDiff;
+                }
 
-                return ($p[$a['status']] ?? 3) <=> ($p[$b['status']] ?? 3);
+                return strcasecmp($a['name'], $b['name']);
             });
 
             return [
                 'classmates' => $classmates,
                 'onlineCount' => $onlineCount,
-                'totalEnrolled' => $section->users()->where('is_admin', false)->count(),
+                'totalEnrolled' => count($classmates),
             ];
         });
 

@@ -51,7 +51,8 @@ export interface ClassmatePresence {
     id: number | string;
     public_id?: string;
     name: string;
-    avatar?: string;
+    avatar?: string | null;
+    section_name?: string | null;
     status: 'online' | 'idle' | 'offline';
     role?: string;
     activity?: string;
@@ -1909,12 +1910,15 @@ export interface ProfileModalData {
     bio?: string;
     level?: number;
     section_name?: string;
+    presence_status?: 'online' | 'idle' | 'offline';
+    presence_activity?: string;
     can_follow?: boolean;
     is_following?: boolean;
     followers_count?: number;
     following_count?: number;
     posts_count?: number;
     likes_received?: number;
+    has_active_stories?: boolean;
     recent_posts?: Array<{
         id: number | string;
         content: string;
@@ -1928,13 +1932,52 @@ const isProfileModalOpen = ref(false);
 const isLoadingProfile = ref(false);
 const activeProfile = ref<ProfileModalData | null>(null);
 
+const profileStoryGroup = computed<UserStoryGroup | null>(() => {
+    if (!activeProfile.value) return null;
+    return (
+        allActiveStoryGroups.value.find((g) => {
+            if (
+                activeProfile.value?.public_id &&
+                g.public_id === activeProfile.value.public_id
+            ) {
+                return true;
+            }
+            if (
+                g.name &&
+                activeProfile.value?.name &&
+                g.name.trim().toLowerCase() ===
+                    activeProfile.value.name.trim().toLowerCase()
+            ) {
+                return true;
+            }
+            return false;
+        }) ?? null
+    );
+});
+
+const profileHasActiveStory = computed(() => {
+    if (activeProfile.value?.is_masked) return false;
+    return Boolean(
+        (profileStoryGroup.value &&
+            profileStoryGroup.value.stories.length > 0) ||
+        activeProfile.value?.has_active_stories,
+    );
+});
+
+const handleProfileAvatarClick = () => {
+    if (profileStoryGroup.value && profileStoryGroup.value.stories.length > 0) {
+        isProfileModalOpen.value = false;
+        openStoryViewer(profileStoryGroup.value, 0);
+    }
+};
+
 const openProfileModal = async (userRef: {
     public_id?: string | null;
     name?: string;
     is_masked?: boolean;
     avatar?: string | null;
     handle?: string;
-    section_name?: string;
+    section_name?: string | null;
 }) => {
     const isSelfUser =
         (Boolean(currentUser.value?.public_id) &&
@@ -2004,7 +2047,17 @@ const openProfileModal = async (userRef: {
         });
         if (res.ok) {
             const data = await res.json();
-            activeProfile.value = data;
+            activeProfile.value = {
+                ...activeProfile.value,
+                ...data,
+                avatar:
+                    data.avatar ||
+                    activeProfile.value?.avatar ||
+                    userRef.avatar,
+                has_active_stories:
+                    data.has_active_stories ??
+                    activeProfile.value?.has_active_stories,
+            };
         }
     } catch {
         // Keep optimistic data
@@ -2145,12 +2198,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Community Lounge" />
 
-        <div class="relative min-h-[calc(100vh-4rem)] p-3 sm:p-5 lg:p-6">
-            <div class="mx-auto max-w-6xl">
+        <div
+            class="relative flex min-h-[calc(100vh-4rem)] flex-col p-3 sm:p-5 lg:h-[calc(100vh-3.5rem)] lg:min-h-0 lg:overflow-hidden lg:p-6"
+        >
+            <div
+                class="mx-auto flex h-full w-full max-w-6xl flex-col lg:overflow-hidden"
+            >
                 <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
                 <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
                 <header
-                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4"
+                    class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3 sm:pb-4"
                 >
                     <div class="flex items-center gap-3">
                         <button
@@ -2176,9 +2233,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 </header>
 
                 <!-- ═══ 2-Column Social Feed Layout ═══ -->
-                <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+                <div
+                    class="grid min-h-0 flex-1 grid-cols-1 items-start gap-6 pt-3 sm:gap-8 sm:pt-4 lg:grid-cols-12 lg:overflow-hidden"
+                >
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
-                    <main class="space-y-5 lg:col-span-7 xl:col-span-8">
+                    <main
+                        class="h-full space-y-5 lg:col-span-7 lg:scrollbar-thin lg:overflow-y-auto lg:pr-2 xl:col-span-8"
+                    >
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
                             aria-label="Classmate Stories"
@@ -3731,7 +3792,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden space-y-6 lg:sticky lg:top-6 lg:col-span-5 lg:block xl:col-span-4"
+                        class="hidden h-full space-y-4 overflow-y-auto pr-1 lg:col-span-5 lg:block lg:scrollbar-thin xl:col-span-4"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
                         <div class="flex items-center justify-between px-1">
@@ -3837,7 +3898,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             </div>
 
                             <!-- Classmate Member List -->
-                            <div class="mt-3 divide-y divide-border/30">
+                            <div
+                                class="mt-3 max-h-[380px] scrollbar-thin divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1"
+                            >
                                 <div
                                     v-for="member in filteredClassmates"
                                     :key="member.id"
@@ -3846,6 +3909,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         openProfileModal({
                                             public_id: member.public_id,
                                             name: member.name,
+                                            avatar: member.avatar,
+                                            section_name: member.section_name,
                                         })
                                     "
                                 >
@@ -3855,7 +3920,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         <!-- Avatar -->
                                         <div class="relative shrink-0">
                                             <div
-                                                class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold select-none"
+                                                class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-semibold select-none"
                                                 :class="[
                                                     member.isCurrentUser
                                                         ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
@@ -3868,7 +3933,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                             : 'bg-muted text-muted-foreground ring-1 ring-border',
                                                 ]"
                                             >
-                                                {{ getInitials(member.name) }}
+                                                <img
+                                                    v-if="member.avatar"
+                                                    :src="member.avatar"
+                                                    :alt="member.name"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <span v-else>
+                                                    {{
+                                                        getInitials(member.name)
+                                                    }}
+                                                </span>
                                             </div>
                                             <span
                                                 class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-card"
@@ -3903,10 +3978,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 </span>
                                             </div>
                                             <p
-                                                v-if="member.activity"
                                                 class="truncate text-[10px] text-muted-foreground"
                                             >
-                                                {{ member.activity }}
+                                                {{
+                                                    member.section_name
+                                                        ? member.section_name
+                                                        : member.activity
+                                                }}
                                             </p>
                                         </div>
                                     </div>
@@ -4185,12 +4263,14 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 openProfileModal({
                                     public_id: member.public_id,
                                     name: member.name,
+                                    avatar: member.avatar,
+                                    section_name: member.section_name,
                                 });
                             "
                         >
                             <div class="relative shrink-0">
                                 <div
-                                    class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold select-none"
+                                    class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-semibold select-none"
                                     :class="[
                                         member.isCurrentUser
                                             ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
@@ -4201,7 +4281,15 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 : 'bg-muted text-muted-foreground ring-1 ring-border',
                                     ]"
                                 >
-                                    {{ getInitials(member.name) }}
+                                    <img
+                                        v-if="member.avatar"
+                                        :src="member.avatar"
+                                        :alt="member.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <span v-else>
+                                        {{ getInitials(member.name) }}
+                                    </span>
                                 </div>
                                 <span
                                     class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-card"
@@ -4311,23 +4399,76 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     <!-- Avatar circle centered overlapping header -->
                     <div class="-mt-12 mb-3 inline-block">
                         <div
-                            class="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-card bg-muted text-xl font-bold text-foreground shadow-lg"
+                            class="relative flex items-center justify-center rounded-full transition-transform"
+                            :class="[
+                                profileHasActiveStory
+                                    ? 'cursor-pointer bg-gradient-to-tr from-brand via-[#e6a875] to-[#f5eedc] p-[3px] shadow-lg hover:scale-105 active:scale-95'
+                                    : 'p-0',
+                            ]"
+                            :title="
+                                profileHasActiveStory
+                                    ? 'Click to view active story'
+                                    : undefined
+                            "
+                            @click="handleProfileAvatarClick"
                         >
-                            <EyeOff
-                                v-if="activeProfile?.is_masked"
-                                class="h-8 w-8 text-muted-foreground"
-                            />
-                            <span v-else>
-                                {{
-                                    getInitials(
-                                        activeProfile?.name || 'Student',
-                                    )
-                                }}
-                            </span>
+                            <div
+                                class="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-muted text-xl font-bold text-foreground shadow-sm"
+                            >
+                                <EyeOff
+                                    v-if="activeProfile?.is_masked"
+                                    class="h-8 w-8 text-muted-foreground"
+                                />
+                                <img
+                                    v-else-if="activeProfile?.avatar"
+                                    :src="activeProfile.avatar"
+                                    :alt="activeProfile.name"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>
+                                    {{
+                                        getInitials(
+                                            activeProfile?.name || 'Student',
+                                        )
+                                    }}
+                                </span>
+                            </div>
+
                             <span
                                 v-if="!activeProfile?.is_masked"
-                                class="absolute right-1 bottom-1 h-3.5 w-3.5 rounded-full border-2 border-card bg-emerald-500"
+                                class="absolute right-1 bottom-1 h-3.5 w-3.5 rounded-full border-2 border-card"
+                                :class="{
+                                    'bg-emerald-500':
+                                        activeProfile?.presence_status ===
+                                            'online' ||
+                                        activeProfile?.presence_activity ===
+                                            'Active in Lounge' ||
+                                        !activeProfile?.presence_status,
+                                    'bg-amber-500':
+                                        activeProfile?.presence_status ===
+                                        'idle',
+                                    'bg-muted-foreground/40':
+                                        activeProfile?.presence_status ===
+                                            'offline' &&
+                                        activeProfile?.presence_activity !==
+                                            'Active in Lounge',
+                                }"
                             />
+                        </div>
+
+                        <!-- Story available badge -->
+                        <div
+                            v-if="profileHasActiveStory"
+                            class="mt-1 flex justify-center"
+                        >
+                            <button
+                                type="button"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand transition-colors hover:bg-brand/20 active:scale-95"
+                                @click="handleProfileAvatarClick"
+                            >
+                                <Sparkles class="h-2.5 w-2.5" />
+                                <span>Story available</span>
+                            </button>
                         </div>
                     </div>
 
