@@ -831,6 +831,82 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
         });
 
+        it('renders student avatar image and active story gradient ring in profile modal', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        is_masked: false,
+                        is_self: false,
+                        name: 'Tina Grande Calub',
+                        handle: 'tina.grande.calub',
+                        avatar: 'https://example.com/tina.jpg',
+                        has_active_stories: true,
+                    }),
+            });
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    stories: [
+                        {
+                            user_id: 88,
+                            public_id: 'usr_tina_88',
+                            name: 'Tina Grande Calub',
+                            handle: 'tina.grande.calub',
+                            avatar: 'https://example.com/tina.jpg',
+                            is_self: false,
+                            is_masked: false,
+                            stories: [
+                                {
+                                    id: 1,
+                                    media_url: 'https://example.com/story.jpg',
+                                    media_type: 'image',
+                                    duration_seconds: 5,
+                                    views_count: 3,
+                                    reactions_count: 1,
+                                    user_reaction: null,
+                                    created_at: '1h ago',
+                                },
+                            ],
+                        },
+                    ],
+                    onlineClassmates: [
+                        {
+                            id: 88,
+                            public_id: 'usr_tina_88',
+                            name: 'Tina Grande Calub',
+                            avatar: 'https://example.com/tina.jpg',
+                            status: 'online',
+                        },
+                    ],
+                },
+            });
+
+            const classmateRow = wrapper.find(
+                '[data-test="section-presence-card"] .group',
+            );
+            expect(classmateRow.exists()).toBe(true);
+            await classmateRow.trigger('click');
+
+            const modal = wrapper.find('[data-test="profile-preview-modal"]');
+            expect(modal.exists()).toBe(true);
+            expect(modal.text()).toContain('Tina Grande Calub');
+
+            // Avatar image is rendered
+            const avatarImg = modal.find('img');
+            expect(avatarImg.exists()).toBe(true);
+            expect(avatarImg.attributes('src')).toBe(
+                'https://example.com/tina.jpg',
+            );
+
+            // Story gradient ring is present
+            expect(modal.html()).toContain(
+                'from-brand via-[#e6a875] to-[#f5eedc]',
+            );
+            expect(modal.text()).toContain('Story available');
+        });
+
         it('renders commenter avatar and handle, and opens profile modal on click', async () => {
             global.fetch = vi.fn().mockResolvedValue({
                 ok: true,
