@@ -671,6 +671,11 @@ class CommunityController extends Controller
                 ? null
                 : ($author?->avatar ? PublicFileUrl::resolve($author->avatar) : null);
 
+            $authorSectionName = $post->section?->name ?? 'Workspace';
+            if ($post->is_anonymous || ! $isSameSection) {
+                $authorSectionName = 'Anonymous';
+            }
+
             return [
                 'id' => $post->id,
                 'content' => $post->content,
@@ -692,7 +697,7 @@ class CommunityController extends Controller
                     'is_same_section' => $isSameSection,
                     'is_masked' => $isMasked,
                     'is_following' => in_array($post->user_id, $viewerFollowingIds, true),
-                    'section_name' => $post->section?->name ?? 'Workspace',
+                    'section_name' => $authorSectionName,
                 ],
                 'comments' => $post->comments->map(function ($c) use ($viewer, $viewerSectionId, $section, $viewerCommentLikedIds) {
                     $cAuthor = $c->user;
@@ -711,7 +716,7 @@ class CommunityController extends Controller
                         'author_handle' => $masked ? 'student.'.substr(md5((string) $c->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $cAuthor?->name ?? 'student')),
                         'author_avatar' => $masked ? null : ($cAuthor?->avatar ? PublicFileUrl::resolve($cAuthor->avatar) : null),
                         'is_masked' => $masked,
-                        'section_name' => $cAuthor ? ($isSame ? ($section?->name ?? 'Your Section') : 'Other Section') : 'Workspace',
+                        'section_name' => $masked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
                         'likes_count' => (int) $c->likes_count,
                         'is_liked' => in_array($c->id, $viewerCommentLikedIds, true),
                         'replies' => $c->relationLoaded('replies')
@@ -732,7 +737,7 @@ class CommunityController extends Controller
                                     'author_handle' => $rMasked ? 'student.'.substr(md5((string) $r->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $rAuthor?->name ?? 'student')),
                                     'author_avatar' => $rMasked ? null : ($rAuthor?->avatar ? PublicFileUrl::resolve($rAuthor->avatar) : null),
                                     'is_masked' => $rMasked,
-                                    'section_name' => $rAuthor ? ($rIsSame ? ($section?->name ?? 'Your Section') : 'Other Section') : 'Workspace',
+                                    'section_name' => $rMasked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
                                     'likes_count' => (int) $r->likes_count,
                                     'is_liked' => in_array($r->id, $viewerCommentLikedIds, true),
                                     'replies' => [],
