@@ -2935,8 +2935,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 class="text-[11px] text-muted-foreground"
                                             >
                                                 {{
-                                                    post.author.section_name ||
-                                                    sectionDisplayName
+                                                    post.author.is_masked
+                                                        ? post.author
+                                                              .section_name ||
+                                                          'Anonymous'
+                                                        : post.author
+                                                              .section_name ||
+                                                          sectionDisplayName
                                                 }}
                                                 · {{ post.created_at }}
                                             </p>

@@ -76,6 +76,47 @@ it('renders community lounge feed with nested comments and replies', function ()
         );
 });
 
+it('masks section name as Anonymous when post is anonymous or from a different section', function () {
+    $sectionA = Section::factory()->create([
+        'name' => 'Computer Application',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $sectionB = Section::factory()->create([
+        'name' => 'Computer Networking',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $this->student->sections()->attach($sectionA);
+    $otherStudent->sections()->attach($sectionB);
+
+    $crossPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $sectionB->id,
+        'user_id' => $otherStudent->id,
+        'content' => 'Cross section post',
+        'is_anonymous' => false,
+    ]);
+
+    $anonPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $sectionA->id,
+        'user_id' => $otherStudent->id,
+        'content' => 'Anonymous post',
+        'is_anonymous' => true,
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('posts.0.author.section_name', 'Anonymous')
+            ->where('posts.1.author.section_name', 'Anonymous')
+        );
+});
+
 it('returns a locked response when community page is disabled in registry', function () {
     StudentPageRegistry::setControls([
         'community' => [
