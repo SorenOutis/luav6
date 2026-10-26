@@ -22,9 +22,12 @@ import {
     PartyPopper,
     Pause,
     Pencil,
+    Music,
     Play,
     Plus,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     CornerDownRight,
     Eye,
@@ -89,6 +92,23 @@ export interface PostAuthor {
     section_name?: string;
 }
 
+export interface PostMediaItem {
+    id: number | string;
+    url: string;
+    type: 'image' | 'video' | string;
+    name?: string | null;
+    size?: number | null;
+}
+
+export interface PostMusicTrack {
+    id: number;
+    title: string;
+    artist: string;
+    duration?: number;
+    audio_url: string;
+    cover_image_url?: string | null;
+}
+
 export interface CommunityFeedPost {
     id: number | string;
     content: string;
@@ -97,6 +117,8 @@ export interface CommunityFeedPost {
     attachment_type?: string | null;
     attachment_name?: string | null;
     attachment_size?: number | null;
+    media?: PostMediaItem[];
+    music?: PostMusicTrack | null;
     likes_count: number;
     comments_count: number;
     is_liked: boolean;
@@ -169,6 +191,7 @@ interface Props {
     onlineCount?: number;
     totalEnrolledCount?: number;
     posts?: CommunityFeedPost[];
+    musicTracks?: PostMusicTrack[];
     trendingTopics?: TrendingTopic[];
     currentTab?: 'all' | 'section' | 'saved';
     stories?: UserStoryGroup[];
@@ -1282,36 +1305,269 @@ const handleAddComment = async (postId: number | string) => {
     }
 };
 
-// ─── Post Composer Form ──────────────────────────────────────────────────────
+// ─── Post Composer Form & Media Modal State ─────────────────────────────────
+export interface ComposerMediaFile {
+    file: File;
+    preview: string;
+    type: 'image' | 'video';
+    name: string;
+    size: number;
+}
+
 const isComposerOpen = ref(false);
 const composerFile = ref<File | null>(null);
 const composerFilePreview = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
+// Social Pop-up Media Composer Modal state
+const isMediaModalOpen = ref(false);
+const mediaFiles = ref<ComposerMediaFile[]>([]);
+const activeMediaIndex = ref(0);
+const selectedMusicTrackId = ref<number | null>(null);
+const isMusicPickerOpen = ref(false);
+const previewAudio = ref<HTMLAudioElement | null>(null);
+const playingTrackId = ref<number | null>(null);
+const mediaFileInputRef = ref<HTMLInputElement | null>(null);
+
+const activeMediaItem = computed<ComposerMediaFile | null>(() => {
+    return mediaFiles.value[activeMediaIndex.value] ?? null;
+});
+
+const selectedMusicTrack = computed<PostMusicTrack | null>(() => {
+    if (!selectedMusicTrackId.value) return null;
+    return (
+        props.musicTracks?.find((t) => t.id === selectedMusicTrackId.value) ??
+        null
+    );
+});
+
 const composerForm = useForm<{
     content: string;
     is_anonymous: boolean;
     section_id: number | null;
+    profile_music_track_id: number | null;
     attachment: File | null;
+    attachments: File[];
 }>({
     content: '',
     is_anonymous: false,
     section_id: null,
+    profile_music_track_id: null,
     attachment: null,
+    attachments: [],
 });
+
+const revokeMediaPreviews = () => {
+    mediaFiles.value.forEach((item) => {
+        if (item.preview && item.preview.startsWith('blob:')) {
+            try {
+                URL.revokeObjectURL(item.preview);
+            } catch {
+                // ignore
+            }
+        }
+    });
+};
+
+const stopMusicPreview = () => {
+    if (previewAudio.value) {
+        previewAudio.value.pause();
+        previewAudio.value = null;
+    }
+    playingTrackId.value = null;
+};
+
+const toggleTrackPreview = (track: PostMusicTrack) => {
+    if (playingTrackId.value === track.id) {
+        stopMusicPreview();
+        return;
+    }
+    stopMusicPreview();
+    const audio = new Audio(track.audio_url);
+    previewAudio.value = audio;
+    playingTrackId.value = track.id;
+    audio.play().catch(() => {
+        stopMusicPreview();
+    });
+    audio.onended = () => {
+        playingTrackId.value = null;
+        previewAudio.value = null;
+    };
+};
+
+const selectMusicTrack = (track: PostMusicTrack) => {
+    if (selectedMusicTrackId.value === track.id) {
+        selectedMusicTrackId.value = null;
+    } else {
+        selectedMusicTrackId.value = track.id;
+    }
+    stopMusicPreview();
+    isMusicPickerOpen.value = false;
+};
+
+const removeSelectedMusic = () => {
+    selectedMusicTrackId.value = null;
+    stopMusicPreview();
+};
+
+const openMediaModalWithFiles = (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (!list.length) return;
+
+    for (const file of list) {
+        const isVid =
+            file.type.startsWith('video/') ||
+            /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+        const previewUrl = URL.createObjectURL(file);
+        mediaFiles.value.push({
+            file,
+            preview: previewUrl,
+            type: isVid ? 'video' : 'image',
+            name: file.name,
+            size: file.size,
+        });
+    }
+
+    if (activeMediaIndex.value >= mediaFiles.value.length) {
+        activeMediaIndex.value = 0;
+    }
+
+    isMediaModalOpen.value = true;
+};
+
+const handleMediaFileInputChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length) {
+        openMediaModalWithFiles(target.files);
+        target.value = '';
+    }
+};
+
+const removeMediaItem = (index: number) => {
+    const item = mediaFiles.value[index];
+    if (item && item.preview.startsWith('blob:')) {
+        try {
+            URL.revokeObjectURL(item.preview);
+        } catch {
+            // ignore
+        }
+    }
+    mediaFiles.value.splice(index, 1);
+    if (activeMediaIndex.value >= mediaFiles.value.length) {
+        activeMediaIndex.value = Math.max(0, mediaFiles.value.length - 1);
+    }
+    if (mediaFiles.value.length === 0) {
+        closeMediaModal();
+    }
+};
+
+const moveMedia = (fromIndex: number, toIndex: number) => {
+    if (
+        toIndex < 0 ||
+        toIndex >= mediaFiles.value.length ||
+        fromIndex === toIndex
+    ) {
+        return;
+    }
+    const item = mediaFiles.value.splice(fromIndex, 1)[0];
+    mediaFiles.value.splice(toIndex, 0, item);
+    activeMediaIndex.value = toIndex;
+};
+
+const moveMediaCarousel = (dir: number) => {
+    if (!mediaFiles.value.length) return;
+    activeMediaIndex.value =
+        (activeMediaIndex.value + dir + mediaFiles.value.length) %
+        mediaFiles.value.length;
+};
+
+const closeMediaModal = () => {
+    stopMusicPreview();
+    isMusicPickerOpen.value = false;
+    isMediaModalOpen.value = false;
+    revokeMediaPreviews();
+    mediaFiles.value = [];
+    activeMediaIndex.value = 0;
+    selectedMusicTrackId.value = null;
+    if (mediaFileInputRef.value) {
+        mediaFileInputRef.value.value = '';
+    }
+};
+
+const submitMediaPost = () => {
+    if (!composerForm.content.trim() && mediaFiles.value.length === 0) {
+        return;
+    }
+
+    composerForm.section_id = selectedSectionId.value;
+    composerForm.profile_music_track_id = selectedMusicTrackId.value;
+    composerForm.attachments = mediaFiles.value.map((m) => m.file);
+    composerForm.attachment = mediaFiles.value[0]?.file ?? null;
+
+    composerForm.post('/community/posts', {
+        preserveScroll: true,
+        onSuccess: () => {
+            composerForm.reset();
+            closeMediaModal();
+            clearComposerFile();
+            isComposerOpen.value = false;
+            tabPostsCache.value = {};
+        },
+    });
+};
+
+// ─── Feed Post Carousel & Soundtrack Player ──────────────────────────────────
+const activePostMediaIndex = ref<Record<string, number>>({});
+const activePlayingPostId = ref<number | string | null>(null);
+const feedAudioElement = ref<HTMLAudioElement | null>(null);
+
+const stopFeedPostMusic = () => {
+    if (feedAudioElement.value) {
+        feedAudioElement.value.pause();
+        feedAudioElement.value = null;
+    }
+    activePlayingPostId.value = null;
+};
+
+const toggleFeedPostMusic = (post: CommunityFeedPost) => {
+    if (!post.music) return;
+    if (activePlayingPostId.value === post.id) {
+        stopFeedPostMusic();
+        return;
+    }
+    stopFeedPostMusic();
+    activePlayingPostId.value = post.id;
+    const audio = new Audio(post.music.audio_url);
+    feedAudioElement.value = audio;
+    audio.play().catch(() => {
+        stopFeedPostMusic();
+    });
+    audio.onended = () => {
+        activePlayingPostId.value = null;
+        feedAudioElement.value = null;
+    };
+};
 
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files[0]) {
         const file = target.files[0];
+        const isMedia =
+            file.type.startsWith('image/') ||
+            file.type.startsWith('video/') ||
+            /\.(mp4|mov|webm|m4v|jpg|jpeg|png|webp|gif)$/i.test(file.name);
+
+        if (isMedia) {
+            // Automatically launch the Instagram / TikTok-style pop-up media composer!
+            openMediaModalWithFiles([file]);
+            target.value = '';
+            return;
+        }
+
+        // Otherwise keep regular document/code attachment inline
         composerFile.value = file;
         composerForm.attachment = file;
-
-        if (file.type.startsWith('image/')) {
-            composerFilePreview.value = URL.createObjectURL(file);
-        } else {
-            composerFilePreview.value = null;
-        }
+        composerFilePreview.value = null;
     }
 };
 
@@ -1319,17 +1575,20 @@ const clearComposerFile = () => {
     composerFile.value = null;
     composerFilePreview.value = null;
     composerForm.attachment = null;
+    composerForm.attachments = [];
     if (fileInputRef.value) {
         fileInputRef.value.value = '';
     }
 };
 
 const submitPost = () => {
-    if (!composerForm.content.trim()) {
+    if (!composerForm.content.trim() && !composerForm.attachment) {
         return;
     }
 
     composerForm.section_id = selectedSectionId.value;
+    composerForm.profile_music_track_id = null;
+    composerForm.attachments = [];
 
     composerForm.post('/community/posts', {
         preserveScroll: true,
@@ -1978,6 +2237,10 @@ const handleDeleteStory = async () => {
 };
 
 const handleStoryKeydown = (e: KeyboardEvent) => {
+    if (isMediaModalOpen.value && e.key === 'Escape') {
+        closeMediaModal();
+        return;
+    }
     if (isWelcomeModalOpen.value && e.key === 'Escape') {
         dismissWelcomeModal();
         return;
@@ -2227,6 +2490,7 @@ watch(
         isProfileModalOpen,
         isStoryViewerOpen,
         isStoryModalOpen,
+        isMediaModalOpen,
         isWelcomeModalOpen,
         postToDelete,
         commentToDelete,
@@ -2236,6 +2500,7 @@ watch(
         modalOpen,
         storyViewerOpen,
         storyModalOpen,
+        mediaModalOpen,
         welcomeOpen,
         postDeleteOpen,
         commentDeleteOpen,
@@ -2246,6 +2511,7 @@ watch(
                 modalOpen ||
                 storyViewerOpen ||
                 storyModalOpen ||
+                mediaModalOpen ||
                 welcomeOpen ||
                 Boolean(postDeleteOpen) ||
                 Boolean(commentDeleteOpen)
@@ -2300,6 +2566,9 @@ if (typeof window !== 'undefined') {
 onBeforeUnmount(() => {
     clearStoryMedia();
     stopStoryPlayback();
+    revokeMediaPreviews();
+    stopMusicPreview();
+    stopFeedPostMusic();
     if (typeof window !== 'undefined') {
         window.removeEventListener('keydown', handleStoryKeydown);
         window.removeEventListener('click', handleDocumentClick);
@@ -2685,7 +2954,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             </button>
                                         </div>
 
-                                        <!-- Hidden file input -->
+                                        <!-- Hidden file input for documents/code -->
                                         <input
                                             ref="fileInputRef"
                                             type="file"
@@ -2693,29 +2962,73 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             @change="handleFileSelect"
                                         />
 
+                                        <!-- Hidden file input for photos/videos -->
+                                        <input
+                                            ref="mediaFileInputRef"
+                                            type="file"
+                                            accept="image/*,video/*"
+                                            multiple
+                                            class="hidden"
+                                            data-test="media-post-file-input"
+                                            @change="handleMediaFileInputChange"
+                                        />
+
                                         <!-- Composer Action Tray -->
                                         <div
                                             class="mt-3 flex items-center justify-between border-t border-border/30 pt-2.5 text-xs"
                                         >
                                             <div
-                                                class="flex items-center gap-1 text-muted-foreground"
+                                                class="flex items-center gap-1.5 text-muted-foreground"
                                             >
+                                                <!-- Photo / Video Trigger (Instagram / Facebook / TikTok Style Modal) -->
                                                 <button
                                                     type="button"
-                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
-                                                    title="Attach photo or document"
+                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                                    title="Attach photos or videos"
+                                                    data-test="open-media-modal-button"
                                                     @click="
-                                                        fileInputRef?.click()
+                                                        mediaFileInputRef?.click()
                                                     "
                                                 >
                                                     <ImageIcon
-                                                        class="h-3.5 w-3.5"
+                                                        class="h-3.5 w-3.5 text-brand"
                                                     />
+                                                    <span
+                                                        class="hidden text-[11px] font-medium sm:inline"
+                                                        >Photo/Video</span
+                                                    >
                                                 </button>
+
+                                                <!-- Music Soundtrack Trigger -->
+                                                <button
+                                                    v-if="
+                                                        props.musicTracks &&
+                                                        props.musicTracks
+                                                            .length > 0
+                                                    "
+                                                    type="button"
+                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                                    title="Add soundtrack"
+                                                    data-test="open-music-modal-button"
+                                                    @click="
+                                                        isMediaModalOpen = true;
+                                                        isMusicPickerOpen = true;
+                                                    "
+                                                >
+                                                    <Music
+                                                        class="h-3.5 w-3.5 text-amber-500"
+                                                    />
+                                                    <span
+                                                        class="hidden text-[11px] font-medium sm:inline"
+                                                        >Music</span
+                                                    >
+                                                </button>
+
+                                                <!-- Code / File Trigger -->
                                                 <button
                                                     type="button"
-                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
-                                                    title="Attach code snippet or file"
+                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                    title="Attach document or code snippet"
                                                     @click="
                                                         fileInputRef?.click()
                                                     "
@@ -3092,9 +3405,184 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     </p>
                                 </div>
 
-                                <!-- Post Attachment (Image or File) -->
+                                <!-- Post Music Soundtrack (Instagram / TikTok Style) -->
+                                <div v-if="post.music" class="px-4 pb-2.5">
+                                    <button
+                                        type="button"
+                                        class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition-all hover:bg-brand/20 active:scale-95"
+                                        data-test="post-soundtrack-badge"
+                                        @click="toggleFeedPostMusic(post)"
+                                    >
+                                        <Music
+                                            v-if="
+                                                activePlayingPostId === post.id
+                                            "
+                                            class="h-3.5 w-3.5 animate-pulse text-brand"
+                                        />
+                                        <Music
+                                            v-else
+                                            class="h-3.5 w-3.5 text-brand"
+                                        />
+                                        <span
+                                            class="max-w-[200px] truncate sm:max-w-xs"
+                                        >
+                                            {{ post.music.title }} •
+                                            {{ post.music.artist }}
+                                        </span>
+                                        <span
+                                            class="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-brand uppercase"
+                                        >
+                                            {{
+                                                activePlayingPostId === post.id
+                                                    ? 'Pause'
+                                                    : 'Play'
+                                            }}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <!-- Post Media (Multi-Photo Carousel or Video) -->
                                 <div
-                                    v-if="post.attachment_url"
+                                    v-if="post.media && post.media.length > 0"
+                                    class="px-4 pb-3"
+                                    data-test="post-media-container"
+                                >
+                                    <div
+                                        class="relative overflow-hidden rounded-xl border border-border/50 bg-black/5 dark:bg-black/25"
+                                    >
+                                        <template
+                                            v-if="
+                                                post.media[
+                                                    activePostMediaIndex[
+                                                        post.id
+                                                    ] || 0
+                                                ]
+                                            "
+                                        >
+                                            <!-- Video player -->
+                                            <video
+                                                v-if="
+                                                    post.media[
+                                                        activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0
+                                                    ].type === 'video'
+                                                "
+                                                :src="
+                                                    post.media[
+                                                        activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0
+                                                    ].url
+                                                "
+                                                controls
+                                                class="max-h-96 w-full bg-black object-contain"
+                                                data-test="post-media-video"
+                                            />
+                                            <!-- Photo -->
+                                            <img
+                                                v-else
+                                                :src="
+                                                    post.media[
+                                                        activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0
+                                                    ].url
+                                                "
+                                                :alt="
+                                                    post.media[
+                                                        activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0
+                                                    ].name ||
+                                                    post.content ||
+                                                    'Post media'
+                                                "
+                                                class="max-h-96 w-full object-cover"
+                                                data-test="post-media-image"
+                                            />
+                                        </template>
+
+                                        <!-- Multi-photo Carousel Controls -->
+                                        <template v-if="post.media.length > 1">
+                                            <button
+                                                type="button"
+                                                class="absolute top-1/2 left-2.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
+                                                aria-label="Previous photo"
+                                                data-test="post-carousel-prev"
+                                                @click="
+                                                    activePostMediaIndex[
+                                                        post.id
+                                                    ] =
+                                                        ((activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0) -
+                                                            1 +
+                                                            post.media.length) %
+                                                        post.media.length
+                                                "
+                                            >
+                                                <ChevronLeft class="h-4 w-4" />
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="absolute top-1/2 right-2.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
+                                                aria-label="Next photo"
+                                                data-test="post-carousel-next"
+                                                @click="
+                                                    activePostMediaIndex[
+                                                        post.id
+                                                    ] =
+                                                        ((activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0) +
+                                                            1) %
+                                                        post.media.length
+                                                "
+                                            >
+                                                <ChevronRight class="h-4 w-4" />
+                                            </button>
+
+                                            <!-- Counter badge -->
+                                            <div
+                                                class="absolute top-2.5 right-2.5 rounded-full bg-black/70 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs"
+                                                data-test="post-carousel-counter"
+                                            >
+                                                {{
+                                                    (activePostMediaIndex[
+                                                        post.id
+                                                    ] || 0) + 1
+                                                }}
+                                                / {{ post.media.length }}
+                                            </div>
+
+                                            <!-- Dots Indicator -->
+                                            <div
+                                                class="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1.5"
+                                            >
+                                                <span
+                                                    v-for="(
+                                                        _, dotIdx
+                                                    ) in post.media"
+                                                    :key="dotIdx"
+                                                    :class="[
+                                                        'h-1.5 rounded-full transition-all',
+                                                        (activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0) === dotIdx
+                                                            ? 'w-4 bg-white shadow-xs'
+                                                            : 'w-1.5 bg-white/50',
+                                                    ]"
+                                                />
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Legacy Single Attachment Fallback -->
+                                <div
+                                    v-else-if="post.attachment_url"
                                     class="px-4 pb-3"
                                 >
                                     <!-- Image Preview -->
@@ -5856,6 +6344,456 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     >
                         Enter Lounge
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Create Post Modal (Instagram / Facebook / TikTok Style) ═══ -->
+        <div
+            v-if="isMediaModalOpen"
+            class="fixed inset-0 z-[180] flex items-center justify-center p-3 backdrop-blur-md transition-all duration-300 sm:p-4"
+            data-test="create-media-post-modal"
+            @click.self="closeMediaModal"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/75 backdrop-blur-md"
+                data-test="create-media-modal-backdrop"
+                @click="closeMediaModal"
+            />
+
+            <div
+                class="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl ring-1 ring-border/20 sm:rounded-3xl md:flex-row dark:border-white/10 dark:bg-zinc-900"
+            >
+                <!-- Top close button -->
+                <button
+                    type="button"
+                    class="absolute top-3 right-3 z-30 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-105 hover:bg-black/80 active:scale-95"
+                    aria-label="Close composer"
+                    data-test="close-media-modal-button"
+                    @click="closeMediaModal"
+                >
+                    <X class="h-4 w-4" />
+                </button>
+
+                <!-- Left Column / Media Stage (Desktop 58%, Mobile 100%) -->
+                <div
+                    class="relative flex min-h-[260px] flex-1 flex-col justify-between overflow-hidden bg-zinc-950 text-white sm:min-h-[360px] md:min-h-[460px]"
+                >
+                    <!-- Main Active Media Preview Stage -->
+                    <div
+                        class="relative flex flex-1 items-center justify-center overflow-hidden"
+                    >
+                        <template v-if="activeMediaItem">
+                            <video
+                                v-if="activeMediaItem.type === 'video'"
+                                :src="activeMediaItem.preview"
+                                controls
+                                class="max-h-[380px] w-full object-contain md:max-h-[480px]"
+                                data-test="media-modal-video-preview"
+                            />
+                            <img
+                                v-else
+                                :src="activeMediaItem.preview"
+                                :alt="activeMediaItem.name"
+                                class="max-h-[380px] w-full object-contain md:max-h-[480px]"
+                                data-test="media-modal-image-preview"
+                            />
+                        </template>
+
+                        <!-- Empty Dropzone if no media selected yet -->
+                        <div
+                            v-else
+                            class="flex flex-col items-center justify-center p-8 text-center"
+                            @click="mediaFileInputRef?.click()"
+                        >
+                            <div
+                                class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-brand"
+                            >
+                                <ImageIcon class="h-7 w-7" />
+                            </div>
+                            <h4 class="text-sm font-bold">
+                                Select photos and videos
+                            </h4>
+                            <p class="mt-1 text-xs text-zinc-400">
+                                Drag photos and videos here or click to browse
+                            </p>
+                            <button
+                                type="button"
+                                class="mt-4 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand/90"
+                            >
+                                Select from computer
+                            </button>
+                        </div>
+
+                        <!-- Previous / Next Arrows for carousel -->
+                        <template v-if="mediaFiles.length > 1">
+                            <button
+                                type="button"
+                                class="absolute top-1/2 left-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                                data-test="media-prev-button"
+                                @click="moveMediaCarousel(-1)"
+                            >
+                                <ChevronLeft class="h-4 w-4" />
+                            </button>
+                            <button
+                                type="button"
+                                class="absolute top-1/2 right-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                                data-test="media-next-button"
+                                @click="moveMediaCarousel(1)"
+                            >
+                                <ChevronRight class="h-4 w-4" />
+                            </button>
+
+                            <!-- Counter badge -->
+                            <div
+                                class="absolute top-3 left-3 rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs"
+                                data-test="media-modal-counter"
+                            >
+                                {{ activeMediaIndex + 1 }} /
+                                {{ mediaFiles.length }}
+                            </div>
+                        </template>
+
+                        <!-- Attached Music Track Badge on Preview (Instagram style) -->
+                        <div
+                            v-if="selectedMusicTrack"
+                            class="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/75 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur-md"
+                            data-test="modal-attached-soundtrack-badge"
+                        >
+                            <Music
+                                class="h-3.5 w-3.5 animate-pulse text-brand"
+                            />
+                            <span
+                                class="max-w-[140px] truncate sm:max-w-[200px]"
+                            >
+                                {{ selectedMusicTrack.title }} •
+                                {{ selectedMusicTrack.artist }}
+                            </span>
+                            <button
+                                type="button"
+                                class="ml-1 cursor-pointer text-white/70 hover:text-white"
+                                title="Remove music"
+                                @click.stop="removeSelectedMusic"
+                            >
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Thumbnail Strip -->
+                    <div
+                        v-if="mediaFiles.length > 0"
+                        class="flex scrollbar-none items-center gap-2 overflow-x-auto border-t border-white/10 bg-black/40 p-2.5 backdrop-blur-xs"
+                    >
+                        <div
+                            v-for="(item, idx) in mediaFiles"
+                            :key="idx"
+                            :class="[
+                                'group relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all',
+                                activeMediaIndex === idx
+                                    ? 'scale-105 border-brand ring-2 ring-brand/50'
+                                    : 'border-white/20 opacity-70 hover:opacity-100',
+                            ]"
+                            @click="activeMediaIndex = idx"
+                        >
+                            <img
+                                v-if="item.type === 'image'"
+                                :src="item.preview"
+                                :alt="item.name"
+                                class="h-full w-full object-cover"
+                            />
+                            <div
+                                v-else
+                                class="flex h-full w-full items-center justify-center bg-zinc-800 text-[10px] font-bold text-white"
+                            >
+                                <Film class="h-4 w-4" />
+                            </div>
+
+                            <!-- Remove thumbnail button -->
+                            <button
+                                type="button"
+                                class="absolute top-0.5 right-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-black/80 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                title="Remove this photo"
+                                @click.stop="removeMediaItem(idx)"
+                            >
+                                <X class="h-2.5 w-2.5" />
+                            </button>
+                        </div>
+
+                        <!-- Add more button -->
+                        <button
+                            v-if="mediaFiles.length < 10"
+                            type="button"
+                            class="flex h-12 w-12 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/30 bg-white/5 text-white/80 transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand"
+                            title="Add more photos or videos"
+                            data-test="add-more-media-button"
+                            @click="mediaFileInputRef?.click()"
+                        >
+                            <Plus class="h-4 w-4" />
+                            <span class="text-[9px] font-semibold">Add</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column / Caption, Music, Privacy & Publish (Desktop 42%, Mobile 100%) -->
+                <div
+                    class="flex w-full flex-col justify-between border-t border-border/70 bg-card p-4 sm:p-5 md:w-[380px] md:border-t-0 md:border-l md:p-6"
+                >
+                    <div
+                        class="max-h-[50vh] space-y-4 overflow-y-auto md:max-h-none"
+                    >
+                        <!-- Author Header -->
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                            >
+                                <img
+                                    v-if="currentUser?.avatar"
+                                    :src="currentUser.avatar"
+                                    :alt="currentUserName"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>{{ currentUserInitials }}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <h3
+                                    class="text-xs font-bold text-foreground sm:text-sm"
+                                >
+                                    {{ currentUserName }}
+                                </h3>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Posting to
+                                    <span class="font-medium text-foreground">
+                                        {{ sectionDisplayName }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Caption Textarea -->
+                        <div>
+                            <textarea
+                                v-model="composerForm.content"
+                                rows="4"
+                                maxlength="2000"
+                                placeholder="Write a caption, share learning tips, or start a discussion..."
+                                class="w-full resize-none rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none sm:text-sm"
+                                data-test="media-modal-caption-textarea"
+                            />
+                            <div
+                                class="mt-1 flex items-center justify-between text-[11px] text-muted-foreground"
+                            >
+                                <span
+                                    >{{ composerForm.content.length }} /
+                                    2000</span
+                                >
+                                <span
+                                    v-if="mediaFiles.length > 0"
+                                    class="font-medium text-brand"
+                                >
+                                    {{ mediaFiles.length }} media item{{
+                                        mediaFiles.length > 1 ? 's' : ''
+                                    }}
+                                    attached
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Music Soundtrack Selector Row -->
+                        <div
+                            class="rounded-xl border border-border/70 bg-muted/30 p-3"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/15 text-brand"
+                                    >
+                                        <Music class="h-3.5 w-3.5" />
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="text-xs font-semibold text-foreground"
+                                        >
+                                            Music Soundtrack
+                                        </p>
+                                        <p
+                                            class="text-[10px] text-muted-foreground"
+                                        >
+                                            {{
+                                                selectedMusicTrack
+                                                    ? selectedMusicTrack.title +
+                                                      ' • ' +
+                                                      selectedMusicTrack.artist
+                                                    : 'Add background music'
+                                            }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer rounded-lg border border-border/60 bg-background px-2.5 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
+                                    data-test="toggle-music-picker-button"
+                                    @click="
+                                        isMusicPickerOpen = !isMusicPickerOpen
+                                    "
+                                >
+                                    {{
+                                        selectedMusicTrack ? 'Change' : '+ Add'
+                                    }}
+                                </button>
+                            </div>
+
+                            <!-- Music Picker Track List -->
+                            <div
+                                v-if="isMusicPickerOpen"
+                                class="mt-3 space-y-2 border-t border-border/50 pt-2.5"
+                                data-test="music-tracks-picker"
+                            >
+                                <div
+                                    v-if="
+                                        !props.musicTracks ||
+                                        props.musicTracks.length === 0
+                                    "
+                                    class="py-3 text-center text-xs text-muted-foreground"
+                                >
+                                    No music tracks available in this workspace.
+                                </div>
+                                <div
+                                    v-for="track in props.musicTracks"
+                                    :key="track.id"
+                                    class="flex items-center justify-between rounded-lg p-1.5 transition hover:bg-muted/60"
+                                    :class="
+                                        selectedMusicTrackId === track.id
+                                            ? 'border border-brand/40 bg-brand/10'
+                                            : ''
+                                    "
+                                >
+                                    <div
+                                        class="flex min-w-0 items-center gap-2"
+                                    >
+                                        <!-- Play preview audio button -->
+                                        <button
+                                            type="button"
+                                            class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 active:scale-95"
+                                            :title="
+                                                playingTrackId === track.id
+                                                    ? 'Pause preview'
+                                                    : 'Play preview'
+                                            "
+                                            @click.stop="
+                                                toggleTrackPreview(track)
+                                            "
+                                        >
+                                            <Pause
+                                                v-if="
+                                                    playingTrackId === track.id
+                                                "
+                                                class="h-3 w-3"
+                                            />
+                                            <Play
+                                                v-else
+                                                class="ml-0.5 h-3 w-3"
+                                            />
+                                        </button>
+                                        <div class="min-w-0">
+                                            <p
+                                                class="truncate text-xs font-semibold text-foreground"
+                                            >
+                                                {{ track.title }}
+                                            </p>
+                                            <p
+                                                class="truncate text-[10px] text-muted-foreground"
+                                            >
+                                                {{ track.artist }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer rounded-md px-2 py-0.5 text-xs font-semibold"
+                                        :class="
+                                            selectedMusicTrackId === track.id
+                                                ? 'text-rose-500 hover:text-rose-600'
+                                                : 'text-brand hover:underline'
+                                        "
+                                        @click="selectMusicTrack(track)"
+                                    >
+                                        {{
+                                            selectedMusicTrackId === track.id
+                                                ? 'Remove'
+                                                : 'Select'
+                                        }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Anonymous Toggle & Visibility note -->
+                        <div
+                            class="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3"
+                        >
+                            <label
+                                v-if="props.allowsAnonymous !== false"
+                                class="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground select-none"
+                            >
+                                <input
+                                    v-model="composerForm.is_anonymous"
+                                    type="checkbox"
+                                    class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-0"
+                                    data-test="media-modal-anonymous-checkbox"
+                                />
+                                <span>Post anonymously</span>
+                            </label>
+                            <p class="text-[11px] text-muted-foreground">
+                                {{
+                                    composerForm.is_anonymous
+                                        ? 'Your name and avatar will be hidden from everyone.'
+                                        : props.isSectionOnly
+                                          ? 'Visible only to enrolled students in your section.'
+                                          : 'Your identity is visible to your section, masked outside.'
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Actions Bottom Bar -->
+                    <div
+                        class="mt-4 flex items-center justify-between border-t border-border/50 pt-3"
+                    >
+                        <button
+                            type="button"
+                            class="cursor-pointer rounded-xl px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+                            data-test="media-modal-cancel-button"
+                            @click="closeMediaModal"
+                        >
+                            Discard
+                        </button>
+
+                        <button
+                            type="button"
+                            :disabled="
+                                (!composerForm.content.trim() &&
+                                    mediaFiles.length === 0) ||
+                                composerForm.processing
+                            "
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-foreground px-5 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                            data-test="media-modal-publish-button"
+                            @click="submitMediaPost"
+                        >
+                            <Loader2
+                                v-if="composerForm.processing"
+                                class="h-3.5 w-3.5 animate-spin"
+                            />
+                            <span>{{
+                                composerForm.processing
+                                    ? 'Publishing...'
+                                    : 'Share Post'
+                            }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

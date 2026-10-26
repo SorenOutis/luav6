@@ -17,6 +17,7 @@ class CommunityPost extends Model
         'workspace_id',
         'user_id',
         'section_id',
+        'profile_music_track_id',
         'content',
         'attachment_url',
         'attachment_type',
@@ -34,6 +35,7 @@ class CommunityPost extends Model
             'likes_count' => 'integer',
             'comments_count' => 'integer',
             'attachment_size' => 'integer',
+            'profile_music_track_id' => 'integer',
         ];
     }
 
@@ -42,6 +44,10 @@ class CommunityPost extends Model
         static::deleting(function (CommunityPost $post): void {
             if ($post->attachment_url) {
                 Storage::disk('public')->delete($post->attachment_url);
+            }
+
+            foreach ($post->media as $mediaItem) {
+                $mediaItem->delete();
             }
         });
     }
@@ -74,5 +80,15 @@ class CommunityPost extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(CommunityComment::class, 'post_id');
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(CommunityPostMedia::class, 'post_id')->orderBy('sort_order', 'asc');
+    }
+
+    public function musicTrack(): BelongsTo
+    {
+        return $this->belongsTo(ProfileMusicTrack::class, 'profile_music_track_id');
     }
 }

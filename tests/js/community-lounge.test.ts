@@ -3577,4 +3577,287 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
         });
     });
+
+    describe('Community.vue pop-up social media composer & multi-media carousel', () => {
+        const studentUser = {
+            id: 1,
+            public_id: 'usr_student_1',
+            name: 'Alex Rivera',
+            handle: 'alex.rivera',
+        };
+
+        const sampleMusicTracks = [
+            {
+                id: 10,
+                title: 'Lo-Fi Chill Study',
+                artist: 'BeatMaker',
+                duration: 120,
+                audio_url: '/profile-music/10/stream',
+                cover_image_url: '/storage/music/cover1.jpg',
+            },
+            {
+                id: 11,
+                title: 'Focus Beats',
+                artist: 'Acoustic Labs',
+                duration: 90,
+                audio_url: '/profile-music/11/stream',
+                cover_image_url: null,
+            },
+        ];
+
+        beforeEach(() => {
+            mockPageProps = {
+                auth: { user: studentUser },
+            };
+        });
+
+        it('opens social media popup modal when photos or videos are selected', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(false);
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            expect(fileInput.exists()).toBe(true);
+
+            const imgFile = new File(['image-bytes'], 'vacation.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="media-modal-image-preview"]')
+                    .exists(),
+            ).toBe(true);
+        });
+
+        it('supports multi-photo carousel preview with next/prev buttons and counter', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile1 = new File(['img1'], 'photo1.jpg', {
+                type: 'image/jpeg',
+            });
+            const imgFile2 = new File(['img2'], 'photo2.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile1, imgFile2],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            const counter = wrapper.find('[data-test="media-modal-counter"]');
+            expect(counter.exists()).toBe(true);
+            expect(counter.text()).toBe('1 / 2');
+
+            // Click next photo button
+            await wrapper
+                .find('[data-test="media-next-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(
+                wrapper.find('[data-test="media-modal-counter"]').text(),
+            ).toBe('2 / 2');
+
+            // Click prev photo button
+            await wrapper
+                .find('[data-test="media-prev-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(
+                wrapper.find('[data-test="media-modal-counter"]').text(),
+            ).toBe('1 / 2');
+        });
+
+        it('allows toggling music soundtrack picker and selecting a track', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="music-tracks-picker"]').exists(),
+            ).toBe(false);
+
+            // Open music picker
+            await wrapper
+                .find('[data-test="toggle-music-picker-button"]')
+                .trigger('click');
+            await nextTick();
+
+            const picker = wrapper.find('[data-test="music-tracks-picker"]');
+            expect(picker.exists()).toBe(true);
+            expect(picker.text()).toContain('Lo-Fi Chill Study');
+            expect(picker.text()).toContain('Focus Beats');
+
+            // Select track 10
+            const selectButtons = picker.findAll('button');
+            const selectBtn = selectButtons.find((b) =>
+                b.text().includes('Select'),
+            );
+            expect(selectBtn).toBeDefined();
+            await selectBtn!.trigger('click');
+            await nextTick();
+
+            // Track is now selected and badge is displayed in preview
+            const badge = wrapper.find(
+                '[data-test="modal-attached-soundtrack-badge"]',
+            );
+            expect(badge.exists()).toBe(true);
+            expect(badge.text()).toContain('Lo-Fi Chill Study');
+        });
+
+        it('dismisses media modal on discard click or Escape key', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(true);
+
+            // Trigger Escape key
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(false);
+        });
+
+        it('renders multi-photo carousel and soundtrack badge on feed posts', async () => {
+            const feedPost = {
+                id: 101,
+                content: 'Beautiful sunset on campus!',
+                created_at: '5m ago',
+                likes_count: 3,
+                comments_count: 1,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    public_id: 'usr_student_1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'Section Alpha',
+                },
+                media: [
+                    {
+                        id: 1,
+                        url: '/storage/photo1.jpg',
+                        type: 'image',
+                        name: 'photo1.jpg',
+                    },
+                    {
+                        id: 2,
+                        url: '/storage/photo2.jpg',
+                        type: 'image',
+                        name: 'photo2.jpg',
+                    },
+                ],
+                music: {
+                    id: 10,
+                    title: 'Campus Vibe',
+                    artist: 'StudyGroup',
+                    audio_url: '/profile-music/10/stream',
+                },
+                comments: [],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [feedPost],
+                },
+            });
+
+            // Music soundtrack badge is displayed
+            const musicBadge = wrapper.find(
+                '[data-test="post-soundtrack-badge"]',
+            );
+            expect(musicBadge.exists()).toBe(true);
+            expect(musicBadge.text()).toContain('Campus Vibe • StudyGroup');
+
+            // Media carousel is displayed with counter and navigation
+            const mediaContainer = wrapper.find(
+                '[data-test="post-media-container"]',
+            );
+            expect(mediaContainer.exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="post-carousel-counter"]').text(),
+            ).toBe('1 / 2');
+
+            // Navigate to next photo in feed post
+            await wrapper
+                .find('[data-test="post-carousel-next"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-carousel-counter"]').text(),
+            ).toBe('2 / 2');
+        });
+    });
 });

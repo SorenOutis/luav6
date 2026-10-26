@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityPost;
 use App\Models\CommunityProfileFeatured;
 use App\Models\CommunityStory;
+use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
@@ -68,6 +69,25 @@ class CommunityController extends Controller
 
         $isFirstTimeJoin = (bool) $request->session()->get('first_time_lounge_join', false);
 
+        $userWorkspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
+        $musicTracks = ProfileMusicTrack::query()
+            ->where('is_active', true)
+            ->availableForWorkspace($userWorkspaceId)
+            ->orderBy('title')
+            ->get()
+            ->map(fn (ProfileMusicTrack $track) => [
+                'id' => $track->id,
+                'title' => $track->title,
+                'artist' => $track->artist,
+                'duration' => (float) $track->duration_seconds,
+                'audioUrl' => route('profile-music.stream', $track->id),
+                'coverImageUrl' => $track->cover_image_path
+                    ? PublicFileUrl::resolve($track->cover_image_path)
+                    : null,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('Community', [
             'workspace' => $workspace,
             'sectionName' => $section?->name ?? 'Your Section',
@@ -77,6 +97,7 @@ class CommunityController extends Controller
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
             'posts' => $posts,
+            'musicTracks' => $musicTracks,
             'trendingTopics' => $trendingTopics,
             'currentTab' => $tab,
             'stories' => $stories,
@@ -295,7 +316,7 @@ class CommunityController extends Controller
         $posts = CommunityPost::query()
             ->where('user_id', $user->id)
             ->when(! $isSelf, fn ($q) => $q->where('is_anonymous', false))
-            ->with(['section:id,name'])
+            ->with(['section:id,name', 'media', 'musicTrack'])
             ->latest()
             ->limit(50)
             ->get();
@@ -312,21 +333,50 @@ class CommunityController extends Controller
             ->pluck('post_id')
             ->all();
 
-        $postsData = $posts->map(fn (CommunityPost $p) => [
-            'id' => $p->id,
-            'content' => $p->content,
-            'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
-            'attachment_type' => $p->attachment_type,
-            'attachment_name' => $p->attachment_name,
-            'attachment_size' => $p->attachment_size,
-            'likes_count' => (int) $p->likes_count,
-            'comments_count' => (int) $p->comments_count,
-            'created_at' => $p->created_at->diffForHumans(short: true),
-            'is_liked' => in_array($p->id, $viewerLikedIds, true),
-            'is_bookmarked' => in_array($p->id, $viewerBookmarkedIds, true),
-            'is_anonymous' => (bool) $p->is_anonymous,
-            'section_name' => $p->section?->name ?? ($userSection?->name ?? 'Section'),
-        ])->all();
+        $postsData = $posts->map(function (CommunityPost $p) use ($viewerLikedIds, $viewerBookmarkedIds, $userSection) {
+            $mediaItems = $p->media->map(fn ($m) => [
+                'id' => $m->id,
+                'url' => PublicFileUrl::resolve($m->media_url),
+                'type' => $m->media_type,
+                'name' => $m->file_name,
+                'size' => $m->file_size,
+            ])->values()->all();
+
+            if (empty($mediaItems) && $p->attachment_url) {
+                $mediaItems = [[
+                    'id' => 0,
+                    'url' => PublicFileUrl::resolve($p->attachment_url),
+                    'type' => $p->attachment_type,
+                    'name' => $p->attachment_name,
+                    'size' => $p->attachment_size,
+                ]];
+            }
+
+            return [
+                'id' => $p->id,
+                'content' => $p->content,
+                'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
+                'attachment_type' => $p->attachment_type,
+                'attachment_name' => $p->attachment_name,
+                'attachment_size' => $p->attachment_size,
+                'media' => $mediaItems,
+                'music' => $p->musicTrack && $p->musicTrack->is_active ? [
+                    'id' => $p->musicTrack->id,
+                    'title' => $p->musicTrack->title,
+                    'artist' => $p->musicTrack->artist,
+                    'duration' => (float) $p->musicTrack->duration_seconds,
+                    'audio_url' => route('profile-music.stream', $p->musicTrack->id),
+                    'cover_image_url' => $p->musicTrack->cover_image_path ? PublicFileUrl::resolve($p->musicTrack->cover_image_path) : null,
+                ] : null,
+                'likes_count' => (int) $p->likes_count,
+                'comments_count' => (int) $p->comments_count,
+                'created_at' => $p->created_at->diffForHumans(short: true),
+                'is_liked' => in_array($p->id, $viewerLikedIds, true),
+                'is_bookmarked' => in_array($p->id, $viewerBookmarkedIds, true),
+                'is_anonymous' => (bool) $p->is_anonymous,
+                'section_name' => $p->section?->name ?? ($userSection?->name ?? 'Section'),
+            ];
+        })->all();
 
         // Saved lounge posts (only visible when viewing self)
         $savedPosts = [];
@@ -350,26 +400,55 @@ class CommunityController extends Controller
         if ($isSelf) {
             $saved = CommunityPost::query()
                 ->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id))
-                ->with(['user:id,public_id,name,avatar', 'section:id,name'])
+                ->with(['user:id,public_id,name,avatar', 'section:id,name', 'media', 'musicTrack'])
                 ->latest()
                 ->limit(50)
                 ->get();
 
-            $savedPosts = $saved->map(fn (CommunityPost $p) => [
-                'id' => $p->id,
-                'content' => $p->content,
-                'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
-                'attachment_type' => $p->attachment_type,
-                'attachment_name' => $p->attachment_name,
-                'attachment_size' => $p->attachment_size,
-                'likes_count' => (int) $p->likes_count,
-                'comments_count' => (int) $p->comments_count,
-                'created_at' => $p->created_at->diffForHumans(short: true),
-                'author_name' => $p->user?->name ?? 'Student',
-                'author_handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $p->user?->name ?? 'student')),
-                'author_avatar' => $p->user?->avatar ? PublicFileUrl::resolve($p->user->avatar) : null,
-                'section_name' => $p->section?->name ?? 'Section',
-            ])->all();
+            $savedPosts = $saved->map(function (CommunityPost $p) {
+                $mediaItems = $p->media->map(fn ($m) => [
+                    'id' => $m->id,
+                    'url' => PublicFileUrl::resolve($m->media_url),
+                    'type' => $m->media_type,
+                    'name' => $m->file_name,
+                    'size' => $m->file_size,
+                ])->values()->all();
+
+                if (empty($mediaItems) && $p->attachment_url) {
+                    $mediaItems = [[
+                        'id' => 0,
+                        'url' => PublicFileUrl::resolve($p->attachment_url),
+                        'type' => $p->attachment_type,
+                        'name' => $p->attachment_name,
+                        'size' => $p->attachment_size,
+                    ]];
+                }
+
+                return [
+                    'id' => $p->id,
+                    'content' => $p->content,
+                    'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
+                    'attachment_type' => $p->attachment_type,
+                    'attachment_name' => $p->attachment_name,
+                    'attachment_size' => $p->attachment_size,
+                    'media' => $mediaItems,
+                    'music' => $p->musicTrack && $p->musicTrack->is_active ? [
+                        'id' => $p->musicTrack->id,
+                        'title' => $p->musicTrack->title,
+                        'artist' => $p->musicTrack->artist,
+                        'duration' => (float) $p->musicTrack->duration_seconds,
+                        'audio_url' => route('profile-music.stream', $p->musicTrack->id),
+                        'cover_image_url' => $p->musicTrack->cover_image_path ? PublicFileUrl::resolve($p->musicTrack->cover_image_path) : null,
+                    ] : null,
+                    'likes_count' => (int) $p->likes_count,
+                    'comments_count' => (int) $p->comments_count,
+                    'created_at' => $p->created_at->diffForHumans(short: true),
+                    'author_name' => $p->user?->name ?? 'Student',
+                    'author_handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $p->user?->name ?? 'student')),
+                    'author_avatar' => $p->user?->avatar ? PublicFileUrl::resolve($p->user->avatar) : null,
+                    'section_name' => $p->section?->name ?? 'Section',
+                ];
+            })->all();
         }
 
         return Inertia::render('CommunityProfile', [
@@ -607,6 +686,8 @@ class CommunityController extends Controller
             ->with([
                 'user:id,public_id,name,avatar,level',
                 'section:id,name',
+                'media',
+                'musicTrack',
                 'comments' => fn ($q) => $q->whereNull('parent_id')
                     ->latest()
                     ->limit(10)
@@ -698,6 +779,38 @@ class CommunityController extends Controller
                 $authorSectionName = 'Anonymous';
             }
 
+            $mediaItems = $post->media->map(fn ($m) => [
+                'id' => $m->id,
+                'url' => PublicFileUrl::resolve($m->media_url),
+                'type' => $m->media_type,
+                'name' => $m->file_name,
+                'size' => $m->file_size,
+            ])->values()->all();
+
+            if (empty($mediaItems) && $post->attachment_url) {
+                $mediaItems = [[
+                    'id' => 0,
+                    'url' => PublicFileUrl::resolve($post->attachment_url),
+                    'type' => $post->attachment_type,
+                    'name' => $post->attachment_name,
+                    'size' => $post->attachment_size,
+                ]];
+            }
+
+            $musicData = null;
+            if ($post->musicTrack && $post->musicTrack->is_active) {
+                $musicData = [
+                    'id' => $post->musicTrack->id,
+                    'title' => $post->musicTrack->title,
+                    'artist' => $post->musicTrack->artist,
+                    'duration' => (float) $post->musicTrack->duration_seconds,
+                    'audio_url' => route('profile-music.stream', $post->musicTrack->id),
+                    'cover_image_url' => $post->musicTrack->cover_image_path
+                        ? PublicFileUrl::resolve($post->musicTrack->cover_image_path)
+                        : null,
+                ];
+            }
+
             return [
                 'id' => $post->id,
                 'content' => $post->content,
@@ -706,6 +819,8 @@ class CommunityController extends Controller
                 'attachment_type' => $post->attachment_type,
                 'attachment_name' => $post->attachment_name,
                 'attachment_size' => $post->attachment_size,
+                'media' => $mediaItems,
+                'music' => $musicData,
                 'likes_count' => (int) $post->likes_count,
                 'comments_count' => (int) $post->comments_count,
                 'is_liked' => in_array($post->id, $viewerLikedIds, true),

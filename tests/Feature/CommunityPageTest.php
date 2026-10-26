@@ -5,6 +5,7 @@ use App\Models\CommunityInvite;
 use App\Models\CommunityPost;
 use App\Models\CommunityProfileFeatured;
 use App\Models\CommunityStory;
+use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
@@ -250,6 +251,93 @@ it('allows creating a post with file attachment', function () {
     expect($post->attachment_type)->toBe('document');
     expect($post->attachment_name)->toBe('study_notes.pdf');
     Storage::disk('public')->assertExists($post->attachment_url);
+});
+
+it('allows creating a post with multiple images and attached music track', function () {
+    Storage::fake('public');
+
+    $track = ProfileMusicTrack::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'is_active' => true,
+    ]);
+
+    $img1 = UploadedFile::fake()->image('photo1.jpg', 600, 600);
+    $img2 = UploadedFile::fake()->image('photo2.png', 800, 800);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Campus gallery with music!',
+            'profile_music_track_id' => $track->id,
+            'attachments' => [$img1, $img2],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->profile_music_track_id)->toBe($track->id);
+    expect($post->media()->count())->toBe(2);
+
+    $media = $post->media()->get();
+    expect($media[0]->media_type)->toBe('image');
+    expect($media[0]->file_name)->toBe('photo1.jpg');
+    expect($media[0]->sort_order)->toBe(0);
+    expect($media[1]->file_name)->toBe('photo2.png');
+    expect($media[1]->sort_order)->toBe(1);
+
+    Storage::disk('public')->assertExists($media[0]->media_url);
+    Storage::disk('public')->assertExists($media[1]->media_url);
+});
+
+it('allows creating a media-only post with no caption', function () {
+    Storage::fake('public');
+
+    $img = UploadedFile::fake()->image('snap.jpg', 400, 400);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => '',
+            'attachments' => [$img],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->content)->toBe('');
+    expect($post->media()->count())->toBe(1);
+});
+
+it('allows creating a video post and returns media and music in the community feed', function () {
+    Storage::fake('public');
+
+    $track = ProfileMusicTrack::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'title' => 'Coding Lofi',
+        'is_active' => true,
+    ]);
+
+    $video = UploadedFile::fake()->create('project_demo.mp4', 5000, 'video/mp4');
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Check out our project demo!',
+            'profile_music_track_id' => $track->id,
+            'attachments' => [$video],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->media()->count())->toBe(1);
+    expect($post->media()->first()->media_type)->toBe('video');
+
+    $response = $this->actingAs($this->student)->get(route('community.index'));
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Community')
+        ->has('musicTracks')
+        ->where('posts.0.music.title', 'Coding Lofi')
+        ->where('posts.0.media.0.type', 'video')
+    );
 });
 
 it('allows toggling likes on a community post', function () {
