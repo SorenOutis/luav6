@@ -1567,6 +1567,13 @@ const previewAudio = ref<HTMLAudioElement | null>(null);
 const playingTrackId = ref<number | null>(null);
 const mediaFileInputRef = ref<HTMLInputElement | null>(null);
 
+// Section picker state for students with multiple sections
+const composerSectionId = ref<number | null>(
+    props.currentSectionId ?? props.availableSections?.[0]?.id ?? null,
+);
+const isComposerSectionDropdownOpen = ref(false);
+const isInlineSectionDropdownOpen = ref(false);
+
 const activeMediaItem = computed<ComposerMediaFile | null>(() => {
     return mediaFiles.value[activeMediaIndex.value] ?? null;
 });
@@ -1589,10 +1596,21 @@ const composerForm = useForm<{
 }>({
     content: '',
     is_anonymous: false,
-    section_id: null,
+    section_id:
+        props.currentSectionId ?? props.availableSections?.[0]?.id ?? null,
     profile_music_track_id: null,
     attachment: null,
     attachments: [],
+});
+
+const postingSectionName = computed(() => {
+    if (composerSectionId.value) {
+        const found = props.availableSections?.find(
+            (s) => s.id === composerSectionId.value,
+        );
+        if (found) return found.name;
+    }
+    return sectionDisplayName.value;
 });
 
 const revokeMediaPreviews = () => {
@@ -1724,7 +1742,8 @@ const submitMediaPost = () => {
         return;
     }
 
-    composerForm.section_id = selectedSectionId.value;
+    composerForm.section_id =
+        composerSectionId.value ?? selectedSectionId.value;
     composerForm.profile_music_track_id = selectedMusicTrackId.value;
     composerForm.attachments = mediaFiles.value.map((m) => m.file);
     composerForm.attachment = mediaFiles.value[0]?.file ?? null;
@@ -1903,7 +1922,8 @@ const submitPost = () => {
         return;
     }
 
-    composerForm.section_id = selectedSectionId.value;
+    composerForm.section_id =
+        composerSectionId.value ?? selectedSectionId.value;
     composerForm.profile_music_track_id = null;
     composerForm.attachments = [];
 
@@ -2890,6 +2910,26 @@ const handleDocumentClick = (e: MouseEvent) => {
             resumeStory();
         }
     }
+    if (isComposerSectionDropdownOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="composer-modal-section-menu"]') &&
+            !target.closest('[data-test="composer-modal-section-trigger"]')
+        ) {
+            isComposerSectionDropdownOpen.value = false;
+        }
+    }
+    if (isInlineSectionDropdownOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="inline-composer-section-menu"]') &&
+            !target.closest('[data-test="inline-composer-section-trigger"]')
+        ) {
+            isInlineSectionDropdownOpen.value = false;
+        }
+    }
 };
 
 if (typeof window !== 'undefined') {
@@ -3391,6 +3431,82 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         >Post anonymously</span
                                                     >
                                                 </label>
+
+                                                <!-- Section Picker for Multi-Section Students -->
+                                                <div
+                                                    v-if="
+                                                        props.availableSections &&
+                                                        props.availableSections
+                                                            .length > 1
+                                                    "
+                                                    class="relative ml-2"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground transition hover:border-border hover:bg-muted"
+                                                        data-test="inline-composer-section-trigger"
+                                                        title="Choose posting section"
+                                                        @click.stop="
+                                                            isInlineSectionDropdownOpen =
+                                                                !isInlineSectionDropdownOpen
+                                                        "
+                                                    >
+                                                        <Users
+                                                            class="h-3 w-3 text-brand"
+                                                        />
+                                                        <span
+                                                            class="max-w-[100px] truncate sm:max-w-[130px]"
+                                                            >{{
+                                                                postingSectionName
+                                                            }}</span
+                                                        >
+                                                        <ChevronDown
+                                                            class="h-2.5 w-2.5 text-muted-foreground"
+                                                        />
+                                                    </button>
+
+                                                    <div
+                                                        v-if="
+                                                            isInlineSectionDropdownOpen
+                                                        "
+                                                        class="absolute bottom-full left-0 z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10"
+                                                        data-test="inline-composer-section-menu"
+                                                    >
+                                                        <button
+                                                            v-for="sec in props.availableSections"
+                                                            :key="sec.id"
+                                                            type="button"
+                                                            class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition hover:bg-muted"
+                                                            :class="
+                                                                sec.id ===
+                                                                composerSectionId
+                                                                    ? 'bg-brand/10 font-bold text-brand'
+                                                                    : 'text-foreground'
+                                                            "
+                                                            @click="
+                                                                composerSectionId =
+                                                                    sec.id;
+                                                                composerForm.section_id =
+                                                                    sec.id;
+                                                                isInlineSectionDropdownOpen = false;
+                                                            "
+                                                        >
+                                                            <span
+                                                                class="truncate"
+                                                                >{{
+                                                                    sec.name
+                                                                }}</span
+                                                            >
+                                                            <Check
+                                                                v-if="
+                                                                    sec.id ===
+                                                                    composerSectionId
+                                                                "
+                                                                class="h-3.5 w-3.5 shrink-0 text-brand"
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div
@@ -6971,12 +7087,78 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 >
                                     {{ currentUserName }}
                                 </h3>
-                                <p class="text-[11px] text-muted-foreground">
-                                    Posting to
-                                    <span class="font-medium text-foreground">
+                                <div class="mt-0.5 flex items-center gap-1.5">
+                                    <span
+                                        class="text-[11px] text-muted-foreground"
+                                        >Posting to</span
+                                    >
+                                    <div
+                                        v-if="
+                                            props.availableSections &&
+                                            props.availableSections.length > 1
+                                        "
+                                        class="relative"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-95"
+                                            data-test="composer-modal-section-trigger"
+                                            @click.stop="
+                                                isComposerSectionDropdownOpen =
+                                                    !isComposerSectionDropdownOpen
+                                            "
+                                        >
+                                            <span
+                                                class="max-w-[130px] truncate sm:max-w-[170px]"
+                                                >{{ postingSectionName }}</span
+                                            >
+                                            <ChevronDown
+                                                class="h-3 w-3 text-muted-foreground"
+                                            />
+                                        </button>
+
+                                        <div
+                                            v-if="isComposerSectionDropdownOpen"
+                                            class="absolute top-full left-0 z-50 mt-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10"
+                                            data-test="composer-modal-section-menu"
+                                        >
+                                            <button
+                                                v-for="sec in props.availableSections"
+                                                :key="sec.id"
+                                                type="button"
+                                                class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition hover:bg-muted"
+                                                :class="
+                                                    sec.id === composerSectionId
+                                                        ? 'bg-brand/10 font-bold text-brand'
+                                                        : 'text-foreground'
+                                                "
+                                                @click="
+                                                    composerSectionId = sec.id;
+                                                    composerForm.section_id =
+                                                        sec.id;
+                                                    isComposerSectionDropdownOpen = false;
+                                                "
+                                            >
+                                                <span class="truncate">{{
+                                                    sec.name
+                                                }}</span>
+                                                <Check
+                                                    v-if="
+                                                        sec.id ===
+                                                        composerSectionId
+                                                    "
+                                                    class="h-3.5 w-3.5 shrink-0 text-brand"
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span
+                                        v-else
+                                        class="text-xs font-semibold text-foreground"
+                                    >
                                         {{ sectionDisplayName }}
                                     </span>
-                                </p>
+                                </div>
                             </div>
                         </div>
 

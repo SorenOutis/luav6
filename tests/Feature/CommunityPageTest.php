@@ -235,6 +235,26 @@ it('allows authenticated student to create a community post', function () {
     ]);
 });
 
+it('allows a student enrolled in multiple sections to choose which section to post to', function () {
+    $sectionA = Section::factory()->create(['name' => 'Section A', 'workspace_id' => $this->workspace->id]);
+    $sectionB = Section::factory()->create(['name' => 'Section B', 'workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach([$sectionA->id, $sectionB->id]);
+
+    // Student explicitly posts to Section B
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Important update for Section B classmates!',
+            'section_id' => $sectionB->id,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_posts', [
+        'user_id' => $this->student->id,
+        'section_id' => $sectionB->id,
+        'content' => 'Important update for Section B classmates!',
+    ]);
+});
+
 it('allows creating a post with file attachment', function () {
     Storage::fake('public');
 

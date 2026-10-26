@@ -4056,5 +4056,93 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
             ).toContain('4 post likes');
         });
+
+        it('allows choosing which section a post will be displayed in when student has multiple sections', async () => {
+            const multiSections = [
+                { id: 101, name: 'BSIT 3-A' },
+                { id: 102, name: 'Section Beta' },
+            ];
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    availableSections: multiSections,
+                    currentSectionId: 101,
+                },
+            });
+
+            // Inline composer shows the section trigger
+            const inlineSectionTrigger = wrapper.find(
+                '[data-test="inline-composer-section-trigger"]',
+            );
+            expect(inlineSectionTrigger.exists()).toBe(true);
+            expect(inlineSectionTrigger.text()).toContain('BSIT 3-A');
+
+            // Open section picker in inline composer
+            await inlineSectionTrigger.trigger('click');
+            await nextTick();
+
+            const inlineMenu = wrapper.find(
+                '[data-test="inline-composer-section-menu"]',
+            );
+            expect(inlineMenu.exists()).toBe(true);
+
+            // Select Section Beta
+            const betaBtn = inlineMenu
+                .findAll('button')
+                .find((b) => b.text().includes('Section Beta'));
+            expect(betaBtn).toBeDefined();
+            await betaBtn!.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper
+                    .find('[data-test="inline-composer-section-trigger"]')
+                    .text(),
+            ).toContain('Section Beta');
+
+            // Now open media composer modal
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            // Modal shows chosen posting section
+            const modalSectionTrigger = wrapper.find(
+                '[data-test="composer-modal-section-trigger"]',
+            );
+            expect(modalSectionTrigger.exists()).toBe(true);
+            expect(modalSectionTrigger.text()).toContain('Section Beta');
+
+            // Change section inside modal back to BSIT 3-A
+            await modalSectionTrigger.trigger('click');
+            await nextTick();
+
+            const modalMenu = wrapper.find(
+                '[data-test="composer-modal-section-menu"]',
+            );
+            expect(modalMenu.exists()).toBe(true);
+
+            const aBtn = modalMenu
+                .findAll('button')
+                .find((b) => b.text().includes('BSIT 3-A'));
+            expect(aBtn).toBeDefined();
+            await aBtn!.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper
+                    .find('[data-test="composer-modal-section-trigger"]')
+                    .text(),
+            ).toContain('BSIT 3-A');
+        });
     });
 });

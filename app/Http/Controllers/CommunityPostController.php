@@ -53,9 +53,15 @@ class CommunityPostController extends Controller
 
         $section = null;
         if (! empty($validated['section_id'])) {
-            $section = Section::query()
+            $candidate = Section::query()
                 ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
                 ->find($validated['section_id']);
+
+            if ($candidate) {
+                if ($viewer->is_admin || $viewer->sections()->where('sections.id', $candidate->id)->exists()) {
+                    $section = $candidate;
+                }
+            }
         }
 
         if (! $section) {
