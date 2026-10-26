@@ -328,7 +328,7 @@ class CommunityPostController extends Controller
         }
 
         $isLiked = false;
-        DB::transaction(function () use ($viewer, $media, $post, &$isLiked) {
+        DB::transaction(function () use ($viewer, $media, &$isLiked) {
             $existing = CommunityPostMediaLike::where('post_media_id', $media->id)
                 ->where('user_id', $viewer->id)
                 ->lockForUpdate()
@@ -346,20 +346,6 @@ class CommunityPostController extends Controller
                 ]);
                 $media->increment('likes_count');
                 $isLiked = true;
-
-                // When user reacts to an image/video, count as a reaction to the whole post if not already reacted
-                $postLiked = CommunityPostLike::where('post_id', $post->id)
-                    ->where('user_id', $viewer->id)
-                    ->exists();
-
-                if (! $postLiked) {
-                    CommunityPostLike::create([
-                        'post_id' => $post->id,
-                        'user_id' => $viewer->id,
-                        'created_at' => now(),
-                    ]);
-                    $post->increment('likes_count');
-                }
             }
         });
 

@@ -3854,13 +3854,35 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             );
             expect(bentoItems.length).toBe(2);
 
-            // Feed card does not render action bar / comment section when post has media
+            // Feed card renders action bar and comments for the whole post
             expect(
                 wrapper.find('[data-test="post-like-button"]').exists(),
-            ).toBe(false);
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="post-comments-toggle-button"]')
+                    .exists(),
+            ).toBe(true);
         });
 
-        it('opens lightbox modal when clicking an image in the feed post and allows navigation and comments', async () => {
+        it('keeps post threads in the feed and media threads in the lightbox during navigation', async () => {
+            const mediaComment = {
+                id: 801,
+                author_name: 'David Kim',
+                author_handle: 'david.kim',
+                content: 'Great first photo!',
+                created_at: '4m ago',
+                replies: [
+                    {
+                        id: 802,
+                        parent_id: 801,
+                        author_name: 'Alex Rivera',
+                        author_handle: 'alex.rivera',
+                        content: 'Photo reply only',
+                        created_at: '3m ago',
+                    },
+                ],
+            };
             const feedPost = {
                 id: 201,
                 content: 'Graduation day pictures!',
@@ -3885,12 +3907,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                         url: '/storage/photo1.jpg',
                         type: 'image',
                         name: 'photo1.jpg',
+                        comments: [mediaComment],
+                        comments_count: 2,
                     },
                     {
                         id: 2,
                         url: '/storage/photo2.jpg',
                         type: 'image',
                         name: 'photo2.jpg',
+                        comments: [],
+                        comments_count: 0,
                     },
                 ],
                 comments: [
@@ -3900,6 +3926,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                         author_handle: 'sarah.chen',
                         content: 'Congratulations Alex!',
                         created_at: '5m ago',
+                        replies: [
+                            {
+                                id: 702,
+                                parent_id: 701,
+                                author_name: 'Alex Rivera',
+                                author_handle: 'alex.rivera',
+                                content: 'Whole-post reply only',
+                                created_at: '4m ago',
+                            },
+                        ],
                     },
                 ],
             };
@@ -3914,6 +3950,23 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(
                 wrapper.find('[data-test="post-lightbox-modal"]').exists(),
             ).toBe(false);
+            const feed = wrapper.find('article');
+            expect(feed.find('[data-test="post-like-button"]').exists()).toBe(
+                true,
+            );
+            expect(
+                feed.find('input[placeholder="Add a comment…"]').exists(),
+            ).toBe(true);
+            expect(feed.find('[data-test="comment-item"]').text()).toContain(
+                'Congratulations Alex!',
+            );
+            expect(feed.text()).not.toContain('Great first photo!');
+            await feed
+                .find('[data-test="toggle-replies-button"]')
+                .trigger('click');
+            expect(feed.find('[data-test="reply-item"]').text()).toContain(
+                'Whole-post reply only',
+            );
 
             // Click the image in the feed post
             await wrapper
@@ -3933,13 +3986,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 wrapper.find('[data-test="lightbox-post-content"]').text(),
             ).toContain('Graduation day pictures!');
 
-            // Lightbox shows existing comments
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
             expect(
-                wrapper.find('[data-test="lightbox-comment-item"]').exists(),
-            ).toBe(true);
-            expect(
-                wrapper.find('[data-test="lightbox-comment-item"]').text(),
-            ).toContain('Congratulations Alex!');
+                lightbox.find('[data-test="lightbox-comment-item"]').text(),
+            ).toContain('Great first photo!');
+            expect(lightbox.text()).toContain('Photo reply only');
+            expect(lightbox.text()).toContain('Comments (2)');
+            expect(lightbox.text()).not.toContain('Congratulations Alex!');
+            expect(lightbox.text()).not.toContain('Whole-post reply only');
 
             // Carousel navigation inside lightbox
             expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
@@ -3953,6 +4007,16 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
                 '2 / 2',
             );
+            expect(
+                lightbox.find('[data-test="lightbox-comment-item"]').exists(),
+            ).toBe(false);
+            expect(lightbox.text()).toContain('Comments (0)');
+            expect(lightbox.text()).toContain('No comments yet.');
+            expect(lightbox.text()).not.toContain('Congratulations Alex!');
+            expect(lightbox.text()).not.toContain('Great first photo!');
+            expect(feed.find('[data-test="comment-item"]').text()).toContain(
+                'Congratulations Alex!',
+            );
 
             // Close lightbox on desktop close button
             await wrapper
@@ -3965,7 +4029,86 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             ).toBe(false);
         });
 
-        it('tracks different reactions on each image and contributes to whole post reactions', async () => {
+        it('keeps legacy attachment interactions on the whole post without inventing media state', async () => {
+            vi.useFakeTimers();
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [
+                        {
+                            id: 250,
+                            content: 'Legacy photo',
+                            created_at: '1h ago',
+                            attachment_url: '/storage/legacy.jpg',
+                            attachment_type: 'image',
+                            likes_count: 2,
+                            comments_count: 1,
+                            is_liked: true,
+                            is_bookmarked: false,
+                            author: {
+                                id: '1',
+                                name: 'Alex Rivera',
+                                handle: 'alex.rivera',
+                                is_same_section: true,
+                                is_masked: false,
+                                is_following: false,
+                            },
+                            media: [
+                                {
+                                    id: 0,
+                                    url: '/storage/legacy.jpg',
+                                    type: 'image',
+                                    likes_count: 0,
+                                    is_liked: false,
+                                    comments: [],
+                                    comments_count: 0,
+                                },
+                            ],
+                            comments: [
+                                {
+                                    id: 750,
+                                    author_name: 'Sarah Chen',
+                                    author_handle: 'sarah.chen',
+                                    content: 'Legacy whole-post comment',
+                                    created_at: '30m ago',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+            await wrapper
+                .find('[data-test="post-media-image"]')
+                .trigger('click');
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
+            const likeButton = lightbox.find(
+                '[data-test="lightbox-like-button"]',
+            );
+            expect(likeButton.text()).toBe('2');
+            expect(likeButton.classes()).toContain('text-rose-500');
+            expect(lightbox.text()).toContain('Legacy whole-post comment');
+            expect(lightbox.text()).toContain('Comments (1)');
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: false, likes_count: 1 },
+            });
+            await likeButton.trigger('click');
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenCalledWith(
+                '/community/posts/250/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(likeButton.text()).toBe('1');
+            expect(likeButton.classes()).not.toContain('text-rose-500');
+            expect(wrapper.find('[data-test="post-like-button"]').text()).toBe(
+                '1',
+            );
+            wrapper.unmount();
+            vi.useRealTimers();
+        });
+
+        it('keeps optimistic and persisted media likes separate from post likes', async () => {
+            vi.useFakeTimers();
             const multiImagePost = {
                 id: 301,
                 content: 'Check out these designs',
@@ -4051,10 +4194,270 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(
                 wrapper.find('[data-test="lightbox-like-button"]').text(),
             ).toBe('5');
-            // Whole post total likes incremented to 4
             expect(
                 wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
-            ).toContain('4 post likes');
+            ).toContain('3 post likes');
+            const postLike = wrapper.find('[data-test="post-like-button"]');
+            expect(postLike.text()).toBe('3');
+            expect(postLike.classes()).not.toContain('text-rose-500');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: true, likes_count: 5 },
+            });
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenCalledWith(
+                '/community/media/501/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+            expect(postLike.text()).toBe('3');
+            expect(postLike.classes()).not.toContain('text-rose-500');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: true, likes_count: 4 },
+            });
+            await postLike.trigger('click');
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/301/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(postLike.text()).toBe('4');
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('5');
+
+            await wrapper
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('1');
+            expect(postLike.text()).toBe('4');
+            wrapper.unmount();
+            vi.useRealTimers();
+        });
+
+        it('submits post and media comments and replies without mixing threads, counts, or drafts', async () => {
+            const postComment = {
+                id: 901,
+                author_name: 'Sarah Chen',
+                author_handle: 'sarah.chen',
+                content: 'Whole-post thread',
+                created_at: '5m ago',
+                replies: [],
+            };
+            const mediaComment = {
+                id: 902,
+                author_name: 'David Kim',
+                author_handle: 'david.kim',
+                content: 'First-photo thread',
+                created_at: '4m ago',
+                replies: [],
+            };
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [
+                        {
+                            id: 401,
+                            content: 'Independent conversations',
+                            created_at: '10m ago',
+                            likes_count: 0,
+                            comments_count: 1,
+                            is_liked: false,
+                            is_bookmarked: false,
+                            author: {
+                                id: '1',
+                                name: 'Alex Rivera',
+                                handle: 'alex.rivera',
+                                is_same_section: true,
+                                is_masked: false,
+                                is_following: false,
+                            },
+                            comments: [postComment],
+                            media: [
+                                {
+                                    id: 601,
+                                    url: '/storage/first.jpg',
+                                    type: 'image',
+                                    comments: [mediaComment],
+                                    comments_count: 1,
+                                },
+                                {
+                                    id: 602,
+                                    url: '/storage/second.jpg',
+                                    type: 'image',
+                                    comments: [],
+                                    comments_count: 0,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+            const feed = wrapper.find('article');
+            const feedInput = feed.find('input[placeholder="Add a comment…"]');
+            await feedInput.setValue('Post draft stays here');
+            await feed
+                .findAll('[data-test="bento-media-item"]')[0]
+                .trigger('click');
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
+            const mediaInput = lightbox.find(
+                '[data-test="lightbox-comment-input"]',
+            );
+            expect((mediaInput.element as HTMLInputElement).value).toBe('');
+
+            const mediaReply = {
+                id: 903,
+                parent_id: 902,
+                author_name: 'Alex Rivera',
+                author_handle: 'alex.rivera',
+                content: 'Reply to first photo',
+                created_at: 'just now',
+            };
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { comment: mediaReply, comments_count: 2 },
+            });
+            const replyButton = lightbox
+                .find('[data-test="lightbox-comment-item"]')
+                .findAll('button')
+                .find((button) => button.text() === 'Reply');
+            await replyButton!.trigger('click');
+            await mediaInput.setValue(mediaReply.content);
+            await lightbox
+                .find('[data-test="lightbox-submit-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                {
+                    content: mediaReply.content,
+                    parent_id: 902,
+                    post_media_id: 601,
+                },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(lightbox.text()).toContain(mediaReply.content);
+            expect(lightbox.text()).toContain('Comments (2)');
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '1',
+            );
+            expect(feed.text()).not.toContain(mediaReply.content);
+            expect((feedInput.element as HTMLInputElement).value).toBe(
+                'Post draft stays here',
+            );
+
+            await mediaInput.setValue('First-photo draft');
+            await lightbox
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            expect((mediaInput.element as HTMLInputElement).value).toBe('');
+            expect(lightbox.text()).toContain('Comments (0)');
+            const secondComment = {
+                id: 904,
+                author_name: 'Alex Rivera',
+                author_handle: 'alex.rivera',
+                content: 'Second-photo comment',
+                created_at: 'just now',
+            };
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { comment: secondComment, comments_count: 1 },
+            });
+            await mediaInput.setValue(secondComment.content);
+            await lightbox
+                .find('[data-test="lightbox-submit-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                {
+                    content: secondComment.content,
+                    parent_id: null,
+                    post_media_id: 602,
+                },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(lightbox.text()).toContain('Comments (1)');
+            expect(lightbox.text()).toContain(secondComment.content);
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '1',
+            );
+            await lightbox
+                .find('[data-test="lightbox-prev-button"]')
+                .trigger('click');
+            expect((mediaInput.element as HTMLInputElement).value).toBe(
+                'First-photo draft',
+            );
+            expect(lightbox.text()).toContain(mediaReply.content);
+            expect(lightbox.text()).not.toContain(secondComment.content);
+            expect(lightbox.text()).toContain('Comments (2)');
+            await lightbox
+                .find('[data-test="lightbox-sidebar-close"]')
+                .trigger('click');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    comment: {
+                        ...postComment,
+                        id: 905,
+                        content: 'Post draft stays here',
+                    },
+                    comments_count: 2,
+                },
+            });
+            await feed
+                .find('[data-test="post-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                { content: 'Post draft stays here', parent_id: null },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '2',
+            );
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    comment: {
+                        ...postComment,
+                        id: 906,
+                        parent_id: 901,
+                        content: 'Post reply stays here',
+                    },
+                    comments_count: 3,
+                },
+            });
+            await feed
+                .find('[data-test="comment-reply-button"]')
+                .trigger('click');
+            await feedInput.setValue('Post reply stays here');
+            await feed
+                .find('[data-test="post-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                { content: 'Post reply stays here', parent_id: 901 },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '3',
+            );
+            expect(feed.find('[data-test="reply-item"]').text()).toContain(
+                'Post reply stays here',
+            );
+            await feed
+                .findAll('[data-test="bento-media-item"]')[0]
+                .trigger('click');
+            const reopened = wrapper.find('[data-test="post-lightbox-modal"]');
+            expect(reopened.text()).toContain('Comments (2)');
+            expect(reopened.text()).not.toContain('Post reply stays here');
+            expect(reopened.text()).not.toContain('Post draft stays here');
+            wrapper.unmount();
         });
 
         it('allows choosing which section a post will be displayed in when student has multiple sections', async () => {

@@ -37,16 +37,22 @@ class CommunityCommentController extends Controller
             'post_media_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('community_post_media', 'id')->where('post_id', $post->id),
+                Rule::exists(CommunityPostMedia::class, 'id')->where('post_id', $post->id),
             ],
             'parent_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('community_comments', 'id')->where('post_id', $post->id),
+                Rule::exists(CommunityComment::class, 'id')
+                    ->where('post_id', $post->id)
+                    ->where('post_media_id', $request->input('post_media_id')),
             ],
         ]);
 
-        $comment = DB::transaction(function () use ($viewer, $post, $validated) {
+        $target = isset($validated['post_media_id'])
+            ? $post->media()->findOrFail($validated['post_media_id'])
+            : $post;
+
+        $comment = DB::transaction(function () use ($viewer, $post, $target, $validated) {
             $created = CommunityComment::create([
                 'post_id' => $post->id,
                 'post_media_id' => $validated['post_media_id'] ?? null,
@@ -55,12 +61,7 @@ class CommunityCommentController extends Controller
                 'content' => $validated['content'],
             ]);
 
-            $post->increment('comments_count');
-
-            if (! empty($validated['post_media_id'])) {
-                $media = CommunityPostMedia::find($validated['post_media_id']);
-                $media?->increment('comments_count');
-            }
+            $target->increment('comments_count');
 
             return $created;
         });
@@ -84,7 +85,7 @@ class CommunityCommentController extends Controller
                     'is_liked' => false,
                     'replies' => [],
                 ],
-                'comments_count' => (int) $post->fresh()->comments_count,
+                'comments_count' => (int) $target->fresh()->comments_count,
             ]);
         }
 
@@ -135,7 +136,7 @@ class CommunityCommentController extends Controller
         $isPostOwner = $post && (int) $post->user_id === (int) $viewer->id;
         abort_unless($viewer->id === $comment->user_id || $isPostOwner || $viewer->is_admin, 403);
 
-        $comment->delete();
+        DB::transaction(fn () => $comment->delete());
 
         if ($request->wantsJson()) {
             return response()->json(['status' => 'deleted']);

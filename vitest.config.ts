@@ -52,6 +52,15 @@ export default defineConfig({
                 ),
             },
             {
+                find: '@/routes/community',
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/routes_temp/routes/community',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
                 find: '@motionone/vue',
                 replacement: fileURLToPath(
                     new URL(

@@ -50,18 +50,17 @@ class CommunityComment extends Model
     protected static function booted(): void
     {
         static::deleting(function (CommunityComment $comment): void {
-            $decrement = 1 + $comment->replies()->count();
-            $post = CommunityPost::withoutGlobalScopes()->find($comment->post_id);
-
-            if ($post && $post->comments_count > 0) {
-                $post->decrement('comments_count', min($post->comments_count, $decrement));
+            // Database cascades skip model events, so delete descendants explicitly for scoped counters.
+            foreach ($comment->replies()->get() as $reply) {
+                $reply->delete();
             }
 
-            if ($comment->post_media_id) {
-                $media = CommunityPostMedia::find($comment->post_media_id);
-                if ($media && $media->comments_count > 0) {
-                    $media->decrement('comments_count', min($media->comments_count, $decrement));
-                }
+            $target = $comment->post_media_id !== null
+                ? CommunityPostMedia::find($comment->post_media_id)
+                : CommunityPost::withoutGlobalScopes()->find($comment->post_id);
+
+            if ($target && $target->comments_count > 0) {
+                $target->decrement('comments_count');
             }
         });
     }

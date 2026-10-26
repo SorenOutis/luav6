@@ -11,6 +11,7 @@ use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\StudentPageRegistry;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -390,7 +391,7 @@ it('allows toggling likes on a community post', function () {
     expect($post->fresh()->likes_count)->toBe(0);
 });
 
-it('allows toggling likes on specific media items and counts toward whole post', function () {
+it('keeps media likes independent from whole post and sibling media likes', function () {
     $post = CommunityPost::factory()->create([
         'workspace_id' => $this->workspace->id,
         'user_id' => $this->student->id,
@@ -414,14 +415,18 @@ it('allows toggling likes on specific media items and counts toward whole post',
         'likes_count' => 0,
     ]);
 
-    // Liking media1
     $this->actingAs($this->student)
-        ->post(route('community.media.like', $media1))
-        ->assertRedirect();
+        ->postJson(route('community.media.like', $media1))
+        ->assertOk()
+        ->assertJsonPath('is_liked', true)
+        ->assertJsonPath('likes_count', 1)
+        ->assertJsonPath('post_likes_count', 0)
+        ->assertJsonPath('post_is_liked', false);
 
     expect($media1->fresh()->likes_count)->toBe(1);
     expect($media2->fresh()->likes_count)->toBe(0);
-    expect($post->fresh()->likes_count)->toBe(1);
+    expect($post->fresh()->likes_count)->toBe(0);
+    expect($post->likes()->count())->toBe(0);
 
     $this->assertDatabaseHas('community_post_media_likes', [
         'post_media_id' => $media1->id,
@@ -432,13 +437,38 @@ it('allows toggling likes on specific media items and counts toward whole post',
         'user_id' => $this->student->id,
     ]);
 
-    // Unliking media1
-    $this->actingAs($this->student)
-        ->post(route('community.media.like', $media1))
-        ->assertRedirect();
+    $this->postJson(route('community.media.like', $media2))
+        ->assertOk()
+        ->assertJsonPath('post_likes_count', 0)
+        ->assertJsonPath('post_is_liked', false);
+
+    $this->postJson(route('community.posts.like', $post))
+        ->assertOk()
+        ->assertJsonPath('likes_count', 1);
+
+    expect($media1->fresh()->likes_count)->toBe(1);
+    expect($media2->fresh()->likes_count)->toBe(1);
+
+    $this->postJson(route('community.media.like', $media1))
+        ->assertOk()
+        ->assertJsonPath('is_liked', false)
+        ->assertJsonPath('likes_count', 0)
+        ->assertJsonPath('post_likes_count', 1)
+        ->assertJsonPath('post_is_liked', true);
 
     expect($media1->fresh()->likes_count)->toBe(0);
-    expect($media2->fresh()->likes_count)->toBe(0);
+    expect($media2->fresh()->likes_count)->toBe(1);
+    expect($post->fresh()->likes_count)->toBe(1);
+    expect($post->likes()->count())->toBe(1);
+    expect($media1->likes()->count())->toBe(0);
+
+    $this->postJson(route('community.posts.like', $post))
+        ->assertOk()
+        ->assertJsonPath('likes_count', 0);
+
+    expect($post->likes()->count())->toBe(0);
+    expect($media2->fresh()->likes_count)->toBe(1);
+    expect($media2->likes()->count())->toBe(1);
 });
 
 it('allows adding comments specifically to a media item in a post', function () {
@@ -468,10 +498,11 @@ it('allows adding comments specifically to a media item in a post', function () 
                 'content' => 'Nice bottle of wine!',
                 'post_media_id' => $media->id,
             ],
-        ]);
+        ])
+        ->assertJsonPath('comments_count', 1);
 
     expect($media->fresh()->comments_count)->toBe(1);
-    expect($post->fresh()->comments_count)->toBe(1);
+    expect($post->fresh()->comments_count)->toBe(0);
 
     $this->assertDatabaseHas('community_comments', [
         'post_id' => $post->id,
@@ -479,6 +510,388 @@ it('allows adding comments specifically to a media item in a post', function () 
         'content' => 'Nice bottle of wine!',
     ]);
 });
+
+it('keeps comment and reply counters scoped to their targets', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+
+    $this->actingAs($this->student);
+
+    $mediaComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media comment',
+        'post_media_id' => $media->id,
+    ])->assertOk()->assertJsonPath('comments_count', 1)->json('comment');
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media reply',
+        'post_media_id' => $media->id,
+        'parent_id' => $mediaComment['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2);
+
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(2);
+    expect($sibling->fresh()->comments_count)->toBe(0);
+
+    $postComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post comment',
+        'post_media_id' => null,
+    ])->assertOk()->assertJsonPath('comments_count', 1)->json('comment');
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post reply',
+        'parent_id' => $postComment['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2);
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Sibling comment',
+        'post_media_id' => $sibling->id,
+    ])->assertOk()->assertJsonPath('comments_count', 1);
+
+    expect($post->fresh()->comments_count)->toBe(2);
+    expect($media->fresh()->comments_count)->toBe(2);
+    expect($sibling->fresh()->comments_count)->toBe(1);
+});
+
+it('rejects parents outside the exact comment target without changing counters', function (string $parentScope, string $targetScope, bool $omitMedia) {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $otherPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+    $otherMedia = $otherPost->media()->create(['media_url' => 'other.jpg', 'media_type' => 'image']);
+    $mediaIds = ['post' => null, 'media' => $media->id, 'sibling' => $sibling->id, 'other post' => null, 'other media' => $otherMedia->id];
+    $parent = CommunityComment::create([
+        'post_id' => in_array($parentScope, ['other post', 'other media'], true) ? $otherPost->id : $post->id,
+        'post_media_id' => $mediaIds[$parentScope],
+        'user_id' => $this->student->id,
+        'content' => 'Existing parent',
+    ]);
+    $payload = ['content' => 'Invalid reply', 'parent_id' => $parent->id];
+    if (! $omitMedia) {
+        $payload['post_media_id'] = $mediaIds[$targetScope];
+    }
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('parent_id');
+
+    expect(CommunityComment::count())->toBe(1);
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($otherPost->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(0);
+    expect($sibling->fresh()->comments_count)->toBe(0);
+    expect($otherMedia->fresh()->comments_count)->toBe(0);
+})->with([
+    'media parent with omitted media target' => ['media', 'post', true],
+    'media parent with null media target' => ['media', 'post', false],
+    'post parent with media target' => ['post', 'media', false],
+    'sibling media parent' => ['sibling', 'media', false],
+    'other post parent with post target' => ['other post', 'post', true],
+    'other post parent with media target' => ['other post', 'media', false],
+    'other media parent' => ['other media', 'media', false],
+]);
+
+it('rejects a media target from another post without creating a comment', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $otherPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $otherPost->media()->create(['media_url' => 'other.jpg', 'media_type' => 'image']);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), [
+            'content' => 'Invalid media comment',
+            'post_media_id' => $media->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('post_media_id');
+
+    expect(CommunityComment::count())->toBe(0);
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($otherPost->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(0);
+});
+
+it('reloads isolated post and media threads and reactions across lounge feeds and profiles', function (string $view) {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'comments_count' => 2,
+    ]);
+    $media = $post->media()->create([
+        'media_url' => 'photo.jpg',
+        'media_type' => 'image',
+        'comments_count' => 2,
+    ]);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video', 'sort_order' => 1]);
+    $postComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Legacy unscoped post comment',
+    ]);
+    $postReply = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $postComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post reply',
+    ]);
+    $mediaComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'user_id' => $this->student->id,
+        'content' => 'Photo comment',
+    ]);
+    $mediaReply = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'parent_id' => $mediaComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Photo reply',
+    ]);
+    $otherUser = User::factory()->create();
+    $mediaComment->likes()->create(['user_id' => $otherUser->id]);
+    $mediaComment->update(['likes_count' => 1]);
+    $post->bookmarks()->create(['user_id' => $this->student->id]);
+
+    $this->actingAs($this->student);
+    foreach ([$postComment, $mediaReply] as $comment) {
+        $this->postJson(route('community.comments.like', $comment))->assertOk();
+    }
+    $this->postJson(route('community.media.like', $media))->assertOk();
+
+    $isProfile = in_array($view, ['profile', 'saved profile'], true);
+    $prefix = match ($view) {
+        'profile' => 'profile.posts.0',
+        'saved profile' => 'profile.saved_posts.0',
+        default => 'posts.0',
+    };
+    $url = $isProfile
+        ? route('community.users.show', $this->student)
+        : route('community.index', $view === 'saved feed' ? ['tab' => 'saved'] : []);
+    $preventedLazyLoading = Model::preventsLazyLoading();
+    Model::preventLazyLoading();
+
+    try {
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component($isProfile ? 'CommunityProfile' : 'Community')
+                ->where($prefix.'.id', $post->id)
+                ->where($prefix.'.likes_count', 0)
+                ->where($prefix.'.is_liked', false)
+                ->where($prefix.'.comments_count', 2)
+                ->has($prefix.'.comments', 1)
+                ->where($prefix.'.comments.0.id', $postComment->id)
+                ->where($prefix.'.comments.0.post_media_id', null)
+                ->where($prefix.'.comments.0.likes_count', 1)
+                ->where($prefix.'.comments.0.is_liked', true)
+                ->has($prefix.'.comments.0.replies', 1)
+                ->where($prefix.'.comments.0.replies.0.id', $postReply->id)
+                ->where($prefix.'.comments.0.replies.0.is_liked', false)
+                ->has($prefix.'.media', 2)
+                ->where($prefix.'.media.0.id', $media->id)
+                ->where($prefix.'.media.0.likes_count', 1)
+                ->where($prefix.'.media.0.is_liked', true)
+                ->where($prefix.'.media.0.comments_count', 2)
+                ->has($prefix.'.media.0.comments', 1)
+                ->where($prefix.'.media.0.comments.0.id', $mediaComment->id)
+                ->where($prefix.'.media.0.comments.0.post_media_id', $media->id)
+                ->where($prefix.'.media.0.comments.0.likes_count', 1)
+                ->where($prefix.'.media.0.comments.0.is_liked', false)
+                ->has($prefix.'.media.0.comments.0.replies', 1)
+                ->where($prefix.'.media.0.comments.0.replies.0.id', $mediaReply->id)
+                ->where($prefix.'.media.0.comments.0.replies.0.post_media_id', $media->id)
+                ->where($prefix.'.media.0.comments.0.replies.0.likes_count', 1)
+                ->where($prefix.'.media.0.comments.0.replies.0.is_liked', true)
+                ->where($prefix.'.media.1.id', $sibling->id)
+                ->where($prefix.'.media.1.likes_count', 0)
+                ->where($prefix.'.media.1.is_liked', false)
+                ->where($prefix.'.media.1.comments_count', 0)
+                ->has($prefix.'.media.1.comments', 0)
+            );
+    } finally {
+        Model::preventLazyLoading($preventedLazyLoading);
+    }
+
+    expect($postComment->fresh()->post_media_id)->toBeNull();
+    expect($post->fresh()->likes_count)->toBe(0);
+})->with(['feed', 'saved feed', 'profile', 'saved profile']);
+
+it('does not expose legacy cross-scope replies in post or media threads', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $postComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post root',
+    ]);
+    $mediaComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'user_id' => $this->student->id,
+        'content' => 'Media root',
+    ]);
+    $legacyReplies = collect([
+        CommunityComment::create([
+            'post_id' => $post->id,
+            'post_media_id' => $media->id,
+            'parent_id' => $postComment->id,
+            'user_id' => $this->student->id,
+            'content' => 'Legacy media reply under post root',
+        ]),
+        CommunityComment::create([
+            'post_id' => $post->id,
+            'parent_id' => $mediaComment->id,
+            'user_id' => $this->student->id,
+            'content' => 'Legacy post reply under media root',
+        ]),
+    ]);
+
+    $this->actingAs($this->student)->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->has('posts.0.comments', 1)
+            ->where('posts.0.comments.0.id', $postComment->id)
+            ->has('posts.0.comments.0.replies', 0)
+            ->has('posts.0.media.0.comments', 1)
+            ->where('posts.0.media.0.comments.0.id', $mediaComment->id)
+            ->has('posts.0.media.0.comments.0.replies', 0)
+        );
+
+    foreach ($legacyReplies as $reply) {
+        $this->assertModelExists($reply);
+    }
+    expect($legacyReplies[0]->fresh()->post_media_id)->toBe($media->id);
+    expect($legacyReplies[1]->fresh()->post_media_id)->toBeNull();
+});
+
+it('keeps legacy attachment interactions on the whole post after reload', function (string $view) {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'attachment_url' => 'legacy-photo.jpg',
+        'attachment_type' => 'image',
+        'likes_count' => 1,
+        'comments_count' => 1,
+    ]);
+    $post->likes()->create(['user_id' => $this->student->id]);
+    $post->bookmarks()->create(['user_id' => $this->student->id]);
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Legacy unscoped comment',
+    ]);
+    $isProfile = in_array($view, ['profile', 'saved profile'], true);
+    $prefix = match ($view) {
+        'profile' => 'profile.posts.0',
+        'saved profile' => 'profile.saved_posts.0',
+        default => 'posts.0',
+    };
+    $url = $isProfile
+        ? route('community.users.show', $this->student)
+        : route('community.index', $view === 'saved feed' ? ['tab' => 'saved'] : []);
+
+    $this->actingAs($this->student)->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component($isProfile ? 'CommunityProfile' : 'Community')
+            ->where($prefix.'.likes_count', 1)
+            ->where($prefix.'.is_liked', true)
+            ->where($prefix.'.comments_count', 1)
+            ->has($prefix.'.comments', 1)
+            ->where($prefix.'.comments.0.id', $comment->id)
+            ->where($prefix.'.comments.0.post_media_id', null)
+            ->has($prefix.'.media', 1)
+            ->where($prefix.'.media.0.id', 0)
+            ->where($prefix.'.media.0.likes_count', 0)
+            ->where($prefix.'.media.0.is_liked', false)
+            ->where($prefix.'.media.0.comments_count', 0)
+            ->has($prefix.'.media.0.comments', 0)
+        );
+
+    expect($post->media()->count())->toBe(0);
+    expect($comment->fresh()->post_media_id)->toBeNull();
+    expect($post->fresh()->comments_count)->toBe(1);
+    expect($post->fresh()->likes_count)->toBe(1);
+})->with(['feed', 'saved feed', 'profile', 'saved profile']);
+
+it('deletes nested comment trees while decrementing only their own target counters', function (bool $isMedia, bool $deleteReply) {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+    $this->actingAs($this->student);
+
+    $postComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post root',
+    ])->assertOk()->json('comment');
+    $mediaComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media root', 'post_media_id' => $media->id,
+    ])->assertOk()->json('comment');
+    $siblingComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Sibling root', 'post_media_id' => $sibling->id,
+    ])->assertOk()->json('comment');
+    $root = $isMedia ? $mediaComment : $postComment;
+    $target = $isMedia ? $media : $post;
+    $payload = ['post_media_id' => $isMedia ? $media->id : null];
+    $reply = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Reply', 'parent_id' => $root['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2)->json('comment');
+    $grandchild = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Nested reply', 'parent_id' => $reply['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 3)->json('comment');
+    $survivor = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Separate root',
+    ])->assertOk()->assertJsonPath('comments_count', 4)->json('comment');
+    $this->postJson(route('community.comments.like', $grandchild['id']))->assertOk();
+
+    $this->deleteJson(route('community.comments.destroy', $deleteReply ? $reply['id'] : $root['id']))
+        ->assertOk()->assertJsonPath('status', 'deleted');
+
+    expect($target->fresh()->comments_count)->toBe($deleteReply ? 2 : 1);
+    expect(($isMedia ? $post : $media)->fresh()->comments_count)->toBe(1);
+    expect($sibling->fresh()->comments_count)->toBe(1);
+    expect(CommunityComment::find($reply['id']))->toBeNull();
+    expect(CommunityComment::find($grandchild['id']))->toBeNull();
+    expect(CommunityComment::find($root['id']) !== null)->toBe($deleteReply);
+    expect(CommunityComment::find($survivor['id']))->not->toBeNull();
+    expect(CommunityComment::find($siblingComment['id']))->not->toBeNull();
+    $this->assertDatabaseMissing('community_comment_likes', ['comment_id' => $grandchild['id']]);
+})->with([
+    'post root' => [false, false],
+    'post reply' => [false, true],
+    'media root' => [true, false],
+    'media reply' => [true, true],
+]);
 
 it('allows toggling bookmarks on a community post', function () {
     $post = CommunityPost::factory()->create([
