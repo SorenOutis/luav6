@@ -1535,6 +1535,58 @@ const toggleFeedPostMusic = (post: CommunityFeedPost) => {
     };
 };
 
+// ─── Social Media Lightbox / Full-screen Post Media Modal ───────────────────
+const isLightboxOpen = ref(false);
+const lightboxPost = ref<CommunityFeedPost | null>(null);
+const lightboxMediaIndex = ref(0);
+
+const activeLightboxMediaItem = computed(() => {
+    if (!lightboxPost.value) return null;
+    if (lightboxPost.value.media && lightboxPost.value.media.length > 0) {
+        return (
+            lightboxPost.value.media[lightboxMediaIndex.value] ||
+            lightboxPost.value.media[0]
+        );
+    }
+    if (lightboxPost.value.attachment_url) {
+        return {
+            id: 0,
+            url: lightboxPost.value.attachment_url,
+            type: lightboxPost.value.attachment_type || 'image',
+            name: lightboxPost.value.attachment_name,
+            size: lightboxPost.value.attachment_size,
+        };
+    }
+    return null;
+});
+
+const openPostLightbox = (post: CommunityFeedPost, mediaIndex = 0) => {
+    lightboxPost.value = post;
+    lightboxMediaIndex.value = mediaIndex;
+    isLightboxOpen.value = true;
+};
+
+const closePostLightbox = () => {
+    isLightboxOpen.value = false;
+    lightboxPost.value = null;
+    lightboxMediaIndex.value = 0;
+};
+
+const lightboxPrevMedia = () => {
+    if (!lightboxPost.value?.media || lightboxPost.value.media.length <= 1)
+        return;
+    lightboxMediaIndex.value =
+        (lightboxMediaIndex.value - 1 + lightboxPost.value.media.length) %
+        lightboxPost.value.media.length;
+};
+
+const lightboxNextMedia = () => {
+    if (!lightboxPost.value?.media || lightboxPost.value.media.length <= 1)
+        return;
+    lightboxMediaIndex.value =
+        (lightboxMediaIndex.value + 1) % lightboxPost.value.media.length;
+};
+
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files[0]) {
@@ -2224,6 +2276,20 @@ const handleDeleteStory = async () => {
 };
 
 const handleStoryKeydown = (e: KeyboardEvent) => {
+    if (isLightboxOpen.value) {
+        if (e.key === 'Escape') {
+            closePostLightbox();
+            return;
+        }
+        if (e.key === 'ArrowLeft') {
+            lightboxPrevMedia();
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            lightboxNextMedia();
+            return;
+        }
+    }
     if (isMediaModalOpen.value && e.key === 'Escape') {
         closeMediaModal();
         return;
@@ -2478,6 +2544,7 @@ watch(
         isStoryViewerOpen,
         isStoryModalOpen,
         isMediaModalOpen,
+        isLightboxOpen,
         isWelcomeModalOpen,
         postToDelete,
         commentToDelete,
@@ -2488,6 +2555,7 @@ watch(
         storyViewerOpen,
         storyModalOpen,
         mediaModalOpen,
+        lightboxOpen,
         welcomeOpen,
         postDeleteOpen,
         commentDeleteOpen,
@@ -2499,6 +2567,7 @@ watch(
                 storyViewerOpen ||
                 storyModalOpen ||
                 mediaModalOpen ||
+                lightboxOpen ||
                 welcomeOpen ||
                 Boolean(postDeleteOpen) ||
                 Boolean(commentDeleteOpen)
@@ -3240,16 +3309,21 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         })
                                                     "
                                                 >
-                                                    {{ post.author.handle }}
+                                                    {{
+                                                        post.author.is_masked
+                                                            ? post.author.name
+                                                            : post.author.name
+                                                    }}
                                                 </span>
                                                 <span
-                                                    class="text-[10px] text-muted-foreground"
-                                                    >•</span
+                                                    v-if="
+                                                        !post.author
+                                                            .is_masked &&
+                                                        post.author.handle
+                                                    "
+                                                    class="text-[11px] text-muted-foreground"
                                                 >
-                                                <span
-                                                    class="text-xs font-medium text-muted-foreground"
-                                                >
-                                                    {{ post.author.name }}
+                                                    @{{ post.author.handle }}
                                                 </span>
                                             </div>
                                             <p
@@ -3485,8 +3559,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                     post.content ||
                                                     'Post media'
                                                 "
-                                                class="max-h-96 w-full object-cover"
+                                                class="max-h-[520px] w-full cursor-pointer bg-zinc-950/5 object-contain transition hover:opacity-95 dark:bg-zinc-950/40"
                                                 data-test="post-media-image"
+                                                @click="
+                                                    openPostLightbox(
+                                                        post,
+                                                        activePostMediaIndex[
+                                                            post.id
+                                                        ] || 0,
+                                                    )
+                                                "
                                             />
                                         </template>
 
@@ -3575,7 +3657,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     <!-- Image Preview -->
                                     <div
                                         v-if="post.attachment_type === 'image'"
-                                        class="overflow-hidden rounded-xl border border-border/50"
+                                        class="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-zinc-950/5 transition hover:opacity-95 dark:bg-zinc-950/40"
+                                        @click="openPostLightbox(post, 0)"
                                     >
                                         <img
                                             :src="post.attachment_url"
@@ -3583,7 +3666,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 post.attachment_name ||
                                                 'Post attachment'
                                             "
-                                            class="max-h-96 w-full object-cover"
+                                            class="max-h-[520px] w-full object-contain"
                                         />
                                     </div>
 
@@ -6780,6 +6863,501 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     : 'Share Post'
                             }}</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Post Lightbox / Full-screen Media Viewer Modal (Facebook / Instagram Style) ═══ -->
+        <div
+            v-if="isLightboxOpen && lightboxPost"
+            class="fixed inset-0 z-[190] flex items-center justify-center p-2 backdrop-blur-md transition-all duration-200 sm:p-4 md:p-6"
+            data-test="post-lightbox-modal"
+            @click.self="closePostLightbox"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/85 backdrop-blur-md"
+                data-test="post-lightbox-backdrop"
+                @click="closePostLightbox"
+            />
+
+            <!-- Dialog Container -->
+            <div
+                class="relative flex h-full max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-2xl sm:rounded-3xl md:flex-row dark:bg-zinc-950"
+            >
+                <!-- Left Stage: Large Media Viewport -->
+                <div
+                    class="relative flex min-h-[300px] flex-1 items-center justify-center overflow-hidden bg-black text-white select-none sm:min-h-[420px]"
+                >
+                    <!-- Close button in media viewport (visible on mobile) -->
+                    <button
+                        type="button"
+                        class="absolute top-3 left-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-105 hover:bg-black/80 active:scale-95 md:hidden"
+                        aria-label="Close viewer"
+                        data-test="lightbox-mobile-close"
+                        @click="closePostLightbox"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+
+                    <!-- Active Media (Image or Video) -->
+                    <template v-if="activeLightboxMediaItem">
+                        <video
+                            v-if="activeLightboxMediaItem.type === 'video'"
+                            :src="activeLightboxMediaItem.url"
+                            controls
+                            autoplay
+                            class="max-h-[85vh] max-w-full object-contain"
+                            data-test="lightbox-video"
+                        />
+                        <img
+                            v-else
+                            :src="activeLightboxMediaItem.url"
+                            :alt="activeLightboxMediaItem.name || 'Post media'"
+                            class="max-h-[85vh] max-w-full object-contain select-none"
+                            data-test="lightbox-image"
+                        />
+                    </template>
+
+                    <!-- Carousel Arrows (if multiple media) -->
+                    <template
+                        v-if="
+                            lightboxPost.media && lightboxPost.media.length > 1
+                        "
+                    >
+                        <button
+                            type="button"
+                            class="absolute top-1/2 left-3 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                            aria-label="Previous photo"
+                            data-test="lightbox-prev-button"
+                            @click="lightboxPrevMedia"
+                        >
+                            <ChevronLeft class="h-5 w-5" />
+                        </button>
+                        <button
+                            type="button"
+                            class="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                            aria-label="Next photo"
+                            data-test="lightbox-next-button"
+                            @click="lightboxNextMedia"
+                        >
+                            <ChevronRight class="h-5 w-5" />
+                        </button>
+
+                        <!-- Counter badge -->
+                        <div
+                            class="absolute top-3.5 right-3.5 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white backdrop-blur-xs"
+                            data-test="lightbox-counter"
+                        >
+                            {{ lightboxMediaIndex + 1 }} /
+                            {{ lightboxPost.media.length }}
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Right Stage: Sidebar with Author, Content, Reactions & Comments -->
+                <div
+                    class="flex w-full flex-col justify-between border-t border-border/70 bg-card md:w-[380px] md:border-t-0 md:border-l lg:w-[420px] dark:border-white/10 dark:bg-zinc-900"
+                >
+                    <!-- Sidebar Top Header -->
+                    <div
+                        class="flex items-center justify-between border-b border-border/60 p-3.5 sm:p-4"
+                    >
+                        <div class="flex items-center gap-2.5">
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                            >
+                                <img
+                                    v-if="lightboxPost.author.avatar"
+                                    :src="lightboxPost.author.avatar"
+                                    :alt="lightboxPost.author.name"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>
+                                    {{ getInitials(lightboxPost.author.name) }}
+                                </span>
+                            </div>
+                            <div class="min-w-0">
+                                <h3
+                                    class="truncate text-xs font-bold text-foreground sm:text-sm"
+                                    data-test="lightbox-author-name"
+                                >
+                                    {{
+                                        lightboxPost.author.is_masked
+                                            ? lightboxPost.author.name
+                                            : lightboxPost.author.name ||
+                                              lightboxPost.author.handle
+                                    }}
+                                </h3>
+                                <p class="text-[11px] text-muted-foreground">
+                                    {{
+                                        lightboxPost.author.is_masked
+                                            ? lightboxPost.author
+                                                  .section_name || 'Anonymous'
+                                            : lightboxPost.author
+                                                  .section_name ||
+                                              sectionDisplayName
+                                    }}
+                                    · {{ lightboxPost.created_at }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Close button on desktop -->
+                        <button
+                            type="button"
+                            class="hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition hover:bg-muted hover:text-foreground md:flex"
+                            data-test="lightbox-sidebar-close"
+                            @click="closePostLightbox"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Post Caption, Soundtrack & Comments List -->
+                    <div
+                        class="flex-1 space-y-4 overflow-y-auto p-3.5 sm:p-4"
+                        data-test="lightbox-comments-list"
+                    >
+                        <!-- Post Text Content -->
+                        <p
+                            v-if="lightboxPost.content"
+                            class="text-xs leading-relaxed text-foreground sm:text-[13px]"
+                            data-test="lightbox-post-content"
+                        >
+                            {{ lightboxPost.content }}
+                        </p>
+
+                        <!-- Attached Soundtrack if any -->
+                        <div v-if="lightboxPost.music" class="pt-1">
+                            <button
+                                type="button"
+                                class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition hover:bg-brand/20 active:scale-95"
+                                @click="toggleFeedPostMusic(lightboxPost)"
+                            >
+                                <Music
+                                    v-if="
+                                        activePlayingPostId === lightboxPost.id
+                                    "
+                                    class="h-3.5 w-3.5 animate-pulse text-brand"
+                                />
+                                <Music v-else class="h-3.5 w-3.5 text-brand" />
+                                <span
+                                    class="max-w-[200px] truncate sm:max-w-xs"
+                                >
+                                    {{ lightboxPost.music.title }} •
+                                    {{ lightboxPost.music.artist }}
+                                </span>
+                                <span
+                                    class="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-brand uppercase"
+                                >
+                                    {{
+                                        activePlayingPostId === lightboxPost.id
+                                            ? 'Pause'
+                                            : 'Play'
+                                    }}
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="border-t border-border/50 pt-2" />
+
+                        <!-- Comments Section Header -->
+                        <div
+                            class="flex items-center justify-between text-xs font-semibold text-muted-foreground"
+                        >
+                            <span
+                                >Comments ({{
+                                    getPostCommentsCount(lightboxPost)
+                                }})</span
+                            >
+                        </div>
+
+                        <!-- Empty state if no comments -->
+                        <div
+                            v-if="getPostComments(lightboxPost).length === 0"
+                            class="py-8 text-center text-xs text-muted-foreground"
+                        >
+                            No comments yet. Be the first to share your
+                            thoughts!
+                        </div>
+
+                        <!-- Comments & Replies Tree -->
+                        <div v-else class="space-y-3">
+                            <div
+                                v-for="c in getPostComments(lightboxPost)"
+                                :key="c.id"
+                                class="space-y-2 rounded-xl bg-muted/20 p-2.5 text-xs text-foreground"
+                                data-test="lightbox-comment-item"
+                            >
+                                <div class="flex items-start gap-2">
+                                    <div
+                                        class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-[10px] font-bold text-brand select-none"
+                                    >
+                                        <img
+                                            v-if="c.author_avatar"
+                                            :src="c.author_avatar"
+                                            :alt="c.author_name"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <span v-else>{{
+                                            getInitials(c.author_name)
+                                        }}</span>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span
+                                                class="font-bold text-foreground"
+                                            >
+                                                {{
+                                                    c.is_masked
+                                                        ? c.author_name
+                                                        : c.author_name ||
+                                                          c.author_handle
+                                                }}
+                                            </span>
+                                            <span
+                                                class="text-[10px] text-muted-foreground"
+                                                >· {{ c.created_at }}</span
+                                            >
+                                        </div>
+                                        <p
+                                            class="mt-0.5 text-xs leading-relaxed text-foreground/90"
+                                        >
+                                            {{ c.content }}
+                                        </p>
+
+                                        <!-- Comment Actions (Like & Reply) -->
+                                        <div
+                                            class="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer transition hover:text-foreground"
+                                                :class="
+                                                    isCommentLiked(c.id)
+                                                        ? 'font-semibold text-rose-500'
+                                                        : ''
+                                                "
+                                                @click="
+                                                    handleCommentLike(
+                                                        lightboxPost.id,
+                                                        c.id,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    isCommentLiked(c.id)
+                                                        ? 'Liked'
+                                                        : 'Like'
+                                                }}
+                                                <span
+                                                    v-if="
+                                                        getCommentLikesCount(
+                                                            c,
+                                                        ) > 0
+                                                    "
+                                                    >({{
+                                                        getCommentLikesCount(c)
+                                                    }})</span
+                                                >
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer font-medium hover:text-foreground"
+                                                @click="
+                                                    setReplyingTo(
+                                                        lightboxPost.id,
+                                                        c,
+                                                    )
+                                                "
+                                            >
+                                                Reply
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nested Replies -->
+                                <div
+                                    v-if="c.replies && c.replies.length > 0"
+                                    class="ml-6 space-y-2 border-l-2 border-border/60 pl-2.5"
+                                >
+                                    <div
+                                        v-for="r in c.replies"
+                                        :key="r.id"
+                                        class="flex items-start gap-2"
+                                    >
+                                        <div
+                                            class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-[9px] font-bold text-brand select-none"
+                                        >
+                                            <img
+                                                v-if="r.author_avatar"
+                                                :src="r.author_avatar"
+                                                :alt="r.author_name"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <span v-else>{{
+                                                getInitials(r.author_name)
+                                            }}</span>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <span
+                                                    class="text-[11px] font-bold text-foreground"
+                                                >
+                                                    {{
+                                                        r.is_masked
+                                                            ? r.author_name
+                                                            : r.author_name ||
+                                                              r.author_handle
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="text-[9px] text-muted-foreground"
+                                                    >· {{ r.created_at }}</span
+                                                >
+                                            </div>
+                                            <p
+                                                class="text-[11px] leading-relaxed text-foreground/90"
+                                            >
+                                                {{ r.content }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Bottom: Like/Comment/Share Bar & Add Comment Form -->
+                    <div
+                        class="border-t border-border/60 bg-muted/20 p-3 sm:p-3.5"
+                    >
+                        <!-- Action Icons Bar -->
+                        <div
+                            class="mb-2.5 flex items-center justify-between text-xs"
+                        >
+                            <div class="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    class="flex cursor-pointer items-center gap-1.5 transition active:scale-95"
+                                    :class="
+                                        isPostLiked(lightboxPost.id)
+                                            ? 'text-rose-500'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    data-test="lightbox-like-button"
+                                    @click="toggleLike(lightboxPost.id)"
+                                >
+                                    <Heart
+                                        class="h-4 w-4"
+                                        :class="
+                                            isPostLiked(lightboxPost.id)
+                                                ? 'fill-rose-500'
+                                                : ''
+                                        "
+                                    />
+                                    <span>{{
+                                        getPostLikesCount(lightboxPost)
+                                    }}</span>
+                                </button>
+
+                                <div
+                                    class="flex items-center gap-1 text-muted-foreground"
+                                >
+                                    <MessageCircle class="h-4 w-4" />
+                                    <span>{{
+                                        getPostCommentsCount(lightboxPost)
+                                    }}</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
+                                    title="Share post"
+                                    @click="handleSharePost(lightboxPost.id)"
+                                >
+                                    <Send class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
+                                title="Bookmark post"
+                                @click="toggleBookmark(lightboxPost.id)"
+                            >
+                                <Bookmark
+                                    class="h-4 w-4"
+                                    :class="
+                                        isPostBookmarked(lightboxPost.id)
+                                            ? 'fill-amber-500 text-amber-500'
+                                            : ''
+                                    "
+                                />
+                            </button>
+                        </div>
+
+                        <!-- Replying to Indicator Pill -->
+                        <div
+                            v-if="replyingTo[String(lightboxPost.id)]"
+                            class="mb-2 flex items-center justify-between rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] text-brand"
+                        >
+                            <span
+                                >Replying to @{{
+                                    replyingTo[String(lightboxPost.id)]
+                                        ?.author_handle
+                                }}</span
+                            >
+                            <button
+                                type="button"
+                                class="cursor-pointer text-muted-foreground hover:text-foreground"
+                                @click="cancelReply(lightboxPost.id)"
+                            >
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+
+                        <!-- Add Comment Input Row -->
+                        <div class="flex items-center gap-2">
+                            <input
+                                v-model="commentInputs[String(lightboxPost.id)]"
+                                type="text"
+                                maxlength="1000"
+                                placeholder="Add a comment…"
+                                class="flex-1 rounded-full border border-border/70 bg-background px-3.5 py-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-brand focus:outline-none"
+                                data-test="lightbox-comment-input"
+                                @keydown.enter.prevent="
+                                    handleAddComment(lightboxPost.id)
+                                "
+                            />
+                            <button
+                                type="button"
+                                :disabled="
+                                    !commentInputs[
+                                        String(lightboxPost.id)
+                                    ]?.trim() ||
+                                    isSubmittingComment[String(lightboxPost.id)]
+                                "
+                                class="cursor-pointer rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-40"
+                                data-test="lightbox-submit-comment-button"
+                                @click="handleAddComment(lightboxPost.id)"
+                            >
+                                <Loader2
+                                    v-if="
+                                        isSubmittingComment[
+                                            String(lightboxPost.id)
+                                        ]
+                                    "
+                                    class="h-3 w-3 animate-spin"
+                                />
+                                <span v-else>Post</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

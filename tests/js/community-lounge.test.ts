@@ -3859,5 +3859,110 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 wrapper.find('[data-test="post-carousel-counter"]').text(),
             ).toBe('2 / 2');
         });
+
+        it('opens lightbox modal when clicking an image in the feed post and allows navigation and comments', async () => {
+            const feedPost = {
+                id: 201,
+                content: 'Graduation day pictures!',
+                created_at: '10m ago',
+                likes_count: 5,
+                comments_count: 1,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    public_id: 'usr_student_1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'BSIT 3-A',
+                },
+                media: [
+                    {
+                        id: 1,
+                        url: '/storage/photo1.jpg',
+                        type: 'image',
+                        name: 'photo1.jpg',
+                    },
+                    {
+                        id: 2,
+                        url: '/storage/photo2.jpg',
+                        type: 'image',
+                        name: 'photo2.jpg',
+                    },
+                ],
+                comments: [
+                    {
+                        id: 701,
+                        author_name: 'Sarah Chen',
+                        author_handle: 'sarah.chen',
+                        content: 'Congratulations Alex!',
+                        created_at: '5m ago',
+                    },
+                ],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [feedPost],
+                },
+            });
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(false);
+
+            // Click the image in the feed post
+            await wrapper
+                .find('[data-test="post-media-image"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(true);
+
+            // Lightbox shows author name and caption
+            expect(
+                wrapper.find('[data-test="lightbox-author-name"]').text(),
+            ).toContain('Alex Rivera');
+            expect(
+                wrapper.find('[data-test="lightbox-post-content"]').text(),
+            ).toContain('Graduation day pictures!');
+
+            // Lightbox shows existing comments
+            expect(
+                wrapper.find('[data-test="lightbox-comment-item"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="lightbox-comment-item"]').text(),
+            ).toContain('Congratulations Alex!');
+
+            // Carousel navigation inside lightbox
+            expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
+                '1 / 2',
+            );
+
+            await wrapper
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
+                '2 / 2',
+            );
+
+            // Close lightbox on desktop close button
+            await wrapper
+                .find('[data-test="lightbox-sidebar-close"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(false);
+        });
     });
 });
