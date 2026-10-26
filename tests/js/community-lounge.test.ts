@@ -1636,6 +1636,26 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(savedTab.classes()).toContain('text-amber-600');
         });
 
+        it('hides the redundant My Section tab when section-only mode is active', () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    isSectionOnly: true,
+                },
+            });
+
+            expect(
+                wrapper.find('[data-test="community-tab-all"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper.find('[data-test="community-tab-section"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper.find('[data-test="community-tab-saved"]').exists(),
+            ).toBe(true);
+            expect(wrapper.text()).not.toContain('Section Only');
+        });
+
         it('switches tabs instantly with optimistic client-side filtering and cache', async () => {
             const mockPosts = [
                 {
