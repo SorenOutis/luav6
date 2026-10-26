@@ -7140,12 +7140,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         ? 'font-semibold text-rose-500'
                                                         : ''
                                                 "
-                                                @click="
-                                                    handleCommentLike(
-                                                        lightboxPost.id,
-                                                        c.id,
-                                                    )
-                                                "
+                                                @click="toggleCommentLike(c.id)"
                                             >
                                                 {{
                                                     isCommentLiked(c.id)
@@ -7155,11 +7150,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 <span
                                                     v-if="
                                                         getCommentLikesCount(
-                                                            c,
+                                                            c.id,
                                                         ) > 0
                                                     "
                                                     >({{
-                                                        getCommentLikesCount(c)
+                                                        getCommentLikesCount(
+                                                            c.id,
+                                                        )
                                                     }})</span
                                                 >
                                             </button>
@@ -7262,7 +7259,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         "
                                     />
                                     <span>{{
-                                        getPostLikesCount(lightboxPost)
+                                        getPostLikesCount(lightboxPost.id)
                                     }}</span>
                                 </button>
 
@@ -7279,7 +7276,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     type="button"
                                     class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
                                     title="Share post"
-                                    @click="handleSharePost(lightboxPost.id)"
+                                    @click="handleSharePost(lightboxPost)"
                                 >
                                     <Send class="h-3.5 w-3.5" />
                                 </button>
