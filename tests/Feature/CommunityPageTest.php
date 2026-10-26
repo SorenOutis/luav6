@@ -3,6 +3,7 @@
 use App\Models\CommunityComment;
 use App\Models\CommunityInvite;
 use App\Models\CommunityPost;
+use App\Models\CommunityPostMedia;
 use App\Models\CommunityProfileFeatured;
 use App\Models\CommunityStory;
 use App\Models\ProfileMusicTrack;
@@ -367,6 +368,57 @@ it('allows toggling likes on a community post', function () {
         'user_id' => $this->student->id,
     ]);
     expect($post->fresh()->likes_count)->toBe(0);
+});
+
+it('allows toggling likes on specific media items and counts toward whole post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $media1 = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test1.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test1.jpg',
+        'sort_order' => 0,
+        'likes_count' => 0,
+    ]);
+
+    $media2 = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test2.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test2.jpg',
+        'sort_order' => 1,
+        'likes_count' => 0,
+    ]);
+
+    // Liking media1
+    $this->actingAs($this->student)
+        ->post(route('community.media.like', $media1))
+        ->assertRedirect();
+
+    expect($media1->fresh()->likes_count)->toBe(1);
+    expect($media2->fresh()->likes_count)->toBe(0);
+    expect($post->fresh()->likes_count)->toBe(1);
+
+    $this->assertDatabaseHas('community_post_media_likes', [
+        'post_media_id' => $media1->id,
+        'user_id' => $this->student->id,
+    ]);
+    $this->assertDatabaseMissing('community_post_media_likes', [
+        'post_media_id' => $media2->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    // Unliking media1
+    $this->actingAs($this->student)
+        ->post(route('community.media.like', $media1))
+        ->assertRedirect();
+
+    expect($media1->fresh()->likes_count)->toBe(0);
+    expect($media2->fresh()->likes_count)->toBe(0);
 });
 
 it('allows toggling bookmarks on a community post', function () {

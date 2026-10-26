@@ -3964,5 +3964,111 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 wrapper.find('[data-test="post-lightbox-modal"]').exists(),
             ).toBe(false);
         });
+
+        it('tracks different reactions on each image and contributes to whole post reactions', async () => {
+            const multiImagePost = {
+                id: 301,
+                content: 'Check out these designs',
+                created_at: 'just now',
+                likes_count: 3,
+                comments_count: 0,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'Designers',
+                },
+                media: [
+                    {
+                        id: 501,
+                        url: '/storage/jacket1.jpg',
+                        type: 'image',
+                        likes_count: 4,
+                        is_liked: false,
+                    },
+                    {
+                        id: 502,
+                        url: '/storage/jacket2.jpg',
+                        type: 'image',
+                        likes_count: 1,
+                        is_liked: true,
+                    },
+                ],
+                comments: [],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [multiImagePost],
+                },
+            });
+
+            // Feed carousel shows like count for photo 1 (501 has 4 likes)
+            const photoLikeBtn = wrapper.find(
+                '[data-test="carousel-photo-like-button"]',
+            );
+            expect(photoLikeBtn.exists()).toBe(true);
+            expect(photoLikeBtn.text()).toContain('4');
+
+            // Switch to photo 2 in feed carousel
+            await wrapper
+                .find('[data-test="post-carousel-next"]')
+                .trigger('click');
+            await nextTick();
+
+            // Photo 2 (502 has 1 like and is liked)
+            expect(
+                wrapper.find('[data-test="carousel-photo-like-button"]').text(),
+            ).toContain('1');
+
+            // Open lightbox on photo 2
+            await wrapper
+                .find('[data-test="post-media-image"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(true);
+            // Lightbox shows photo 2's count (1) and whole post total (3 post likes)
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('1');
+            expect(
+                wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
+            ).toContain('3 post likes');
+
+            // Switch to photo 1 in lightbox
+            await wrapper
+                .find('[data-test="lightbox-prev-button"]')
+                .trigger('click');
+            await nextTick();
+
+            // Lightbox now shows photo 1's distinct count (4)
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('4');
+
+            // Like photo 1 inside lightbox
+            await wrapper
+                .find('[data-test="lightbox-like-button"]')
+                .trigger('click');
+            await nextTick();
+
+            // Photo 1 likes incremented to 5
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('5');
+            // Whole post total likes incremented to 4
+            expect(
+                wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
+            ).toContain('4 post likes');
+        });
     });
 });

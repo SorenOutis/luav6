@@ -98,6 +98,8 @@ export interface PostMediaItem {
     type: 'image' | 'video' | string;
     name?: string | null;
     size?: number | null;
+    likes_count?: number;
+    is_liked?: boolean;
 }
 
 export interface PostMusicTrack {
@@ -1015,6 +1017,120 @@ const toggleCommentLike = (commentId: number | string) => {
     }, 350);
 };
 
+// ─── Post Media Item Likes State ─────────────────────────────────────────────
+const mediaLikedMap = ref<Record<string, boolean>>({});
+const mediaLikesCountMap = ref<Record<string, number>>({});
+const serverMediaLikedMap = ref<Record<string, boolean>>({});
+const mediaLikeDebounceTimers = ref<
+    Record<string, ReturnType<typeof setTimeout>>
+>({});
+
+const initMediaReactions = (media?: PostMediaItem[]) => {
+    if (!media) return;
+    for (const m of media) {
+        const mKey = String(m.id);
+        if (mediaLikedMap.value[mKey] === undefined) {
+            mediaLikedMap.value[mKey] = Boolean(m.is_liked);
+            mediaLikesCountMap.value[mKey] = m.likes_count ?? 0;
+            serverMediaLikedMap.value[mKey] = Boolean(m.is_liked);
+        }
+    }
+};
+
+const isMediaLiked = (
+    mediaItem: PostMediaItem | null | undefined,
+): boolean => {
+    if (!mediaItem) return false;
+    const key = String(mediaItem.id);
+    if (mediaLikedMap.value[key] !== undefined) {
+        return mediaLikedMap.value[key];
+    }
+    return Boolean(mediaItem.is_liked);
+};
+
+const getMediaLikesCount = (
+    mediaItem: PostMediaItem | null | undefined,
+): number => {
+    if (!mediaItem) return 0;
+    const key = String(mediaItem.id);
+    if (mediaLikesCountMap.value[key] !== undefined) {
+        return mediaLikesCountMap.value[key];
+    }
+    return mediaItem.likes_count ?? 0;
+};
+
+const toggleMediaLike = (
+    post: CommunityFeedPost,
+    mediaItem: PostMediaItem | null | undefined,
+) => {
+    if (!mediaItem || !mediaItem.id) {
+        toggleLike(post.id);
+        return;
+    }
+
+    const mKey = String(mediaItem.id);
+    const pKey = String(post.id);
+    const prevLiked = isMediaLiked(mediaItem);
+    const prevCount = getMediaLikesCount(mediaItem);
+    const nextLiked = !prevLiked;
+
+    // 1. Immediate optimistic client update for media item
+    mediaLikedMap.value[mKey] = nextLiked;
+    mediaLikesCountMap.value[mKey] = Math.max(
+        0,
+        prevCount + (nextLiked ? 1 : -1),
+    );
+
+    // 2. Reacting to an image also counts as a reaction to the whole post if not already reacted!
+    const postCurrentlyLiked = isPostLiked(post.id);
+    if (nextLiked && !postCurrentlyLiked) {
+        likedMap.value[pKey] = true;
+        likesCountMap.value[pKey] = getPostLikesCount(post.id) + 1;
+    }
+
+    // 3. Clear existing debounce timer
+    if (mediaLikeDebounceTimers.value[mKey]) {
+        clearTimeout(mediaLikeDebounceTimers.value[mKey]);
+    }
+
+    // 4. Debounce network sync by 350ms
+    mediaLikeDebounceTimers.value[mKey] = setTimeout(async () => {
+        delete mediaLikeDebounceTimers.value[mKey];
+
+        if (mediaLikedMap.value[mKey] === serverMediaLikedMap.value[mKey]) {
+            return;
+        }
+
+        try {
+            const res = await axios.post(
+                `/community/media/${mediaItem.id}/like`,
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            if (res.data) {
+                serverMediaLikedMap.value[mKey] = Boolean(res.data.is_liked);
+                mediaLikedMap.value[mKey] = Boolean(res.data.is_liked);
+                mediaLikesCountMap.value[mKey] = Number(
+                    res.data.likes_count ?? 0,
+                );
+                if (res.data.post_id) {
+                    serverLikedMap.value[pKey] = Boolean(
+                        res.data.post_is_liked,
+                    );
+                    likedMap.value[pKey] = Boolean(res.data.post_is_liked);
+                    likesCountMap.value[pKey] = Number(
+                        res.data.post_likes_count ?? 0,
+                    );
+                }
+            }
+        } catch {
+            mediaLikedMap.value[mKey] =
+                serverMediaLikedMap.value[mKey] ?? prevLiked;
+            mediaLikesCountMap.value[mKey] = prevCount;
+        }
+    }, 350);
+};
+
 watch(
     displayPosts,
     (posts) => {
@@ -1036,6 +1152,7 @@ watch(
                 commentsCountMap.value[key] = post.comments_count ?? 0;
             }
             initCommentReactions(post.comments);
+            initMediaReactions(post.media);
         }
     },
     { immediate: true },
@@ -1172,6 +1289,9 @@ onBeforeUnmount(() => {
         clearTimeout(timer);
     }
     for (const timer of Object.values(commentLikeDebounceTimers.value)) {
+        clearTimeout(timer);
+    }
+    for (const timer of Object.values(mediaLikeDebounceTimers.value)) {
         clearTimeout(timer);
     }
 });
@@ -3574,9 +3694,51 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                         <!-- Multi-photo Carousel Controls -->
                                         <template v-if="post.media.length > 1">
+                                            <!-- Per-photo heart badge on carousel -->
                                             <button
                                                 type="button"
-                                                class="absolute top-1/2 left-2.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
+                                                class="absolute top-2.5 left-2.5 z-20 flex cursor-pointer items-center gap-1 rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs transition hover:bg-black/85 active:scale-95"
+                                                data-test="carousel-photo-like-button"
+                                                title="Like this photo"
+                                                @click.stop="
+                                                    toggleMediaLike(
+                                                        post,
+                                                        post.media[
+                                                            activePostMediaIndex[
+                                                                post.id
+                                                            ] || 0
+                                                        ],
+                                                    )
+                                                "
+                                            >
+                                                <Heart
+                                                    class="h-3 w-3"
+                                                    :class="
+                                                        isMediaLiked(
+                                                            post.media[
+                                                                activePostMediaIndex[
+                                                                    post.id
+                                                                ] || 0
+                                                            ],
+                                                        )
+                                                            ? 'fill-rose-500 text-rose-500'
+                                                            : 'text-white'
+                                                    "
+                                                />
+                                                <span>{{
+                                                    getMediaLikesCount(
+                                                        post.media[
+                                                            activePostMediaIndex[
+                                                                post.id
+                                                            ] || 0
+                                                        ],
+                                                    )
+                                                }}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="absolute top-1/2 left-2.5 z-20 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
                                                 aria-label="Previous photo"
                                                 data-test="post-carousel-prev"
                                                 @click="
@@ -7243,23 +7405,33 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     type="button"
                                     class="flex cursor-pointer items-center gap-1.5 transition active:scale-95"
                                     :class="
-                                        isPostLiked(lightboxPost.id)
-                                            ? 'text-rose-500'
+                                        isMediaLiked(activeLightboxMediaItem)
+                                            ? 'font-semibold text-rose-500'
                                             : 'text-muted-foreground hover:text-foreground'
                                     "
                                     data-test="lightbox-like-button"
-                                    @click="toggleLike(lightboxPost.id)"
+                                    title="Like this photo"
+                                    @click="
+                                        toggleMediaLike(
+                                            lightboxPost,
+                                            activeLightboxMediaItem,
+                                        )
+                                    "
                                 >
                                     <Heart
                                         class="h-4 w-4"
                                         :class="
-                                            isPostLiked(lightboxPost.id)
+                                            isMediaLiked(
+                                                activeLightboxMediaItem,
+                                            )
                                                 ? 'fill-rose-500'
                                                 : ''
                                         "
                                     />
                                     <span>{{
-                                        getPostLikesCount(lightboxPost.id)
+                                        getMediaLikesCount(
+                                            activeLightboxMediaItem,
+                                        )
                                     }}</span>
                                 </button>
 
@@ -7282,21 +7454,39 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 </button>
                             </div>
 
-                            <button
-                                type="button"
-                                class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
-                                title="Bookmark post"
-                                @click="toggleBookmark(lightboxPost.id)"
-                            >
-                                <Bookmark
-                                    class="h-4 w-4"
-                                    :class="
-                                        isPostBookmarked(lightboxPost.id)
-                                            ? 'fill-amber-500 text-amber-500'
-                                            : ''
+                            <div class="flex items-center gap-2.5">
+                                <span
+                                    v-if="
+                                        lightboxPost.media &&
+                                        lightboxPost.media.length > 1
                                     "
-                                />
-                            </button>
+                                    class="text-[11px] font-medium text-muted-foreground"
+                                    data-test="lightbox-post-total-likes"
+                                >
+                                    {{ getPostLikesCount(lightboxPost.id) }}
+                                    post like{{
+                                        getPostLikesCount(lightboxPost.id) === 1
+                                            ? ''
+                                            : 's'
+                                    }}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
+                                    title="Bookmark post"
+                                    @click="toggleBookmark(lightboxPost.id)"
+                                >
+                                    <Bookmark
+                                        class="h-4 w-4"
+                                        :class="
+                                            isPostBookmarked(lightboxPost.id)
+                                                ? 'fill-amber-500 text-amber-500'
+                                                : ''
+                                        "
+                                    />
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Replying to Indicator Pill -->

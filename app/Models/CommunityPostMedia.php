@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class CommunityPostMedia extends Model
@@ -18,6 +19,7 @@ class CommunityPostMedia extends Model
         'file_name',
         'file_size',
         'sort_order',
+        'likes_count',
     ];
 
     protected function casts(): array
@@ -25,6 +27,7 @@ class CommunityPostMedia extends Model
         return [
             'file_size' => 'integer',
             'sort_order' => 'integer',
+            'likes_count' => 'integer',
         ];
     }
 
@@ -40,5 +43,10 @@ class CommunityPostMedia extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(CommunityPost::class, 'post_id');
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(CommunityPostMediaLike::class, 'post_media_id');
     }
 }

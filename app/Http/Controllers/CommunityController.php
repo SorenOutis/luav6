@@ -327,19 +327,30 @@ class CommunityController extends Controller
             ->pluck('post_id')
             ->all();
 
+        $allProfileMediaIds = $posts->pluck('media')->flatten()->pluck('id')->filter()->all();
+        $viewerProfileMediaLikedIds = ! empty($allProfileMediaIds)
+            ? DB::table('community_post_media_likes')
+                ->where('user_id', $viewer->id)
+                ->whereIn('post_media_id', $allProfileMediaIds)
+                ->pluck('post_media_id')
+                ->all()
+            : [];
+
         $viewerBookmarkedIds = DB::table('community_post_bookmarks')
             ->where('user_id', $viewer->id)
             ->whereIn('post_id', $posts->pluck('id'))
             ->pluck('post_id')
             ->all();
 
-        $postsData = $posts->map(function (CommunityPost $p) use ($viewerLikedIds, $viewerBookmarkedIds, $userSection) {
+        $postsData = $posts->map(function (CommunityPost $p) use ($viewerLikedIds, $viewerBookmarkedIds, $viewerProfileMediaLikedIds, $userSection) {
             $mediaItems = $p->media->map(fn ($m) => [
                 'id' => $m->id,
                 'url' => PublicFileUrl::resolve($m->media_url),
                 'type' => $m->media_type,
                 'name' => $m->file_name,
                 'size' => $m->file_size,
+                'likes_count' => (int) $m->likes_count,
+                'is_liked' => in_array($m->id, $viewerProfileMediaLikedIds, true),
             ])->values()->all();
 
             if (empty($mediaItems) && $p->attachment_url) {
@@ -349,6 +360,8 @@ class CommunityController extends Controller
                     'type' => $p->attachment_type,
                     'name' => $p->attachment_name,
                     'size' => $p->attachment_size,
+                    'likes_count' => (int) $p->likes_count,
+                    'is_liked' => in_array($p->id, $viewerLikedIds, true),
                 ]];
             }
 
@@ -748,6 +761,15 @@ class CommunityController extends Controller
             });
         })->all();
 
+        $allMediaIds = $posts->pluck('media')->flatten()->pluck('id')->filter()->all();
+        $viewerMediaLikedIds = $viewer && ! empty($allMediaIds)
+            ? DB::table('community_post_media_likes')
+                ->where('user_id', $viewer->id)
+                ->whereIn('post_media_id', $allMediaIds)
+                ->pluck('post_media_id')
+                ->all()
+            : [];
+
         $viewerCommentLikedIds = $viewer && ! empty($allCommentIds)
             ? DB::table('community_comment_likes')
                 ->where('user_id', $viewer->id)
@@ -756,7 +778,7 @@ class CommunityController extends Controller
                 ->all()
             : [];
 
-        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerCommentLikedIds): array {
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerCommentLikedIds, $viewerMediaLikedIds): array {
             $author = $post->user;
             $isSameSection = $viewerSectionId && $post->section_id === $viewerSectionId;
             $isOwnPost = $viewer && $post->user_id === $viewer->id;
@@ -785,6 +807,8 @@ class CommunityController extends Controller
                 'type' => $m->media_type,
                 'name' => $m->file_name,
                 'size' => $m->file_size,
+                'likes_count' => (int) $m->likes_count,
+                'is_liked' => in_array($m->id, $viewerMediaLikedIds, true),
             ])->values()->all();
 
             if (empty($mediaItems) && $post->attachment_url) {
@@ -794,6 +818,8 @@ class CommunityController extends Controller
                     'type' => $post->attachment_type,
                     'name' => $post->attachment_name,
                     'size' => $post->attachment_size,
+                    'likes_count' => (int) $post->likes_count,
+                    'is_liked' => in_array($post->id, $viewerLikedIds, true),
                 ]];
             }
 

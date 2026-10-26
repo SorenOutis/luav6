@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\CommunityPost;
 use App\Models\CommunityPostBookmark;
 use App\Models\CommunityPostLike;
+use App\Models\CommunityPostMedia;
+use App\Models\CommunityPostMediaLike;
 use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Support\CommunitySettings;
@@ -294,6 +296,75 @@ class CommunityPostController extends Controller
             return response()->json([
                 'is_liked' => $isLiked,
                 'likes_count' => (int) $post->fresh()->likes_count,
+            ]);
+        }
+
+        return back();
+    }
+
+    /**
+     * Toggle like status on a specific post media item (photo/video).
+     */
+    public function toggleMediaLike(Request $request, CommunityPostMedia $media): JsonResponse|RedirectResponse
+    {
+        $viewer = $request->user();
+        abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
+
+        $post = $media->post;
+        abort_unless($post, 404);
+
+        if (CommunitySettings::isRestrictedToSection() && ! $viewer->is_admin) {
+            $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+            if ($post->section_id && ! in_array($post->section_id, $viewerSectionIds, true)) {
+                abort(403, 'Cross-section interactions are restricted.');
+            }
+        }
+
+        $isLiked = false;
+        DB::transaction(function () use ($viewer, $media, $post, &$isLiked) {
+            $existing = CommunityPostMediaLike::where('post_media_id', $media->id)
+                ->where('user_id', $viewer->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                $existing->delete();
+                $isLiked = false;
+                $media->decrement('likes_count');
+            } else {
+                CommunityPostMediaLike::create([
+                    'post_media_id' => $media->id,
+                    'user_id' => $viewer->id,
+                    'created_at' => now(),
+                ]);
+                $media->increment('likes_count');
+                $isLiked = true;
+
+                // When user reacts to an image/video, count as a reaction to the whole post if not already reacted
+                $postLiked = CommunityPostLike::where('post_id', $post->id)
+                    ->where('user_id', $viewer->id)
+                    ->exists();
+
+                if (! $postLiked) {
+                    CommunityPostLike::create([
+                        'post_id' => $post->id,
+                        'user_id' => $viewer->id,
+                        'created_at' => now(),
+                    ]);
+                    $post->increment('likes_count');
+                }
+            }
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'is_liked' => $isLiked,
+                'media_id' => $media->id,
+                'likes_count' => (int) $media->fresh()->likes_count,
+                'post_id' => $post->id,
+                'post_likes_count' => (int) $post->fresh()->likes_count,
+                'post_is_liked' => CommunityPostLike::where('post_id', $post->id)->where('user_id', $viewer->id)->exists(),
             ]);
         }
 
