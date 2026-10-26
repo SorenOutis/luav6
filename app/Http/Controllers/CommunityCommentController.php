@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityComment;
 use App\Models\CommunityCommentLike;
 use App\Models\CommunityPost;
+use App\Support\CommunitySettings;
 use App\Support\PublicFileUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,13 @@ class CommunityCommentController extends Controller
         $viewer = $request->user();
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
+
+        if (CommunitySettings::isRestrictedToSection() && ! $viewer->is_admin) {
+            $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+            if ($post->section_id && ! in_array($post->section_id, $viewerSectionIds, true)) {
+                abort(403, 'Cross-section interactions are restricted.');
+            }
+        }
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:1000'],

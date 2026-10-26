@@ -6,6 +6,7 @@ use App\Models\CommunityPost;
 use App\Models\CommunityPostBookmark;
 use App\Models\CommunityPostLike;
 use App\Models\Section;
+use App\Support\CommunitySettings;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -55,6 +56,15 @@ class CommunityPostController extends Controller
             $section = Section::query()
                 ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
                 ->first();
+        }
+
+        if (CommunitySettings::isRestrictedToSection() && ! $section && ! $viewer->is_admin) {
+            abort(422, 'You must be enrolled in a section to post in section-only mode.');
+        }
+
+        $isAnonymous = (bool) ($validated['is_anonymous'] ?? false);
+        if (! CommunitySettings::allowsAnonymous()) {
+            $isAnonymous = false;
         }
 
         $attachmentUrl = null;
@@ -176,6 +186,13 @@ class CommunityPostController extends Controller
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
 
+        if (CommunitySettings::isRestrictedToSection() && ! $viewer->is_admin) {
+            $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+            if ($post->section_id && ! in_array($post->section_id, $viewerSectionIds, true)) {
+                abort(403, 'Cross-section interactions are restricted.');
+            }
+        }
+
         $isLiked = false;
         DB::transaction(function () use ($viewer, $post, &$isLiked) {
             $existing = CommunityPostLike::where('post_id', $post->id)
@@ -215,6 +232,13 @@ class CommunityPostController extends Controller
         $viewer = $request->user();
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
+
+        if (CommunitySettings::isRestrictedToSection() && ! $viewer->is_admin) {
+            $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+            if ($post->section_id && ! in_array($post->section_id, $viewerSectionIds, true)) {
+                abort(403, 'Cross-section interactions are restricted.');
+            }
+        }
 
         $isBookmarked = false;
         DB::transaction(function () use ($viewer, $post, &$isBookmarked) {

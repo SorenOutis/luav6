@@ -8,6 +8,7 @@ use App\Models\CommunityStory;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\CommunitySettings;
 use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
@@ -52,6 +53,9 @@ class CommunityController extends Controller
 
         // Filter / tab
         $tab = $request->query('tab', 'all');
+        if (CommunitySettings::isRestrictedToSection() && $tab === 'section') {
+            $tab = 'all';
+        }
 
         // Query posts
         $posts = $this->getPosts($viewer, $section, $tab);
@@ -77,6 +81,10 @@ class CommunityController extends Controller
             'currentTab' => $tab,
             'stories' => $stories,
             'isFirstTimeJoin' => $isFirstTimeJoin,
+            'isSectionOnly' => CommunitySettings::isRestrictedToSection(),
+            'feedScope' => CommunitySettings::feedScope(),
+            'allowsAnonymous' => CommunitySettings::allowsAnonymous(),
+            'storiesEnabled' => CommunitySettings::storiesEnabled(),
         ]);
     }
 
@@ -592,6 +600,7 @@ class CommunityController extends Controller
     private function getPosts(?User $viewer, ?Section $section, string $tab): array
     {
         $workspaceId = app(WorkspaceContext::class)->id();
+        $isRestricted = CommunitySettings::isRestrictedToSection();
 
         $query = CommunityPost::query()
             ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
@@ -614,6 +623,19 @@ class CommunityController extends Controller
             $query->where('section_id', $section->id);
         } elseif ($tab === 'saved' && $viewer) {
             $query->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id));
+            if ($isRestricted && ! $viewer->is_admin) {
+                if ($section) {
+                    $query->where('section_id', $section->id);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
+        } elseif ($isRestricted && ! $viewer?->is_admin) {
+            if ($section) {
+                $query->where('section_id', $section->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         $posts = $query->limit(30)->get();
@@ -799,7 +821,12 @@ class CommunityController extends Controller
             return [];
         }
 
+        if (! CommunitySettings::storiesEnabled()) {
+            return [];
+        }
+
         $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+        $isRestricted = CommunitySettings::isRestrictedToSection();
 
         $stories = CommunityStory::query()
             ->active()
@@ -823,6 +850,10 @@ class CommunityController extends Controller
             $sharesSection = $isSelf;
             if (! $isSelf && ! empty($viewerSectionIds)) {
                 $sharesSection = $user->sections()->whereIn('sections.id', $viewerSectionIds)->exists();
+            }
+
+            if ($isRestricted && ! $viewer->is_admin && ! $sharesSection && ! $isSelf) {
+                continue;
             }
 
             $isMasked = ! $sharesSection && ! $isSelf;

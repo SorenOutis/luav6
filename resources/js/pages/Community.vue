@@ -173,9 +173,18 @@ interface Props {
     currentTab?: 'all' | 'section' | 'saved';
     stories?: UserStoryGroup[];
     isFirstTimeJoin?: boolean;
+    isSectionOnly?: boolean;
+    feedScope?: 'workspace' | 'section';
+    allowsAnonymous?: boolean;
+    storiesEnabled?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    storiesEnabled: true,
+    allowsAnonymous: true,
+    isSectionOnly: false,
+    feedScope: 'workspace',
+});
 
 const page = usePage();
 const currentUser = computed(() => (page.props as any)?.auth?.user);
@@ -251,9 +260,13 @@ const dismissWelcomeModal = () => {
 };
 
 // ─── Active Tab Filtering & Client-Side Tab Cache ────────────────────────────
-const activeTab = ref<'all' | 'section' | 'saved'>(props.currentTab ?? 'all');
+const initialTab =
+    props.isSectionOnly && props.currentTab === 'section'
+        ? 'all'
+        : (props.currentTab ?? 'all');
+const activeTab = ref<'all' | 'section' | 'saved'>(initialTab);
 const tabPostsCache = ref<Record<string, CommunityFeedPost[]>>({
-    [props.currentTab ?? 'all']: [...(props.posts ?? [])],
+    [initialTab]: [...(props.posts ?? [])],
 });
 
 const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
@@ -2357,6 +2370,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     >
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
+                            v-if="props.storiesEnabled !== false"
                             aria-label="Classmate Stories"
                             class="flex scrollbar-none items-center gap-3 overflow-x-auto rounded-xl border border-border/50 bg-card/60 p-2.5 pb-2 shadow-2xs backdrop-blur-xs"
                         >
@@ -2506,6 +2520,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             </button>
 
                             <button
+                                v-if="!props.isSectionOnly"
                                 type="button"
                                 data-test="community-tab-section"
                                 class="group relative flex cursor-pointer items-center gap-1.5 py-2.5 transition-colors"
@@ -2712,6 +2727,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                                 <!-- Anonymous Toggle -->
                                                 <label
+                                                    v-if="
+                                                        props.allowsAnonymous !==
+                                                        false
+                                                    "
                                                     class="ml-2 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                                                 >
                                                     <input
@@ -2736,7 +2755,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                     {{
                                                         composerForm.is_anonymous
                                                             ? 'Identity hidden from everyone'
-                                                            : 'Identity masked outside section'
+                                                            : props.isSectionOnly
+                                                              ? 'Visible only to your section'
+                                                              : 'Identity masked outside section'
                                                     }}
                                                 </span>
                                                 <button
