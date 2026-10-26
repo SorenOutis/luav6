@@ -1609,6 +1609,57 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(wrapper.text()).toContain('Create MyDay Story');
         });
 
+        it.each(['all', 'section', 'saved'] as const)(
+            'keeps the %s tab in a desktop-only scroll region separate from the sidebar',
+            async (tab) => {
+                const wrapper = mount(Community, {
+                    props: {
+                        workspace: null,
+                        currentTab: 'all',
+                    },
+                });
+
+                await wrapper
+                    .get(`[data-test="community-tab-${tab}"]`)
+                    .trigger('click');
+
+                const layout = wrapper.get('[data-test="community-layout"]');
+                const feed = wrapper.get('[data-test="community-feed-scroll"]');
+                const sidebar = wrapper.get(
+                    '[data-test="community-right-sidebar"]',
+                );
+
+                expect(layout.classes()).toContain('lg:h-[calc(100dvh-5rem)]');
+                expect(layout.classes()).toContain('lg:min-h-0');
+                expect(feed.classes()).toContain('lg:overflow-y-auto');
+                expect(feed.classes()).toContain('lg:overscroll-y-contain');
+                expect(feed.classes()).toContain('lg:min-h-0');
+                expect(feed.classes()).not.toContain('overflow-y-auto');
+                expect(feed.element.contains(sidebar.element)).toBe(false);
+                expect(feed.element.parentElement).toBe(
+                    sidebar.element.parentElement,
+                );
+                expect(
+                    feed
+                        .find('[data-test="community-feed-container"]')
+                        .exists(),
+                ).toBe(true);
+
+                for (const region of [feed, sidebar]) {
+                    expect(
+                        region.attributes('data-lenis-prevent'),
+                    ).toBeDefined();
+                    expect(region.attributes('scroll-region')).toBeDefined();
+                    expect(region.attributes('tabindex')).toBe('0');
+                    expect(region.attributes('aria-label')).toBeTruthy();
+                }
+
+                expect(sidebar.classes()).toContain('lg:overflow-y-auto');
+                expect(sidebar.classes()).toContain('lg:overscroll-y-contain');
+                wrapper.unmount();
+            },
+        );
+
         it('styles tabs with tailored semantic colors for Feed, My Section, and Saved', async () => {
             const wrapper = mount(Community, {
                 props: {

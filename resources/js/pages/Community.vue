@@ -2953,12 +2953,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Community Lounge" />
 
-        <div class="relative min-h-[calc(100vh-4rem)] p-2.5 sm:p-3.5 lg:p-4">
-            <div class="mx-auto max-w-6xl">
+        <div
+            class="relative min-h-[calc(100vh-4rem)] p-2.5 sm:p-3.5 lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:p-4"
+            data-test="community-layout"
+        >
+            <div
+                class="mx-auto max-w-6xl lg:flex lg:h-full lg:min-h-0 lg:flex-col"
+            >
                 <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
                 <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
                 <header
-                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5 sm:pb-3"
+                    class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5 sm:pb-3"
                 >
                     <div class="flex items-center gap-3">
                         <button
@@ -2985,11 +2990,16 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                 <!-- ═══ 2-Column Social Feed Layout ═══ -->
                 <div
-                    class="grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-5 xl:gap-6"
+                    class="grid grid-cols-1 items-start gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-1 lg:items-stretch lg:gap-5 xl:gap-6"
                 >
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
                     <main
-                        class="space-y-3.5 sm:space-y-4 lg:col-span-7 xl:col-span-8"
+                        class="min-w-0 space-y-3.5 sm:space-y-4 lg:col-span-7 lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-8"
+                        data-test="community-feed-scroll"
+                        data-lenis-prevent
+                        scroll-region
+                        tabindex="0"
+                        aria-label="Community feed"
                     >
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
@@ -4956,7 +4966,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden space-y-3.5 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
+                        class="hidden min-w-0 space-y-3.5 lg:col-span-5 lg:block lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-4"
+                        data-test="community-right-sidebar"
+                        data-lenis-prevent
+                        scroll-region
+                        tabindex="0"
+                        aria-label="Community sidebar"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
                         <div
