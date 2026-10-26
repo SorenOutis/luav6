@@ -1610,7 +1610,7 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
         });
 
         it.each(['all', 'section', 'saved'] as const)(
-            'keeps the %s tab in a desktop-only scroll region separate from the sidebar',
+            'keeps the %s tab feed and sidebar in independent desktop scroll regions without visible scrollbars',
             async (tab) => {
                 const wrapper = mount(Community, {
                     props: {
@@ -1628,13 +1628,25 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 const sidebar = wrapper.get(
                     '[data-test="community-right-sidebar"]',
                 );
+                const statusesList = wrapper.get(
+                    '[data-test="classmates-list"]',
+                );
 
                 expect(layout.classes()).toContain('lg:h-[calc(100dvh-5rem)]');
                 expect(layout.classes()).toContain('lg:min-h-0');
+                expect(layout.classes()).toContain('scrollbar-none');
+
+                // Feed should be independently scrollable without scrollbars
                 expect(feed.classes()).toContain('lg:overflow-y-auto');
                 expect(feed.classes()).toContain('lg:overscroll-y-contain');
                 expect(feed.classes()).toContain('lg:min-h-0');
+                expect(feed.classes()).toContain('scrollbar-none');
                 expect(feed.classes()).not.toContain('overflow-y-auto');
+                expect(feed.attributes('data-lenis-prevent')).toBeDefined();
+                expect(feed.attributes('scroll-region')).toBeDefined();
+                expect(feed.attributes('tabindex')).toBe('0');
+                expect(feed.attributes('aria-label')).toBe('Community feed');
+
                 expect(feed.element.contains(sidebar.element)).toBe(false);
                 expect(feed.element.parentElement).toBe(
                     sidebar.element.parentElement,
@@ -1645,20 +1657,61 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                         .exists(),
                 ).toBe(true);
 
-                for (const region of [feed, sidebar]) {
-                    expect(
-                        region.attributes('data-lenis-prevent'),
-                    ).toBeDefined();
-                    expect(region.attributes('scroll-region')).toBeDefined();
-                    expect(region.attributes('tabindex')).toBe('0');
-                    expect(region.attributes('aria-label')).toBeTruthy();
-                }
-
+                // Sidebar should be independently scrollable without scrollbars when hovered
                 expect(sidebar.classes()).toContain('lg:overflow-y-auto');
                 expect(sidebar.classes()).toContain('lg:overscroll-y-contain');
+                expect(sidebar.classes()).toContain('scrollbar-none');
+                expect(sidebar.attributes('data-lenis-prevent')).toBeDefined();
+                expect(sidebar.attributes('scroll-region')).toBeDefined();
+                expect(sidebar.attributes('tabindex')).toBe('0');
+                expect(sidebar.attributes('aria-label')).toBe(
+                    'Community sidebar',
+                );
+
+                // Statuses list inside sidebar is nested-scrollable without scrollbars
+                expect(statusesList.classes()).toContain('overflow-y-auto');
+                expect(statusesList.classes()).toContain('scrollbar-none');
+
                 wrapper.unmount();
             },
         );
+
+        it('scrolls statuses list when hovering statuses without bubbling to sidebar', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    currentTab: 'all',
+                },
+            });
+
+            const sidebar = wrapper.get(
+                '[data-test="community-right-sidebar"]',
+            );
+            const statusesList = wrapper.get('[data-test="classmates-list"]');
+
+            statusesList.element.scrollTop = 0;
+            sidebar.element.scrollTop = 0;
+            Object.defineProperty(statusesList.element, 'scrollHeight', {
+                configurable: true,
+                value: 600,
+            });
+            Object.defineProperty(statusesList.element, 'clientHeight', {
+                configurable: true,
+                value: 240,
+            });
+
+            // Wheel on statuses list scrolls statuses list directly
+            const statusesWheelEvent = new WheelEvent('wheel', {
+                deltaY: 50,
+                bubbles: true,
+                cancelable: true,
+            });
+            statusesList.element.dispatchEvent(statusesWheelEvent);
+            expect(statusesList.element.scrollTop).toBe(50);
+            expect(statusesWheelEvent.defaultPrevented).toBe(true);
+
+            wrapper.unmount();
+        });
 
         it('styles tabs with tailored semantic colors for Feed, My Section, and Saved', async () => {
             const wrapper = mount(Community, {

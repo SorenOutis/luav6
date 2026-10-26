@@ -46,7 +46,14 @@ import {
     Users,
     X,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { like as likeMedia } from '@/routes/community/media';
@@ -297,10 +304,21 @@ const activeTab = ref<'all' | 'section' | 'saved'>(initialTab);
 const tabPostsCache = ref<Record<string, CommunityFeedPost[]>>({
     [initialTab]: [...(props.posts ?? [])],
 });
+const feedScrollRef = ref<HTMLElement | null>(null);
+const tabScrollPositions = ref<Record<string, number>>({
+    all: 0,
+    section: 0,
+    saved: 0,
+});
 
 const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
     if (activeTab.value === tab) {
         return;
+    }
+
+    if (feedScrollRef.value) {
+        tabScrollPositions.value[activeTab.value] =
+            feedScrollRef.value.scrollTop;
     }
 
     // Cache current tab state
@@ -322,6 +340,12 @@ const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
             );
         }
     }
+
+    nextTick(() => {
+        if (feedScrollRef.value) {
+            feedScrollRef.value.scrollTop = tabScrollPositions.value[tab] ?? 0;
+        }
+    });
 
     // 2. Background Inertia router visit to reconcile with server
     router.visit(`/community?tab=${tab}`, {
@@ -2663,6 +2687,23 @@ const profileHasActiveStory = computed(() => {
     );
 });
 
+const isDesktopLayout = (): boolean => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1024;
+};
+
+const scrollFeedBy = (deltaY: number) => {
+    if (!feedScrollRef.value) return;
+    if (typeof feedScrollRef.value.scrollBy === 'function') {
+        feedScrollRef.value.scrollBy({
+            top: deltaY,
+            behavior: 'auto',
+        });
+    } else {
+        feedScrollRef.value.scrollTop += deltaY;
+    }
+};
+
 const handleClassmatesWheel = (event: WheelEvent) => {
     const el = event.currentTarget as HTMLElement | null;
     if (!el) return;
@@ -2674,10 +2715,40 @@ const handleClassmatesWheel = (event: WheelEvent) => {
         (event.deltaY > 0 && canScrollDown) ||
         (event.deltaY < 0 && canScrollUp)
     ) {
-        el.scrollTop += event.deltaY;
-        event.preventDefault();
-        event.stopPropagation();
+        if (typeof el.scrollBy === 'function') {
+            el.scrollBy({ top: event.deltaY, behavior: 'auto' });
+        } else {
+            el.scrollTop += event.deltaY;
+        }
     }
+    // Isolate statuses scrolling: never bubble to sidebar when hovering statuses list
+    event.preventDefault();
+    event.stopPropagation();
+};
+
+const handleLayoutWheel = (event: WheelEvent) => {
+    if (!isDesktopLayout()) return;
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-test="classmates-list"]')) {
+        return;
+    }
+    if (target?.closest('[data-test="community-feed-scroll"]')) {
+        return;
+    }
+    if (target?.closest('[data-test="community-right-sidebar"]')) {
+        return;
+    }
+    if (
+        target?.closest(
+            '[role="dialog"], [data-test="section-dropdown-menu"], [data-test="mobile-presence-drawer"]',
+        )
+    ) {
+        return;
+    }
+
+    scrollFeedBy(event.deltaY);
+    event.preventDefault();
 };
 
 const handleProfileAvatarClick = () => {
@@ -2954,8 +3025,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
         <Head title="Community Lounge" />
 
         <div
-            class="relative min-h-[calc(100vh-4rem)] p-2.5 sm:p-3.5 lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:p-4"
+            class="relative min-h-[calc(100vh-4rem)] [scrollbar-width:none] scrollbar-none p-2.5 [-ms-overflow-style:none] sm:p-3.5 lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:overflow-hidden lg:p-4 [&::-webkit-scrollbar]:hidden"
             data-test="community-layout"
+            data-lenis-prevent
+            @wheel="handleLayoutWheel"
         >
             <div
                 class="mx-auto max-w-6xl lg:flex lg:h-full lg:min-h-0 lg:flex-col"
@@ -2994,7 +3067,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                 >
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
                     <main
-                        class="min-w-0 space-y-3.5 sm:space-y-4 lg:col-span-7 lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-8"
+                        ref="feedScrollRef"
+                        class="min-w-0 [scrollbar-width:none] scrollbar-none space-y-3.5 [-ms-overflow-style:none] sm:space-y-4 lg:col-span-7 lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-8 [&::-webkit-scrollbar]:hidden"
                         data-test="community-feed-scroll"
                         data-lenis-prevent
                         scroll-region
@@ -4966,7 +5040,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden min-w-0 space-y-3.5 lg:col-span-5 lg:block lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-4"
+                        class="hidden min-w-0 [scrollbar-width:none] scrollbar-none space-y-3.5 [-ms-overflow-style:none] lg:col-span-5 lg:block lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-4 [&::-webkit-scrollbar]:hidden"
                         data-test="community-right-sidebar"
                         data-lenis-prevent
                         scroll-region
@@ -5160,7 +5234,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                             <!-- Classmate Member List -->
                             <div
-                                class="mt-2 max-h-[240px] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1 sm:max-h-[280px]"
+                                data-test="classmates-list"
+                                data-lenis-prevent
+                                class="mt-2 max-h-[240px] [scrollbar-width:none] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] sm:max-h-[280px] [&::-webkit-scrollbar]:hidden"
                                 @wheel="handleClassmatesWheel"
                             >
                                 <div
