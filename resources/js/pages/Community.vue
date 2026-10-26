@@ -1461,19 +1461,6 @@ const removeMediaItem = (index: number) => {
     }
 };
 
-const moveMedia = (fromIndex: number, toIndex: number) => {
-    if (
-        toIndex < 0 ||
-        toIndex >= mediaFiles.value.length ||
-        fromIndex === toIndex
-    ) {
-        return;
-    }
-    const item = mediaFiles.value.splice(fromIndex, 1)[0];
-    mediaFiles.value.splice(toIndex, 0, item);
-    activeMediaIndex.value = toIndex;
-};
-
 const moveMediaCarousel = (dir: number) => {
     if (!mediaFiles.value.length) return;
     activeMediaIndex.value =
