@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CommunityComment;
 use App\Models\CommunityPost;
 use App\Models\CommunityProfileFeatured;
 use App\Models\CommunityStory;
+use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
@@ -68,6 +70,25 @@ class CommunityController extends Controller
 
         $isFirstTimeJoin = (bool) $request->session()->get('first_time_lounge_join', false);
 
+        $userWorkspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
+        $musicTracks = ProfileMusicTrack::query()
+            ->where('is_active', true)
+            ->availableForWorkspace($userWorkspaceId)
+            ->orderBy('title')
+            ->get()
+            ->map(fn (ProfileMusicTrack $track) => [
+                'id' => $track->id,
+                'title' => $track->title,
+                'artist' => $track->artist,
+                'duration' => (float) $track->duration_seconds,
+                'audioUrl' => route('profile-music.stream', $track->id),
+                'coverImageUrl' => $track->cover_image_path
+                    ? PublicFileUrl::resolve($track->cover_image_path)
+                    : null,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('Community', [
             'workspace' => $workspace,
             'sectionName' => $section?->name ?? 'Your Section',
@@ -77,6 +98,7 @@ class CommunityController extends Controller
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
             'posts' => $posts,
+            'musicTracks' => $musicTracks,
             'trendingTopics' => $trendingTopics,
             'currentTab' => $tab,
             'stories' => $stories,
@@ -295,7 +317,7 @@ class CommunityController extends Controller
         $posts = CommunityPost::query()
             ->where('user_id', $user->id)
             ->when(! $isSelf, fn ($q) => $q->where('is_anonymous', false))
-            ->with(['section:id,name'])
+            ->with(['section:id,name', 'media', 'musicTrack', ...$this->commentRelations($viewer)])
             ->latest()
             ->limit(50)
             ->get();
@@ -306,27 +328,74 @@ class CommunityController extends Controller
             ->pluck('post_id')
             ->all();
 
+        $allProfileMediaIds = $posts->pluck('media')->flatten()->pluck('id')->filter()->all();
+        $viewerProfileMediaLikedIds = ! empty($allProfileMediaIds)
+            ? DB::table('community_post_media_likes')
+                ->where('user_id', $viewer->id)
+                ->whereIn('post_media_id', $allProfileMediaIds)
+                ->pluck('post_media_id')
+                ->all()
+            : [];
+
         $viewerBookmarkedIds = DB::table('community_post_bookmarks')
             ->where('user_id', $viewer->id)
             ->whereIn('post_id', $posts->pluck('id'))
             ->pluck('post_id')
             ->all();
 
-        $postsData = $posts->map(fn (CommunityPost $p) => [
-            'id' => $p->id,
-            'content' => $p->content,
-            'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
-            'attachment_type' => $p->attachment_type,
-            'attachment_name' => $p->attachment_name,
-            'attachment_size' => $p->attachment_size,
-            'likes_count' => (int) $p->likes_count,
-            'comments_count' => (int) $p->comments_count,
-            'created_at' => $p->created_at->diffForHumans(short: true),
-            'is_liked' => in_array($p->id, $viewerLikedIds, true),
-            'is_bookmarked' => in_array($p->id, $viewerBookmarkedIds, true),
-            'is_anonymous' => (bool) $p->is_anonymous,
-            'section_name' => $p->section?->name ?? ($userSection?->name ?? 'Section'),
-        ])->all();
+        $postsData = $posts->map(function (CommunityPost $p) use ($viewer, $viewerLikedIds, $viewerBookmarkedIds, $viewerProfileMediaLikedIds, $userSection) {
+            $mediaItems = $p->media->map(fn ($m) => [
+                'id' => $m->id,
+                'url' => PublicFileUrl::resolve($m->media_url),
+                'type' => $m->media_type,
+                'name' => $m->file_name,
+                'size' => $m->file_size,
+                'likes_count' => (int) $m->likes_count,
+                'is_liked' => in_array($m->id, $viewerProfileMediaLikedIds, true),
+                'comments_count' => (int) $m->comments_count,
+                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $userSection))->values()->all(),
+            ])->values()->all();
+
+            if (empty($mediaItems) && $p->attachment_url) {
+                $mediaItems = [[
+                    'id' => 0,
+                    'url' => PublicFileUrl::resolve($p->attachment_url),
+                    'type' => $p->attachment_type,
+                    'name' => $p->attachment_name,
+                    'size' => $p->attachment_size,
+                    'likes_count' => 0,
+                    'is_liked' => false,
+                    'comments_count' => 0,
+                    'comments' => [],
+                ]];
+            }
+
+            return [
+                'id' => $p->id,
+                'content' => $p->content,
+                'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
+                'attachment_type' => $p->attachment_type,
+                'attachment_name' => $p->attachment_name,
+                'attachment_size' => $p->attachment_size,
+                'media' => $mediaItems,
+                'music' => $p->musicTrack && $p->musicTrack->is_active ? [
+                    'id' => $p->musicTrack->id,
+                    'title' => $p->musicTrack->title,
+                    'artist' => $p->musicTrack->artist,
+                    'duration' => (float) $p->musicTrack->duration_seconds,
+                    'audio_url' => route('profile-music.stream', $p->musicTrack->id),
+                    'cover_image_url' => $p->musicTrack->cover_image_path ? PublicFileUrl::resolve($p->musicTrack->cover_image_path) : null,
+                ] : null,
+                'likes_count' => (int) $p->likes_count,
+                'comments_count' => (int) $p->comments_count,
+                'comments' => $p->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $userSection))->values()->all(),
+                'created_at' => $p->created_at->diffForHumans(short: true),
+                'is_liked' => in_array($p->id, $viewerLikedIds, true),
+                'is_bookmarked' => in_array($p->id, $viewerBookmarkedIds, true),
+                'is_anonymous' => (bool) $p->is_anonymous,
+                'section_name' => $p->section?->name ?? ($userSection?->name ?? 'Section'),
+            ];
+        })->all();
 
         // Saved lounge posts (only visible when viewing self)
         $savedPosts = [];
@@ -350,26 +419,72 @@ class CommunityController extends Controller
         if ($isSelf) {
             $saved = CommunityPost::query()
                 ->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id))
-                ->with(['user:id,public_id,name,avatar', 'section:id,name'])
+                ->with([
+                    'user:id,public_id,name,avatar',
+                    'section:id,name',
+                    'media' => fn ($q) => $q->withExists(['likes as is_liked' => fn ($likes) => $likes->where('user_id', $viewer->id)]),
+                    'musicTrack',
+                    ...$this->commentRelations($viewer),
+                ])
+                ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $viewer->id)])
                 ->latest()
                 ->limit(50)
                 ->get();
 
-            $savedPosts = $saved->map(fn (CommunityPost $p) => [
-                'id' => $p->id,
-                'content' => $p->content,
-                'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
-                'attachment_type' => $p->attachment_type,
-                'attachment_name' => $p->attachment_name,
-                'attachment_size' => $p->attachment_size,
-                'likes_count' => (int) $p->likes_count,
-                'comments_count' => (int) $p->comments_count,
-                'created_at' => $p->created_at->diffForHumans(short: true),
-                'author_name' => $p->user?->name ?? 'Student',
-                'author_handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $p->user?->name ?? 'student')),
-                'author_avatar' => $p->user?->avatar ? PublicFileUrl::resolve($p->user->avatar) : null,
-                'section_name' => $p->section?->name ?? 'Section',
-            ])->all();
+            $savedPosts = $saved->map(function (CommunityPost $p) use ($viewer, $userSection) {
+                $mediaItems = $p->media->map(fn ($m) => [
+                    'id' => $m->id,
+                    'url' => PublicFileUrl::resolve($m->media_url),
+                    'type' => $m->media_type,
+                    'name' => $m->file_name,
+                    'size' => $m->file_size,
+                    'likes_count' => (int) $m->likes_count,
+                    'is_liked' => (bool) $m->is_liked,
+                    'comments_count' => (int) $m->comments_count,
+                    'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $userSection))->values()->all(),
+                ])->values()->all();
+
+                if (empty($mediaItems) && $p->attachment_url) {
+                    $mediaItems = [[
+                        'id' => 0,
+                        'url' => PublicFileUrl::resolve($p->attachment_url),
+                        'type' => $p->attachment_type,
+                        'name' => $p->attachment_name,
+                        'size' => $p->attachment_size,
+                        'likes_count' => 0,
+                        'is_liked' => false,
+                        'comments_count' => 0,
+                        'comments' => [],
+                    ]];
+                }
+
+                return [
+                    'id' => $p->id,
+                    'content' => $p->content,
+                    'attachment_url' => $p->attachment_url ? PublicFileUrl::resolve($p->attachment_url) : null,
+                    'attachment_type' => $p->attachment_type,
+                    'attachment_name' => $p->attachment_name,
+                    'attachment_size' => $p->attachment_size,
+                    'media' => $mediaItems,
+                    'music' => $p->musicTrack && $p->musicTrack->is_active ? [
+                        'id' => $p->musicTrack->id,
+                        'title' => $p->musicTrack->title,
+                        'artist' => $p->musicTrack->artist,
+                        'duration' => (float) $p->musicTrack->duration_seconds,
+                        'audio_url' => route('profile-music.stream', $p->musicTrack->id),
+                        'cover_image_url' => $p->musicTrack->cover_image_path ? PublicFileUrl::resolve($p->musicTrack->cover_image_path) : null,
+                    ] : null,
+                    'likes_count' => (int) $p->likes_count,
+                    'comments_count' => (int) $p->comments_count,
+                    'comments' => $p->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $userSection))->values()->all(),
+                    'is_liked' => (bool) $p->is_liked,
+                    'created_at' => $p->created_at->diffForHumans(short: true),
+                    'author_name' => $p->user?->name ?? 'Student',
+                    'author_handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $p->user?->name ?? 'student')),
+                    'author_avatar' => $p->user?->avatar ? PublicFileUrl::resolve($p->user->avatar) : null,
+                    'section_name' => $p->section?->name ?? 'Section',
+                ];
+            })->all();
         }
 
         return Inertia::render('CommunityProfile', [
@@ -607,15 +722,9 @@ class CommunityController extends Controller
             ->with([
                 'user:id,public_id,name,avatar,level',
                 'section:id,name',
-                'comments' => fn ($q) => $q->whereNull('parent_id')
-                    ->latest()
-                    ->limit(10)
-                    ->with([
-                        'user' => fn ($uq) => $uq->select('id', 'public_id', 'name', 'avatar', 'level')->with('sections:id,name'),
-                        'replies' => fn ($rq) => $rq->oldest()->with([
-                            'user' => fn ($uq) => $uq->select('id', 'public_id', 'name', 'avatar', 'level')->with('sections:id,name'),
-                        ]),
-                    ]),
+                'media',
+                'musicTrack',
+                ...$this->commentRelations($viewer),
             ])
             ->latest();
 
@@ -661,21 +770,16 @@ class CommunityController extends Controller
             ? $viewer->following()->whereIn('users.id', $posts->pluck('user_id'))->pluck('users.id')->all()
             : [];
 
-        $allCommentIds = $posts->flatMap(function (CommunityPost $p) {
-            return $p->comments->flatMap(function ($c) {
-                return collect([$c->id])->concat($c->replies->pluck('id'));
-            });
-        })->all();
-
-        $viewerCommentLikedIds = $viewer && ! empty($allCommentIds)
-            ? DB::table('community_comment_likes')
+        $allMediaIds = $posts->pluck('media')->flatten()->pluck('id')->filter()->all();
+        $viewerMediaLikedIds = $viewer && ! empty($allMediaIds)
+            ? DB::table('community_post_media_likes')
                 ->where('user_id', $viewer->id)
-                ->whereIn('comment_id', $allCommentIds)
-                ->pluck('comment_id')
+                ->whereIn('post_media_id', $allMediaIds)
+                ->pluck('post_media_id')
                 ->all()
             : [];
 
-        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerCommentLikedIds): array {
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerMediaLikedIds): array {
             $author = $post->user;
             $isSameSection = $viewerSectionId && $post->section_id === $viewerSectionId;
             $isOwnPost = $viewer && $post->user_id === $viewer->id;
@@ -698,6 +802,46 @@ class CommunityController extends Controller
                 $authorSectionName = 'Anonymous';
             }
 
+            $mediaItems = $post->media->map(fn ($m) => [
+                'id' => $m->id,
+                'url' => PublicFileUrl::resolve($m->media_url),
+                'type' => $m->media_type,
+                'name' => $m->file_name,
+                'size' => $m->file_size,
+                'likes_count' => (int) $m->likes_count,
+                'is_liked' => in_array($m->id, $viewerMediaLikedIds, true),
+                'comments_count' => (int) $m->comments_count,
+                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section))->values()->all(),
+            ])->values()->all();
+
+            if (empty($mediaItems) && $post->attachment_url) {
+                $mediaItems = [[
+                    'id' => 0,
+                    'url' => PublicFileUrl::resolve($post->attachment_url),
+                    'type' => $post->attachment_type,
+                    'name' => $post->attachment_name,
+                    'size' => $post->attachment_size,
+                    'likes_count' => 0,
+                    'is_liked' => false,
+                    'comments_count' => 0,
+                    'comments' => [],
+                ]];
+            }
+
+            $musicData = null;
+            if ($post->musicTrack && $post->musicTrack->is_active) {
+                $musicData = [
+                    'id' => $post->musicTrack->id,
+                    'title' => $post->musicTrack->title,
+                    'artist' => $post->musicTrack->artist,
+                    'duration' => (float) $post->musicTrack->duration_seconds,
+                    'audio_url' => route('profile-music.stream', $post->musicTrack->id),
+                    'cover_image_url' => $post->musicTrack->cover_image_path
+                        ? PublicFileUrl::resolve($post->musicTrack->cover_image_path)
+                        : null,
+                ];
+            }
+
             return [
                 'id' => $post->id,
                 'content' => $post->content,
@@ -706,6 +850,8 @@ class CommunityController extends Controller
                 'attachment_type' => $post->attachment_type,
                 'attachment_name' => $post->attachment_name,
                 'attachment_size' => $post->attachment_size,
+                'media' => $mediaItems,
+                'music' => $musicData,
                 'likes_count' => (int) $post->likes_count,
                 'comments_count' => (int) $post->comments_count,
                 'is_liked' => in_array($post->id, $viewerLikedIds, true),
@@ -721,55 +867,65 @@ class CommunityController extends Controller
                     'is_following' => in_array($post->user_id, $viewerFollowingIds, true),
                     'section_name' => $authorSectionName,
                 ],
-                'comments' => $post->comments->map(function ($c) use ($viewer, $viewerSectionId, $section, $viewerCommentLikedIds) {
-                    $cAuthor = $c->user;
-                    $isSame = $viewerSectionId && $viewer && $cAuthor && $cAuthor->sections->contains('id', $viewerSectionId);
-                    $isOwn = $viewer && $c->user_id === $viewer->id;
-                    $masked = ! $isSame && ! $isOwn;
-
-                    return [
-                        'id' => $c->id,
-                        'parent_id' => $c->parent_id,
-                        'content' => $c->content,
-                        'created_at' => $c->created_at->diffForHumans(short: true),
-                        'author_id' => (string) ($cAuthor?->id ?? ''),
-                        'author_public_id' => $masked ? null : (string) ($cAuthor?->public_id ?? ''),
-                        'author_name' => $masked ? 'Student #'.substr(md5((string) $c->user_id), 0, 4) : ($cAuthor?->name ?? 'Student'),
-                        'author_handle' => $masked ? 'student.'.substr(md5((string) $c->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $cAuthor?->name ?? 'student')),
-                        'author_avatar' => $masked ? null : ($cAuthor?->avatar ? PublicFileUrl::resolve($cAuthor->avatar) : null),
-                        'is_masked' => $masked,
-                        'section_name' => $masked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
-                        'likes_count' => (int) $c->likes_count,
-                        'is_liked' => in_array($c->id, $viewerCommentLikedIds, true),
-                        'replies' => $c->relationLoaded('replies')
-                            ? $c->replies->map(function ($r) use ($viewer, $viewerSectionId, $section, $viewerCommentLikedIds) {
-                                $rAuthor = $r->user;
-                                $rIsSame = $viewerSectionId && $viewer && $rAuthor && $rAuthor->sections->contains('id', $viewerSectionId);
-                                $rIsOwn = $viewer && $r->user_id === $viewer->id;
-                                $rMasked = ! $rIsSame && ! $rIsOwn;
-
-                                return [
-                                    'id' => $r->id,
-                                    'parent_id' => $r->parent_id,
-                                    'content' => $r->content,
-                                    'created_at' => $r->created_at->diffForHumans(short: true),
-                                    'author_id' => (string) ($rAuthor?->id ?? ''),
-                                    'author_public_id' => $rMasked ? null : (string) ($rAuthor?->public_id ?? ''),
-                                    'author_name' => $rMasked ? 'Student #'.substr(md5((string) $r->user_id), 0, 4) : ($rAuthor?->name ?? 'Student'),
-                                    'author_handle' => $rMasked ? 'student.'.substr(md5((string) $r->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $rAuthor?->name ?? 'student')),
-                                    'author_avatar' => $rMasked ? null : ($rAuthor?->avatar ? PublicFileUrl::resolve($rAuthor->avatar) : null),
-                                    'is_masked' => $rMasked,
-                                    'section_name' => $rMasked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
-                                    'likes_count' => (int) $r->likes_count,
-                                    'is_liked' => in_array($r->id, $viewerCommentLikedIds, true),
-                                    'replies' => [],
-                                ];
-                            })->all()
-                            : [],
-                    ];
-                })->all(),
+                'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section))->values()->all(),
             ];
         })->all();
+    }
+
+    /**
+     * @return array<string, \Closure>
+     */
+    private function commentRelations(?User $viewer): array
+    {
+        $withComment = fn ($q) => $q
+            ->with(['user' => fn ($uq) => $uq->select('id', 'public_id', 'name', 'avatar', 'level')->with('sections:id,name')])
+            ->withExists(['likes as is_liked' => fn ($likes) => $likes->where('user_id', $viewer?->id)]);
+
+        return [
+            'comments' => fn ($q) => $withComment($q)
+                ->whereNull('post_media_id')
+                ->whereNull('parent_id')
+                ->latest()
+                ->limit(10)
+                ->with(['replies' => $withComment]),
+            'media.comments' => fn ($q) => $withComment($q)
+                ->whereNull('parent_id')
+                ->latest()
+                ->limit(10)
+                ->with(['replies' => $withComment]),
+        ];
+    }
+
+    private function serializeComment(CommunityComment $comment, ?User $viewer, ?Section $section): array
+    {
+        $author = $comment->user;
+        $isSameSection = $section && $viewer && $author && $author->sections->contains('id', $section->id);
+        $isOwn = $viewer && $comment->user_id === $viewer->id;
+        $isMasked = ! $isSameSection && ! $isOwn;
+
+        return [
+            'id' => $comment->id,
+            'post_id' => $comment->post_id,
+            'post_media_id' => $comment->post_media_id,
+            'parent_id' => $comment->parent_id,
+            'content' => $comment->content,
+            'created_at' => $comment->created_at->diffForHumans(short: true),
+            'author_id' => (string) ($author?->id ?? ''),
+            'author_public_id' => $isMasked ? null : (string) ($author?->public_id ?? ''),
+            'author_name' => $isMasked ? 'Student #'.substr(md5((string) $comment->user_id), 0, 4) : ($author?->name ?? 'Student'),
+            'author_handle' => $isMasked ? 'student.'.substr(md5((string) $comment->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $author?->name ?? 'student')),
+            'author_avatar' => $isMasked ? null : ($author?->avatar ? PublicFileUrl::resolve($author->avatar) : null),
+            'is_masked' => $isMasked,
+            'section_name' => $isMasked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
+            'likes_count' => (int) $comment->likes_count,
+            'is_liked' => (bool) $comment->is_liked,
+            'replies' => $comment->relationLoaded('replies')
+                ? $comment->replies
+                    ->filter(fn (CommunityComment $reply): bool => $reply->post_id === $comment->post_id && $reply->post_media_id === $comment->post_media_id)
+                    ->map(fn (CommunityComment $reply): array => $this->serializeComment($reply, $viewer, $section))
+                    ->values()->all()
+                : [],
+        ];
     }
 
     /**

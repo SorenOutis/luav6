@@ -10,6 +10,7 @@ class CommunityComment extends Model
 {
     protected $fillable = [
         'post_id',
+        'post_media_id',
         'parent_id',
         'user_id',
         'content',
@@ -19,6 +20,11 @@ class CommunityComment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(CommunityPost::class, 'post_id');
+    }
+
+    public function media(): BelongsTo
+    {
+        return $this->belongsTo(CommunityPostMedia::class, 'post_media_id');
     }
 
     public function user(): BelongsTo
@@ -44,11 +50,17 @@ class CommunityComment extends Model
     protected static function booted(): void
     {
         static::deleting(function (CommunityComment $comment): void {
-            $decrement = 1 + $comment->replies()->count();
-            $post = CommunityPost::withoutGlobalScopes()->find($comment->post_id);
+            // Database cascades skip model events, so delete descendants explicitly for scoped counters.
+            foreach ($comment->replies()->get() as $reply) {
+                $reply->delete();
+            }
 
-            if ($post && $post->comments_count > 0) {
-                $post->decrement('comments_count', min($post->comments_count, $decrement));
+            $target = $comment->post_media_id !== null
+                ? CommunityPostMedia::find($comment->post_media_id)
+                : CommunityPost::withoutGlobalScopes()->find($comment->post_id);
+
+            if ($target && $target->comments_count > 0) {
+                $target->decrement('comments_count');
             }
         });
     }

@@ -164,6 +164,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('community/posts/{post}/like', [CommunityPostController::class, 'toggleLike'])
         ->middleware('student.page:community')
         ->name('community.posts.like');
+    Route::post('community/media/{media}/like', [CommunityPostController::class, 'toggleMediaLike'])
+        ->middleware('student.page:community')
+        ->name('community.media.like');
     Route::post('community/posts/{post}/bookmark', [CommunityPostController::class, 'toggleBookmark'])
         ->middleware('student.page:community')
         ->name('community.posts.bookmark');

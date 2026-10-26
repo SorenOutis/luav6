@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityComment;
 use App\Models\CommunityCommentLike;
 use App\Models\CommunityPost;
+use App\Models\CommunityPostMedia;
 use App\Support\CommunitySettings;
 use App\Support\PublicFileUrl;
 use Illuminate\Http\JsonResponse;
@@ -33,22 +34,34 @@ class CommunityCommentController extends Controller
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:1000'],
+            'post_media_id' => [
+                'nullable',
+                'integer',
+                Rule::exists(CommunityPostMedia::class, 'id')->where('post_id', $post->id),
+            ],
             'parent_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('community_comments', 'id')->where('post_id', $post->id),
+                Rule::exists(CommunityComment::class, 'id')
+                    ->where('post_id', $post->id)
+                    ->where('post_media_id', $request->input('post_media_id')),
             ],
         ]);
 
-        $comment = DB::transaction(function () use ($viewer, $post, $validated) {
+        $target = isset($validated['post_media_id'])
+            ? $post->media()->findOrFail($validated['post_media_id'])
+            : $post;
+
+        $comment = DB::transaction(function () use ($viewer, $post, $target, $validated) {
             $created = CommunityComment::create([
                 'post_id' => $post->id,
+                'post_media_id' => $validated['post_media_id'] ?? null,
                 'parent_id' => $validated['parent_id'] ?? null,
                 'user_id' => $viewer->id,
                 'content' => $validated['content'],
             ]);
 
-            $post->increment('comments_count');
+            $target->increment('comments_count');
 
             return $created;
         });
@@ -57,6 +70,8 @@ class CommunityCommentController extends Controller
             return response()->json([
                 'comment' => [
                     'id' => $comment->id,
+                    'post_id' => $comment->post_id,
+                    'post_media_id' => $comment->post_media_id,
                     'parent_id' => $comment->parent_id,
                     'content' => $comment->content,
                     'created_at' => 'just now',
@@ -70,7 +85,7 @@ class CommunityCommentController extends Controller
                     'is_liked' => false,
                     'replies' => [],
                 ],
-                'comments_count' => (int) $post->fresh()->comments_count,
+                'comments_count' => (int) $target->fresh()->comments_count,
             ]);
         }
 
@@ -121,7 +136,7 @@ class CommunityCommentController extends Controller
         $isPostOwner = $post && (int) $post->user_id === (int) $viewer->id;
         abort_unless($viewer->id === $comment->user_id || $isPostOwner || $viewer->is_admin, 403);
 
-        $comment->delete();
+        DB::transaction(fn () => $comment->delete());
 
         if ($request->wantsJson()) {
             return response()->json(['status' => 'deleted']);

@@ -1609,6 +1609,110 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(wrapper.text()).toContain('Create MyDay Story');
         });
 
+        it.each(['all', 'section', 'saved'] as const)(
+            'keeps the %s tab feed and sidebar in independent desktop scroll regions without visible scrollbars',
+            async (tab) => {
+                const wrapper = mount(Community, {
+                    props: {
+                        workspace: null,
+                        currentTab: 'all',
+                    },
+                });
+
+                await wrapper
+                    .get(`[data-test="community-tab-${tab}"]`)
+                    .trigger('click');
+
+                const layout = wrapper.get('[data-test="community-layout"]');
+                const feed = wrapper.get('[data-test="community-feed-scroll"]');
+                const sidebar = wrapper.get(
+                    '[data-test="community-right-sidebar"]',
+                );
+                const statusesList = wrapper.get(
+                    '[data-test="classmates-list"]',
+                );
+
+                expect(layout.classes()).toContain('lg:h-[calc(100dvh-5rem)]');
+                expect(layout.classes()).toContain('lg:min-h-0');
+                expect(layout.classes()).toContain('scrollbar-none');
+
+                // Feed should be independently scrollable without scrollbars
+                expect(feed.classes()).toContain('lg:overflow-y-auto');
+                expect(feed.classes()).toContain('lg:overscroll-y-contain');
+                expect(feed.classes()).toContain('lg:min-h-0');
+                expect(feed.classes()).toContain('scrollbar-none');
+                expect(feed.classes()).not.toContain('overflow-y-auto');
+                expect(feed.attributes('data-lenis-prevent')).toBeDefined();
+                expect(feed.attributes('scroll-region')).toBeDefined();
+                expect(feed.attributes('tabindex')).toBe('0');
+                expect(feed.attributes('aria-label')).toBe('Community feed');
+
+                expect(feed.element.contains(sidebar.element)).toBe(false);
+                expect(feed.element.parentElement).toBe(
+                    sidebar.element.parentElement,
+                );
+                expect(
+                    feed
+                        .find('[data-test="community-feed-container"]')
+                        .exists(),
+                ).toBe(true);
+
+                // Sidebar should be independently scrollable without scrollbars when hovered
+                expect(sidebar.classes()).toContain('lg:overflow-y-auto');
+                expect(sidebar.classes()).toContain('lg:overscroll-y-contain');
+                expect(sidebar.classes()).toContain('scrollbar-none');
+                expect(sidebar.attributes('data-lenis-prevent')).toBeDefined();
+                expect(sidebar.attributes('scroll-region')).toBeDefined();
+                expect(sidebar.attributes('tabindex')).toBe('0');
+                expect(sidebar.attributes('aria-label')).toBe(
+                    'Community sidebar',
+                );
+
+                // Statuses list inside sidebar is nested-scrollable without scrollbars
+                expect(statusesList.classes()).toContain('overflow-y-auto');
+                expect(statusesList.classes()).toContain('scrollbar-none');
+
+                wrapper.unmount();
+            },
+        );
+
+        it('scrolls statuses list when hovering statuses without bubbling to sidebar', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    currentTab: 'all',
+                },
+            });
+
+            const sidebar = wrapper.get(
+                '[data-test="community-right-sidebar"]',
+            );
+            const statusesList = wrapper.get('[data-test="classmates-list"]');
+
+            statusesList.element.scrollTop = 0;
+            sidebar.element.scrollTop = 0;
+            Object.defineProperty(statusesList.element, 'scrollHeight', {
+                configurable: true,
+                value: 600,
+            });
+            Object.defineProperty(statusesList.element, 'clientHeight', {
+                configurable: true,
+                value: 240,
+            });
+
+            // Wheel on statuses list scrolls statuses list directly
+            const statusesWheelEvent = new WheelEvent('wheel', {
+                deltaY: 50,
+                bubbles: true,
+                cancelable: true,
+            });
+            statusesList.element.dispatchEvent(statusesWheelEvent);
+            expect(statusesList.element.scrollTop).toBe(50);
+            expect(statusesWheelEvent.defaultPrevented).toBe(true);
+
+            wrapper.unmount();
+        });
+
         it('styles tabs with tailored semantic colors for Feed, My Section, and Saved', async () => {
             const wrapper = mount(Community, {
                 props: {
@@ -3575,6 +3679,977 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(wrapper.find('[data-test="welcome-modal"]').exists()).toBe(
                 false,
             );
+        });
+    });
+
+    describe('Community.vue pop-up social media composer & multi-media carousel', () => {
+        const studentUser = {
+            id: 1,
+            public_id: 'usr_student_1',
+            name: 'Alex Rivera',
+            handle: 'alex.rivera',
+        };
+
+        const sampleMusicTracks = [
+            {
+                id: 10,
+                title: 'Lo-Fi Chill Study',
+                artist: 'BeatMaker',
+                duration: 120,
+                audio_url: '/profile-music/10/stream',
+                cover_image_url: '/storage/music/cover1.jpg',
+            },
+            {
+                id: 11,
+                title: 'Focus Beats',
+                artist: 'Acoustic Labs',
+                duration: 90,
+                audio_url: '/profile-music/11/stream',
+                cover_image_url: null,
+            },
+        ];
+
+        beforeEach(() => {
+            mockPageProps = {
+                auth: { user: studentUser },
+            };
+        });
+
+        it('opens social media popup modal when photos or videos are selected', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(false);
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            expect(fileInput.exists()).toBe(true);
+
+            const imgFile = new File(['image-bytes'], 'vacation.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="media-modal-image-preview"]')
+                    .exists(),
+            ).toBe(true);
+        });
+
+        it('supports multi-photo carousel preview with next/prev buttons and counter', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile1 = new File(['img1'], 'photo1.jpg', {
+                type: 'image/jpeg',
+            });
+            const imgFile2 = new File(['img2'], 'photo2.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile1, imgFile2],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            const counter = wrapper.find('[data-test="media-modal-counter"]');
+            expect(counter.exists()).toBe(true);
+            expect(counter.text()).toBe('1 / 2');
+
+            // Click next photo button
+            await wrapper
+                .find('[data-test="media-next-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(
+                wrapper.find('[data-test="media-modal-counter"]').text(),
+            ).toBe('2 / 2');
+
+            // Click prev photo button
+            await wrapper
+                .find('[data-test="media-prev-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(
+                wrapper.find('[data-test="media-modal-counter"]').text(),
+            ).toBe('1 / 2');
+        });
+
+        it('allows toggling music soundtrack picker and selecting a track', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="music-tracks-picker"]').exists(),
+            ).toBe(false);
+
+            // Open music picker
+            await wrapper
+                .find('[data-test="toggle-music-picker-button"]')
+                .trigger('click');
+            await nextTick();
+
+            const picker = wrapper.find('[data-test="music-tracks-picker"]');
+            expect(picker.exists()).toBe(true);
+            expect(picker.text()).toContain('Lo-Fi Chill Study');
+            expect(picker.text()).toContain('Focus Beats');
+
+            // Select track 10
+            const selectButtons = picker.findAll('button');
+            const selectBtn = selectButtons.find((b) =>
+                b.text().includes('Select'),
+            );
+            expect(selectBtn).toBeDefined();
+            await selectBtn!.trigger('click');
+            await nextTick();
+
+            // Track is now selected and badge is displayed in preview
+            const badge = wrapper.find(
+                '[data-test="modal-attached-soundtrack-badge"]',
+            );
+            expect(badge.exists()).toBe(true);
+            expect(badge.text()).toContain('Lo-Fi Chill Study');
+        });
+
+        it('dismisses media modal on discard click or Escape key', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: sampleMusicTracks,
+                },
+            });
+
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(true);
+
+            // Trigger Escape key
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="create-media-post-modal"]').exists(),
+            ).toBe(false);
+        });
+
+        it('renders multi-photo carousel and soundtrack badge on feed posts', async () => {
+            const feedPost = {
+                id: 101,
+                content: 'Beautiful sunset on campus!',
+                created_at: '5m ago',
+                likes_count: 3,
+                comments_count: 1,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    public_id: 'usr_student_1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'Section Alpha',
+                },
+                media: [
+                    {
+                        id: 1,
+                        url: '/storage/photo1.jpg',
+                        type: 'image',
+                        name: 'photo1.jpg',
+                    },
+                    {
+                        id: 2,
+                        url: '/storage/photo2.jpg',
+                        type: 'image',
+                        name: 'photo2.jpg',
+                    },
+                ],
+                music: {
+                    id: 10,
+                    title: 'Campus Vibe',
+                    artist: 'StudyGroup',
+                    audio_url: '/profile-music/10/stream',
+                },
+                comments: [],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [feedPost],
+                },
+            });
+
+            // Music soundtrack badge is displayed
+            const musicBadge = wrapper.find(
+                '[data-test="post-soundtrack-badge"]',
+            );
+            expect(musicBadge.exists()).toBe(true);
+            expect(musicBadge.text()).toContain('Campus Vibe • StudyGroup');
+
+            // Media Bento Grid is displayed with both photos visible
+            const mediaContainer = wrapper.find(
+                '[data-test="post-media-container"]',
+            );
+            expect(mediaContainer.exists()).toBe(true);
+
+            const bentoGrid = wrapper.find('[data-test="bento-grid-2"]');
+            expect(bentoGrid.exists()).toBe(true);
+
+            const bentoItems = wrapper.findAll(
+                '[data-test="bento-media-item"]',
+            );
+            expect(bentoItems.length).toBe(2);
+
+            // Feed card renders action bar and comments for the whole post
+            expect(
+                wrapper.find('[data-test="post-like-button"]').exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="post-comments-toggle-button"]')
+                    .exists(),
+            ).toBe(true);
+        });
+
+        it('keeps post threads in the feed and media threads in the lightbox during navigation', async () => {
+            const mediaComment = {
+                id: 801,
+                author_name: 'David Kim',
+                author_handle: 'david.kim',
+                content: 'Great first photo!',
+                created_at: '4m ago',
+                replies: [
+                    {
+                        id: 802,
+                        parent_id: 801,
+                        author_name: 'Alex Rivera',
+                        author_handle: 'alex.rivera',
+                        content: 'Photo reply only',
+                        created_at: '3m ago',
+                    },
+                ],
+            };
+            const feedPost = {
+                id: 201,
+                content: 'Graduation day pictures!',
+                created_at: '10m ago',
+                likes_count: 5,
+                comments_count: 1,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    public_id: 'usr_student_1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'BSIT 3-A',
+                },
+                media: [
+                    {
+                        id: 1,
+                        url: '/storage/photo1.jpg',
+                        type: 'image',
+                        name: 'photo1.jpg',
+                        comments: [mediaComment],
+                        comments_count: 2,
+                    },
+                    {
+                        id: 2,
+                        url: '/storage/photo2.jpg',
+                        type: 'image',
+                        name: 'photo2.jpg',
+                        comments: [],
+                        comments_count: 0,
+                    },
+                ],
+                comments: [
+                    {
+                        id: 701,
+                        author_name: 'Sarah Chen',
+                        author_handle: 'sarah.chen',
+                        content: 'Congratulations Alex!',
+                        created_at: '5m ago',
+                        replies: [
+                            {
+                                id: 702,
+                                parent_id: 701,
+                                author_name: 'Alex Rivera',
+                                author_handle: 'alex.rivera',
+                                content: 'Whole-post reply only',
+                                created_at: '4m ago',
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [feedPost],
+                },
+            });
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(false);
+            const feed = wrapper.find('article');
+            expect(feed.find('[data-test="post-like-button"]').exists()).toBe(
+                true,
+            );
+            expect(
+                feed.find('input[placeholder="Add a comment…"]').exists(),
+            ).toBe(true);
+            expect(feed.find('[data-test="comment-item"]').text()).toContain(
+                'Congratulations Alex!',
+            );
+            expect(feed.text()).not.toContain('Great first photo!');
+            await feed
+                .find('[data-test="toggle-replies-button"]')
+                .trigger('click');
+            expect(feed.find('[data-test="reply-item"]').text()).toContain(
+                'Whole-post reply only',
+            );
+
+            // Click the image in the feed post
+            await wrapper
+                .find('[data-test="post-media-image"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(true);
+
+            // Lightbox shows author name and caption
+            expect(
+                wrapper.find('[data-test="lightbox-author-name"]').text(),
+            ).toContain('Alex Rivera');
+            expect(
+                wrapper.find('[data-test="lightbox-post-content"]').text(),
+            ).toContain('Graduation day pictures!');
+
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
+            expect(
+                lightbox.find('[data-test="lightbox-comment-item"]').text(),
+            ).toContain('Great first photo!');
+            expect(lightbox.text()).toContain('Photo reply only');
+            expect(lightbox.text()).toContain('Comments (2)');
+            expect(lightbox.text()).not.toContain('Congratulations Alex!');
+            expect(lightbox.text()).not.toContain('Whole-post reply only');
+
+            // Carousel navigation inside lightbox
+            expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
+                '1 / 2',
+            );
+
+            await wrapper
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(wrapper.find('[data-test="lightbox-counter"]').text()).toBe(
+                '2 / 2',
+            );
+            expect(
+                lightbox.find('[data-test="lightbox-comment-item"]').exists(),
+            ).toBe(false);
+            expect(lightbox.text()).toContain('Comments (0)');
+            expect(lightbox.text()).toContain('No comments yet.');
+            expect(lightbox.text()).not.toContain('Congratulations Alex!');
+            expect(lightbox.text()).not.toContain('Great first photo!');
+            expect(feed.find('[data-test="comment-item"]').text()).toContain(
+                'Congratulations Alex!',
+            );
+
+            // Close lightbox on desktop close button
+            await wrapper
+                .find('[data-test="lightbox-sidebar-close"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(false);
+        });
+
+        it('keeps legacy attachment interactions on the whole post without inventing media state', async () => {
+            vi.useFakeTimers();
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [
+                        {
+                            id: 250,
+                            content: 'Legacy photo',
+                            created_at: '1h ago',
+                            attachment_url: '/storage/legacy.jpg',
+                            attachment_type: 'image',
+                            likes_count: 2,
+                            comments_count: 1,
+                            is_liked: true,
+                            is_bookmarked: false,
+                            author: {
+                                id: '1',
+                                name: 'Alex Rivera',
+                                handle: 'alex.rivera',
+                                is_same_section: true,
+                                is_masked: false,
+                                is_following: false,
+                            },
+                            media: [
+                                {
+                                    id: 0,
+                                    url: '/storage/legacy.jpg',
+                                    type: 'image',
+                                    likes_count: 0,
+                                    is_liked: false,
+                                    comments: [],
+                                    comments_count: 0,
+                                },
+                            ],
+                            comments: [
+                                {
+                                    id: 750,
+                                    author_name: 'Sarah Chen',
+                                    author_handle: 'sarah.chen',
+                                    content: 'Legacy whole-post comment',
+                                    created_at: '30m ago',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+            await wrapper
+                .find('[data-test="post-media-image"]')
+                .trigger('click');
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
+            const likeButton = lightbox.find(
+                '[data-test="lightbox-like-button"]',
+            );
+            expect(likeButton.text()).toBe('2');
+            expect(likeButton.classes()).toContain('text-rose-500');
+            expect(lightbox.text()).toContain('Legacy whole-post comment');
+            expect(lightbox.text()).toContain('Comments (1)');
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: false, likes_count: 1 },
+            });
+            await likeButton.trigger('click');
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenCalledWith(
+                '/community/posts/250/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(likeButton.text()).toBe('1');
+            expect(likeButton.classes()).not.toContain('text-rose-500');
+            expect(wrapper.find('[data-test="post-like-button"]').text()).toBe(
+                '1',
+            );
+            wrapper.unmount();
+            vi.useRealTimers();
+        });
+
+        it('keeps optimistic and persisted media likes separate from post likes', async () => {
+            vi.useFakeTimers();
+            const multiImagePost = {
+                id: 301,
+                content: 'Check out these designs',
+                created_at: 'just now',
+                likes_count: 3,
+                comments_count: 0,
+                is_liked: false,
+                is_bookmarked: false,
+                author: {
+                    id: '1',
+                    name: 'Alex Rivera',
+                    handle: 'alex.rivera',
+                    is_same_section: true,
+                    is_masked: false,
+                    is_following: false,
+                    section_name: 'Designers',
+                },
+                media: [
+                    {
+                        id: 501,
+                        url: '/storage/jacket1.jpg',
+                        type: 'image',
+                        likes_count: 4,
+                        is_liked: false,
+                    },
+                    {
+                        id: 502,
+                        url: '/storage/jacket2.jpg',
+                        type: 'image',
+                        likes_count: 1,
+                        is_liked: true,
+                    },
+                ],
+                comments: [],
+            };
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [multiImagePost],
+                },
+            });
+
+            // Bento Grid renders both photos in the post
+            const bentoItems = wrapper.findAll(
+                '[data-test="bento-media-item"]',
+            );
+            expect(bentoItems.length).toBe(2);
+
+            // Open lightbox on photo 2 by clicking the 2nd bento item
+            await bentoItems[1].trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="post-lightbox-modal"]').exists(),
+            ).toBe(true);
+            // Lightbox shows photo 2's count (1) and whole post total (3 post likes)
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('1');
+            expect(
+                wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
+            ).toContain('3 post likes');
+
+            // Switch to photo 1 in lightbox
+            await wrapper
+                .find('[data-test="lightbox-prev-button"]')
+                .trigger('click');
+            await nextTick();
+
+            // Lightbox now shows photo 1's distinct count (4)
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('4');
+
+            // Like photo 1 inside lightbox
+            await wrapper
+                .find('[data-test="lightbox-like-button"]')
+                .trigger('click');
+            await nextTick();
+
+            // Photo 1 likes incremented to 5
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('5');
+            expect(
+                wrapper.find('[data-test="lightbox-post-total-likes"]').text(),
+            ).toContain('3 post likes');
+            const postLike = wrapper.find('[data-test="post-like-button"]');
+            expect(postLike.text()).toBe('3');
+            expect(postLike.classes()).not.toContain('text-rose-500');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: true, likes_count: 5 },
+            });
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenCalledWith(
+                '/community/media/501/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+            expect(postLike.text()).toBe('3');
+            expect(postLike.classes()).not.toContain('text-rose-500');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { is_liked: true, likes_count: 4 },
+            });
+            await postLike.trigger('click');
+            await vi.advanceTimersByTimeAsync(360);
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/301/like',
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(postLike.text()).toBe('4');
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('5');
+
+            await wrapper
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            expect(
+                wrapper.find('[data-test="lightbox-like-button"]').text(),
+            ).toBe('1');
+            expect(postLike.text()).toBe('4');
+            wrapper.unmount();
+            vi.useRealTimers();
+        });
+
+        it('submits post and media comments and replies without mixing threads, counts, or drafts', async () => {
+            const postComment = {
+                id: 901,
+                author_name: 'Sarah Chen',
+                author_handle: 'sarah.chen',
+                content: 'Whole-post thread',
+                created_at: '5m ago',
+                replies: [],
+            };
+            const mediaComment = {
+                id: 902,
+                author_name: 'David Kim',
+                author_handle: 'david.kim',
+                content: 'First-photo thread',
+                created_at: '4m ago',
+                replies: [],
+            };
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: [
+                        {
+                            id: 401,
+                            content: 'Independent conversations',
+                            created_at: '10m ago',
+                            likes_count: 0,
+                            comments_count: 1,
+                            is_liked: false,
+                            is_bookmarked: false,
+                            author: {
+                                id: '1',
+                                name: 'Alex Rivera',
+                                handle: 'alex.rivera',
+                                is_same_section: true,
+                                is_masked: false,
+                                is_following: false,
+                            },
+                            comments: [postComment],
+                            media: [
+                                {
+                                    id: 601,
+                                    url: '/storage/first.jpg',
+                                    type: 'image',
+                                    comments: [mediaComment],
+                                    comments_count: 1,
+                                },
+                                {
+                                    id: 602,
+                                    url: '/storage/second.jpg',
+                                    type: 'image',
+                                    comments: [],
+                                    comments_count: 0,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+            const feed = wrapper.find('article');
+            const feedInput = feed.find('input[placeholder="Add a comment…"]');
+            await feedInput.setValue('Post draft stays here');
+            await feed
+                .findAll('[data-test="bento-media-item"]')[0]
+                .trigger('click');
+            const lightbox = wrapper.find('[data-test="post-lightbox-modal"]');
+            const mediaInput = lightbox.find(
+                '[data-test="lightbox-comment-input"]',
+            );
+            expect((mediaInput.element as HTMLInputElement).value).toBe('');
+
+            const mediaReply = {
+                id: 903,
+                parent_id: 902,
+                author_name: 'Alex Rivera',
+                author_handle: 'alex.rivera',
+                content: 'Reply to first photo',
+                created_at: 'just now',
+            };
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { comment: mediaReply, comments_count: 2 },
+            });
+            const replyButton = lightbox
+                .find('[data-test="lightbox-comment-item"]')
+                .findAll('button')
+                .find((button) => button.text() === 'Reply');
+            await replyButton!.trigger('click');
+            await mediaInput.setValue(mediaReply.content);
+            await lightbox
+                .find('[data-test="lightbox-submit-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                {
+                    content: mediaReply.content,
+                    parent_id: 902,
+                    post_media_id: 601,
+                },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(lightbox.text()).toContain(mediaReply.content);
+            expect(lightbox.text()).toContain('Comments (2)');
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '1',
+            );
+            expect(feed.text()).not.toContain(mediaReply.content);
+            expect((feedInput.element as HTMLInputElement).value).toBe(
+                'Post draft stays here',
+            );
+
+            await mediaInput.setValue('First-photo draft');
+            await lightbox
+                .find('[data-test="lightbox-next-button"]')
+                .trigger('click');
+            expect((mediaInput.element as HTMLInputElement).value).toBe('');
+            expect(lightbox.text()).toContain('Comments (0)');
+            const secondComment = {
+                id: 904,
+                author_name: 'Alex Rivera',
+                author_handle: 'alex.rivera',
+                content: 'Second-photo comment',
+                created_at: 'just now',
+            };
+            mockAxiosPost.mockResolvedValueOnce({
+                data: { comment: secondComment, comments_count: 1 },
+            });
+            await mediaInput.setValue(secondComment.content);
+            await lightbox
+                .find('[data-test="lightbox-submit-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                {
+                    content: secondComment.content,
+                    parent_id: null,
+                    post_media_id: 602,
+                },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(lightbox.text()).toContain('Comments (1)');
+            expect(lightbox.text()).toContain(secondComment.content);
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '1',
+            );
+            await lightbox
+                .find('[data-test="lightbox-prev-button"]')
+                .trigger('click');
+            expect((mediaInput.element as HTMLInputElement).value).toBe(
+                'First-photo draft',
+            );
+            expect(lightbox.text()).toContain(mediaReply.content);
+            expect(lightbox.text()).not.toContain(secondComment.content);
+            expect(lightbox.text()).toContain('Comments (2)');
+            await lightbox
+                .find('[data-test="lightbox-sidebar-close"]')
+                .trigger('click');
+
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    comment: {
+                        ...postComment,
+                        id: 905,
+                        content: 'Post draft stays here',
+                    },
+                    comments_count: 2,
+                },
+            });
+            await feed
+                .find('[data-test="post-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                { content: 'Post draft stays here', parent_id: null },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '2',
+            );
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    comment: {
+                        ...postComment,
+                        id: 906,
+                        parent_id: 901,
+                        content: 'Post reply stays here',
+                    },
+                    comments_count: 3,
+                },
+            });
+            await feed
+                .find('[data-test="comment-reply-button"]')
+                .trigger('click');
+            await feedInput.setValue('Post reply stays here');
+            await feed
+                .find('[data-test="post-comment-button"]')
+                .trigger('click');
+            await flushPromises();
+            expect(mockAxiosPost).toHaveBeenLastCalledWith(
+                '/community/posts/401/comments',
+                { content: 'Post reply stays here', parent_id: 901 },
+                { headers: { Accept: 'application/json' } },
+            );
+            expect(feed.find('[data-test="post-comments-count"]').text()).toBe(
+                '3',
+            );
+            expect(feed.find('[data-test="reply-item"]').text()).toContain(
+                'Post reply stays here',
+            );
+            await feed
+                .findAll('[data-test="bento-media-item"]')[0]
+                .trigger('click');
+            const reopened = wrapper.find('[data-test="post-lightbox-modal"]');
+            expect(reopened.text()).toContain('Comments (2)');
+            expect(reopened.text()).not.toContain('Post reply stays here');
+            expect(reopened.text()).not.toContain('Post draft stays here');
+            wrapper.unmount();
+        });
+
+        it('allows choosing which section a post will be displayed in when student has multiple sections', async () => {
+            const multiSections = [
+                { id: 101, name: 'BSIT 3-A' },
+                { id: 102, name: 'Section Beta' },
+            ];
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    availableSections: multiSections,
+                    currentSectionId: 101,
+                },
+            });
+
+            // Inline composer shows the section trigger
+            const inlineSectionTrigger = wrapper.find(
+                '[data-test="inline-composer-section-trigger"]',
+            );
+            expect(inlineSectionTrigger.exists()).toBe(true);
+            expect(inlineSectionTrigger.text()).toContain('BSIT 3-A');
+
+            // Open section picker in inline composer
+            await inlineSectionTrigger.trigger('click');
+            await nextTick();
+
+            const inlineMenu = wrapper.find(
+                '[data-test="inline-composer-section-menu"]',
+            );
+            expect(inlineMenu.exists()).toBe(true);
+
+            // Select Section Beta
+            const betaBtn = inlineMenu
+                .findAll('button')
+                .find((b) => b.text().includes('Section Beta'));
+            expect(betaBtn).toBeDefined();
+            await betaBtn!.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper
+                    .find('[data-test="inline-composer-section-trigger"]')
+                    .text(),
+            ).toContain('Section Beta');
+
+            // Now open media composer modal
+            const fileInput = wrapper.find(
+                '[data-test="media-post-file-input"]',
+            );
+            const imgFile = new File(['img'], 'photo.jpg', {
+                type: 'image/jpeg',
+            });
+            Object.defineProperty(fileInput.element, 'files', {
+                value: [imgFile],
+                writable: true,
+            });
+            await fileInput.trigger('change');
+            await nextTick();
+
+            // Modal shows chosen posting section
+            const modalSectionTrigger = wrapper.find(
+                '[data-test="composer-modal-section-trigger"]',
+            );
+            expect(modalSectionTrigger.exists()).toBe(true);
+            expect(modalSectionTrigger.text()).toContain('Section Beta');
+
+            // Change section inside modal back to BSIT 3-A
+            await modalSectionTrigger.trigger('click');
+            await nextTick();
+
+            const modalMenu = wrapper.find(
+                '[data-test="composer-modal-section-menu"]',
+            );
+            expect(modalMenu.exists()).toBe(true);
+
+            const aBtn = modalMenu
+                .findAll('button')
+                .find((b) => b.text().includes('BSIT 3-A'));
+            expect(aBtn).toBeDefined();
+            await aBtn!.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper
+                    .find('[data-test="composer-modal-section-trigger"]')
+                    .text(),
+            ).toContain('BSIT 3-A');
         });
     });
 });

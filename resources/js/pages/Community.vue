@@ -22,9 +22,12 @@ import {
     PartyPopper,
     Pause,
     Pencil,
+    Music,
     Play,
     Plus,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     CornerDownRight,
     Eye,
@@ -43,9 +46,18 @@ import {
     Users,
     X,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { like as likeMedia } from '@/routes/community/media';
+import { store as storePostComment } from '@/routes/community/posts/comments';
 import type { BreadcrumbItem } from '@/types';
 
 export interface ClassmatePresence {
@@ -89,6 +101,27 @@ export interface PostAuthor {
     section_name?: string;
 }
 
+export interface PostMediaItem {
+    id: number | string;
+    url: string;
+    type: 'image' | 'video' | string;
+    name?: string | null;
+    size?: number | null;
+    likes_count?: number;
+    is_liked?: boolean;
+    comments?: PostComment[];
+    comments_count?: number;
+}
+
+export interface PostMusicTrack {
+    id: number;
+    title: string;
+    artist: string;
+    duration?: number;
+    audio_url: string;
+    cover_image_url?: string | null;
+}
+
 export interface CommunityFeedPost {
     id: number | string;
     content: string;
@@ -97,6 +130,8 @@ export interface CommunityFeedPost {
     attachment_type?: string | null;
     attachment_name?: string | null;
     attachment_size?: number | null;
+    media?: PostMediaItem[];
+    music?: PostMusicTrack | null;
     likes_count: number;
     comments_count: number;
     is_liked: boolean;
@@ -169,6 +204,7 @@ interface Props {
     onlineCount?: number;
     totalEnrolledCount?: number;
     posts?: CommunityFeedPost[];
+    musicTracks?: PostMusicTrack[];
     trendingTopics?: TrendingTopic[];
     currentTab?: 'all' | 'section' | 'saved';
     stories?: UserStoryGroup[];
@@ -268,10 +304,21 @@ const activeTab = ref<'all' | 'section' | 'saved'>(initialTab);
 const tabPostsCache = ref<Record<string, CommunityFeedPost[]>>({
     [initialTab]: [...(props.posts ?? [])],
 });
+const feedScrollRef = ref<HTMLElement | null>(null);
+const tabScrollPositions = ref<Record<string, number>>({
+    all: 0,
+    section: 0,
+    saved: 0,
+});
 
 const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
     if (activeTab.value === tab) {
         return;
+    }
+
+    if (feedScrollRef.value) {
+        tabScrollPositions.value[activeTab.value] =
+            feedScrollRef.value.scrollTop;
     }
 
     // Cache current tab state
@@ -293,6 +340,12 @@ const handleTabChange = (tab: 'all' | 'section' | 'saved') => {
             );
         }
     }
+
+    nextTick(() => {
+        if (feedScrollRef.value) {
+            feedScrollRef.value.scrollTop = tabScrollPositions.value[tab] ?? 0;
+        }
+    });
 
     // 2. Background Inertia router visit to reconcile with server
     router.visit(`/community?tab=${tab}`, {
@@ -992,6 +1045,110 @@ const toggleCommentLike = (commentId: number | string) => {
     }, 350);
 };
 
+// ─── Post Media Item Likes State ─────────────────────────────────────────────
+const mediaLikedMap = ref<Record<string, boolean>>({});
+const mediaLikesCountMap = ref<Record<string, number>>({});
+const serverMediaLikedMap = ref<Record<string, boolean>>({});
+const mediaLikeDebounceTimers = ref<
+    Record<string, ReturnType<typeof setTimeout>>
+>({});
+
+const initMediaReactions = (media?: PostMediaItem[]) => {
+    if (!media) return;
+    for (const m of media) {
+        const mKey = String(m.id);
+        if (mediaLikedMap.value[mKey] === undefined) {
+            mediaLikedMap.value[mKey] = Boolean(m.is_liked);
+            mediaLikesCountMap.value[mKey] = m.likes_count ?? 0;
+            serverMediaLikedMap.value[mKey] = Boolean(m.is_liked);
+        }
+        const commentKey = 'media_' + String(m.id);
+        if (localCommentsMap.value[commentKey] === undefined && m.comments) {
+            localCommentsMap.value[commentKey] = JSON.parse(
+                JSON.stringify(m.comments),
+            );
+            commentsCountMap.value[commentKey] =
+                m.comments_count ?? m.comments.length;
+            initCommentReactions(m.comments);
+        }
+    }
+};
+
+const isMediaLiked = (mediaItem: PostMediaItem | null | undefined): boolean => {
+    if (!mediaItem) return false;
+    const key = String(mediaItem.id);
+    if (mediaLikedMap.value[key] !== undefined) {
+        return mediaLikedMap.value[key];
+    }
+    return Boolean(mediaItem.is_liked);
+};
+
+const getMediaLikesCount = (
+    mediaItem: PostMediaItem | null | undefined,
+): number => {
+    if (!mediaItem) return 0;
+    const key = String(mediaItem.id);
+    if (mediaLikesCountMap.value[key] !== undefined) {
+        return mediaLikesCountMap.value[key];
+    }
+    return mediaItem.likes_count ?? 0;
+};
+
+const toggleMediaLike = (
+    post: CommunityFeedPost,
+    mediaItem: PostMediaItem | null | undefined,
+) => {
+    if (!mediaItem || !mediaItem.id) {
+        toggleLike(post.id);
+        return;
+    }
+
+    const mKey = String(mediaItem.id);
+    const prevLiked = isMediaLiked(mediaItem);
+    const prevCount = getMediaLikesCount(mediaItem);
+    const nextLiked = !prevLiked;
+
+    // 1. Immediate optimistic client update for media item
+    mediaLikedMap.value[mKey] = nextLiked;
+    mediaLikesCountMap.value[mKey] = Math.max(
+        0,
+        prevCount + (nextLiked ? 1 : -1),
+    );
+
+    // 2. Clear existing debounce timer
+    if (mediaLikeDebounceTimers.value[mKey]) {
+        clearTimeout(mediaLikeDebounceTimers.value[mKey]);
+    }
+
+    // 3. Debounce network sync by 350ms
+    mediaLikeDebounceTimers.value[mKey] = setTimeout(async () => {
+        delete mediaLikeDebounceTimers.value[mKey];
+
+        if (mediaLikedMap.value[mKey] === serverMediaLikedMap.value[mKey]) {
+            return;
+        }
+
+        try {
+            const res = await axios.post(
+                likeMedia.url(Number(mediaItem.id)),
+                {},
+                { headers: { Accept: 'application/json' } },
+            );
+            if (res.data) {
+                serverMediaLikedMap.value[mKey] = Boolean(res.data.is_liked);
+                mediaLikedMap.value[mKey] = Boolean(res.data.is_liked);
+                mediaLikesCountMap.value[mKey] = Number(
+                    res.data.likes_count ?? 0,
+                );
+            }
+        } catch {
+            mediaLikedMap.value[mKey] =
+                serverMediaLikedMap.value[mKey] ?? prevLiked;
+            mediaLikesCountMap.value[mKey] = prevCount;
+        }
+    }, 350);
+};
+
 watch(
     displayPosts,
     (posts) => {
@@ -1013,6 +1170,7 @@ watch(
                 commentsCountMap.value[key] = post.comments_count ?? 0;
             }
             initCommentReactions(post.comments);
+            initMediaReactions(post.media);
         }
     },
     { immediate: true },
@@ -1151,6 +1309,9 @@ onBeforeUnmount(() => {
     for (const timer of Object.values(commentLikeDebounceTimers.value)) {
         clearTimeout(timer);
     }
+    for (const timer of Object.values(mediaLikeDebounceTimers.value)) {
+        clearTimeout(timer);
+    }
 });
 
 // ─── Quick Comments & Threaded Replies State ────────────────────────────────
@@ -1282,36 +1443,471 @@ const handleAddComment = async (postId: number | string) => {
     }
 };
 
-// ─── Post Composer Form ──────────────────────────────────────────────────────
+const getMediaComments = (
+    mediaItem: PostMediaItem | null | undefined,
+): PostComment[] => {
+    if (!mediaItem || !mediaItem.id) return [];
+    const key = 'media_' + String(mediaItem.id);
+    return localCommentsMap.value[key] ?? mediaItem.comments ?? [];
+};
+
+const getMediaCommentsCount = (
+    mediaItem: PostMediaItem | null | undefined,
+): number => {
+    if (!mediaItem || !mediaItem.id) return 0;
+    const key = 'media_' + String(mediaItem.id);
+    return (
+        commentsCountMap.value[key] ??
+        mediaItem.comments_count ??
+        mediaItem.comments?.length ??
+        0
+    );
+};
+
+const handleAddLightboxComment = async (
+    post: CommunityFeedPost,
+    mediaItem: PostMediaItem | null | undefined,
+) => {
+    if (!mediaItem || !mediaItem.id) {
+        await handleAddComment(post.id);
+        return;
+    }
+
+    const key = 'media_' + String(mediaItem.id);
+    const content = (commentInputs.value[key] || '').trim();
+    if (!content || isSubmittingComment.value[key]) {
+        return;
+    }
+
+    const replyTarget = replyingTo.value[key];
+    const parentId = replyTarget?.id ?? null;
+
+    isSubmittingComment.value[key] = true;
+    commentInputs.value[key] = '';
+    replyingTo.value[key] = null;
+
+    try {
+        const response = await axios.post(
+            storePostComment.url(Number(post.id)),
+            {
+                content,
+                parent_id: parentId,
+                post_media_id: mediaItem.id,
+            },
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+            },
+        );
+
+        const newComment = response.data?.comment;
+        if (newComment) {
+            const newKey = String(newComment.id);
+            commentLikedMap.value[newKey] = false;
+            commentLikesCountMap.value[newKey] = 0;
+            serverCommentLikedMap.value[newKey] = false;
+
+            if (!localCommentsMap.value[key]) {
+                localCommentsMap.value[key] = mediaItem.comments
+                    ? JSON.parse(JSON.stringify(mediaItem.comments))
+                    : [];
+            }
+
+            if (parentId) {
+                const parent = localCommentsMap.value[key].find(
+                    (c) => String(c.id) === String(parentId),
+                );
+                if (parent) {
+                    if (!parent.replies) {
+                        parent.replies = [];
+                    }
+                    parent.replies.push(newComment);
+                    expandedReplies.value[String(parentId)] = true;
+                } else {
+                    localCommentsMap.value[key].push(newComment);
+                }
+            } else {
+                localCommentsMap.value[key].push(newComment);
+            }
+
+            commentsCountMap.value[key] =
+                response.data.comments_count ??
+                getMediaCommentsCount(mediaItem) + 1;
+        }
+    } catch {
+        router.post(
+            storePostComment.url(Number(post.id)),
+            {
+                content,
+                parent_id: parentId,
+                post_media_id: mediaItem.id,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    } finally {
+        isSubmittingComment.value[key] = false;
+    }
+};
+
+// ─── Post Composer Form & Media Modal State ─────────────────────────────────
+export interface ComposerMediaFile {
+    file: File;
+    preview: string;
+    type: 'image' | 'video';
+    name: string;
+    size: number;
+}
+
 const isComposerOpen = ref(false);
 const composerFile = ref<File | null>(null);
 const composerFilePreview = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
+// Social Pop-up Media Composer Modal state
+const isMediaModalOpen = ref(false);
+const mediaFiles = ref<ComposerMediaFile[]>([]);
+const activeMediaIndex = ref(0);
+const selectedMusicTrackId = ref<number | null>(null);
+const isMusicPickerOpen = ref(false);
+const previewAudio = ref<HTMLAudioElement | null>(null);
+const playingTrackId = ref<number | null>(null);
+const mediaFileInputRef = ref<HTMLInputElement | null>(null);
+
+// Section picker state for students with multiple sections
+const composerSectionId = ref<number | null>(
+    props.currentSectionId ?? props.availableSections?.[0]?.id ?? null,
+);
+const isComposerSectionDropdownOpen = ref(false);
+const isInlineSectionDropdownOpen = ref(false);
+
+const activeMediaItem = computed<ComposerMediaFile | null>(() => {
+    return mediaFiles.value[activeMediaIndex.value] ?? null;
+});
+
+const selectedMusicTrack = computed<PostMusicTrack | null>(() => {
+    if (!selectedMusicTrackId.value) return null;
+    return (
+        props.musicTracks?.find((t) => t.id === selectedMusicTrackId.value) ??
+        null
+    );
+});
+
 const composerForm = useForm<{
     content: string;
     is_anonymous: boolean;
     section_id: number | null;
+    profile_music_track_id: number | null;
     attachment: File | null;
+    attachments: File[];
 }>({
     content: '',
     is_anonymous: false,
-    section_id: null,
+    section_id:
+        props.currentSectionId ?? props.availableSections?.[0]?.id ?? null,
+    profile_music_track_id: null,
     attachment: null,
+    attachments: [],
 });
+
+const postingSectionName = computed(() => {
+    if (composerSectionId.value) {
+        const found = props.availableSections?.find(
+            (s) => s.id === composerSectionId.value,
+        );
+        if (found) return found.name;
+    }
+    return sectionDisplayName.value;
+});
+
+const revokeMediaPreviews = () => {
+    mediaFiles.value.forEach((item) => {
+        if (item.preview && item.preview.startsWith('blob:')) {
+            try {
+                URL.revokeObjectURL(item.preview);
+            } catch {
+                // ignore
+            }
+        }
+    });
+};
+
+const stopMusicPreview = () => {
+    if (previewAudio.value) {
+        previewAudio.value.pause();
+        previewAudio.value = null;
+    }
+    playingTrackId.value = null;
+};
+
+const toggleTrackPreview = (track: PostMusicTrack) => {
+    if (playingTrackId.value === track.id) {
+        stopMusicPreview();
+        return;
+    }
+    stopMusicPreview();
+    const audio = new Audio(track.audio_url);
+    previewAudio.value = audio;
+    playingTrackId.value = track.id;
+    audio.play().catch(() => {
+        stopMusicPreview();
+    });
+    audio.onended = () => {
+        playingTrackId.value = null;
+        previewAudio.value = null;
+    };
+};
+
+const selectMusicTrack = (track: PostMusicTrack) => {
+    if (selectedMusicTrackId.value === track.id) {
+        selectedMusicTrackId.value = null;
+    } else {
+        selectedMusicTrackId.value = track.id;
+    }
+    stopMusicPreview();
+    isMusicPickerOpen.value = false;
+};
+
+const removeSelectedMusic = () => {
+    selectedMusicTrackId.value = null;
+    stopMusicPreview();
+};
+
+const openMediaModalWithFiles = (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (!list.length) return;
+
+    for (const file of list) {
+        const isVid =
+            file.type.startsWith('video/') ||
+            /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+        const previewUrl = URL.createObjectURL(file);
+        mediaFiles.value.push({
+            file,
+            preview: previewUrl,
+            type: isVid ? 'video' : 'image',
+            name: file.name,
+            size: file.size,
+        });
+    }
+
+    if (activeMediaIndex.value >= mediaFiles.value.length) {
+        activeMediaIndex.value = 0;
+    }
+
+    isMediaModalOpen.value = true;
+};
+
+const handleMediaFileInputChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length) {
+        openMediaModalWithFiles(target.files);
+        target.value = '';
+    }
+};
+
+const removeMediaItem = (index: number) => {
+    const item = mediaFiles.value[index];
+    if (item && item.preview.startsWith('blob:')) {
+        try {
+            URL.revokeObjectURL(item.preview);
+        } catch {
+            // ignore
+        }
+    }
+    mediaFiles.value.splice(index, 1);
+    if (activeMediaIndex.value >= mediaFiles.value.length) {
+        activeMediaIndex.value = Math.max(0, mediaFiles.value.length - 1);
+    }
+    if (mediaFiles.value.length === 0) {
+        closeMediaModal();
+    }
+};
+
+const moveMediaCarousel = (dir: number) => {
+    if (!mediaFiles.value.length) return;
+    activeMediaIndex.value =
+        (activeMediaIndex.value + dir + mediaFiles.value.length) %
+        mediaFiles.value.length;
+};
+
+const closeMediaModal = () => {
+    stopMusicPreview();
+    isMusicPickerOpen.value = false;
+    isMediaModalOpen.value = false;
+    revokeMediaPreviews();
+    mediaFiles.value = [];
+    activeMediaIndex.value = 0;
+    selectedMusicTrackId.value = null;
+    if (mediaFileInputRef.value) {
+        mediaFileInputRef.value.value = '';
+    }
+};
+
+const submitMediaPost = () => {
+    if (!composerForm.content.trim() && mediaFiles.value.length === 0) {
+        return;
+    }
+
+    composerForm.section_id =
+        composerSectionId.value ?? selectedSectionId.value;
+    composerForm.profile_music_track_id = selectedMusicTrackId.value;
+    composerForm.attachments = mediaFiles.value.map((m) => m.file);
+    composerForm.attachment = mediaFiles.value[0]?.file ?? null;
+
+    composerForm.post('/community/posts', {
+        preserveScroll: true,
+        onSuccess: () => {
+            composerForm.reset();
+            closeMediaModal();
+            clearComposerFile();
+            isComposerOpen.value = false;
+            tabPostsCache.value = {};
+        },
+    });
+};
+
+// ─── Feed Post Soundtrack Player ─────────────────────────────────────────────
+const activePlayingPostId = ref<number | string | null>(null);
+const feedAudioElement = ref<HTMLAudioElement | null>(null);
+
+const stopFeedPostMusic = () => {
+    if (feedAudioElement.value) {
+        feedAudioElement.value.pause();
+        feedAudioElement.value = null;
+    }
+    activePlayingPostId.value = null;
+};
+
+const toggleFeedPostMusic = (post: CommunityFeedPost) => {
+    if (!post.music) return;
+    if (activePlayingPostId.value === post.id) {
+        stopFeedPostMusic();
+        return;
+    }
+    stopFeedPostMusic();
+    activePlayingPostId.value = post.id;
+    const audio = new Audio(post.music.audio_url);
+    feedAudioElement.value = audio;
+    audio.play().catch(() => {
+        stopFeedPostMusic();
+    });
+    audio.onended = () => {
+        activePlayingPostId.value = null;
+        feedAudioElement.value = null;
+    };
+};
+
+// ─── Social Media Lightbox / Full-screen Post Media Modal ───────────────────
+const isLightboxOpen = ref(false);
+const lightboxPost = ref<CommunityFeedPost | null>(null);
+const lightboxMediaIndex = ref(0);
+
+const activeLightboxMediaItem = computed(() => {
+    if (!lightboxPost.value) return null;
+    if (lightboxPost.value.media && lightboxPost.value.media.length > 0) {
+        return (
+            lightboxPost.value.media[lightboxMediaIndex.value] ||
+            lightboxPost.value.media[0]
+        );
+    }
+    if (lightboxPost.value.attachment_url) {
+        return {
+            id: 0,
+            url: lightboxPost.value.attachment_url,
+            type: lightboxPost.value.attachment_type || 'image',
+            name: lightboxPost.value.attachment_name,
+            size: lightboxPost.value.attachment_size,
+        };
+    }
+    return null;
+});
+
+const lightboxCommentKey = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return 'media_' + String(activeLightboxMediaItem.value.id);
+    }
+    return lightboxPost.value ? String(lightboxPost.value.id) : '';
+});
+
+const currentLightboxLiked = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return isMediaLiked(activeLightboxMediaItem.value);
+    }
+    return lightboxPost.value ? isPostLiked(lightboxPost.value.id) : false;
+});
+
+const currentLightboxLikesCount = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return getMediaLikesCount(activeLightboxMediaItem.value);
+    }
+    return lightboxPost.value ? getPostLikesCount(lightboxPost.value.id) : 0;
+});
+
+const currentLightboxComments = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return getMediaComments(activeLightboxMediaItem.value);
+    }
+    return lightboxPost.value ? getPostComments(lightboxPost.value) : [];
+});
+
+const currentLightboxCommentsCount = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return getMediaCommentsCount(activeLightboxMediaItem.value);
+    }
+    return lightboxPost.value ? getPostCommentsCount(lightboxPost.value) : 0;
+});
+
+const openPostLightbox = (post: CommunityFeedPost, mediaIndex = 0) => {
+    lightboxPost.value = post;
+    lightboxMediaIndex.value = mediaIndex;
+    isLightboxOpen.value = true;
+};
+
+const closePostLightbox = () => {
+    isLightboxOpen.value = false;
+    lightboxPost.value = null;
+    lightboxMediaIndex.value = 0;
+};
+
+const lightboxPrevMedia = () => {
+    if (!lightboxPost.value?.media || lightboxPost.value.media.length <= 1)
+        return;
+    lightboxMediaIndex.value =
+        (lightboxMediaIndex.value - 1 + lightboxPost.value.media.length) %
+        lightboxPost.value.media.length;
+};
+
+const lightboxNextMedia = () => {
+    if (!lightboxPost.value?.media || lightboxPost.value.media.length <= 1)
+        return;
+    lightboxMediaIndex.value =
+        (lightboxMediaIndex.value + 1) % lightboxPost.value.media.length;
+};
 
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files[0]) {
         const file = target.files[0];
+        const isMedia =
+            file.type.startsWith('image/') ||
+            file.type.startsWith('video/') ||
+            /\.(mp4|mov|webm|m4v|jpg|jpeg|png|webp|gif)$/i.test(file.name);
+
+        if (isMedia) {
+            // Automatically launch the Instagram / TikTok-style pop-up media composer!
+            openMediaModalWithFiles([file]);
+            target.value = '';
+            return;
+        }
+
+        // Otherwise keep regular document/code attachment inline
         composerFile.value = file;
         composerForm.attachment = file;
-
-        if (file.type.startsWith('image/')) {
-            composerFilePreview.value = URL.createObjectURL(file);
-        } else {
-            composerFilePreview.value = null;
-        }
+        composerFilePreview.value = null;
     }
 };
 
@@ -1319,17 +1915,21 @@ const clearComposerFile = () => {
     composerFile.value = null;
     composerFilePreview.value = null;
     composerForm.attachment = null;
+    composerForm.attachments = [];
     if (fileInputRef.value) {
         fileInputRef.value.value = '';
     }
 };
 
 const submitPost = () => {
-    if (!composerForm.content.trim()) {
+    if (!composerForm.content.trim() && !composerForm.attachment) {
         return;
     }
 
-    composerForm.section_id = selectedSectionId.value;
+    composerForm.section_id =
+        composerSectionId.value ?? selectedSectionId.value;
+    composerForm.profile_music_track_id = null;
+    composerForm.attachments = [];
 
     composerForm.post('/community/posts', {
         preserveScroll: true,
@@ -1978,6 +2578,24 @@ const handleDeleteStory = async () => {
 };
 
 const handleStoryKeydown = (e: KeyboardEvent) => {
+    if (isLightboxOpen.value) {
+        if (e.key === 'Escape') {
+            closePostLightbox();
+            return;
+        }
+        if (e.key === 'ArrowLeft') {
+            lightboxPrevMedia();
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            lightboxNextMedia();
+            return;
+        }
+    }
+    if (isMediaModalOpen.value && e.key === 'Escape') {
+        closeMediaModal();
+        return;
+    }
     if (isWelcomeModalOpen.value && e.key === 'Escape') {
         dismissWelcomeModal();
         return;
@@ -2069,6 +2687,23 @@ const profileHasActiveStory = computed(() => {
     );
 });
 
+const isDesktopLayout = (): boolean => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1024;
+};
+
+const scrollFeedBy = (deltaY: number) => {
+    if (!feedScrollRef.value) return;
+    if (typeof feedScrollRef.value.scrollBy === 'function') {
+        feedScrollRef.value.scrollBy({
+            top: deltaY,
+            behavior: 'auto',
+        });
+    } else {
+        feedScrollRef.value.scrollTop += deltaY;
+    }
+};
+
 const handleClassmatesWheel = (event: WheelEvent) => {
     const el = event.currentTarget as HTMLElement | null;
     if (!el) return;
@@ -2080,10 +2715,40 @@ const handleClassmatesWheel = (event: WheelEvent) => {
         (event.deltaY > 0 && canScrollDown) ||
         (event.deltaY < 0 && canScrollUp)
     ) {
-        el.scrollTop += event.deltaY;
-        event.preventDefault();
-        event.stopPropagation();
+        if (typeof el.scrollBy === 'function') {
+            el.scrollBy({ top: event.deltaY, behavior: 'auto' });
+        } else {
+            el.scrollTop += event.deltaY;
+        }
     }
+    // Isolate statuses scrolling: never bubble to sidebar when hovering statuses list
+    event.preventDefault();
+    event.stopPropagation();
+};
+
+const handleLayoutWheel = (event: WheelEvent) => {
+    if (!isDesktopLayout()) return;
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-test="classmates-list"]')) {
+        return;
+    }
+    if (target?.closest('[data-test="community-feed-scroll"]')) {
+        return;
+    }
+    if (target?.closest('[data-test="community-right-sidebar"]')) {
+        return;
+    }
+    if (
+        target?.closest(
+            '[role="dialog"], [data-test="section-dropdown-menu"], [data-test="mobile-presence-drawer"]',
+        )
+    ) {
+        return;
+    }
+
+    scrollFeedBy(event.deltaY);
+    event.preventDefault();
 };
 
 const handleProfileAvatarClick = () => {
@@ -2227,6 +2892,8 @@ watch(
         isProfileModalOpen,
         isStoryViewerOpen,
         isStoryModalOpen,
+        isMediaModalOpen,
+        isLightboxOpen,
         isWelcomeModalOpen,
         postToDelete,
         commentToDelete,
@@ -2236,6 +2903,8 @@ watch(
         modalOpen,
         storyViewerOpen,
         storyModalOpen,
+        mediaModalOpen,
+        lightboxOpen,
         welcomeOpen,
         postDeleteOpen,
         commentDeleteOpen,
@@ -2246,6 +2915,8 @@ watch(
                 modalOpen ||
                 storyViewerOpen ||
                 storyModalOpen ||
+                mediaModalOpen ||
+                lightboxOpen ||
                 welcomeOpen ||
                 Boolean(postDeleteOpen) ||
                 Boolean(commentDeleteOpen)
@@ -2290,6 +2961,26 @@ const handleDocumentClick = (e: MouseEvent) => {
             resumeStory();
         }
     }
+    if (isComposerSectionDropdownOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="composer-modal-section-menu"]') &&
+            !target.closest('[data-test="composer-modal-section-trigger"]')
+        ) {
+            isComposerSectionDropdownOpen.value = false;
+        }
+    }
+    if (isInlineSectionDropdownOpen.value) {
+        const target = e.target as HTMLElement | null;
+        if (
+            target &&
+            !target.closest('[data-test="inline-composer-section-menu"]') &&
+            !target.closest('[data-test="inline-composer-section-trigger"]')
+        ) {
+            isInlineSectionDropdownOpen.value = false;
+        }
+    }
 };
 
 if (typeof window !== 'undefined') {
@@ -2300,6 +2991,9 @@ if (typeof window !== 'undefined') {
 onBeforeUnmount(() => {
     clearStoryMedia();
     stopStoryPlayback();
+    revokeMediaPreviews();
+    stopMusicPreview();
+    stopFeedPostMusic();
     if (typeof window !== 'undefined') {
         window.removeEventListener('keydown', handleStoryKeydown);
         window.removeEventListener('click', handleDocumentClick);
@@ -2330,12 +3024,19 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Community Lounge" />
 
-        <div class="relative min-h-[calc(100vh-4rem)] p-2.5 sm:p-3.5 lg:p-4">
-            <div class="mx-auto max-w-6xl">
+        <div
+            class="relative min-h-[calc(100vh-4rem)] [scrollbar-width:none] scrollbar-none p-2.5 [-ms-overflow-style:none] sm:p-3.5 lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:overflow-hidden lg:p-4 [&::-webkit-scrollbar]:hidden"
+            data-test="community-layout"
+            data-lenis-prevent
+            @wheel="handleLayoutWheel"
+        >
+            <div
+                class="mx-auto max-w-6xl lg:flex lg:h-full lg:min-h-0 lg:flex-col"
+            >
                 <!-- ═══ Instagram / Threads Clean Navigation Bar ═══ -->
                 <!-- ─── Minimal Header ─────────────────────────────────────────────── -->
                 <header
-                    class="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5 sm:pb-3"
+                    class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5 sm:pb-3"
                 >
                     <div class="flex items-center gap-3">
                         <button
@@ -2362,11 +3063,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                 <!-- ═══ 2-Column Social Feed Layout ═══ -->
                 <div
-                    class="grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-5 xl:gap-6"
+                    class="grid grid-cols-1 items-start gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-1 lg:items-stretch lg:gap-5 xl:gap-6"
                 >
                     <!-- Main Feed Column (col-span-7 or 8 on desktop) -->
                     <main
-                        class="space-y-3.5 sm:space-y-4 lg:col-span-7 xl:col-span-8"
+                        ref="feedScrollRef"
+                        class="min-w-0 [scrollbar-width:none] scrollbar-none space-y-3.5 [-ms-overflow-style:none] sm:space-y-4 lg:col-span-7 lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-8 [&::-webkit-scrollbar]:hidden"
+                        data-test="community-feed-scroll"
+                        data-lenis-prevent
+                        scroll-region
+                        tabindex="0"
+                        aria-label="Community feed"
                     >
                         <!-- ─── Instagram Top Stories Tray ──────────────────────────── -->
                         <section
@@ -2685,7 +3392,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             </button>
                                         </div>
 
-                                        <!-- Hidden file input -->
+                                        <!-- Hidden file input for documents/code -->
                                         <input
                                             ref="fileInputRef"
                                             type="file"
@@ -2693,29 +3400,73 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             @change="handleFileSelect"
                                         />
 
+                                        <!-- Hidden file input for photos/videos -->
+                                        <input
+                                            ref="mediaFileInputRef"
+                                            type="file"
+                                            accept="image/*,video/*"
+                                            multiple
+                                            class="hidden"
+                                            data-test="media-post-file-input"
+                                            @change="handleMediaFileInputChange"
+                                        />
+
                                         <!-- Composer Action Tray -->
                                         <div
                                             class="mt-3 flex items-center justify-between border-t border-border/30 pt-2.5 text-xs"
                                         >
                                             <div
-                                                class="flex items-center gap-1 text-muted-foreground"
+                                                class="flex items-center gap-1.5 text-muted-foreground"
                                             >
+                                                <!-- Photo / Video Trigger (Instagram / Facebook / TikTok Style Modal) -->
                                                 <button
                                                     type="button"
-                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
-                                                    title="Attach photo or document"
+                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                                    title="Attach photos or videos"
+                                                    data-test="open-media-modal-button"
                                                     @click="
-                                                        fileInputRef?.click()
+                                                        mediaFileInputRef?.click()
                                                     "
                                                 >
                                                     <ImageIcon
-                                                        class="h-3.5 w-3.5"
+                                                        class="h-3.5 w-3.5 text-brand"
                                                     />
+                                                    <span
+                                                        class="hidden text-[11px] font-medium sm:inline"
+                                                        >Photo/Video</span
+                                                    >
                                                 </button>
+
+                                                <!-- Music Soundtrack Trigger -->
+                                                <button
+                                                    v-if="
+                                                        props.musicTracks &&
+                                                        props.musicTracks
+                                                            .length > 0
+                                                    "
+                                                    type="button"
+                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                                    title="Add soundtrack"
+                                                    data-test="open-music-modal-button"
+                                                    @click="
+                                                        isMediaModalOpen = true;
+                                                        isMusicPickerOpen = true;
+                                                    "
+                                                >
+                                                    <Music
+                                                        class="h-3.5 w-3.5 text-amber-500"
+                                                    />
+                                                    <span
+                                                        class="hidden text-[11px] font-medium sm:inline"
+                                                        >Music</span
+                                                    >
+                                                </button>
+
+                                                <!-- Code / File Trigger -->
                                                 <button
                                                     type="button"
-                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-muted hover:text-foreground"
-                                                    title="Attach code snippet or file"
+                                                    class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                    title="Attach document or code snippet"
                                                     @click="
                                                         fileInputRef?.click()
                                                     "
@@ -2744,6 +3495,82 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         >Post anonymously</span
                                                     >
                                                 </label>
+
+                                                <!-- Section Picker for Multi-Section Students -->
+                                                <div
+                                                    v-if="
+                                                        props.availableSections &&
+                                                        props.availableSections
+                                                            .length > 1
+                                                    "
+                                                    class="relative ml-2"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground transition hover:border-border hover:bg-muted"
+                                                        data-test="inline-composer-section-trigger"
+                                                        title="Choose posting section"
+                                                        @click.stop="
+                                                            isInlineSectionDropdownOpen =
+                                                                !isInlineSectionDropdownOpen
+                                                        "
+                                                    >
+                                                        <Users
+                                                            class="h-3 w-3 text-brand"
+                                                        />
+                                                        <span
+                                                            class="max-w-[100px] truncate sm:max-w-[130px]"
+                                                            >{{
+                                                                postingSectionName
+                                                            }}</span
+                                                        >
+                                                        <ChevronDown
+                                                            class="h-2.5 w-2.5 text-muted-foreground"
+                                                        />
+                                                    </button>
+
+                                                    <div
+                                                        v-if="
+                                                            isInlineSectionDropdownOpen
+                                                        "
+                                                        class="absolute bottom-full left-0 z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10"
+                                                        data-test="inline-composer-section-menu"
+                                                    >
+                                                        <button
+                                                            v-for="sec in props.availableSections"
+                                                            :key="sec.id"
+                                                            type="button"
+                                                            class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition hover:bg-muted"
+                                                            :class="
+                                                                sec.id ===
+                                                                composerSectionId
+                                                                    ? 'bg-brand/10 font-bold text-brand'
+                                                                    : 'text-foreground'
+                                                            "
+                                                            @click="
+                                                                composerSectionId =
+                                                                    sec.id;
+                                                                composerForm.section_id =
+                                                                    sec.id;
+                                                                isInlineSectionDropdownOpen = false;
+                                                            "
+                                                        >
+                                                            <span
+                                                                class="truncate"
+                                                                >{{
+                                                                    sec.name
+                                                                }}</span
+                                                            >
+                                                            <Check
+                                                                v-if="
+                                                                    sec.id ===
+                                                                    composerSectionId
+                                                                "
+                                                                class="h-3.5 w-3.5 shrink-0 text-brand"
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div
@@ -2940,16 +3767,21 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         })
                                                     "
                                                 >
-                                                    {{ post.author.handle }}
+                                                    {{
+                                                        post.author.is_masked
+                                                            ? post.author.name
+                                                            : post.author.name
+                                                    }}
                                                 </span>
                                                 <span
-                                                    class="text-[10px] text-muted-foreground"
-                                                    >•</span
+                                                    v-if="
+                                                        !post.author
+                                                            .is_masked &&
+                                                        post.author.handle
+                                                    "
+                                                    class="text-[11px] text-muted-foreground"
                                                 >
-                                                <span
-                                                    class="text-xs font-medium text-muted-foreground"
-                                                >
-                                                    {{ post.author.name }}
+                                                    @{{ post.author.handle }}
                                                 </span>
                                             </div>
                                             <p
@@ -3092,15 +3924,231 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     </p>
                                 </div>
 
-                                <!-- Post Attachment (Image or File) -->
+                                <!-- Post Music Soundtrack (Instagram / TikTok Style) -->
+                                <div v-if="post.music" class="px-4 pb-2.5">
+                                    <button
+                                        type="button"
+                                        class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition-all hover:bg-brand/20 active:scale-95"
+                                        data-test="post-soundtrack-badge"
+                                        @click="toggleFeedPostMusic(post)"
+                                    >
+                                        <Music
+                                            v-if="
+                                                activePlayingPostId === post.id
+                                            "
+                                            class="h-3.5 w-3.5 animate-pulse text-brand"
+                                        />
+                                        <Music
+                                            v-else
+                                            class="h-3.5 w-3.5 text-brand"
+                                        />
+                                        <span
+                                            class="max-w-[200px] truncate sm:max-w-xs"
+                                        >
+                                            {{ post.music.title }} •
+                                            {{ post.music.artist }}
+                                        </span>
+                                        <span
+                                            class="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-brand uppercase"
+                                        >
+                                            {{
+                                                activePlayingPostId === post.id
+                                                    ? 'Pause'
+                                                    : 'Play'
+                                            }}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <!-- Post Media Bento Grid (Facebook / Social Style) -->
                                 <div
-                                    v-if="post.attachment_url"
+                                    v-if="post.media && post.media.length > 0"
+                                    class="px-4 pb-3"
+                                    data-test="post-media-container"
+                                >
+                                    <!-- 1 Item (Full width) -->
+                                    <div
+                                        v-if="post.media.length === 1"
+                                        class="overflow-hidden rounded-xl border border-border/50 bg-zinc-950/5 dark:bg-zinc-950/40"
+                                    >
+                                        <video
+                                            v-if="
+                                                post.media[0].type === 'video'
+                                            "
+                                            :src="post.media[0].url"
+                                            controls
+                                            class="max-h-[520px] w-full bg-black object-contain"
+                                            data-test="post-media-video"
+                                        />
+                                        <img
+                                            v-else
+                                            :src="post.media[0].url"
+                                            :alt="
+                                                post.media[0].name ||
+                                                post.content ||
+                                                'Post media'
+                                            "
+                                            class="max-h-[520px] w-full cursor-pointer object-contain transition hover:opacity-95"
+                                            data-test="post-media-image"
+                                            @click="openPostLightbox(post, 0)"
+                                        />
+                                    </div>
+
+                                    <!-- 2 Items (Side-by-side Bento Grid) -->
+                                    <div
+                                        v-else-if="post.media.length === 2"
+                                        class="grid h-72 w-full grid-cols-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-2"
+                                    >
+                                        <div
+                                            v-for="(
+                                                item, itemIdx
+                                            ) in post.media.slice(0, 2)"
+                                            :key="item.id || itemIdx"
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="
+                                                openPostLightbox(post, itemIdx)
+                                            "
+                                        >
+                                            <video
+                                                v-if="item.type === 'video'"
+                                                :src="item.url"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <img
+                                                v-else
+                                                :src="item.url"
+                                                :alt="
+                                                    item.name ||
+                                                    'Photo ' + (itemIdx + 1)
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-test="post-media-image"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <!-- 3 Items (1 large on left, 2 stacked on right) -->
+                                    <div
+                                        v-else-if="post.media.length === 3"
+                                        class="grid h-72 w-full grid-cols-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-3"
+                                    >
+                                        <div
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="openPostLightbox(post, 0)"
+                                        >
+                                            <video
+                                                v-if="
+                                                    post.media[0].type ===
+                                                    'video'
+                                                "
+                                                :src="post.media[0].url"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <img
+                                                v-else
+                                                :src="post.media[0].url"
+                                                :alt="
+                                                    post.media[0].name ||
+                                                    'Photo 1'
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-test="post-media-image"
+                                            />
+                                        </div>
+                                        <div
+                                            class="grid h-full grid-rows-2 gap-2"
+                                        >
+                                            <div
+                                                v-for="(
+                                                    item, itemIdx
+                                                ) in post.media.slice(1, 3)"
+                                                :key="item.id || itemIdx"
+                                                class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                                data-test="bento-media-item"
+                                                @click="
+                                                    openPostLightbox(
+                                                        post,
+                                                        itemIdx + 1,
+                                                    )
+                                                "
+                                            >
+                                                <video
+                                                    v-if="item.type === 'video'"
+                                                    :src="item.url"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <img
+                                                    v-else
+                                                    :src="item.url"
+                                                    :alt="
+                                                        item.name ||
+                                                        'Photo ' + (itemIdx + 2)
+                                                    "
+                                                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4+ Items (2x2 Bento Grid with +N overlay on 4th) -->
+                                    <div
+                                        v-else
+                                        class="grid h-72 w-full grid-cols-2 grid-rows-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-4"
+                                    >
+                                        <div
+                                            v-for="(
+                                                item, itemIdx
+                                            ) in post.media.slice(0, 4)"
+                                            :key="item.id || itemIdx"
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="
+                                                openPostLightbox(post, itemIdx)
+                                            "
+                                        >
+                                            <video
+                                                v-if="item.type === 'video'"
+                                                :src="item.url"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <img
+                                                v-else
+                                                :src="item.url"
+                                                :alt="
+                                                    item.name ||
+                                                    'Photo ' + (itemIdx + 1)
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-test="post-media-image"
+                                            />
+                                            <div
+                                                v-if="
+                                                    itemIdx === 3 &&
+                                                    post.media.length > 4
+                                                "
+                                                class="absolute inset-0 flex items-center justify-center bg-black/60 text-base font-bold text-white backdrop-blur-xs sm:text-lg"
+                                            >
+                                                +{{ post.media.length - 3 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Legacy Single Attachment Fallback -->
+                                <div
+                                    v-else-if="post.attachment_url"
                                     class="px-4 pb-3"
                                 >
                                     <!-- Image Preview -->
                                     <div
                                         v-if="post.attachment_type === 'image'"
-                                        class="overflow-hidden rounded-xl border border-border/50"
+                                        class="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-zinc-950/5 transition hover:opacity-95 dark:bg-zinc-950/40"
+                                        @click="openPostLightbox(post, 0)"
                                     >
                                         <img
                                             :src="post.attachment_url"
@@ -3108,7 +4156,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 post.attachment_name ||
                                                 'Post attachment'
                                             "
-                                            class="max-h-96 w-full object-cover"
+                                            class="max-h-[520px] w-full object-contain"
                                         />
                                     </div>
 
@@ -3992,7 +5040,12 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                     <!-- ═══ Right Sidebar (Instagram Web 'Suggested for You' Style) ═══ -->
                     <aside
-                        class="hidden space-y-3.5 lg:sticky lg:top-4 lg:col-span-5 lg:block xl:col-span-4"
+                        class="hidden min-w-0 [scrollbar-width:none] scrollbar-none space-y-3.5 [-ms-overflow-style:none] lg:col-span-5 lg:block lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1 xl:col-span-4 [&::-webkit-scrollbar]:hidden"
+                        data-test="community-right-sidebar"
+                        data-lenis-prevent
+                        scroll-region
+                        tabindex="0"
+                        aria-label="Community sidebar"
                     >
                         <!-- Instagram Profile Snippet at top of rail -->
                         <div
@@ -4181,7 +5234,9 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                             <!-- Classmate Member List -->
                             <div
-                                class="mt-2 max-h-[240px] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1 sm:max-h-[280px]"
+                                data-test="classmates-list"
+                                data-lenis-prevent
+                                class="mt-2 max-h-[240px] [scrollbar-width:none] scrollbar-none divide-y divide-border/30 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] sm:max-h-[280px] [&::-webkit-scrollbar]:hidden"
                                 @wheel="handleClassmatesWheel"
                             >
                                 <div
@@ -5856,6 +6911,1050 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                     >
                         Enter Lounge
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Create Post Modal (Instagram / Facebook / TikTok Style) ═══ -->
+        <div
+            v-if="isMediaModalOpen"
+            class="fixed inset-0 z-[180] flex items-center justify-center p-3 backdrop-blur-md transition-all duration-300 sm:p-4"
+            data-test="create-media-post-modal"
+            @click.self="closeMediaModal"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/75 backdrop-blur-md"
+                data-test="create-media-modal-backdrop"
+                @click="closeMediaModal"
+            />
+
+            <div
+                class="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl ring-1 ring-border/20 sm:rounded-3xl md:flex-row dark:border-white/10 dark:bg-zinc-900"
+            >
+                <!-- Top close button -->
+                <button
+                    type="button"
+                    class="absolute top-3 right-3 z-30 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-105 hover:bg-black/80 active:scale-95"
+                    aria-label="Close composer"
+                    data-test="close-media-modal-button"
+                    @click="closeMediaModal"
+                >
+                    <X class="h-4 w-4" />
+                </button>
+
+                <!-- Left Column / Media Stage (Desktop 58%, Mobile 100%) -->
+                <div
+                    class="relative flex min-h-[260px] flex-1 flex-col justify-between overflow-hidden bg-zinc-950 text-white sm:min-h-[360px] md:min-h-[460px]"
+                >
+                    <!-- Main Active Media Preview Stage -->
+                    <div
+                        class="relative flex flex-1 items-center justify-center overflow-hidden"
+                    >
+                        <template v-if="activeMediaItem">
+                            <video
+                                v-if="activeMediaItem.type === 'video'"
+                                :src="activeMediaItem.preview"
+                                controls
+                                class="max-h-[380px] w-full object-contain md:max-h-[480px]"
+                                data-test="media-modal-video-preview"
+                            />
+                            <img
+                                v-else
+                                :src="activeMediaItem.preview"
+                                :alt="activeMediaItem.name"
+                                class="max-h-[380px] w-full object-contain md:max-h-[480px]"
+                                data-test="media-modal-image-preview"
+                            />
+                        </template>
+
+                        <!-- Empty Dropzone if no media selected yet -->
+                        <div
+                            v-else
+                            class="flex flex-col items-center justify-center p-8 text-center"
+                            @click="mediaFileInputRef?.click()"
+                        >
+                            <div
+                                class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-brand"
+                            >
+                                <ImageIcon class="h-7 w-7" />
+                            </div>
+                            <h4 class="text-sm font-bold">
+                                Select photos and videos
+                            </h4>
+                            <p class="mt-1 text-xs text-zinc-400">
+                                Drag photos and videos here or click to browse
+                            </p>
+                            <button
+                                type="button"
+                                class="mt-4 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand/90"
+                            >
+                                Select from computer
+                            </button>
+                        </div>
+
+                        <!-- Previous / Next Arrows for carousel -->
+                        <template v-if="mediaFiles.length > 1">
+                            <button
+                                type="button"
+                                class="absolute top-1/2 left-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                                data-test="media-prev-button"
+                                @click="moveMediaCarousel(-1)"
+                            >
+                                <ChevronLeft class="h-4 w-4" />
+                            </button>
+                            <button
+                                type="button"
+                                class="absolute top-1/2 right-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                                data-test="media-next-button"
+                                @click="moveMediaCarousel(1)"
+                            >
+                                <ChevronRight class="h-4 w-4" />
+                            </button>
+
+                            <!-- Counter badge -->
+                            <div
+                                class="absolute top-3 left-3 rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs"
+                                data-test="media-modal-counter"
+                            >
+                                {{ activeMediaIndex + 1 }} /
+                                {{ mediaFiles.length }}
+                            </div>
+                        </template>
+
+                        <!-- Attached Music Track Badge on Preview (Instagram style) -->
+                        <div
+                            v-if="selectedMusicTrack"
+                            class="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/75 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur-md"
+                            data-test="modal-attached-soundtrack-badge"
+                        >
+                            <Music
+                                class="h-3.5 w-3.5 animate-pulse text-brand"
+                            />
+                            <span
+                                class="max-w-[140px] truncate sm:max-w-[200px]"
+                            >
+                                {{ selectedMusicTrack.title }} •
+                                {{ selectedMusicTrack.artist }}
+                            </span>
+                            <button
+                                type="button"
+                                class="ml-1 cursor-pointer text-white/70 hover:text-white"
+                                title="Remove music"
+                                @click.stop="removeSelectedMusic"
+                            >
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Thumbnail Strip -->
+                    <div
+                        v-if="mediaFiles.length > 0"
+                        class="flex scrollbar-none items-center gap-2 overflow-x-auto border-t border-white/10 bg-black/40 p-2.5 backdrop-blur-xs"
+                    >
+                        <div
+                            v-for="(item, idx) in mediaFiles"
+                            :key="idx"
+                            :class="[
+                                'group relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all',
+                                activeMediaIndex === idx
+                                    ? 'scale-105 border-brand ring-2 ring-brand/50'
+                                    : 'border-white/20 opacity-70 hover:opacity-100',
+                            ]"
+                            @click="activeMediaIndex = idx"
+                        >
+                            <img
+                                v-if="item.type === 'image'"
+                                :src="item.preview"
+                                :alt="item.name"
+                                class="h-full w-full object-cover"
+                            />
+                            <div
+                                v-else
+                                class="flex h-full w-full items-center justify-center bg-zinc-800 text-[10px] font-bold text-white"
+                            >
+                                <Film class="h-4 w-4" />
+                            </div>
+
+                            <!-- Remove thumbnail button -->
+                            <button
+                                type="button"
+                                class="absolute top-0.5 right-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-black/80 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                title="Remove this photo"
+                                @click.stop="removeMediaItem(idx)"
+                            >
+                                <X class="h-2.5 w-2.5" />
+                            </button>
+                        </div>
+
+                        <!-- Add more button -->
+                        <button
+                            v-if="mediaFiles.length < 10"
+                            type="button"
+                            class="flex h-12 w-12 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/30 bg-white/5 text-white/80 transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand"
+                            title="Add more photos or videos"
+                            data-test="add-more-media-button"
+                            @click="mediaFileInputRef?.click()"
+                        >
+                            <Plus class="h-4 w-4" />
+                            <span class="text-[9px] font-semibold">Add</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column / Caption, Music, Privacy & Publish (Desktop 42%, Mobile 100%) -->
+                <div
+                    class="flex w-full flex-col justify-between border-t border-border/70 bg-card p-4 sm:p-5 md:w-[380px] md:border-t-0 md:border-l md:p-6"
+                >
+                    <div
+                        class="max-h-[50vh] space-y-4 overflow-y-auto md:max-h-none"
+                    >
+                        <!-- Author Header -->
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                            >
+                                <img
+                                    v-if="currentUser?.avatar"
+                                    :src="currentUser.avatar"
+                                    :alt="currentUserName"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>{{ currentUserInitials }}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <h3
+                                    class="text-xs font-bold text-foreground sm:text-sm"
+                                >
+                                    {{ currentUserName }}
+                                </h3>
+                                <div class="mt-0.5 flex items-center gap-1.5">
+                                    <span
+                                        class="text-[11px] text-muted-foreground"
+                                        >Posting to</span
+                                    >
+                                    <div
+                                        v-if="
+                                            props.availableSections &&
+                                            props.availableSections.length > 1
+                                        "
+                                        class="relative"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-95"
+                                            data-test="composer-modal-section-trigger"
+                                            @click.stop="
+                                                isComposerSectionDropdownOpen =
+                                                    !isComposerSectionDropdownOpen
+                                            "
+                                        >
+                                            <span
+                                                class="max-w-[130px] truncate sm:max-w-[170px]"
+                                                >{{ postingSectionName }}</span
+                                            >
+                                            <ChevronDown
+                                                class="h-3 w-3 text-muted-foreground"
+                                            />
+                                        </button>
+
+                                        <div
+                                            v-if="isComposerSectionDropdownOpen"
+                                            class="absolute top-full left-0 z-50 mt-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10"
+                                            data-test="composer-modal-section-menu"
+                                        >
+                                            <button
+                                                v-for="sec in props.availableSections"
+                                                :key="sec.id"
+                                                type="button"
+                                                class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition hover:bg-muted"
+                                                :class="
+                                                    sec.id === composerSectionId
+                                                        ? 'bg-brand/10 font-bold text-brand'
+                                                        : 'text-foreground'
+                                                "
+                                                @click="
+                                                    composerSectionId = sec.id;
+                                                    composerForm.section_id =
+                                                        sec.id;
+                                                    isComposerSectionDropdownOpen = false;
+                                                "
+                                            >
+                                                <span class="truncate">{{
+                                                    sec.name
+                                                }}</span>
+                                                <Check
+                                                    v-if="
+                                                        sec.id ===
+                                                        composerSectionId
+                                                    "
+                                                    class="h-3.5 w-3.5 shrink-0 text-brand"
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span
+                                        v-else
+                                        class="text-xs font-semibold text-foreground"
+                                    >
+                                        {{ sectionDisplayName }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Caption Textarea -->
+                        <div>
+                            <textarea
+                                v-model="composerForm.content"
+                                rows="4"
+                                maxlength="2000"
+                                placeholder="Write a caption, share learning tips, or start a discussion..."
+                                class="w-full resize-none rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none sm:text-sm"
+                                data-test="media-modal-caption-textarea"
+                            />
+                            <div
+                                class="mt-1 flex items-center justify-between text-[11px] text-muted-foreground"
+                            >
+                                <span
+                                    >{{ composerForm.content.length }} /
+                                    2000</span
+                                >
+                                <span
+                                    v-if="mediaFiles.length > 0"
+                                    class="font-medium text-brand"
+                                >
+                                    {{ mediaFiles.length }} media item{{
+                                        mediaFiles.length > 1 ? 's' : ''
+                                    }}
+                                    attached
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Music Soundtrack Selector Row -->
+                        <div
+                            class="rounded-xl border border-border/70 bg-muted/30 p-3"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/15 text-brand"
+                                    >
+                                        <Music class="h-3.5 w-3.5" />
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="text-xs font-semibold text-foreground"
+                                        >
+                                            Music Soundtrack
+                                        </p>
+                                        <p
+                                            class="text-[10px] text-muted-foreground"
+                                        >
+                                            {{
+                                                selectedMusicTrack
+                                                    ? selectedMusicTrack.title +
+                                                      ' • ' +
+                                                      selectedMusicTrack.artist
+                                                    : 'Add background music'
+                                            }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer rounded-lg border border-border/60 bg-background px-2.5 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
+                                    data-test="toggle-music-picker-button"
+                                    @click="
+                                        isMusicPickerOpen = !isMusicPickerOpen
+                                    "
+                                >
+                                    {{
+                                        selectedMusicTrack ? 'Change' : '+ Add'
+                                    }}
+                                </button>
+                            </div>
+
+                            <!-- Music Picker Track List -->
+                            <div
+                                v-if="isMusicPickerOpen"
+                                class="mt-3 space-y-2 border-t border-border/50 pt-2.5"
+                                data-test="music-tracks-picker"
+                            >
+                                <div
+                                    v-if="
+                                        !props.musicTracks ||
+                                        props.musicTracks.length === 0
+                                    "
+                                    class="py-3 text-center text-xs text-muted-foreground"
+                                >
+                                    No music tracks available in this workspace.
+                                </div>
+                                <div
+                                    v-for="track in props.musicTracks"
+                                    :key="track.id"
+                                    class="flex items-center justify-between rounded-lg p-1.5 transition hover:bg-muted/60"
+                                    :class="
+                                        selectedMusicTrackId === track.id
+                                            ? 'border border-brand/40 bg-brand/10'
+                                            : ''
+                                    "
+                                >
+                                    <div
+                                        class="flex min-w-0 items-center gap-2"
+                                    >
+                                        <!-- Play preview audio button -->
+                                        <button
+                                            type="button"
+                                            class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 active:scale-95"
+                                            :title="
+                                                playingTrackId === track.id
+                                                    ? 'Pause preview'
+                                                    : 'Play preview'
+                                            "
+                                            @click.stop="
+                                                toggleTrackPreview(track)
+                                            "
+                                        >
+                                            <Pause
+                                                v-if="
+                                                    playingTrackId === track.id
+                                                "
+                                                class="h-3 w-3"
+                                            />
+                                            <Play
+                                                v-else
+                                                class="ml-0.5 h-3 w-3"
+                                            />
+                                        </button>
+                                        <div class="min-w-0">
+                                            <p
+                                                class="truncate text-xs font-semibold text-foreground"
+                                            >
+                                                {{ track.title }}
+                                            </p>
+                                            <p
+                                                class="truncate text-[10px] text-muted-foreground"
+                                            >
+                                                {{ track.artist }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer rounded-md px-2 py-0.5 text-xs font-semibold"
+                                        :class="
+                                            selectedMusicTrackId === track.id
+                                                ? 'text-rose-500 hover:text-rose-600'
+                                                : 'text-brand hover:underline'
+                                        "
+                                        @click="selectMusicTrack(track)"
+                                    >
+                                        {{
+                                            selectedMusicTrackId === track.id
+                                                ? 'Remove'
+                                                : 'Select'
+                                        }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Anonymous Toggle & Visibility note -->
+                        <div
+                            class="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3"
+                        >
+                            <label
+                                v-if="props.allowsAnonymous !== false"
+                                class="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground select-none"
+                            >
+                                <input
+                                    v-model="composerForm.is_anonymous"
+                                    type="checkbox"
+                                    class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-0"
+                                    data-test="media-modal-anonymous-checkbox"
+                                />
+                                <span>Post anonymously</span>
+                            </label>
+                            <p class="text-[11px] text-muted-foreground">
+                                {{
+                                    composerForm.is_anonymous
+                                        ? 'Your name and avatar will be hidden from everyone.'
+                                        : props.isSectionOnly
+                                          ? 'Visible only to enrolled students in your section.'
+                                          : 'Your identity is visible to your section, masked outside.'
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Actions Bottom Bar -->
+                    <div
+                        class="mt-4 flex items-center justify-between border-t border-border/50 pt-3"
+                    >
+                        <button
+                            type="button"
+                            class="cursor-pointer rounded-xl px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+                            data-test="media-modal-cancel-button"
+                            @click="closeMediaModal"
+                        >
+                            Discard
+                        </button>
+
+                        <button
+                            type="button"
+                            :disabled="
+                                (!composerForm.content.trim() &&
+                                    mediaFiles.length === 0) ||
+                                composerForm.processing
+                            "
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-foreground px-5 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                            data-test="media-modal-publish-button"
+                            @click="submitMediaPost"
+                        >
+                            <Loader2
+                                v-if="composerForm.processing"
+                                class="h-3.5 w-3.5 animate-spin"
+                            />
+                            <span>{{
+                                composerForm.processing
+                                    ? 'Publishing...'
+                                    : 'Share Post'
+                            }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Post Lightbox / Full-screen Media Viewer Modal (Facebook / Instagram Style) ═══ -->
+        <div
+            v-if="isLightboxOpen && lightboxPost"
+            class="fixed inset-0 z-[190] flex items-center justify-center p-2 backdrop-blur-md transition-all duration-200 sm:p-4 md:p-6"
+            data-test="post-lightbox-modal"
+            @click.self="closePostLightbox"
+        >
+            <!-- Ambient backdrop scrim -->
+            <div
+                class="fixed inset-0 -z-10 bg-black/85 backdrop-blur-md"
+                data-test="post-lightbox-backdrop"
+                @click="closePostLightbox"
+            />
+
+            <!-- Dialog Container -->
+            <div
+                class="relative flex h-full max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-2xl sm:rounded-3xl md:flex-row dark:bg-zinc-950"
+            >
+                <!-- Left Stage: Large Media Viewport -->
+                <div
+                    class="relative flex min-h-[300px] flex-1 items-center justify-center overflow-hidden bg-black text-white select-none sm:min-h-[420px]"
+                >
+                    <!-- Close button in media viewport (visible on mobile) -->
+                    <button
+                        type="button"
+                        class="absolute top-3 left-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-105 hover:bg-black/80 active:scale-95 md:hidden"
+                        aria-label="Close viewer"
+                        data-test="lightbox-mobile-close"
+                        @click="closePostLightbox"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+
+                    <!-- Active Media (Image or Video) -->
+                    <template v-if="activeLightboxMediaItem">
+                        <video
+                            v-if="activeLightboxMediaItem.type === 'video'"
+                            :src="activeLightboxMediaItem.url"
+                            controls
+                            autoplay
+                            class="max-h-[85vh] max-w-full object-contain"
+                            data-test="lightbox-video"
+                        />
+                        <img
+                            v-else
+                            :src="activeLightboxMediaItem.url"
+                            :alt="activeLightboxMediaItem.name || 'Post media'"
+                            class="max-h-[85vh] max-w-full object-contain select-none"
+                            data-test="lightbox-image"
+                        />
+                    </template>
+
+                    <!-- Carousel Arrows (if multiple media) -->
+                    <template
+                        v-if="
+                            lightboxPost.media && lightboxPost.media.length > 1
+                        "
+                    >
+                        <button
+                            type="button"
+                            class="absolute top-1/2 left-3 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                            aria-label="Previous photo"
+                            data-test="lightbox-prev-button"
+                            @click="lightboxPrevMedia"
+                        >
+                            <ChevronLeft class="h-5 w-5" />
+                        </button>
+                        <button
+                            type="button"
+                            class="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                            aria-label="Next photo"
+                            data-test="lightbox-next-button"
+                            @click="lightboxNextMedia"
+                        >
+                            <ChevronRight class="h-5 w-5" />
+                        </button>
+
+                        <!-- Counter badge -->
+                        <div
+                            class="absolute top-3.5 right-3.5 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white backdrop-blur-xs"
+                            data-test="lightbox-counter"
+                        >
+                            {{ lightboxMediaIndex + 1 }} /
+                            {{ lightboxPost.media.length }}
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Right Stage: Sidebar with Author, Content, Reactions & Comments -->
+                <div
+                    class="flex w-full flex-col justify-between border-t border-border/70 bg-card md:w-[380px] md:border-t-0 md:border-l lg:w-[420px] dark:border-white/10 dark:bg-zinc-900"
+                >
+                    <!-- Sidebar Top Header -->
+                    <div
+                        class="flex items-center justify-between border-b border-border/60 p-3.5 sm:p-4"
+                    >
+                        <div class="flex items-center gap-2.5">
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-xs font-bold text-brand select-none"
+                            >
+                                <img
+                                    v-if="lightboxPost.author.avatar"
+                                    :src="lightboxPost.author.avatar"
+                                    :alt="lightboxPost.author.name"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>
+                                    {{ getInitials(lightboxPost.author.name) }}
+                                </span>
+                            </div>
+                            <div class="min-w-0">
+                                <h3
+                                    class="truncate text-xs font-bold text-foreground sm:text-sm"
+                                    data-test="lightbox-author-name"
+                                >
+                                    {{
+                                        lightboxPost.author.is_masked
+                                            ? lightboxPost.author.name
+                                            : lightboxPost.author.name ||
+                                              lightboxPost.author.handle
+                                    }}
+                                </h3>
+                                <p class="text-[11px] text-muted-foreground">
+                                    {{
+                                        lightboxPost.author.is_masked
+                                            ? lightboxPost.author
+                                                  .section_name || 'Anonymous'
+                                            : lightboxPost.author
+                                                  .section_name ||
+                                              sectionDisplayName
+                                    }}
+                                    · {{ lightboxPost.created_at }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Close button on desktop -->
+                        <button
+                            type="button"
+                            class="hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition hover:bg-muted hover:text-foreground md:flex"
+                            data-test="lightbox-sidebar-close"
+                            @click="closePostLightbox"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Post Caption, Soundtrack & Comments List -->
+                    <div
+                        class="flex-1 space-y-4 overflow-y-auto p-3.5 sm:p-4"
+                        data-test="lightbox-comments-list"
+                    >
+                        <!-- Post Text Content -->
+                        <p
+                            v-if="lightboxPost.content"
+                            class="text-xs leading-relaxed text-foreground sm:text-[13px]"
+                            data-test="lightbox-post-content"
+                        >
+                            {{ lightboxPost.content }}
+                        </p>
+
+                        <!-- Attached Soundtrack if any -->
+                        <div v-if="lightboxPost.music" class="pt-1">
+                            <button
+                                type="button"
+                                class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition hover:bg-brand/20 active:scale-95"
+                                @click="toggleFeedPostMusic(lightboxPost)"
+                            >
+                                <Music
+                                    v-if="
+                                        activePlayingPostId === lightboxPost.id
+                                    "
+                                    class="h-3.5 w-3.5 animate-pulse text-brand"
+                                />
+                                <Music v-else class="h-3.5 w-3.5 text-brand" />
+                                <span
+                                    class="max-w-[200px] truncate sm:max-w-xs"
+                                >
+                                    {{ lightboxPost.music.title }} •
+                                    {{ lightboxPost.music.artist }}
+                                </span>
+                                <span
+                                    class="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-brand uppercase"
+                                >
+                                    {{
+                                        activePlayingPostId === lightboxPost.id
+                                            ? 'Pause'
+                                            : 'Play'
+                                    }}
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="border-t border-border/50 pt-2" />
+
+                        <!-- Comments Section Header -->
+                        <div
+                            class="flex items-center justify-between text-xs font-semibold text-muted-foreground"
+                        >
+                            <span
+                                >Comments ({{
+                                    currentLightboxCommentsCount
+                                }})</span
+                            >
+                        </div>
+
+                        <!-- Empty state if no comments -->
+                        <div
+                            v-if="currentLightboxComments.length === 0"
+                            class="py-8 text-center text-xs text-muted-foreground"
+                        >
+                            No comments yet. Be the first to share your
+                            thoughts!
+                        </div>
+
+                        <!-- Comments & Replies Tree -->
+                        <div v-else class="space-y-3">
+                            <div
+                                v-for="c in currentLightboxComments"
+                                :key="c.id"
+                                class="space-y-2 rounded-xl bg-muted/20 p-2.5 text-xs text-foreground"
+                                data-test="lightbox-comment-item"
+                            >
+                                <div class="flex items-start gap-2">
+                                    <div
+                                        class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-[10px] font-bold text-brand select-none"
+                                    >
+                                        <img
+                                            v-if="c.author_avatar"
+                                            :src="c.author_avatar"
+                                            :alt="c.author_name"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <span v-else>{{
+                                            getInitials(c.author_name)
+                                        }}</span>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span
+                                                class="font-bold text-foreground"
+                                            >
+                                                {{
+                                                    c.is_masked
+                                                        ? c.author_name
+                                                        : c.author_name ||
+                                                          c.author_handle
+                                                }}
+                                            </span>
+                                            <span
+                                                class="text-[10px] text-muted-foreground"
+                                                >· {{ c.created_at }}</span
+                                            >
+                                        </div>
+                                        <p
+                                            class="mt-0.5 text-xs leading-relaxed text-foreground/90"
+                                        >
+                                            {{ c.content }}
+                                        </p>
+
+                                        <!-- Comment Actions (Like & Reply) -->
+                                        <div
+                                            class="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer transition hover:text-foreground"
+                                                :class="
+                                                    isCommentLiked(c.id)
+                                                        ? 'font-semibold text-rose-500'
+                                                        : ''
+                                                "
+                                                @click="toggleCommentLike(c.id)"
+                                            >
+                                                {{
+                                                    isCommentLiked(c.id)
+                                                        ? 'Liked'
+                                                        : 'Like'
+                                                }}
+                                                <span
+                                                    v-if="
+                                                        getCommentLikesCount(
+                                                            c.id,
+                                                        ) > 0
+                                                    "
+                                                    >({{
+                                                        getCommentLikesCount(
+                                                            c.id,
+                                                        )
+                                                    }})</span
+                                                >
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer font-medium hover:text-foreground"
+                                                @click="
+                                                    setReplyingTo(
+                                                        lightboxCommentKey,
+                                                        c,
+                                                    )
+                                                "
+                                            >
+                                                Reply
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nested Replies -->
+                                <div
+                                    v-if="c.replies && c.replies.length > 0"
+                                    class="ml-6 space-y-2 border-l-2 border-border/60 pl-2.5"
+                                >
+                                    <div
+                                        v-for="r in c.replies"
+                                        :key="r.id"
+                                        class="flex items-start gap-2"
+                                    >
+                                        <div
+                                            class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-brand/15 text-[9px] font-bold text-brand select-none"
+                                        >
+                                            <img
+                                                v-if="r.author_avatar"
+                                                :src="r.author_avatar"
+                                                :alt="r.author_name"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <span v-else>{{
+                                                getInitials(r.author_name)
+                                            }}</span>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <span
+                                                    class="text-[11px] font-bold text-foreground"
+                                                >
+                                                    {{
+                                                        r.is_masked
+                                                            ? r.author_name
+                                                            : r.author_name ||
+                                                              r.author_handle
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="text-[9px] text-muted-foreground"
+                                                    >· {{ r.created_at }}</span
+                                                >
+                                            </div>
+                                            <p
+                                                class="text-[11px] leading-relaxed text-foreground/90"
+                                            >
+                                                {{ r.content }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Bottom: Like/Comment/Share Bar & Add Comment Form -->
+                    <div
+                        class="border-t border-border/60 bg-muted/20 p-3 sm:p-3.5"
+                    >
+                        <!-- Action Icons Bar -->
+                        <div
+                            class="mb-2.5 flex items-center justify-between text-xs"
+                        >
+                            <div class="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    class="flex cursor-pointer items-center gap-1.5 transition active:scale-95"
+                                    :class="
+                                        currentLightboxLiked
+                                            ? 'font-semibold text-rose-500'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    data-test="lightbox-like-button"
+                                    :title="
+                                        activeLightboxMediaItem?.id
+                                            ? 'Like this media'
+                                            : 'Like this post'
+                                    "
+                                    @click="
+                                        toggleMediaLike(
+                                            lightboxPost,
+                                            activeLightboxMediaItem,
+                                        )
+                                    "
+                                >
+                                    <Heart
+                                        class="h-4 w-4"
+                                        :class="
+                                            currentLightboxLiked
+                                                ? 'fill-rose-500'
+                                                : ''
+                                        "
+                                    />
+                                    <span>{{ currentLightboxLikesCount }}</span>
+                                </button>
+
+                                <div
+                                    class="flex items-center gap-1 text-muted-foreground"
+                                >
+                                    <MessageCircle class="h-4 w-4" />
+                                    <span>{{
+                                        currentLightboxCommentsCount
+                                    }}</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
+                                    title="Share post"
+                                    @click="handleSharePost(lightboxPost)"
+                                >
+                                    <Send class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-2.5">
+                                <span
+                                    v-if="
+                                        lightboxPost.media &&
+                                        lightboxPost.media.length > 1
+                                    "
+                                    class="text-[11px] font-medium text-muted-foreground"
+                                    data-test="lightbox-post-total-likes"
+                                >
+                                    {{ getPostLikesCount(lightboxPost.id) }}
+                                    post like{{
+                                        getPostLikesCount(lightboxPost.id) === 1
+                                            ? ''
+                                            : 's'
+                                    }}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    class="cursor-pointer text-muted-foreground transition hover:text-foreground active:scale-95"
+                                    title="Bookmark post"
+                                    @click="toggleBookmark(lightboxPost.id)"
+                                >
+                                    <Bookmark
+                                        class="h-4 w-4"
+                                        :class="
+                                            isPostBookmarked(lightboxPost.id)
+                                                ? 'fill-amber-500 text-amber-500'
+                                                : ''
+                                        "
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Replying to Indicator Pill -->
+                        <div
+                            v-if="replyingTo[lightboxCommentKey]"
+                            class="mb-2 flex items-center justify-between rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] text-brand"
+                        >
+                            <span
+                                >Replying to @{{
+                                    replyingTo[lightboxCommentKey]
+                                        ?.author_handle
+                                }}</span
+                            >
+                            <button
+                                type="button"
+                                class="cursor-pointer text-muted-foreground hover:text-foreground"
+                                @click="cancelReply(lightboxCommentKey)"
+                            >
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+
+                        <!-- Add Comment Input Row -->
+                        <div class="flex items-center gap-2">
+                            <input
+                                v-model="commentInputs[lightboxCommentKey]"
+                                type="text"
+                                maxlength="1000"
+                                :placeholder="
+                                    replyingTo[lightboxCommentKey]
+                                        ? `Reply to @${replyingTo[lightboxCommentKey]?.author_handle}…`
+                                        : 'Add a comment…'
+                                "
+                                class="flex-1 rounded-full border border-border/70 bg-background px-3.5 py-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-brand focus:outline-none"
+                                data-test="lightbox-comment-input"
+                                @keydown.enter.prevent="
+                                    handleAddLightboxComment(
+                                        lightboxPost,
+                                        activeLightboxMediaItem,
+                                    )
+                                "
+                            />
+                            <button
+                                type="button"
+                                :disabled="
+                                    !commentInputs[
+                                        lightboxCommentKey
+                                    ]?.trim() ||
+                                    isSubmittingComment[lightboxCommentKey]
+                                "
+                                class="cursor-pointer rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-40"
+                                data-test="lightbox-submit-comment-button"
+                                @click="
+                                    handleAddLightboxComment(
+                                        lightboxPost,
+                                        activeLightboxMediaItem,
+                                    )
+                                "
+                            >
+                                <Loader2
+                                    v-if="
+                                        isSubmittingComment[lightboxCommentKey]
+                                    "
+                                    class="h-3 w-3 animate-spin"
+                                />
+                                <span v-else>Post</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
