@@ -3840,24 +3840,24 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(musicBadge.exists()).toBe(true);
             expect(musicBadge.text()).toContain('Campus Vibe • StudyGroup');
 
-            // Media carousel is displayed with counter and navigation
+            // Media Bento Grid is displayed with both photos visible
             const mediaContainer = wrapper.find(
                 '[data-test="post-media-container"]',
             );
             expect(mediaContainer.exists()).toBe(true);
-            expect(
-                wrapper.find('[data-test="post-carousel-counter"]').text(),
-            ).toBe('1 / 2');
 
-            // Navigate to next photo in feed post
-            await wrapper
-                .find('[data-test="post-carousel-next"]')
-                .trigger('click');
-            await nextTick();
+            const bentoGrid = wrapper.find('[data-test="bento-grid-2"]');
+            expect(bentoGrid.exists()).toBe(true);
 
+            const bentoItems = wrapper.findAll(
+                '[data-test="bento-media-item"]',
+            );
+            expect(bentoItems.length).toBe(2);
+
+            // Feed card does not render action bar / comment section when post has media
             expect(
-                wrapper.find('[data-test="post-carousel-counter"]').text(),
-            ).toBe('2 / 2');
+                wrapper.find('[data-test="post-like-button"]').exists(),
+            ).toBe(false);
         });
 
         it('opens lightbox modal when clicking an image in the feed post and allows navigation and comments', async () => {
@@ -4009,28 +4009,14 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 },
             });
 
-            // Feed carousel shows like count for photo 1 (501 has 4 likes)
-            const photoLikeBtn = wrapper.find(
-                '[data-test="carousel-photo-like-button"]',
+            // Bento Grid renders both photos in the post
+            const bentoItems = wrapper.findAll(
+                '[data-test="bento-media-item"]',
             );
-            expect(photoLikeBtn.exists()).toBe(true);
-            expect(photoLikeBtn.text()).toContain('4');
+            expect(bentoItems.length).toBe(2);
 
-            // Switch to photo 2 in feed carousel
-            await wrapper
-                .find('[data-test="post-carousel-next"]')
-                .trigger('click');
-            await nextTick();
-
-            // Photo 2 (502 has 1 like and is liked)
-            expect(
-                wrapper.find('[data-test="carousel-photo-like-button"]').text(),
-            ).toContain('1');
-
-            // Open lightbox on photo 2
-            await wrapper
-                .find('[data-test="post-media-image"]')
-                .trigger('click');
+            // Open lightbox on photo 2 by clicking the 2nd bento item
+            await bentoItems[1].trigger('click');
             await nextTick();
 
             expect(

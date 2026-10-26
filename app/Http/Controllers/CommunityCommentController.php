@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityComment;
 use App\Models\CommunityCommentLike;
 use App\Models\CommunityPost;
+use App\Models\CommunityPostMedia;
 use App\Support\CommunitySettings;
 use App\Support\PublicFileUrl;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,11 @@ class CommunityCommentController extends Controller
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:1000'],
+            'post_media_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('community_post_media', 'id')->where('post_id', $post->id),
+            ],
             'parent_id' => [
                 'nullable',
                 'integer',
@@ -43,12 +49,18 @@ class CommunityCommentController extends Controller
         $comment = DB::transaction(function () use ($viewer, $post, $validated) {
             $created = CommunityComment::create([
                 'post_id' => $post->id,
+                'post_media_id' => $validated['post_media_id'] ?? null,
                 'parent_id' => $validated['parent_id'] ?? null,
                 'user_id' => $viewer->id,
                 'content' => $validated['content'],
             ]);
 
             $post->increment('comments_count');
+
+            if (! empty($validated['post_media_id'])) {
+                $media = CommunityPostMedia::find($validated['post_media_id']);
+                $media?->increment('comments_count');
+            }
 
             return $created;
         });
@@ -57,6 +69,8 @@ class CommunityCommentController extends Controller
             return response()->json([
                 'comment' => [
                     'id' => $comment->id,
+                    'post_id' => $comment->post_id,
+                    'post_media_id' => $comment->post_media_id,
                     'parent_id' => $comment->parent_id,
                     'content' => $comment->content,
                     'created_at' => 'just now',

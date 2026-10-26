@@ -100,6 +100,8 @@ export interface PostMediaItem {
     size?: number | null;
     likes_count?: number;
     is_liked?: boolean;
+    comments?: PostComment[];
+    comments_count?: number;
 }
 
 export interface PostMusicTrack {
@@ -1034,6 +1036,15 @@ const initMediaReactions = (media?: PostMediaItem[]) => {
             mediaLikesCountMap.value[mKey] = m.likes_count ?? 0;
             serverMediaLikedMap.value[mKey] = Boolean(m.is_liked);
         }
+        const commentKey = 'media_' + String(m.id);
+        if (localCommentsMap.value[commentKey] === undefined && m.comments) {
+            localCommentsMap.value[commentKey] = JSON.parse(
+                JSON.stringify(m.comments),
+            );
+            commentsCountMap.value[commentKey] =
+                m.comments_count ?? m.comments.length;
+            initCommentReactions(m.comments);
+        }
     }
 };
 
@@ -1423,6 +1434,115 @@ const handleAddComment = async (postId: number | string) => {
     }
 };
 
+const getMediaComments = (
+    mediaItem: PostMediaItem | null | undefined,
+): PostComment[] => {
+    if (!mediaItem || !mediaItem.id) return [];
+    const key = 'media_' + String(mediaItem.id);
+    return localCommentsMap.value[key] ?? mediaItem.comments ?? [];
+};
+
+const getMediaCommentsCount = (
+    mediaItem: PostMediaItem | null | undefined,
+): number => {
+    if (!mediaItem || !mediaItem.id) return 0;
+    const key = 'media_' + String(mediaItem.id);
+    return (
+        commentsCountMap.value[key] ??
+        mediaItem.comments_count ??
+        mediaItem.comments?.length ??
+        0
+    );
+};
+
+const handleAddLightboxComment = async (
+    post: CommunityFeedPost,
+    mediaItem: PostMediaItem | null | undefined,
+) => {
+    if (!mediaItem || !mediaItem.id) {
+        await handleAddComment(post.id);
+        return;
+    }
+
+    const key = 'media_' + String(mediaItem.id);
+    const content = (commentInputs.value[key] || '').trim();
+    if (!content || isSubmittingComment.value[key]) {
+        return;
+    }
+
+    const replyTarget = replyingTo.value[key];
+    const parentId = replyTarget?.id ?? null;
+
+    isSubmittingComment.value[key] = true;
+    commentInputs.value[key] = '';
+    replyingTo.value[key] = null;
+
+    try {
+        const response = await axios.post(
+            `/community/posts/${post.id}/comments`,
+            {
+                content,
+                parent_id: parentId,
+                post_media_id: mediaItem.id,
+            },
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+            },
+        );
+
+        const newComment = response.data?.comment;
+        if (newComment) {
+            const newKey = String(newComment.id);
+            commentLikedMap.value[newKey] = false;
+            commentLikesCountMap.value[newKey] = 0;
+            serverCommentLikedMap.value[newKey] = false;
+
+            if (!localCommentsMap.value[key]) {
+                localCommentsMap.value[key] = mediaItem.comments
+                    ? JSON.parse(JSON.stringify(mediaItem.comments))
+                    : [];
+            }
+
+            if (parentId) {
+                const parent = localCommentsMap.value[key].find(
+                    (c) => String(c.id) === String(parentId),
+                );
+                if (parent) {
+                    if (!parent.replies) {
+                        parent.replies = [];
+                    }
+                    parent.replies.push(newComment);
+                    expandedReplies.value[String(parentId)] = true;
+                } else {
+                    localCommentsMap.value[key].push(newComment);
+                }
+            } else {
+                localCommentsMap.value[key].push(newComment);
+            }
+
+            commentsCountMap.value[key] =
+                (commentsCountMap.value[key] ?? 0) + 1;
+        }
+    } catch {
+        router.post(
+            `/community/posts/${post.id}/comments`,
+            {
+                content,
+                parent_id: parentId,
+                post_media_id: mediaItem.id,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    } finally {
+        isSubmittingComment.value[key] = false;
+    }
+};
+
 // ─── Post Composer Form & Media Modal State ─────────────────────────────────
 export interface ComposerMediaFile {
     file: File;
@@ -1621,8 +1741,7 @@ const submitMediaPost = () => {
     });
 };
 
-// ─── Feed Post Carousel & Soundtrack Player ──────────────────────────────────
-const activePostMediaIndex = ref<Record<string, number>>({});
+// ─── Feed Post Soundtrack Player ─────────────────────────────────────────────
 const activePlayingPostId = ref<number | string | null>(null);
 const feedAudioElement = ref<HTMLAudioElement | null>(null);
 
@@ -1676,6 +1795,47 @@ const activeLightboxMediaItem = computed(() => {
         };
     }
     return null;
+});
+
+const lightboxCommentKey = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        return 'media_' + String(activeLightboxMediaItem.value.id);
+    }
+    return lightboxPost.value ? String(lightboxPost.value.id) : '';
+});
+
+const currentLightboxComments = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        const mediaComments = getMediaComments(activeLightboxMediaItem.value);
+        if (mediaComments.length > 0) {
+            return mediaComments;
+        }
+        if (
+            lightboxPost.value &&
+            getPostComments(lightboxPost.value).length > 0
+        ) {
+            return getPostComments(lightboxPost.value);
+        }
+        return mediaComments;
+    }
+    return lightboxPost.value ? getPostComments(lightboxPost.value) : [];
+});
+
+const currentLightboxCommentsCount = computed(() => {
+    if (activeLightboxMediaItem.value?.id) {
+        const count = getMediaCommentsCount(activeLightboxMediaItem.value);
+        if (count > 0) {
+            return count;
+        }
+        if (
+            lightboxPost.value &&
+            getPostCommentsCount(lightboxPost.value) > 0
+        ) {
+            return getPostCommentsCount(lightboxPost.value);
+        }
+        return count;
+    }
+    return lightboxPost.value ? getPostCommentsCount(lightboxPost.value) : 0;
 });
 
 const openPostLightbox = (post: CommunityFeedPost, mediaIndex = 0) => {
@@ -3620,192 +3780,182 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     </button>
                                 </div>
 
-                                <!-- Post Media (Multi-Photo Carousel or Video) -->
+                                <!-- Post Media Bento Grid (Facebook / Social Style) -->
                                 <div
                                     v-if="post.media && post.media.length > 0"
                                     class="px-4 pb-3"
                                     data-test="post-media-container"
                                 >
+                                    <!-- 1 Item (Full width) -->
                                     <div
-                                        class="relative overflow-hidden rounded-xl border border-border/50 bg-black/5 dark:bg-black/25"
+                                        v-if="post.media.length === 1"
+                                        class="overflow-hidden rounded-xl border border-border/50 bg-zinc-950/5 dark:bg-zinc-950/40"
                                     >
-                                        <template
+                                        <video
                                             v-if="
-                                                post.media[
-                                                    activePostMediaIndex[
-                                                        post.id
-                                                    ] || 0
-                                                ]
+                                                post.media[0].type === 'video'
+                                            "
+                                            :src="post.media[0].url"
+                                            controls
+                                            class="max-h-[520px] w-full bg-black object-contain"
+                                            data-test="post-media-video"
+                                        />
+                                        <img
+                                            v-else
+                                            :src="post.media[0].url"
+                                            :alt="
+                                                post.media[0].name ||
+                                                post.content ||
+                                                'Post media'
+                                            "
+                                            class="max-h-[520px] w-full cursor-pointer object-contain transition hover:opacity-95"
+                                            data-test="post-media-image"
+                                            @click="openPostLightbox(post, 0)"
+                                        />
+                                    </div>
+
+                                    <!-- 2 Items (Side-by-side Bento Grid) -->
+                                    <div
+                                        v-else-if="post.media.length === 2"
+                                        class="grid h-72 w-full grid-cols-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-2"
+                                    >
+                                        <div
+                                            v-for="(
+                                                item, itemIdx
+                                            ) in post.media.slice(0, 2)"
+                                            :key="item.id || itemIdx"
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="
+                                                openPostLightbox(post, itemIdx)
                                             "
                                         >
-                                            <!-- Video player -->
                                             <video
-                                                v-if="
-                                                    post.media[
-                                                        activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0
-                                                    ].type === 'video'
-                                                "
-                                                :src="
-                                                    post.media[
-                                                        activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0
-                                                    ].url
-                                                "
-                                                controls
-                                                class="max-h-96 w-full bg-black object-contain"
-                                                data-test="post-media-video"
+                                                v-if="item.type === 'video'"
+                                                :src="item.url"
+                                                class="h-full w-full object-cover"
                                             />
-                                            <!-- Photo -->
                                             <img
                                                 v-else
-                                                :src="
-                                                    post.media[
-                                                        activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0
-                                                    ].url
-                                                "
+                                                :src="item.url"
                                                 :alt="
-                                                    post.media[
-                                                        activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0
-                                                    ].name ||
-                                                    post.content ||
-                                                    'Post media'
+                                                    item.name ||
+                                                    'Photo ' + (itemIdx + 1)
                                                 "
-                                                class="max-h-[520px] w-full cursor-pointer bg-zinc-950/5 object-contain transition hover:opacity-95 dark:bg-zinc-950/40"
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                 data-test="post-media-image"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <!-- 3 Items (1 large on left, 2 stacked on right) -->
+                                    <div
+                                        v-else-if="post.media.length === 3"
+                                        class="grid h-72 w-full grid-cols-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-3"
+                                    >
+                                        <div
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="openPostLightbox(post, 0)"
+                                        >
+                                            <video
+                                                v-if="
+                                                    post.media[0].type ===
+                                                    'video'
+                                                "
+                                                :src="post.media[0].url"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <img
+                                                v-else
+                                                :src="post.media[0].url"
+                                                :alt="
+                                                    post.media[0].name ||
+                                                    'Photo 1'
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-test="post-media-image"
+                                            />
+                                        </div>
+                                        <div
+                                            class="grid h-full grid-rows-2 gap-2"
+                                        >
+                                            <div
+                                                v-for="(
+                                                    item, itemIdx
+                                                ) in post.media.slice(1, 3)"
+                                                :key="item.id || itemIdx"
+                                                class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                                data-test="bento-media-item"
                                                 @click="
                                                     openPostLightbox(
                                                         post,
-                                                        activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0,
-                                                    )
-                                                "
-                                            />
-                                        </template>
-
-                                        <!-- Multi-photo Carousel Controls -->
-                                        <template v-if="post.media.length > 1">
-                                            <!-- Per-photo heart badge on carousel -->
-                                            <button
-                                                type="button"
-                                                class="absolute top-2.5 left-2.5 z-20 flex cursor-pointer items-center gap-1 rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs transition hover:bg-black/85 active:scale-95"
-                                                data-test="carousel-photo-like-button"
-                                                title="Like this photo"
-                                                @click.stop="
-                                                    toggleMediaLike(
-                                                        post,
-                                                        post.media[
-                                                            activePostMediaIndex[
-                                                                post.id
-                                                            ] || 0
-                                                        ],
+                                                        itemIdx + 1,
                                                     )
                                                 "
                                             >
-                                                <Heart
-                                                    class="h-3 w-3"
-                                                    :class="
-                                                        isMediaLiked(
-                                                            post.media[
-                                                                activePostMediaIndex[
-                                                                    post.id
-                                                                ] || 0
-                                                            ],
-                                                        )
-                                                            ? 'fill-rose-500 text-rose-500'
-                                                            : 'text-white'
+                                                <video
+                                                    v-if="item.type === 'video'"
+                                                    :src="item.url"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <img
+                                                    v-else
+                                                    :src="item.url"
+                                                    :alt="
+                                                        item.name ||
+                                                        'Photo ' + (itemIdx + 2)
                                                     "
-                                                />
-                                                <span>{{
-                                                    getMediaLikesCount(
-                                                        post.media[
-                                                            activePostMediaIndex[
-                                                                post.id
-                                                            ] || 0
-                                                        ],
-                                                    )
-                                                }}</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                class="absolute top-1/2 left-2.5 z-20 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
-                                                aria-label="Previous photo"
-                                                data-test="post-carousel-prev"
-                                                @click="
-                                                    activePostMediaIndex[
-                                                        post.id
-                                                    ] =
-                                                        ((activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0) -
-                                                            1 +
-                                                            post.media.length) %
-                                                        post.media.length
-                                                "
-                                            >
-                                                <ChevronLeft class="h-4 w-4" />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                class="absolute top-1/2 right-2.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:scale-110 active:scale-95"
-                                                aria-label="Next photo"
-                                                data-test="post-carousel-next"
-                                                @click="
-                                                    activePostMediaIndex[
-                                                        post.id
-                                                    ] =
-                                                        ((activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0) +
-                                                            1) %
-                                                        post.media.length
-                                                "
-                                            >
-                                                <ChevronRight class="h-4 w-4" />
-                                            </button>
-
-                                            <!-- Counter badge -->
-                                            <div
-                                                class="absolute top-2.5 right-2.5 rounded-full bg-black/70 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs"
-                                                data-test="post-carousel-counter"
-                                            >
-                                                {{
-                                                    (activePostMediaIndex[
-                                                        post.id
-                                                    ] || 0) + 1
-                                                }}
-                                                / {{ post.media.length }}
-                                            </div>
-
-                                            <!-- Dots Indicator -->
-                                            <div
-                                                class="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1.5"
-                                            >
-                                                <span
-                                                    v-for="(
-                                                        _, dotIdx
-                                                    ) in post.media"
-                                                    :key="dotIdx"
-                                                    :class="[
-                                                        'h-1.5 rounded-full transition-all',
-                                                        (activePostMediaIndex[
-                                                            post.id
-                                                        ] || 0) === dotIdx
-                                                            ? 'w-4 bg-white shadow-xs'
-                                                            : 'w-1.5 bg-white/50',
-                                                    ]"
+                                                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                 />
                                             </div>
-                                        </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4+ Items (2x2 Bento Grid with +N overlay on 4th) -->
+                                    <div
+                                        v-else
+                                        class="grid h-72 w-full grid-cols-2 grid-rows-2 gap-2 overflow-hidden rounded-xl border border-border/50 bg-black/5 sm:h-80 md:h-96 dark:bg-black/25"
+                                        data-test="bento-grid-4"
+                                    >
+                                        <div
+                                            v-for="(
+                                                item, itemIdx
+                                            ) in post.media.slice(0, 4)"
+                                            :key="item.id || itemIdx"
+                                            class="group relative h-full w-full cursor-pointer overflow-hidden bg-black/10"
+                                            data-test="bento-media-item"
+                                            @click="
+                                                openPostLightbox(post, itemIdx)
+                                            "
+                                        >
+                                            <video
+                                                v-if="item.type === 'video'"
+                                                :src="item.url"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <img
+                                                v-else
+                                                :src="item.url"
+                                                :alt="
+                                                    item.name ||
+                                                    'Photo ' + (itemIdx + 1)
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-test="post-media-image"
+                                            />
+                                            <div
+                                                v-if="
+                                                    itemIdx === 3 &&
+                                                    post.media.length > 4
+                                                "
+                                                class="absolute inset-0 flex items-center justify-center bg-black/60 text-base font-bold text-white backdrop-blur-xs sm:text-lg"
+                                            >
+                                                +{{ post.media.length - 3 }}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3892,442 +4042,479 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     </div>
                                 </div>
 
-                                <!-- Instagram Action Bar -->
-                                <div
-                                    class="flex items-center justify-between border-t border-border/40 px-4 py-2.5"
+                                <!-- Instagram Action Bar & Comments (Only for text-only/non-media posts) -->
+                                <template
+                                    v-if="
+                                        !post.media || post.media.length === 0
+                                    "
                                 >
-                                    <div class="flex items-center gap-4">
-                                        <!-- Heart / Like -->
+                                    <div
+                                        class="flex items-center justify-between border-t border-border/40 px-4 py-2.5"
+                                    >
+                                        <div class="flex items-center gap-4">
+                                            <!-- Heart / Like -->
+                                            <button
+                                                type="button"
+                                                class="group inline-flex cursor-pointer items-center gap-1.5 text-xs transition-colors"
+                                                :class="
+                                                    isPostLiked(post.id)
+                                                        ? 'text-rose-500'
+                                                        : 'text-muted-foreground hover:text-foreground'
+                                                "
+                                                data-test="post-like-button"
+                                                @click="toggleLike(post.id)"
+                                            >
+                                                <Heart
+                                                    class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
+                                                    :class="{
+                                                        'fill-rose-500':
+                                                            isPostLiked(
+                                                                post.id,
+                                                            ),
+                                                        'scale-125 duration-150':
+                                                            isHeartBouncing[
+                                                                String(post.id)
+                                                            ],
+                                                    }"
+                                                />
+                                                <span class="font-medium">{{
+                                                    getPostLikesCount(post.id)
+                                                }}</span>
+                                            </button>
+
+                                            <!-- Comment -->
+                                            <button
+                                                type="button"
+                                                class="group inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                                data-test="post-comments-toggle-button"
+                                                @click="toggleComments(post.id)"
+                                            >
+                                                <MessageCircle
+                                                    class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
+                                                />
+                                                <span
+                                                    class="font-medium"
+                                                    data-test="post-comments-count"
+                                                    >{{
+                                                        getPostCommentsCount(
+                                                            post,
+                                                        )
+                                                    }}</span
+                                                >
+                                            </button>
+
+                                            <!-- Share / Copy Link -->
+                                            <button
+                                                type="button"
+                                                class="group inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                                :title="
+                                                    copiedPostId === post.id
+                                                        ? 'Link copied!'
+                                                        : 'Share post (Copy link)'
+                                                "
+                                                aria-label="Share post"
+                                                @click="handleSharePost(post)"
+                                            >
+                                                <Check
+                                                    v-if="
+                                                        copiedPostId === post.id
+                                                    "
+                                                    class="animate-in zoom-in-75 h-4 w-4 text-emerald-500 duration-200"
+                                                />
+                                                <Send
+                                                    v-else
+                                                    class="h-4 w-4 -rotate-12 transition-transform group-hover:scale-115 active:scale-90"
+                                                />
+                                                <span
+                                                    v-if="
+                                                        copiedPostId === post.id
+                                                    "
+                                                    class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                                >
+                                                    Copied!
+                                                </span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Bookmark -->
                                         <button
                                             type="button"
-                                            class="group inline-flex cursor-pointer items-center gap-1.5 text-xs transition-colors"
-                                            :class="
-                                                isPostLiked(post.id)
-                                                    ? 'text-rose-500'
-                                                    : 'text-muted-foreground hover:text-foreground'
-                                            "
-                                            data-test="post-like-button"
-                                            @click="toggleLike(post.id)"
+                                            class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                                            :class="{
+                                                'text-foreground':
+                                                    isPostBookmarked(post.id),
+                                            }"
+                                            data-test="post-bookmark-button"
+                                            aria-label="Save post"
+                                            @click="toggleBookmark(post.id)"
                                         >
-                                            <Heart
-                                                class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
+                                            <Bookmark
+                                                class="h-4 w-4"
                                                 :class="{
-                                                    'fill-rose-500':
-                                                        isPostLiked(post.id),
-                                                    'scale-125 duration-150':
-                                                        isHeartBouncing[
-                                                            String(post.id)
-                                                        ],
+                                                    'fill-foreground':
+                                                        isPostBookmarked(
+                                                            post.id,
+                                                        ),
                                                 }"
                                             />
-                                            <span class="font-medium">{{
-                                                getPostLikesCount(post.id)
-                                            }}</span>
-                                        </button>
-
-                                        <!-- Comment -->
-                                        <button
-                                            type="button"
-                                            class="group inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                                            data-test="post-comments-toggle-button"
-                                            @click="toggleComments(post.id)"
-                                        >
-                                            <MessageCircle
-                                                class="h-4 w-4 transition-transform group-hover:scale-115 active:scale-90"
-                                            />
-                                            <span
-                                                class="font-medium"
-                                                data-test="post-comments-count"
-                                                >{{
-                                                    getPostCommentsCount(post)
-                                                }}</span
-                                            >
-                                        </button>
-
-                                        <!-- Share / Copy Link -->
-                                        <button
-                                            type="button"
-                                            class="group inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                                            :title="
-                                                copiedPostId === post.id
-                                                    ? 'Link copied!'
-                                                    : 'Share post (Copy link)'
-                                            "
-                                            aria-label="Share post"
-                                            @click="handleSharePost(post)"
-                                        >
-                                            <Check
-                                                v-if="copiedPostId === post.id"
-                                                class="animate-in zoom-in-75 h-4 w-4 text-emerald-500 duration-200"
-                                            />
-                                            <Send
-                                                v-else
-                                                class="h-4 w-4 -rotate-12 transition-transform group-hover:scale-115 active:scale-90"
-                                            />
-                                            <span
-                                                v-if="copiedPostId === post.id"
-                                                class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
-                                            >
-                                                Copied!
-                                            </span>
                                         </button>
                                     </div>
 
-                                    <!-- Bookmark -->
-                                    <button
-                                        type="button"
-                                        class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
-                                        :class="{
-                                            'text-foreground': isPostBookmarked(
-                                                post.id,
-                                            ),
-                                        }"
-                                        data-test="post-bookmark-button"
-                                        aria-label="Save post"
-                                        @click="toggleBookmark(post.id)"
+                                    <!-- Instagram Social Proof / Comments Feed -->
+                                    <div
+                                        class="space-y-2 border-t border-border/30 bg-muted/15 px-4 py-2.5 text-xs"
                                     >
-                                        <Bookmark
-                                            class="h-4 w-4"
-                                            :class="{
-                                                'fill-foreground':
-                                                    isPostBookmarked(post.id),
-                                            }"
-                                        />
-                                    </button>
-                                </div>
-
-                                <!-- Instagram Social Proof / Comments Feed -->
-                                <div
-                                    class="space-y-2 border-t border-border/30 bg-muted/15 px-4 py-2.5 text-xs"
-                                >
-                                    <p
-                                        v-if="getPostLikesCount(post.id) > 0"
-                                        class="text-[11px] text-muted-foreground"
-                                    >
-                                        <span
-                                            class="font-semibold text-foreground"
-                                            >{{
-                                                getPostLikesCount(post.id)
-                                            }}</span
+                                        <p
+                                            v-if="
+                                                getPostLikesCount(post.id) > 0
+                                            "
+                                            class="text-[11px] text-muted-foreground"
                                         >
-                                        {{
-                                            getPostLikesCount(post.id) === 1
-                                                ? 'like'
-                                                : 'likes'
-                                        }}
-                                    </p>
-
-                                    <!-- View all comments toggle -->
-                                    <button
-                                        v-if="getPostCommentsCount(post) > 1"
-                                        type="button"
-                                        class="cursor-pointer text-[11px] text-muted-foreground hover:underline"
-                                        @click="toggleComments(post.id)"
-                                    >
-                                        {{
-                                            expandedComments[String(post.id)]
-                                                ? 'Hide comments'
-                                                : `View all ${getPostCommentsCount(post)} comments`
-                                        }}
-                                    </button>
-
-                                    <!-- Comments list -->
-                                    <div class="space-y-3 pt-1">
-                                        <div
-                                            v-for="comment in getPostComments(
-                                                post,
-                                            )"
-                                            :key="comment.id"
-                                            class="text-[11px] text-foreground/90"
-                                            data-test="comment-item"
-                                        >
-                                            <div
-                                                class="flex items-start gap-2.5"
+                                            <span
+                                                class="font-semibold text-foreground"
+                                                >{{
+                                                    getPostLikesCount(post.id)
+                                                }}</span
                                             >
-                                                <!-- Commenter Avatar -->
-                                                <button
-                                                    type="button"
-                                                    class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
-                                                    data-test="comment-avatar"
-                                                    @click="
-                                                        openProfileModal({
-                                                            public_id:
-                                                                comment.author_public_id,
-                                                            name: comment.author_name,
-                                                            handle: comment.author_handle,
-                                                            avatar: comment.author_avatar,
-                                                            is_masked:
-                                                                comment.is_masked,
-                                                            section_name:
-                                                                comment.section_name,
-                                                        })
-                                                    "
-                                                >
-                                                    <img
-                                                        v-if="
-                                                            comment.author_avatar &&
-                                                            !comment.is_masked
-                                                        "
-                                                        :src="
-                                                            comment.author_avatar
-                                                        "
-                                                        :alt="
-                                                            comment.author_name
-                                                        "
-                                                        class="h-6 w-6 rounded-full object-cover"
-                                                    />
-                                                    <div
-                                                        v-else
-                                                        class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-[10px] font-bold text-brand select-none"
-                                                    >
-                                                        {{
-                                                            getInitials(
-                                                                comment.author_name,
-                                                            )
-                                                        }}
-                                                    </div>
-                                                </button>
+                                            {{
+                                                getPostLikesCount(post.id) === 1
+                                                    ? 'like'
+                                                    : 'likes'
+                                            }}
+                                        </p>
 
-                                                <!-- Comment Body & Thread -->
-                                                <div class="min-w-0 flex-1">
-                                                    <div
-                                                        class="leading-relaxed"
+                                        <!-- View all comments toggle -->
+                                        <button
+                                            v-if="
+                                                getPostCommentsCount(post) > 1
+                                            "
+                                            type="button"
+                                            class="cursor-pointer text-[11px] text-muted-foreground hover:underline"
+                                            @click="toggleComments(post.id)"
+                                        >
+                                            {{
+                                                expandedComments[
+                                                    String(post.id)
+                                                ]
+                                                    ? 'Hide comments'
+                                                    : `View all ${getPostCommentsCount(post)} comments`
+                                            }}
+                                        </button>
+
+                                        <!-- Comments list -->
+                                        <div class="space-y-3 pt-1">
+                                            <div
+                                                v-for="comment in getPostComments(
+                                                    post,
+                                                )"
+                                                :key="comment.id"
+                                                class="text-[11px] text-foreground/90"
+                                                data-test="comment-item"
+                                            >
+                                                <div
+                                                    class="flex items-start gap-2.5"
+                                                >
+                                                    <!-- Commenter Avatar -->
+                                                    <button
+                                                        type="button"
+                                                        class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
+                                                        data-test="comment-avatar"
+                                                        @click="
+                                                            openProfileModal({
+                                                                public_id:
+                                                                    comment.author_public_id,
+                                                                name: comment.author_name,
+                                                                handle: comment.author_handle,
+                                                                avatar: comment.author_avatar,
+                                                                is_masked:
+                                                                    comment.is_masked,
+                                                                section_name:
+                                                                    comment.section_name,
+                                                            })
+                                                        "
                                                     >
-                                                        <button
-                                                            type="button"
-                                                            class="cursor-pointer font-semibold text-foreground hover:underline"
-                                                            data-test="comment-author-handle"
-                                                            @click="
-                                                                openProfileModal(
-                                                                    {
-                                                                        public_id:
-                                                                            comment.author_public_id,
-                                                                        name: comment.author_name,
-                                                                        handle: comment.author_handle,
-                                                                        avatar: comment.author_avatar,
-                                                                        is_masked:
-                                                                            comment.is_masked,
-                                                                        section_name:
-                                                                            comment.section_name,
-                                                                    },
-                                                                )
+                                                        <img
+                                                            v-if="
+                                                                comment.author_avatar &&
+                                                                !comment.is_masked
                                                             "
+                                                            :src="
+                                                                comment.author_avatar
+                                                            "
+                                                            :alt="
+                                                                comment.author_name
+                                                            "
+                                                            class="h-6 w-6 rounded-full object-cover"
+                                                        />
+                                                        <div
+                                                            v-else
+                                                            class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-[10px] font-bold text-brand select-none"
                                                         >
                                                             {{
-                                                                comment.author_handle
-                                                            }}
-                                                        </button>
-                                                        <div
-                                                            v-if="
-                                                                editingCommentId ===
-                                                                String(
-                                                                    comment.id,
+                                                                getInitials(
+                                                                    comment.author_name,
                                                                 )
-                                                            "
-                                                            class="mt-1.5 space-y-1.5"
-                                                            data-test="comment-edit-form"
+                                                            }}
+                                                        </div>
+                                                    </button>
+
+                                                    <!-- Comment Body & Thread -->
+                                                    <div class="min-w-0 flex-1">
+                                                        <div
+                                                            class="leading-relaxed"
                                                         >
-                                                            <input
-                                                                v-model="
-                                                                    editingCommentContent
-                                                                "
-                                                                type="text"
-                                                                maxlength="1000"
-                                                                class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
-                                                                data-test="comment-edit-input"
-                                                                @keydown.enter.prevent="
-                                                                    saveEditComment(
-                                                                        comment,
+                                                            <button
+                                                                type="button"
+                                                                class="cursor-pointer font-semibold text-foreground hover:underline"
+                                                                data-test="comment-author-handle"
+                                                                @click="
+                                                                    openProfileModal(
+                                                                        {
+                                                                            public_id:
+                                                                                comment.author_public_id,
+                                                                            name: comment.author_name,
+                                                                            handle: comment.author_handle,
+                                                                            avatar: comment.author_avatar,
+                                                                            is_masked:
+                                                                                comment.is_masked,
+                                                                            section_name:
+                                                                                comment.section_name,
+                                                                        },
                                                                     )
                                                                 "
-                                                                @keydown.esc="
-                                                                    cancelEditComment
-                                                                "
-                                                            />
-                                                            <div
-                                                                class="flex items-center gap-2"
                                                             >
-                                                                <button
-                                                                    type="button"
-                                                                    class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
-                                                                    data-test="save-comment-edit-button"
-                                                                    :disabled="
-                                                                        isSavingComment
+                                                                {{
+                                                                    comment.author_handle
+                                                                }}
+                                                            </button>
+                                                            <div
+                                                                v-if="
+                                                                    editingCommentId ===
+                                                                    String(
+                                                                        comment.id,
+                                                                    )
+                                                                "
+                                                                class="mt-1.5 space-y-1.5"
+                                                                data-test="comment-edit-form"
+                                                            >
+                                                                <input
+                                                                    v-model="
+                                                                        editingCommentContent
                                                                     "
-                                                                    @click="
+                                                                    type="text"
+                                                                    maxlength="1000"
+                                                                    class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
+                                                                    data-test="comment-edit-input"
+                                                                    @keydown.enter.prevent="
                                                                         saveEditComment(
                                                                             comment,
                                                                         )
                                                                     "
-                                                                >
-                                                                    Save
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
-                                                                    data-test="cancel-comment-edit-button"
-                                                                    @click="
+                                                                    @keydown.esc="
                                                                         cancelEditComment
                                                                     "
+                                                                />
+                                                                <div
+                                                                    class="flex items-center gap-2"
                                                                 >
-                                                                    Cancel
-                                                                </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
+                                                                        data-test="save-comment-edit-button"
+                                                                        :disabled="
+                                                                            isSavingComment
+                                                                        "
+                                                                        @click="
+                                                                            saveEditComment(
+                                                                                comment,
+                                                                            )
+                                                                        "
+                                                                    >
+                                                                        Save
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                        data-test="cancel-comment-edit-button"
+                                                                        @click="
+                                                                            cancelEditComment
+                                                                        "
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
                                                             </div>
+                                                            <span
+                                                                v-else
+                                                                class="ml-1.5 text-muted-foreground"
+                                                                data-test="comment-content"
+                                                                >{{
+                                                                    comment.content
+                                                                }}</span
+                                                            >
                                                         </div>
-                                                        <span
-                                                            v-else
-                                                            class="ml-1.5 text-muted-foreground"
-                                                            data-test="comment-content"
-                                                            >{{
-                                                                comment.content
-                                                            }}</span
-                                                        >
-                                                    </div>
 
-                                                    <!-- Comment Meta (time + reply button + like reaction + edit/delete) -->
-                                                    <div
-                                                        class="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground"
-                                                    >
-                                                        <span>{{
-                                                            comment.created_at
-                                                        }}</span>
-                                                        <button
-                                                            type="button"
-                                                            class="cursor-pointer font-semibold hover:text-foreground"
-                                                            data-test="comment-reply-button"
-                                                            @click="
-                                                                setReplyingTo(
-                                                                    post.id,
-                                                                    comment,
-                                                                )
-                                                            "
+                                                        <!-- Comment Meta (time + reply button + like reaction + edit/delete) -->
+                                                        <div
+                                                            class="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground"
                                                         >
-                                                            Reply
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
-                                                            :class="{
-                                                                'text-rose-500 hover:text-rose-600':
-                                                                    isCommentLiked(
-                                                                        comment.id,
-                                                                    ),
-                                                            }"
-                                                            data-test="comment-like-button"
-                                                            aria-label="Like comment"
-                                                            @click="
-                                                                toggleCommentLike(
-                                                                    comment.id,
-                                                                )
-                                                            "
-                                                        >
-                                                            <Heart
-                                                                class="h-3 w-3 transition-transform active:scale-75"
+                                                            <span>{{
+                                                                comment.created_at
+                                                            }}</span>
+                                                            <button
+                                                                type="button"
+                                                                class="cursor-pointer font-semibold hover:text-foreground"
+                                                                data-test="comment-reply-button"
+                                                                @click="
+                                                                    setReplyingTo(
+                                                                        post.id,
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                            >
+                                                                Reply
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
                                                                 :class="{
-                                                                    'fill-rose-500 text-rose-500':
+                                                                    'text-rose-500 hover:text-rose-600':
                                                                         isCommentLiked(
                                                                             comment.id,
                                                                         ),
-                                                                    'scale-125 duration-150':
-                                                                        isCommentHeartBouncing[
+                                                                }"
+                                                                data-test="comment-like-button"
+                                                                aria-label="Like comment"
+                                                                @click="
+                                                                    toggleCommentLike(
+                                                                        comment.id,
+                                                                    )
+                                                                "
+                                                            >
+                                                                <Heart
+                                                                    class="h-3 w-3 transition-transform active:scale-75"
+                                                                    :class="{
+                                                                        'fill-rose-500 text-rose-500':
+                                                                            isCommentLiked(
+                                                                                comment.id,
+                                                                            ),
+                                                                        'scale-125 duration-150':
+                                                                            isCommentHeartBouncing[
+                                                                                String(
+                                                                                    comment.id,
+                                                                                )
+                                                                            ],
+                                                                    }"
+                                                                />
+                                                                <span
+                                                                    v-if="
+                                                                        getCommentLikesCount(
+                                                                            comment.id,
+                                                                        ) > 0
+                                                                    "
+                                                                    class="font-medium"
+                                                                >
+                                                                    {{
+                                                                        getCommentLikesCount(
+                                                                            comment.id,
+                                                                        )
+                                                                    }}
+                                                                </span>
+                                                            </button>
+                                                            <button
+                                                                v-if="
+                                                                    canEditComment(
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                                type="button"
+                                                                class="cursor-pointer font-semibold hover:text-foreground"
+                                                                data-test="comment-edit-button"
+                                                                @click="
+                                                                    startEditComment(
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                v-if="
+                                                                    canDeleteComment(
+                                                                        post,
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                                type="button"
+                                                                class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
+                                                                data-test="comment-delete-button"
+                                                                @click="
+                                                                    confirmDeleteComment(
+                                                                        post.id,
+                                                                        comment,
+                                                                    )
+                                                                "
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- View / Hide Threaded Replies Button -->
+                                                        <div
+                                                            v-if="
+                                                                comment.replies &&
+                                                                comment.replies
+                                                                    .length > 0
+                                                            "
+                                                            class="mt-1.5"
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                data-test="toggle-replies-button"
+                                                                @click="
+                                                                    toggleReplies(
+                                                                        comment.id,
+                                                                    )
+                                                                "
+                                                            >
+                                                                <span
+                                                                    class="inline-block h-px w-3 bg-muted-foreground/40"
+                                                                ></span>
+                                                                <span>{{
+                                                                    expandedReplies[
+                                                                        String(
+                                                                            comment.id,
+                                                                        )
+                                                                    ]
+                                                                        ? 'Hide replies'
+                                                                        : `View ${comment.replies.length} ${
+                                                                              comment
+                                                                                  .replies
+                                                                                  .length ===
+                                                                              1
+                                                                                  ? 'reply'
+                                                                                  : 'replies'
+                                                                          }`
+                                                                }}</span>
+                                                                <ChevronUp
+                                                                    v-if="
+                                                                        expandedReplies[
                                                                             String(
                                                                                 comment.id,
                                                                             )
-                                                                        ],
-                                                                }"
-                                                            />
-                                                            <span
-                                                                v-if="
-                                                                    getCommentLikesCount(
-                                                                        comment.id,
-                                                                    ) > 0
-                                                                "
-                                                                class="font-medium"
-                                                            >
-                                                                {{
-                                                                    getCommentLikesCount(
-                                                                        comment.id,
-                                                                    )
-                                                                }}
-                                                            </span>
-                                                        </button>
-                                                        <button
-                                                            v-if="
-                                                                canEditComment(
-                                                                    comment,
-                                                                )
-                                                            "
-                                                            type="button"
-                                                            class="cursor-pointer font-semibold hover:text-foreground"
-                                                            data-test="comment-edit-button"
-                                                            @click="
-                                                                startEditComment(
-                                                                    comment,
-                                                                )
-                                                            "
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            v-if="
-                                                                canDeleteComment(
-                                                                    post,
-                                                                    comment,
-                                                                )
-                                                            "
-                                                            type="button"
-                                                            class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
-                                                            data-test="comment-delete-button"
-                                                            @click="
-                                                                confirmDeleteComment(
-                                                                    post.id,
-                                                                    comment,
-                                                                )
-                                                            "
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
+                                                                        ]
+                                                                    "
+                                                                    class="h-3 w-3"
+                                                                />
+                                                                <ChevronDown
+                                                                    v-else
+                                                                    class="h-3 w-3"
+                                                                />
+                                                            </button>
 
-                                                    <!-- View / Hide Threaded Replies Button -->
-                                                    <div
-                                                        v-if="
-                                                            comment.replies &&
-                                                            comment.replies
-                                                                .length > 0
-                                                        "
-                                                        class="mt-1.5"
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            class="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
-                                                            data-test="toggle-replies-button"
-                                                            @click="
-                                                                toggleReplies(
-                                                                    comment.id,
-                                                                )
-                                                            "
-                                                        >
-                                                            <span
-                                                                class="inline-block h-px w-3 bg-muted-foreground/40"
-                                                            ></span>
-                                                            <span>{{
-                                                                expandedReplies[
-                                                                    String(
-                                                                        comment.id,
-                                                                    )
-                                                                ]
-                                                                    ? 'Hide replies'
-                                                                    : `View ${comment.replies.length} ${
-                                                                          comment
-                                                                              .replies
-                                                                              .length ===
-                                                                          1
-                                                                              ? 'reply'
-                                                                              : 'replies'
-                                                                      }`
-                                                            }}</span>
-                                                            <ChevronUp
+                                                            <!-- Threaded Nested Replies Tree -->
+                                                            <div
                                                                 v-if="
                                                                     expandedReplies[
                                                                         String(
@@ -4335,279 +4522,267 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                                         )
                                                                     ]
                                                                 "
-                                                                class="h-3 w-3"
-                                                            />
-                                                            <ChevronDown
-                                                                v-else
-                                                                class="h-3 w-3"
-                                                            />
-                                                        </button>
-
-                                                        <!-- Threaded Nested Replies Tree -->
-                                                        <div
-                                                            v-if="
-                                                                expandedReplies[
-                                                                    String(
-                                                                        comment.id,
-                                                                    )
-                                                                ]
-                                                            "
-                                                            class="mt-2 space-y-2 border-l-2 border-border/50 pl-3"
-                                                            data-test="comment-replies-container"
-                                                        >
-                                                            <div
-                                                                v-for="reply in comment.replies"
-                                                                :key="reply.id"
-                                                                class="flex items-start gap-2 text-[11px]"
-                                                                data-test="reply-item"
+                                                                class="mt-2 space-y-2 border-l-2 border-border/50 pl-3"
+                                                                data-test="comment-replies-container"
                                                             >
-                                                                <!-- Reply Author Avatar -->
-                                                                <button
-                                                                    type="button"
-                                                                    class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
-                                                                    data-test="reply-avatar"
-                                                                    @click="
-                                                                        openProfileModal(
-                                                                            {
-                                                                                public_id:
-                                                                                    reply.author_public_id,
-                                                                                name: reply.author_name,
-                                                                                handle: reply.author_handle,
-                                                                                avatar: reply.author_avatar,
-                                                                                is_masked:
-                                                                                    reply.is_masked,
-                                                                                section_name:
-                                                                                    reply.section_name,
-                                                                            },
-                                                                        )
-                                                                    "
-                                                                >
-                                                                    <img
-                                                                        v-if="
-                                                                            reply.author_avatar &&
-                                                                            !reply.is_masked
-                                                                        "
-                                                                        :src="
-                                                                            reply.author_avatar
-                                                                        "
-                                                                        :alt="
-                                                                            reply.author_name
-                                                                        "
-                                                                        class="h-5 w-5 rounded-full object-cover"
-                                                                    />
-                                                                    <div
-                                                                        v-else
-                                                                        class="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-[9px] font-bold text-brand select-none"
-                                                                    >
-                                                                        {{
-                                                                            getInitials(
-                                                                                reply.author_name,
-                                                                            )
-                                                                        }}
-                                                                    </div>
-                                                                </button>
-
-                                                                <!-- Reply Body -->
                                                                 <div
-                                                                    class="min-w-0 flex-1"
+                                                                    v-for="reply in comment.replies"
+                                                                    :key="
+                                                                        reply.id
+                                                                    "
+                                                                    class="flex items-start gap-2 text-[11px]"
+                                                                    data-test="reply-item"
                                                                 >
-                                                                    <div
-                                                                        class="leading-relaxed"
+                                                                    <!-- Reply Author Avatar -->
+                                                                    <button
+                                                                        type="button"
+                                                                        class="mt-0.5 shrink-0 cursor-pointer rounded-full transition-transform hover:scale-105"
+                                                                        data-test="reply-avatar"
+                                                                        @click="
+                                                                            openProfileModal(
+                                                                                {
+                                                                                    public_id:
+                                                                                        reply.author_public_id,
+                                                                                    name: reply.author_name,
+                                                                                    handle: reply.author_handle,
+                                                                                    avatar: reply.author_avatar,
+                                                                                    is_masked:
+                                                                                        reply.is_masked,
+                                                                                    section_name:
+                                                                                        reply.section_name,
+                                                                                },
+                                                                            )
+                                                                        "
                                                                     >
-                                                                        <button
-                                                                            type="button"
-                                                                            class="cursor-pointer font-semibold text-foreground hover:underline"
-                                                                            data-test="reply-author-handle"
-                                                                            @click="
-                                                                                openProfileModal(
-                                                                                    {
-                                                                                        public_id:
-                                                                                            reply.author_public_id,
-                                                                                        name: reply.author_name,
-                                                                                        handle: reply.author_handle,
-                                                                                        avatar: reply.author_avatar,
-                                                                                        is_masked:
-                                                                                            reply.is_masked,
-                                                                                        section_name:
-                                                                                            reply.section_name,
-                                                                                    },
-                                                                                )
+                                                                        <img
+                                                                            v-if="
+                                                                                reply.author_avatar &&
+                                                                                !reply.is_masked
                                                                             "
+                                                                            :src="
+                                                                                reply.author_avatar
+                                                                            "
+                                                                            :alt="
+                                                                                reply.author_name
+                                                                            "
+                                                                            class="h-5 w-5 rounded-full object-cover"
+                                                                        />
+                                                                        <div
+                                                                            v-else
+                                                                            class="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-[9px] font-bold text-brand select-none"
                                                                         >
                                                                             {{
-                                                                                reply.author_handle
-                                                                            }}
-                                                                        </button>
-                                                                        <div
-                                                                            v-if="
-                                                                                editingCommentId ===
-                                                                                String(
-                                                                                    reply.id,
+                                                                                getInitials(
+                                                                                    reply.author_name,
                                                                                 )
-                                                                            "
-                                                                            class="mt-1.5 space-y-1.5"
-                                                                            data-test="reply-edit-form"
+                                                                            }}
+                                                                        </div>
+                                                                    </button>
+
+                                                                    <!-- Reply Body -->
+                                                                    <div
+                                                                        class="min-w-0 flex-1"
+                                                                    >
+                                                                        <div
+                                                                            class="leading-relaxed"
                                                                         >
-                                                                            <input
-                                                                                v-model="
-                                                                                    editingCommentContent
-                                                                                "
-                                                                                type="text"
-                                                                                maxlength="1000"
-                                                                                class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
-                                                                                data-test="reply-edit-input"
-                                                                                @keydown.enter.prevent="
-                                                                                    saveEditComment(
-                                                                                        reply,
+                                                                            <button
+                                                                                type="button"
+                                                                                class="cursor-pointer font-semibold text-foreground hover:underline"
+                                                                                data-test="reply-author-handle"
+                                                                                @click="
+                                                                                    openProfileModal(
+                                                                                        {
+                                                                                            public_id:
+                                                                                                reply.author_public_id,
+                                                                                            name: reply.author_name,
+                                                                                            handle: reply.author_handle,
+                                                                                            avatar: reply.author_avatar,
+                                                                                            is_masked:
+                                                                                                reply.is_masked,
+                                                                                            section_name:
+                                                                                                reply.section_name,
+                                                                                        },
                                                                                     )
                                                                                 "
-                                                                                @keydown.esc="
-                                                                                    cancelEditComment
-                                                                                "
-                                                                            />
-                                                                            <div
-                                                                                class="flex items-center gap-2"
                                                                             >
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
-                                                                                    data-test="save-reply-edit-button"
-                                                                                    :disabled="
-                                                                                        isSavingComment
+                                                                                {{
+                                                                                    reply.author_handle
+                                                                                }}
+                                                                            </button>
+                                                                            <div
+                                                                                v-if="
+                                                                                    editingCommentId ===
+                                                                                    String(
+                                                                                        reply.id,
+                                                                                    )
+                                                                                "
+                                                                                class="mt-1.5 space-y-1.5"
+                                                                                data-test="reply-edit-form"
+                                                                            >
+                                                                                <input
+                                                                                    v-model="
+                                                                                        editingCommentContent
                                                                                     "
-                                                                                    @click="
+                                                                                    type="text"
+                                                                                    maxlength="1000"
+                                                                                    class="w-full rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground focus:border-brand focus:outline-none"
+                                                                                    data-test="reply-edit-input"
+                                                                                    @keydown.enter.prevent="
                                                                                         saveEditComment(
                                                                                             reply,
                                                                                         )
                                                                                     "
-                                                                                >
-                                                                                    Save
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
-                                                                                    data-test="cancel-reply-edit-button"
-                                                                                    @click="
+                                                                                    @keydown.esc="
                                                                                         cancelEditComment
                                                                                     "
+                                                                                />
+                                                                                <div
+                                                                                    class="flex items-center gap-2"
                                                                                 >
-                                                                                    Cancel
-                                                                                </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        class="cursor-pointer rounded-md bg-brand px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-brand/90"
+                                                                                        data-test="save-reply-edit-button"
+                                                                                        :disabled="
+                                                                                            isSavingComment
+                                                                                        "
+                                                                                        @click="
+                                                                                            saveEditComment(
+                                                                                                reply,
+                                                                                            )
+                                                                                        "
+                                                                                    >
+                                                                                        Save
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                                        data-test="cancel-reply-edit-button"
+                                                                                        @click="
+                                                                                            cancelEditComment
+                                                                                        "
+                                                                                    >
+                                                                                        Cancel
+                                                                                    </button>
+                                                                                </div>
                                                                             </div>
+                                                                            <span
+                                                                                v-else
+                                                                                class="ml-1.5 text-muted-foreground"
+                                                                                data-test="reply-content"
+                                                                                >{{
+                                                                                    reply.content
+                                                                                }}</span
+                                                                            >
                                                                         </div>
-                                                                        <span
-                                                                            v-else
-                                                                            class="ml-1.5 text-muted-foreground"
-                                                                            data-test="reply-content"
-                                                                            >{{
-                                                                                reply.content
-                                                                            }}</span
+                                                                        <div
+                                                                            class="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground"
                                                                         >
-                                                                    </div>
-                                                                    <div
-                                                                        class="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground"
-                                                                    >
-                                                                        <span>{{
-                                                                            reply.created_at
-                                                                        }}</span>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="cursor-pointer font-semibold hover:text-foreground"
-                                                                            data-test="nested-reply-button"
-                                                                            @click="
-                                                                                setReplyingTo(
-                                                                                    post.id,
-                                                                                    comment,
-                                                                                )
-                                                                            "
-                                                                        >
-                                                                            Reply
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
-                                                                            :class="{
-                                                                                'text-rose-500 hover:text-rose-600':
-                                                                                    isCommentLiked(
-                                                                                        reply.id,
-                                                                                    ),
-                                                                            }"
-                                                                            data-test="reply-like-button"
-                                                                            aria-label="Like reply"
-                                                                            @click="
-                                                                                toggleCommentLike(
-                                                                                    reply.id,
-                                                                                )
-                                                                            "
-                                                                        >
-                                                                            <Heart
-                                                                                class="h-3 w-3 transition-transform active:scale-75"
+                                                                            <span
+                                                                                >{{
+                                                                                    reply.created_at
+                                                                                }}</span
+                                                                            >
+                                                                            <button
+                                                                                type="button"
+                                                                                class="cursor-pointer font-semibold hover:text-foreground"
+                                                                                data-test="nested-reply-button"
+                                                                                @click="
+                                                                                    setReplyingTo(
+                                                                                        post.id,
+                                                                                        comment,
+                                                                                    )
+                                                                                "
+                                                                            >
+                                                                                Reply
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
                                                                                 :class="{
-                                                                                    'fill-rose-500 text-rose-500':
+                                                                                    'text-rose-500 hover:text-rose-600':
                                                                                         isCommentLiked(
                                                                                             reply.id,
                                                                                         ),
-                                                                                    'scale-125 duration-150':
-                                                                                        isCommentHeartBouncing[
-                                                                                            String(
-                                                                                                reply.id,
-                                                                                            )
-                                                                                        ],
                                                                                 }"
-                                                                            />
-                                                                            <span
-                                                                                v-if="
-                                                                                    getCommentLikesCount(
-                                                                                        reply.id,
-                                                                                    ) >
-                                                                                    0
-                                                                                "
-                                                                                class="font-medium"
-                                                                            >
-                                                                                {{
-                                                                                    getCommentLikesCount(
+                                                                                data-test="reply-like-button"
+                                                                                aria-label="Like reply"
+                                                                                @click="
+                                                                                    toggleCommentLike(
                                                                                         reply.id,
                                                                                     )
-                                                                                }}
-                                                                            </span>
-                                                                        </button>
-                                                                        <button
-                                                                            v-if="
-                                                                                canEditComment(
-                                                                                    reply,
-                                                                                )
-                                                                            "
-                                                                            type="button"
-                                                                            class="cursor-pointer font-semibold hover:text-foreground"
-                                                                            data-test="reply-edit-button"
-                                                                            @click="
-                                                                                startEditComment(
-                                                                                    reply,
-                                                                                )
-                                                                            "
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                        <button
-                                                                            v-if="
-                                                                                canDeleteComment(
-                                                                                    post,
-                                                                                    reply,
-                                                                                )
-                                                                            "
-                                                                            type="button"
-                                                                            class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
-                                                                            data-test="reply-delete-button"
-                                                                            @click="
-                                                                                confirmDeleteReply(
-                                                                                    post.id,
-                                                                                    comment,
-                                                                                    reply,
-                                                                                )
-                                                                            "
-                                                                        >
-                                                                            Delete
-                                                                        </button>
+                                                                                "
+                                                                            >
+                                                                                <Heart
+                                                                                    class="h-3 w-3 transition-transform active:scale-75"
+                                                                                    :class="{
+                                                                                        'fill-rose-500 text-rose-500':
+                                                                                            isCommentLiked(
+                                                                                                reply.id,
+                                                                                            ),
+                                                                                        'scale-125 duration-150':
+                                                                                            isCommentHeartBouncing[
+                                                                                                String(
+                                                                                                    reply.id,
+                                                                                                )
+                                                                                            ],
+                                                                                    }"
+                                                                                />
+                                                                                <span
+                                                                                    v-if="
+                                                                                        getCommentLikesCount(
+                                                                                            reply.id,
+                                                                                        ) >
+                                                                                        0
+                                                                                    "
+                                                                                    class="font-medium"
+                                                                                >
+                                                                                    {{
+                                                                                        getCommentLikesCount(
+                                                                                            reply.id,
+                                                                                        )
+                                                                                    }}
+                                                                                </span>
+                                                                            </button>
+                                                                            <button
+                                                                                v-if="
+                                                                                    canEditComment(
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                                type="button"
+                                                                                class="cursor-pointer font-semibold hover:text-foreground"
+                                                                                data-test="reply-edit-button"
+                                                                                @click="
+                                                                                    startEditComment(
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                            >
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                v-if="
+                                                                                    canDeleteComment(
+                                                                                        post,
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                                type="button"
+                                                                                class="cursor-pointer font-semibold text-destructive/80 hover:text-destructive"
+                                                                                data-test="reply-delete-button"
+                                                                                @click="
+                                                                                    confirmDeleteReply(
+                                                                                        post.id,
+                                                                                        comment,
+                                                                                        reply,
+                                                                                    )
+                                                                                "
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -4616,94 +4791,98 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Replying to Indicator Pill -->
-                                    <div
-                                        v-if="replyingTo[String(post.id)]"
-                                        class="mt-2 flex items-center justify-between rounded-md bg-muted/60 px-2.5 py-1 text-[11px] text-muted-foreground"
-                                        data-test="replying-to-indicator"
-                                    >
+                                        <!-- Replying to Indicator Pill -->
                                         <div
-                                            class="flex items-center gap-1.5 truncate"
+                                            v-if="replyingTo[String(post.id)]"
+                                            class="mt-2 flex items-center justify-between rounded-md bg-muted/60 px-2.5 py-1 text-[11px] text-muted-foreground"
+                                            data-test="replying-to-indicator"
                                         >
-                                            <CornerDownRight
-                                                class="h-3 w-3 shrink-0 text-brand"
-                                            />
-                                            <span class="truncate">
-                                                Replying to
-                                                <span
-                                                    class="font-semibold text-foreground"
-                                                    >@{{
-                                                        replyingTo[
-                                                            String(post.id)
-                                                        ]?.author_handle
-                                                    }}</span
-                                                >
-                                            </span>
+                                            <div
+                                                class="flex items-center gap-1.5 truncate"
+                                            >
+                                                <CornerDownRight
+                                                    class="h-3 w-3 shrink-0 text-brand"
+                                                />
+                                                <span class="truncate">
+                                                    Replying to
+                                                    <span
+                                                        class="font-semibold text-foreground"
+                                                        >@{{
+                                                            replyingTo[
+                                                                String(post.id)
+                                                            ]?.author_handle
+                                                        }}</span
+                                                    >
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="cursor-pointer p-0.5 text-muted-foreground hover:text-foreground"
+                                                data-test="cancel-reply-button"
+                                                aria-label="Cancel reply"
+                                                @click="cancelReply(post.id)"
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            class="cursor-pointer p-0.5 text-muted-foreground hover:text-foreground"
-                                            data-test="cancel-reply-button"
-                                            aria-label="Cancel reply"
-                                            @click="cancelReply(post.id)"
-                                        >
-                                            <X class="h-3 w-3" />
-                                        </button>
-                                    </div>
 
-                                    <!-- Quick comment input -->
-                                    <div
-                                        class="mt-2 flex items-center justify-between border-t border-border/20 pt-1"
-                                    >
-                                        <input
-                                            :ref="
-                                                (el) => {
-                                                    commentInputRefs[
-                                                        String(post.id)
-                                                    ] =
-                                                        el as HTMLInputElement | null;
-                                                }
-                                            "
-                                            v-model="
-                                                commentInputs[String(post.id)]
-                                            "
-                                            type="text"
-                                            :placeholder="
-                                                replyingTo[String(post.id)]
-                                                    ? `Reply to @${replyingTo[String(post.id)]?.author_handle}…`
-                                                    : 'Add a comment…'
-                                            "
-                                            class="w-full bg-transparent text-[11px] placeholder:text-muted-foreground/60 focus:outline-none"
-                                            @keydown.enter.prevent="
-                                                handleAddComment(post.id)
-                                            "
-                                        />
-                                        <button
-                                            type="button"
-                                            :disabled="
-                                                !commentInputs[
-                                                    String(post.id)
-                                                ]?.trim() ||
-                                                isSubmittingComment[
-                                                    String(post.id)
-                                                ]
-                                            "
-                                            class="cursor-pointer text-[11px] font-semibold text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
-                                            data-test="post-comment-button"
-                                            @click="handleAddComment(post.id)"
+                                        <!-- Quick comment input -->
+                                        <div
+                                            class="mt-2 flex items-center justify-between border-t border-border/20 pt-1"
                                         >
-                                            {{
-                                                isSubmittingComment[
-                                                    String(post.id)
-                                                ]
-                                                    ? 'Posting…'
-                                                    : 'Post'
-                                            }}
-                                        </button>
+                                            <input
+                                                :ref="
+                                                    (el) => {
+                                                        commentInputRefs[
+                                                            String(post.id)
+                                                        ] =
+                                                            el as HTMLInputElement | null;
+                                                    }
+                                                "
+                                                v-model="
+                                                    commentInputs[
+                                                        String(post.id)
+                                                    ]
+                                                "
+                                                type="text"
+                                                :placeholder="
+                                                    replyingTo[String(post.id)]
+                                                        ? `Reply to @${replyingTo[String(post.id)]?.author_handle}…`
+                                                        : 'Add a comment…'
+                                                "
+                                                class="w-full bg-transparent text-[11px] placeholder:text-muted-foreground/60 focus:outline-none"
+                                                @keydown.enter.prevent="
+                                                    handleAddComment(post.id)
+                                                "
+                                            />
+                                            <button
+                                                type="button"
+                                                :disabled="
+                                                    !commentInputs[
+                                                        String(post.id)
+                                                    ]?.trim() ||
+                                                    isSubmittingComment[
+                                                        String(post.id)
+                                                    ]
+                                                "
+                                                class="cursor-pointer text-[11px] font-semibold text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
+                                                data-test="post-comment-button"
+                                                @click="
+                                                    handleAddComment(post.id)
+                                                "
+                                            >
+                                                {{
+                                                    isSubmittingComment[
+                                                        String(post.id)
+                                                    ]
+                                                        ? 'Posting…'
+                                                        : 'Post'
+                                                }}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </template>
                             </article>
                         </div>
                     </main>
@@ -7229,14 +7408,14 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         >
                             <span
                                 >Comments ({{
-                                    getPostCommentsCount(lightboxPost)
+                                    currentLightboxCommentsCount
                                 }})</span
                             >
                         </div>
 
                         <!-- Empty state if no comments -->
                         <div
-                            v-if="getPostComments(lightboxPost).length === 0"
+                            v-if="currentLightboxComments.length === 0"
                             class="py-8 text-center text-xs text-muted-foreground"
                         >
                             No comments yet. Be the first to share your
@@ -7246,7 +7425,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <!-- Comments & Replies Tree -->
                         <div v-else class="space-y-3">
                             <div
-                                v-for="c in getPostComments(lightboxPost)"
+                                v-for="c in currentLightboxComments"
                                 :key="c.id"
                                 class="space-y-2 rounded-xl bg-muted/20 p-2.5 text-xs text-foreground"
                                 data-test="lightbox-comment-item"
@@ -7325,7 +7504,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 class="cursor-pointer font-medium hover:text-foreground"
                                                 @click="
                                                     setReplyingTo(
-                                                        lightboxPost.id,
+                                                        lightboxCommentKey,
                                                         c,
                                                     )
                                                 "
@@ -7438,7 +7617,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 >
                                     <MessageCircle class="h-4 w-4" />
                                     <span>{{
-                                        getPostCommentsCount(lightboxPost)
+                                        currentLightboxCommentsCount
                                     }}</span>
                                 </div>
 
@@ -7489,19 +7668,19 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                         <!-- Replying to Indicator Pill -->
                         <div
-                            v-if="replyingTo[String(lightboxPost.id)]"
+                            v-if="replyingTo[lightboxCommentKey]"
                             class="mb-2 flex items-center justify-between rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] text-brand"
                         >
                             <span
                                 >Replying to @{{
-                                    replyingTo[String(lightboxPost.id)]
+                                    replyingTo[lightboxCommentKey]
                                         ?.author_handle
                                 }}</span
                             >
                             <button
                                 type="button"
                                 class="cursor-pointer text-muted-foreground hover:text-foreground"
-                                @click="cancelReply(lightboxPost.id)"
+                                @click="cancelReply(lightboxCommentKey)"
                             >
                                 <X class="h-3 w-3" />
                             </button>
@@ -7510,33 +7689,43 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         <!-- Add Comment Input Row -->
                         <div class="flex items-center gap-2">
                             <input
-                                v-model="commentInputs[String(lightboxPost.id)]"
+                                v-model="commentInputs[lightboxCommentKey]"
                                 type="text"
                                 maxlength="1000"
-                                placeholder="Add a comment…"
+                                :placeholder="
+                                    replyingTo[lightboxCommentKey]
+                                        ? `Reply to @${replyingTo[lightboxCommentKey]?.author_handle}…`
+                                        : 'Add a comment…'
+                                "
                                 class="flex-1 rounded-full border border-border/70 bg-background px-3.5 py-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-brand focus:outline-none"
                                 data-test="lightbox-comment-input"
                                 @keydown.enter.prevent="
-                                    handleAddComment(lightboxPost.id)
+                                    handleAddLightboxComment(
+                                        lightboxPost,
+                                        activeLightboxMediaItem,
+                                    )
                                 "
                             />
                             <button
                                 type="button"
                                 :disabled="
                                     !commentInputs[
-                                        String(lightboxPost.id)
+                                        lightboxCommentKey
                                     ]?.trim() ||
-                                    isSubmittingComment[String(lightboxPost.id)]
+                                    isSubmittingComment[lightboxCommentKey]
                                 "
                                 class="cursor-pointer rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-40"
                                 data-test="lightbox-submit-comment-button"
-                                @click="handleAddComment(lightboxPost.id)"
+                                @click="
+                                    handleAddLightboxComment(
+                                        lightboxPost,
+                                        activeLightboxMediaItem,
+                                    )
+                                "
                             >
                                 <Loader2
                                     v-if="
-                                        isSubmittingComment[
-                                            String(lightboxPost.id)
-                                        ]
+                                        isSubmittingComment[lightboxCommentKey]
                                     "
                                     class="h-3 w-3 animate-spin"
                                 />

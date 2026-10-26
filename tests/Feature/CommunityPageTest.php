@@ -421,6 +421,45 @@ it('allows toggling likes on specific media items and counts toward whole post',
     expect($media2->fresh()->likes_count)->toBe(0);
 });
 
+it('allows adding comments specifically to a media item in a post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $media = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test_photo.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test_photo.jpg',
+        'sort_order' => 0,
+        'likes_count' => 0,
+        'comments_count' => 0,
+    ]);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), [
+            'content' => 'Nice bottle of wine!',
+            'post_media_id' => $media->id,
+        ])
+        ->assertOk()
+        ->assertJson([
+            'comment' => [
+                'content' => 'Nice bottle of wine!',
+                'post_media_id' => $media->id,
+            ],
+        ]);
+
+    expect($media->fresh()->comments_count)->toBe(1);
+    expect($post->fresh()->comments_count)->toBe(1);
+
+    $this->assertDatabaseHas('community_comments', [
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'content' => 'Nice bottle of wine!',
+    ]);
+});
+
 it('allows toggling bookmarks on a community post', function () {
     $post = CommunityPost::factory()->create([
         'workspace_id' => $this->workspace->id,

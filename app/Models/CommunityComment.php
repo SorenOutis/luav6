@@ -10,6 +10,7 @@ class CommunityComment extends Model
 {
     protected $fillable = [
         'post_id',
+        'post_media_id',
         'parent_id',
         'user_id',
         'content',
@@ -19,6 +20,11 @@ class CommunityComment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(CommunityPost::class, 'post_id');
+    }
+
+    public function media(): BelongsTo
+    {
+        return $this->belongsTo(CommunityPostMedia::class, 'post_media_id');
     }
 
     public function user(): BelongsTo
@@ -49,6 +55,13 @@ class CommunityComment extends Model
 
             if ($post && $post->comments_count > 0) {
                 $post->decrement('comments_count', min($post->comments_count, $decrement));
+            }
+
+            if ($comment->post_media_id) {
+                $media = CommunityPostMedia::find($comment->post_media_id);
+                if ($media && $media->comments_count > 0) {
+                    $media->decrement('comments_count', min($media->comments_count, $decrement));
+                }
             }
         });
     }

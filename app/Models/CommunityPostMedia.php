@@ -20,6 +20,7 @@ class CommunityPostMedia extends Model
         'file_size',
         'sort_order',
         'likes_count',
+        'comments_count',
     ];
 
     protected function casts(): array
@@ -28,6 +29,7 @@ class CommunityPostMedia extends Model
             'file_size' => 'integer',
             'sort_order' => 'integer',
             'likes_count' => 'integer',
+            'comments_count' => 'integer',
         ];
     }
 
@@ -48,5 +50,10 @@ class CommunityPostMedia extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(CommunityPostMediaLike::class, 'post_media_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(CommunityComment::class, 'post_media_id');
     }
 }
