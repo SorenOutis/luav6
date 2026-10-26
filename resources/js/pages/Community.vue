@@ -1037,9 +1037,7 @@ const initMediaReactions = (media?: PostMediaItem[]) => {
     }
 };
 
-const isMediaLiked = (
-    mediaItem: PostMediaItem | null | undefined,
-): boolean => {
+const isMediaLiked = (mediaItem: PostMediaItem | null | undefined): boolean => {
     if (!mediaItem) return false;
     const key = String(mediaItem.id);
     if (mediaLikedMap.value[key] !== undefined) {
