@@ -47,10 +47,18 @@ class CommunityController extends Controller
 
         // Determine viewer's active section
         $availableSections = $this->getAvailableSections($viewer, $workspace);
+        $workspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
         if ($request->filled('section_id')) {
-            $request->session()->put('community_active_section_id', (int) $request->query('section_id'));
+            $querySectionId = (int) $request->query('section_id');
+            $request->session()->put('community_active_section_id', $querySectionId);
+            Cache::forever($this->activeSectionCacheKey($viewer, $workspaceId), $querySectionId);
         }
-        $requestedSectionId = $request->query('section_id') ?? $request->session()->get('community_active_section_id');
+        $requestedSectionId = $request->query('section_id')
+            ?? Cache::get($this->activeSectionCacheKey($viewer, $workspaceId))
+            ?? $request->session()->get('community_active_section_id');
+        if ($requestedSectionId && $request->session()->get('community_active_section_id') !== (int) $requestedSectionId) {
+            $request->session()->put('community_active_section_id', (int) $requestedSectionId);
+        }
         $section = $this->resolveViewerSection($viewer, $requestedSectionId);
 
         // Fetch section presence list (cached in RAM for 15s to prevent DB overload)
@@ -136,7 +144,10 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
-        $requestedSectionId = $request->query('section_id') ?? $request->session()->get('community_active_section_id');
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $requestedSectionId = $request->query('section_id')
+            ?? Cache::get($this->activeSectionCacheKey($viewer, $workspaceId))
+            ?? $request->session()->get('community_active_section_id');
         $section = $this->resolveViewerSection($viewer, $requestedSectionId);
         $presenceData = $this->getSectionPresenceData($section, $viewer);
 
@@ -163,14 +174,22 @@ class CommunityController extends Controller
             'tab' => ['nullable', 'string', 'in:all,section,saved'],
         ]);
 
-        $request->session()->put('community_active_section_id', (int) $validated['section_id']);
+        $sectionId = (int) $validated['section_id'];
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $request->session()->put('community_active_section_id', $sectionId);
+        Cache::forever($this->activeSectionCacheKey($viewer, $workspaceId), $sectionId);
 
         $tab = $validated['tab'] ?? $request->query('tab');
         if (is_string($tab) && in_array($tab, ['section', 'saved'], true)) {
             return redirect()->route('community.index', ['tab' => $tab]);
         }
 
-        return back();
+        return redirect()->route('community.index');
+    }
+
+    private function activeSectionCacheKey(?User $user, ?int $workspaceId): string
+    {
+        return sprintf('community:active_section:%d:%d', (int) ($user?->id ?? 0), (int) ($workspaceId ?? 0));
     }
 
     /**

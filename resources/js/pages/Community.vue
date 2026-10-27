@@ -468,9 +468,17 @@ const handleSharePost = async (post: CommunityFeedPost) => {
 const selectSection = (sectionId: number) => {
     isSectionDropdownOpen.value = false;
     isMobileSectionDropdownOpen.value = false;
+    isInlineSectionDropdownOpen.value = false;
+    isComposerSectionDropdownOpen.value = false;
     composerSectionId.value = sectionId;
     composerForm.section_id = sectionId;
-    if (selectedSectionId.value === sectionId) return;
+    if (
+        selectedSectionId.value === sectionId &&
+        (props.currentSectionId === undefined ||
+            props.currentSectionId === sectionId)
+    ) {
+        return;
+    }
 
     selectedSectionId.value = sectionId;
     tabPostsCache.value = {};
@@ -3622,7 +3630,12 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
 
                                         <!-- Composer Action Tray -->
                                         <div
-                                            class="mt-3 grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-2 border-t border-border/30 pt-2.5 text-xs sm:flex sm:items-center sm:justify-between"
+                                            :class="[
+                                                'mt-3 items-center gap-x-2 gap-y-2 border-t border-border/30 pt-2.5 text-xs sm:flex sm:items-center sm:justify-between',
+                                                props.allowsAnonymous === false
+                                                    ? 'flex justify-between'
+                                                    : 'grid grid-cols-[1fr_auto]',
+                                            ]"
                                         >
                                             <!-- Media Triggers (Photo, Music, Code) -->
                                             <div
@@ -3700,7 +3713,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
 
                                             <!-- Post Button & Privacy info (Right on mobile line 1, end on desktop) -->
                                             <div
-                                                class="flex shrink-0 items-center justify-end gap-2 sm:order-last"
+                                                class="order-last flex shrink-0 items-center justify-end gap-2 sm:order-last"
                                             >
                                                 <span
                                                     :class="[
@@ -3739,7 +3752,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                 </button>
                                             </div>
 
-                                            <!-- Post Options (Anonymous Toggle & Section Picker: Line 2 on mobile, middle order on desktop) -->
+                                            <!-- Post Options (Anonymous Toggle & Section Picker: Line 2 on mobile when anonymous toggle is active, inline on mobile when anonymous is disabled) -->
                                             <div
                                                 v-if="
                                                     props.allowsAnonymous !==
@@ -3749,11 +3762,11 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                             .length > 1)
                                                 "
                                                 :class="[
-                                                    'col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:mr-auto sm:ml-1 sm:shrink-0 sm:flex-nowrap sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0',
+                                                    'flex items-center gap-2 sm:order-2 sm:col-span-1 sm:mr-auto sm:ml-1 sm:shrink-0 sm:flex-nowrap sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0',
                                                     props.allowsAnonymous ===
                                                     false
-                                                        ? 'lg:hidden'
-                                                        : '',
+                                                        ? 'order-2 mr-auto ml-1 min-w-0 lg:hidden'
+                                                        : 'col-span-2 flex-wrap justify-between border-t border-border/20 pt-1.5',
                                                 ]"
                                             >
                                                 <!-- Anonymous Toggle -->
@@ -3813,7 +3826,13 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                         v-if="
                                                             isInlineSectionDropdownOpen
                                                         "
-                                                        class="absolute right-0 bottom-full z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10 sm:right-auto sm:left-0"
+                                                        :class="[
+                                                            'absolute bottom-full z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10',
+                                                            props.allowsAnonymous ===
+                                                            false
+                                                                ? 'left-0'
+                                                                : 'right-0 sm:right-auto sm:left-0',
+                                                        ]"
                                                         data-test="inline-composer-section-menu"
                                                     >
                                                         <button
@@ -3828,11 +3847,9 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                                     : 'text-foreground'
                                                             "
                                                             @click="
-                                                                composerSectionId =
-                                                                    sec.id;
-                                                                composerForm.section_id =
-                                                                    sec.id;
-                                                                isInlineSectionDropdownOpen = false;
+                                                                selectSection(
+                                                                    sec.id,
+                                                                )
                                                             "
                                                         >
                                                             <span
@@ -7443,12 +7460,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                         ? 'bg-brand/10 font-bold text-brand'
                                                         : 'text-foreground'
                                                 "
-                                                @click="
-                                                    composerSectionId = sec.id;
-                                                    composerForm.section_id =
-                                                        sec.id;
-                                                    isComposerSectionDropdownOpen = false;
-                                                "
+                                                @click="selectSection(sec.id)"
                                             >
                                                 <span class="truncate">{{
                                                     sec.name
