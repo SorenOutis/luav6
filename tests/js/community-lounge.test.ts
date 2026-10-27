@@ -524,6 +524,17 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 expect.objectContaining({
                     preserveState: true,
                     preserveScroll: true,
+                    only: expect.arrayContaining([
+                        'onlineClassmates',
+                        'onlineCount',
+                        'totalEnrolledCount',
+                        'sectionName',
+                        'currentSectionId',
+                        'stories',
+                        'posts',
+                        'hiddenOwnPosts',
+                        'trendingTopics',
+                    ]),
                 }),
             );
         });

@@ -394,3 +394,52 @@ it('persists hidden post state across page refreshes and allows unhiding own pos
         ->has('hiddenOwnPosts', 0)
     );
 });
+
+it('refreshes feed posts, stories, and trending topics when switching active section', function () {
+    CommunitySettings::save(['feed_scope' => CommunitySettings::SCOPE_SECTION]);
+
+    // Student A is enrolled in both Section Alpha and Section Beta
+    $this->studentA->sections()->syncWithoutDetaching([$this->sectionB->id]);
+
+    $postA = CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentA->id,
+        'section_id' => $this->sectionA->id,
+        'content' => 'Alpha lecture notes #AlphaQuiz',
+    ]);
+
+    $postB = CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentB->id,
+        'section_id' => $this->sectionB->id,
+        'content' => 'Beta lab discussion #BetaLab',
+    ]);
+
+    // Initially on Section Alpha
+    actingAs($this->studentA)
+        ->withSession(['community_active_section_id' => $this->sectionA->id])
+        ->get('/community')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Community')
+            ->where('currentSectionId', $this->sectionA->id)
+            ->has('posts', 1)
+            ->where('posts.0.id', $postA->id)
+            ->where('trendingTopics.0.tag', 'alphaquiz')
+        );
+
+    // Switch to Section Beta via sidebar section switcher endpoint and follow redirect
+    actingAs($this->studentA)
+        ->from('/community')
+        ->followingRedirects()
+        ->post(route('community.section.select'), ['section_id' => $this->sectionB->id])
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Community')
+            ->where('currentSectionId', $this->sectionB->id)
+            ->where('sectionName', 'Section Beta')
+            ->has('posts', 1)
+            ->where('posts.0.id', $postB->id)
+            ->where('trendingTopics.0.tag', 'betalab')
+        );
+});
