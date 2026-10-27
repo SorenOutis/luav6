@@ -185,7 +185,7 @@ class CommunityInvites extends Page
 
     public function selectStudent(int $userId): void
     {
-        $student = $this->getStudentsBaseQuery()->find($userId);
+        $student = User::query()->find($userId);
         if (! $student) {
             return;
         }
@@ -212,7 +212,7 @@ class CommunityInvites extends Page
 
     public function regenerateInvite(int $userId): void
     {
-        $student = $this->getStudentsBaseQuery()->find($userId);
+        $student = User::query()->find($userId);
         if (! $student) {
             return;
         }
@@ -237,7 +237,7 @@ class CommunityInvites extends Page
 
     public function grantAccess(int $userId): void
     {
-        $student = $this->getStudentsBaseQuery()->find($userId);
+        $student = User::query()->find($userId);
         if (! $student) {
             return;
         }
@@ -255,7 +255,7 @@ class CommunityInvites extends Page
 
     public function revokeAccess(int $userId): void
     {
-        $student = $this->getStudentsBaseQuery()->find($userId);
+        $student = User::query()->find($userId);
         if (! $student) {
             return;
         }

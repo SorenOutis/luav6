@@ -266,8 +266,9 @@ it('allows admin to manage, generate, and regenerate invite links on filament pa
 it('lists all sections on the workspace sorted alphabetically, sorts students by section, and allows selecting students or sections to grant access', function () {
     $admin = User::factory()->create([
         'is_admin' => true,
-        'current_workspace_id' => $this->workspace->id,
     ]);
+    $admin->workspaces()->syncWithoutDetaching([$this->workspace->id => ['role' => Workspace::ROLE_OWNER]]);
+    $admin->forceFill(['current_workspace_id' => $this->workspace->id])->save();
 
     $otherWorkspace = Workspace::factory()->create();
     Section::factory()->create([
