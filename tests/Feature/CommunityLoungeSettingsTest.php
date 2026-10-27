@@ -300,3 +300,43 @@ it('blocks file attachments when document and code attachments are disabled', fu
         ])
         ->assertStatus(422);
 });
+
+it('only computes trending topics from visible feed posts and excludes hidden cross-section posts', function () {
+    CommunitySettings::save(['feed_scope' => CommunitySettings::SCOPE_SECTION]);
+
+    // Section B post with #NoClass and #NoPasok (hidden from Student A in Section Alpha)
+    CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentB->id,
+        'section_id' => $this->sectionB->id,
+        'content' => 'Walang pasok bukas #NoClass #NoPasok',
+    ]);
+
+    // Student A in Section Alpha has no posts yet -> trendingTopics must be empty
+    $responseEmpty = actingAs($this->studentA)->get('/community');
+    $responseEmpty->assertSuccessful();
+    $responseEmpty->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->has('posts', 0)
+        ->has('trendingTopics', 0)
+    );
+
+    // Student A creates a post in Section Alpha with #Midterms
+    CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentA->id,
+        'section_id' => $this->sectionA->id,
+        'content' => 'Studying for #Midterms right now!',
+    ]);
+
+    $responseWithPost = actingAs($this->studentA)->get('/community');
+    $responseWithPost->assertSuccessful();
+    $responseWithPost->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->has('posts', 1)
+        ->has('trendingTopics', 1)
+        ->where('trendingTopics.0.tag', 'midterms')
+        ->where('trendingTopics.0.name', 'Midterms')
+        ->where('trendingTopics.0.count', 1)
+    );
+});

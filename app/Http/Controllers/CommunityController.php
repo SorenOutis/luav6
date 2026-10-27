@@ -62,8 +62,8 @@ class CommunityController extends Controller
         // Query posts
         $posts = $this->getPosts($viewer, $section, $tab);
 
-        // Trending topics
-        $trendingTopics = $this->getTrendingTopics($workspace?->id);
+        // Trending topics (derived from visible feed posts so hidden/other-section posts never leak)
+        $trendingTopics = $this->getTrendingTopics($posts);
 
         // Active 24h stories tray
         $stories = $this->getActiveStoriesTray($viewer, $workspace, $section);
@@ -741,17 +741,17 @@ class CommunityController extends Controller
             $query->where('section_id', $section->id);
         } elseif ($tab === 'saved' && $viewer) {
             $query->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id));
-            if ($isRestricted && ! $viewer->is_admin) {
+            if ($isRestricted) {
                 if ($section) {
                     $query->where('section_id', $section->id);
-                } else {
+                } elseif (! $viewer->is_admin) {
                     $query->whereRaw('1 = 0');
                 }
             }
-        } elseif ($isRestricted && ! $viewer?->is_admin) {
+        } elseif ($isRestricted) {
             if ($section) {
                 $query->where('section_id', $section->id);
-            } else {
+            } elseif (! $viewer?->is_admin) {
                 $query->whereRaw('1 = 0');
             }
         }
@@ -938,43 +938,49 @@ class CommunityController extends Controller
     }
 
     /**
-     * Get trending hashtags for this workspace (cached for 10 minutes).
+     * Get trending hashtags from the visible feed posts.
+     *
+     * @param  array<int, array<string, mixed>>  $posts
+     * @return array<int, array{tag: string, name: string, count: int}>
      */
-    private function getTrendingTopics(?int $workspaceId): array
+    private function getTrendingTopics(array $posts): array
     {
-        $cacheKey = 'workspace:'.($workspaceId ?? 0).':trending_topics';
+        $tagCounts = [];
+        $tagDisplayNames = [];
 
-        return Cache::remember($cacheKey, 600, function () use ($workspaceId): array {
-            $recentPosts = CommunityPost::query()
-                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
-                ->where('created_at', '>=', now()->subDays(7))
-                ->pluck('content');
-
-            $tagCounts = [];
-            foreach ($recentPosts as $content) {
-                if (preg_match_all('/#([a-zA-Z0-9_]+)/', $content, $matches)) {
-                    foreach ($matches[1] as $tag) {
-                        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+        foreach ($posts as $post) {
+            $content = (string) ($post['content'] ?? '');
+            if ($content !== '' && preg_match_all('/#([a-zA-Z0-9_]+)/', $content, $matches)) {
+                $seenInPost = [];
+                foreach ($matches[1] as $rawTag) {
+                    $lower = strtolower($rawTag);
+                    if (isset($seenInPost[$lower])) {
+                        continue;
+                    }
+                    $seenInPost[$lower] = true;
+                    $tagCounts[$lower] = ($tagCounts[$lower] ?? 0) + 1;
+                    if (! isset($tagDisplayNames[$lower])) {
+                        $tagDisplayNames[$lower] = $rawTag;
                     }
                 }
             }
+        }
 
-            if (! empty($tagCounts)) {
-                arsort($tagCounts);
-                $result = [];
-                foreach (array_slice($tagCounts, 0, 5, true) as $tag => $count) {
-                    $result[] = [
-                        'tag' => strtolower($tag),
-                        'name' => $tag,
-                        'count' => $count,
-                    ];
-                }
-
-                return $result;
-            }
-
+        if (empty($tagCounts)) {
             return [];
-        });
+        }
+
+        arsort($tagCounts);
+        $result = [];
+        foreach (array_slice($tagCounts, 0, 5, true) as $lowerTag => $count) {
+            $result[] = [
+                'tag' => $lowerTag,
+                'name' => $tagDisplayNames[$lowerTag],
+                'count' => $count,
+            ];
+        }
+
+        return $result;
     }
 
     /**
