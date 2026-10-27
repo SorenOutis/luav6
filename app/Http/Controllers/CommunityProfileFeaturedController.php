@@ -70,6 +70,11 @@ class CommunityProfileFeaturedController extends Controller
             }
 
             $mediaPath = Storage::disk('public')->putFile('community-featured', $file);
+            if (! is_string($mediaPath) || $mediaPath === '') {
+                throw ValidationException::withMessages([
+                    'media' => ['We could not save the featured media to storage. Please try again.'],
+                ]);
+            }
             $mediaType = $isImage ? 'image' : 'video';
             $title = $request->input('title');
         }

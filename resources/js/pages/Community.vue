@@ -56,6 +56,7 @@ import {
 } from 'vue';
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { compressImage } from '@/lib/image-compression';
 import { like as likeMedia } from '@/routes/community/media';
 import { store as storePostComment } from '@/routes/community/posts/comments';
 import type { BreadcrumbItem } from '@/types';
@@ -1787,22 +1788,47 @@ const removeSelectedMusic = () => {
     stopMusicPreview();
 };
 
+const mediaUploadError = ref<string | null>(null);
+
 const openMediaModalWithFiles = (files: FileList | File[]) => {
     const list = Array.from(files);
     if (!list.length) return;
+
+    mediaUploadError.value = null;
+    composerForm.clearErrors?.();
 
     for (const file of list) {
         const isVid =
             file.type.startsWith('video/') ||
             /\.(mp4|webm|mov|m4v)$/i.test(file.name);
         const previewUrl = URL.createObjectURL(file);
-        mediaFiles.value.push({
+        const entry = {
             file,
             preview: previewUrl,
-            type: isVid ? 'video' : 'image',
+            type: (isVid ? 'video' : 'image') as 'image' | 'video',
             name: file.name,
             size: file.size,
-        });
+        };
+        mediaFiles.value.push(entry);
+
+        if (!isVid) {
+            void compressImage(file, {
+                maxSize: 1920,
+                quality: 0.85,
+            })
+                .then((compressed) => {
+                    const target = mediaFiles.value.find(
+                        (item) => item.preview === previewUrl,
+                    );
+                    if (target && compressed) {
+                        target.file = compressed;
+                        target.size = compressed.size;
+                    }
+                })
+                .catch(() => {
+                    // Keep original file if compression fails
+                });
+        }
     }
 
     if (activeMediaIndex.value >= mediaFiles.value.length) {
@@ -1849,6 +1875,7 @@ const closeMediaModal = () => {
     stopMusicPreview();
     isMusicPickerOpen.value = false;
     isMediaModalOpen.value = false;
+    mediaUploadError.value = null;
     revokeMediaPreviews();
     mediaFiles.value = [];
     activeMediaIndex.value = 0;
@@ -1863,20 +1890,40 @@ const submitMediaPost = () => {
         return;
     }
 
+    mediaUploadError.value = null;
     composerForm.section_id =
         composerSectionId.value ?? selectedSectionId.value;
     composerForm.profile_music_track_id = selectedMusicTrackId.value;
     composerForm.attachments = mediaFiles.value.map((m) => m.file);
-    composerForm.attachment = mediaFiles.value[0]?.file ?? null;
+    composerForm.attachment = null;
 
     composerForm.post('/community/posts', {
+        forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
+            const nextPosts = ((page?.props as any)?.posts ??
+                props.posts ??
+                []) as CommunityFeedPost[];
+            localPosts.value = [...nextPosts];
+            tabPostsCache.value = {
+                [activeTab.value]: [...nextPosts],
+            };
             composerForm.reset();
             closeMediaModal();
             clearComposerFile();
             isComposerOpen.value = false;
-            tabPostsCache.value = {};
+        },
+        onError: (errors) => {
+            const firstErr =
+                errors.attachments ||
+                (errors as Record<string, string>)['attachments.0'] ||
+                errors.attachment ||
+                errors.content ||
+                Object.values(errors)[0];
+            mediaUploadError.value =
+                typeof firstErr === 'string' && firstErr.trim() !== ''
+                    ? firstErr
+                    : 'Could not publish your post. The file may exceed the upload limit or failed to upload.';
         },
     });
 };
@@ -2043,12 +2090,19 @@ const submitPost = () => {
     composerForm.attachments = [];
 
     composerForm.post('/community/posts', {
+        forceFormData: Boolean(composerForm.attachment),
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
+            const nextPosts = ((page?.props as any)?.posts ??
+                props.posts ??
+                []) as CommunityFeedPost[];
+            localPosts.value = [...nextPosts];
+            tabPostsCache.value = {
+                [activeTab.value]: [...nextPosts],
+            };
             composerForm.reset();
             clearComposerFile();
             isComposerOpen.value = false;
-            tabPostsCache.value = {};
         },
     });
 };
@@ -3621,7 +3675,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                         <input
                                             ref="mediaFileInputRef"
                                             type="file"
-                                            accept="image/*,video/*"
+                                            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                                             multiple
                                             class="hidden"
                                             data-test="media-post-file-input"
@@ -3736,7 +3790,8 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                 <button
                                                     type="button"
                                                     :disabled="
-                                                        !composerForm.content.trim() ||
+                                                        (!composerForm.content.trim() &&
+                                                            !composerForm.attachment) ||
                                                         composerForm.processing
                                                     "
                                                     class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -7672,6 +7727,24 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                 }}
                             </p>
                         </div>
+                        <!-- Upload / Validation Error Notice -->
+                        <p
+                            v-if="
+                                mediaUploadError ||
+                                composerForm.errors?.attachments ||
+                                composerForm.errors?.attachment ||
+                                composerForm.errors?.content
+                            "
+                            class="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400"
+                            data-test="media-modal-error"
+                        >
+                            {{
+                                mediaUploadError ||
+                                composerForm.errors?.attachments ||
+                                composerForm.errors?.attachment ||
+                                composerForm.errors?.content
+                            }}
+                        </p>
                     </div>
 
                     <!-- Actions Bottom Bar -->
