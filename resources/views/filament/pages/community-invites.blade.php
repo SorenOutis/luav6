@@ -1,4 +1,14 @@
 <x-filament-panels::page>
+    @php
+        $workspaceSections = $this->workspaceSections;
+        $activeSection = $this->activeSection;
+        $unassignedCount = $this->unassignedStudentsCount;
+        $roster = $this->studentsRoster;
+        $visibleIds = $roster->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $selectedCount = count($this->selectedStudentIds);
+        $allVisibleSelected = count($visibleIds) > 0 && count(array_intersect($visibleIds, $this->selectedStudentIds)) === count($visibleIds);
+    @endphp
+
     <div class="space-y-6" x-data="{
         copiedId: null,
         copyText(text, id) {
@@ -17,9 +27,131 @@
                         Community Lounge Access Controls
                     </h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        The Community Lounge is private and invite-only. Search any enrolled student in this workspace to view or generate their personal invite link. Regenerating a link permanently revokes the previous token.
+                        The Community Lounge is private and invite-only. Browse workspace sections below, select individual or multiple students to grant access, or generate personal invite links.
                     </p>
                 </div>
+            </div>
+        </div>
+
+        {{-- Workspace Sections Directory & Filter --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-950 dark:text-white">
+                        Workspace Sections ({{ $workspaceSections->count() }})
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        All sections in this workspace sorted alphabetically. Select a section to filter students or grant lounge access by section.
+                    </p>
+                </div>
+
+                @if ($activeSection)
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="selectSectionStudents({{ $activeSection->id }})"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                        >
+                            <x-filament::icon icon="heroicon-o-check-circle" class="h-3.5 w-3.5" />
+                            Select All in {{ $activeSection->name }}
+                        </button>
+
+                        <button
+                            type="button"
+                            wire:click="grantSectionAccess({{ $activeSection->id }})"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
+                        >
+                            <x-filament::icon icon="heroicon-o-lock-open" class="h-3.5 w-3.5" />
+                            Grant Access to {{ $activeSection->name }}
+                        </button>
+
+                        @if (($activeSection->unlocked_students_count ?? 0) > 0)
+                            <button
+                                type="button"
+                                wire:click="revokeSectionAccess({{ $activeSection->id }})"
+                                wire:confirm="This will lock the lounge for all students in {{ $activeSection->name }}. Proceed?"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                            >
+                                <x-filament::icon icon="heroicon-o-lock-closed" class="h-3.5 w-3.5" />
+                                Revoke Section Access
+                            </button>
+                        @endif
+                    </div>
+                @endif
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {{-- All Sections Card --}}
+                <button
+                    type="button"
+                    wire:click="selectSection('all')"
+                    class="flex items-center justify-between rounded-xl border p-3.5 text-start transition {{ $sectionFilter === 'all' ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30 dark:border-amber-400 dark:bg-amber-500/10' : 'border-gray-200 bg-gray-50/60 hover:border-gray-300 hover:bg-gray-100/70 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:bg-white/[0.06]' }}"
+                >
+                    <div class="min-w-0 pr-2">
+                        <div class="truncate text-xs font-bold uppercase tracking-wider {{ $sectionFilter === 'all' ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400' }}">
+                            All Sections
+                        </div>
+                        <div class="mt-0.5 truncate text-sm font-semibold text-gray-950 dark:text-white">
+                            Entire Workspace
+                        </div>
+                    </div>
+                    <span class="shrink-0 rounded-lg bg-gray-200/80 px-2 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                        {{ $workspaceSections->sum('students_count') + $unassignedCount }} students
+                    </span>
+                </button>
+
+                {{-- Individual Workspace Section Cards (Sorted Alphabetically) --}}
+                @foreach ($workspaceSections as $sectionItem)
+                    @php
+                        $isSelectedSection = (string) $sectionFilter === (string) $sectionItem->id;
+                        $secTotal = (int) ($sectionItem->students_count ?? 0);
+                        $secUnlocked = (int) ($sectionItem->unlocked_students_count ?? 0);
+                    @endphp
+                    <button
+                        type="button"
+                        wire:key="workspace-section-card-{{ $sectionItem->id }}"
+                        wire:click="selectSection({{ $sectionItem->id }})"
+                        class="flex items-center justify-between rounded-xl border p-3.5 text-start transition {{ $isSelectedSection ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30 dark:border-amber-400 dark:bg-amber-500/10' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-white/[0.02] dark:hover:border-white/20 dark:hover:bg-white/[0.05]' }}"
+                    >
+                        <div class="min-w-0 pr-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="truncate text-sm font-semibold text-gray-950 dark:text-white">
+                                    {{ $sectionItem->name }}
+                                </span>
+                            </div>
+                            <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                {{ $secTotal }} {{ str('student')->plural($secTotal) }}
+                            </div>
+                        </div>
+
+                        <div class="flex shrink-0 flex-col items-end gap-1">
+                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $secUnlocked > 0 && $secUnlocked === $secTotal ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : ($secUnlocked > 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400') }}">
+                                {{ $secUnlocked }}/{{ $secTotal }} unlocked
+                            </span>
+                        </div>
+                    </button>
+                @endforeach
+
+                {{-- Unassigned Students Card (if any exist or filter is active) --}}
+                @if ($unassignedCount > 0 || $sectionFilter === 'unassigned')
+                    <button
+                        type="button"
+                        wire:click="selectSection('unassigned')"
+                        class="flex items-center justify-between rounded-xl border p-3.5 text-start transition {{ $sectionFilter === 'unassigned' ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30 dark:border-amber-400 dark:bg-amber-500/10' : 'border-dashed border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-100/50 dark:border-white/15 dark:bg-white/[0.01] dark:hover:border-white/25' }}"
+                    >
+                        <div class="min-w-0 pr-2">
+                            <div class="truncate text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                No Section
+                            </div>
+                            <div class="mt-0.5 truncate text-sm font-semibold text-gray-950 dark:text-white">
+                                Unassigned Students
+                            </div>
+                        </div>
+                        <span class="shrink-0 rounded-lg bg-gray-200/80 px-2 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                            {{ $unassignedCount }} {{ str('student')->plural($unassignedCount) }}
+                        </span>
+                    </button>
+                @endif
             </div>
         </div>
 
@@ -48,6 +180,9 @@
             @if (! empty($searchQuery) && $this->searchResults->isNotEmpty() && ! $this->selectedStudent)
                 <div class="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-lg dark:divide-white/5 dark:border-white/10 dark:bg-gray-800">
                     @foreach ($this->searchResults as $match)
+                        @php
+                            $matchSectionNames = $match->sections->pluck('name')->join(', ');
+                        @endphp
                         <button
                             type="button"
                             wire:click="selectStudent({{ $match->id }})"
@@ -63,6 +198,9 @@
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $match->email }}
+                                        @if ($matchSectionNames !== '')
+                                            &bull; {{ $matchSectionNames }}
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -82,6 +220,7 @@
                 $invite = $student->communityInvite;
                 $inviteUrl = $this->getInviteUrl($student);
                 $isAccepted = $invite?->isAccepted() ?? false;
+                $studentSectionNames = $student->sections->pluck('name')->join(', ');
             @endphp
             <div class="rounded-2xl border-2 border-amber-500/40 bg-white p-6 shadow-md dark:border-amber-500/40 dark:bg-gray-900">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -108,8 +247,8 @@
                             </div>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 {{ $student->email }}
-                                @if ($section = $student->sections->first())
-                                    &bull; Section: <strong class="text-gray-700 dark:text-gray-300">{{ $section->name }}</strong>
+                                @if ($studentSectionNames !== '')
+                                    &bull; Section: <strong class="text-gray-700 dark:text-gray-300">{{ $studentSectionNames }}</strong>
                                 @endif
                             </p>
                         </div>
@@ -203,11 +342,22 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
             <div class="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-white/5">
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-950 dark:text-white">
-                        Workspace Students Roster
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Quick overview of all students and their community lounge access status.
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="text-sm font-semibold text-gray-950 dark:text-white">
+                            Workspace Students Roster
+                        </h3>
+                        @if ($activeSection)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                Section: {{ $activeSection->name }}
+                            </span>
+                        @elseif ($sectionFilter === 'unassigned')
+                            <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                                Unassigned Students
+                            </span>
+                        @endif
+                    </div>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Sorted by section and student name. Check students to grant or revoke Community Lounge access in bulk.
                     </p>
                 </div>
 
@@ -237,10 +387,58 @@
                 </div>
             </div>
 
+            {{-- Bulk Selection Action Bar --}}
+            @if ($selectedCount > 0)
+                <div class="flex flex-col gap-3 border-b border-amber-500/30 bg-amber-500/10 px-5 py-3 sm:flex-row sm:items-center sm:justify-between dark:bg-amber-500/10">
+                    <div class="flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                        <x-filament::icon icon="heroicon-s-check-circle" class="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <span>{{ $selectedCount }} {{ str('student')->plural($selectedCount) }} selected</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="grantSelectedAccess"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+                        >
+                            <x-filament::icon icon="heroicon-o-check" class="h-3.5 w-3.5" />
+                            Grant Access to Selected ({{ $selectedCount }})
+                        </button>
+
+                        <button
+                            type="button"
+                            wire:click="revokeSelectedAccess"
+                            wire:confirm="Lock Community Lounge access for the {{ $selectedCount }} selected students?"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                        >
+                            <x-filament::icon icon="heroicon-o-lock-closed" class="h-3.5 w-3.5" />
+                            Revoke Selected
+                        </button>
+
+                        <button
+                            type="button"
+                            wire:click="clearSelectedStudents"
+                            class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        >
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+            @endif
+
             <div class="overflow-x-auto">
                 <table class="w-full text-start text-sm">
                     <thead class="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-white/5 dark:text-gray-400">
                         <tr>
+                            <th class="w-10 px-5 py-3 text-start">
+                                <input
+                                    type="checkbox"
+                                    aria-label="Select all visible students"
+                                    wire:click="toggleSelectAllVisible"
+                                    @checked($allVisibleSelected)
+                                    class="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 dark:border-white/20 dark:bg-gray-800"
+                                />
+                            </th>
                             <th class="px-5 py-3 text-start">Student</th>
                             <th class="px-5 py-3 text-start">Section</th>
                             <th class="px-5 py-3 text-start">Lounge Status</th>
@@ -248,13 +446,27 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @forelse ($this->studentsRoster as $rowStudent)
+                        @forelse ($roster as $rowStudent)
                             @php
                                 $rowInvite = $rowStudent->communityInvite;
                                 $rowAccepted = $rowInvite?->isAccepted() ?? false;
                                 $rowUrl = $rowInvite ? url("/community/join/{$rowInvite->token}") : null;
+                                $isRowSelected = in_array((int) $rowStudent->id, $this->selectedStudentIds, true);
+                                $rowSections = $rowStudent->sections;
                             @endphp
-                            <tr class="transition hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
+                            <tr
+                                wire:key="student-roster-row-{{ $rowStudent->id }}"
+                                class="transition {{ $isRowSelected ? 'bg-amber-500/5 dark:bg-amber-500/10' : 'hover:bg-gray-50/50 dark:hover:bg-white/[0.02]' }}"
+                            >
+                                <td class="px-5 py-3.5">
+                                    <input
+                                        type="checkbox"
+                                        aria-label="Select {{ $rowStudent->name }}"
+                                        wire:click="toggleStudentSelection({{ $rowStudent->id }})"
+                                        @checked($isRowSelected)
+                                        class="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 dark:border-white/20 dark:bg-gray-800"
+                                    />
+                                </td>
                                 <td class="px-5 py-3.5">
                                     <div class="flex items-center gap-3">
                                         <div class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold text-amber-600 dark:text-amber-400">
@@ -271,7 +483,17 @@
                                     </div>
                                 </td>
                                 <td class="px-5 py-3.5 text-xs text-gray-600 dark:text-gray-300">
-                                    {{ $rowStudent->sections->first()?->name ?? '-' }}
+                                    @if ($rowSections->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach ($rowSections as $sec)
+                                                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200">
+                                                    {{ $sec->name }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400 dark:text-gray-500">-</span>
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3.5">
                                     @if ($rowAccepted)
@@ -292,6 +514,27 @@
                                 </td>
                                 <td class="px-5 py-3.5 text-end">
                                     <div class="flex items-center justify-end gap-2">
+                                        @if (! $rowAccepted)
+                                            <button
+                                                type="button"
+                                                wire:click="grantAccess({{ $rowStudent->id }})"
+                                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
+                                            >
+                                                <x-filament::icon icon="heroicon-o-check" class="h-3.5 w-3.5" />
+                                                Grant Access
+                                            </button>
+                                        @else
+                                            <button
+                                                type="button"
+                                                wire:click="revokeAccess({{ $rowStudent->id }})"
+                                                wire:confirm="This will lock the lounge for {{ $rowStudent->name }}. Proceed?"
+                                                class="inline-flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                                            >
+                                                <x-filament::icon icon="heroicon-o-lock-closed" class="h-3.5 w-3.5" />
+                                                Revoke
+                                            </button>
+                                        @endif
+
                                         <button
                                             type="button"
                                             wire:click="selectStudent({{ $rowStudent->id }})"
@@ -322,7 +565,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-5 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                                <td colspan="5" class="px-5 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
                                     No students found for this filter.
                                 </td>
                             </tr>

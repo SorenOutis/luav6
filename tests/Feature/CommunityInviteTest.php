@@ -263,6 +263,106 @@ it('allows admin to manage, generate, and regenerate invite links on filament pa
     expect($freshInvite->fresh()->isAccepted())->toBeFalse();
 });
 
+it('lists all sections on the workspace sorted alphabetically, sorts students by section, and allows selecting students or sections to grant access', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $otherWorkspace = Workspace::factory()->create();
+    Section::factory()->create([
+        'workspace_id' => $otherWorkspace->id,
+        'name' => 'AAA Other Workspace Section',
+    ]);
+
+    $sectionB = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Beta',
+    ]);
+    $sectionA = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Alpha',
+    ]);
+    $sectionEmpty = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Charlie',
+    ]);
+
+    // Default beforeEach student has no section (unassigned)
+    $this->student->update(['name' => 'Zack Unassigned']);
+
+    $studentBeta = User::factory()->create([
+        'name' => 'Alice Beta',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $studentBeta->sections()->attach($sectionB);
+
+    $studentAlpha2 = User::factory()->create([
+        'name' => 'Bob Alpha',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $studentAlpha2->sections()->attach($sectionA);
+
+    $studentAlpha1 = User::factory()->create([
+        'name' => 'Aaron Alpha',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $studentAlpha1->sections()->attach($sectionA);
+
+    $this->actingAs($admin);
+
+    $component = Livewire::test(CommunityInvites::class);
+
+    // 1. All workspace sections are listed and sorted alphabetically (including empty section, excluding other workspace)
+    $workspaceSectionNames = $component->get('workspaceSections')->pluck('name')->all();
+    expect($workspaceSectionNames)->toBe([
+        'Section Alpha',
+        'Section Beta',
+        'Section Charlie',
+    ]);
+
+    // 2. Roster is sorted by section name first (Alpha -> Beta -> Unassigned), then by student name
+    $rosterIds = $component->get('studentsRoster')->pluck('id')->all();
+    expect($rosterIds)->toBe([
+        $studentAlpha1->id,
+        $studentAlpha2->id,
+        $studentBeta->id,
+        $this->student->id,
+    ]);
+
+    // 3. Filtering by Section Alpha shows only Section Alpha students
+    $component->call('selectSection', $sectionA->id)
+        ->assertSet('sectionFilter', (string) $sectionA->id);
+
+    expect($component->get('studentsRoster')->pluck('id')->all())->toBe([
+        $studentAlpha1->id,
+        $studentAlpha2->id,
+    ]);
+
+    // 4. Selecting specific students and granting bulk access unlocks only selected students
+    $component->call('toggleStudentSelection', $studentAlpha1->id)
+        ->call('grantSelectedAccess')
+        ->assertSet('selectedStudentIds', []);
+
+    expect($studentAlpha1->fresh()->hasLoungeAccess())->toBeTrue();
+    expect($studentAlpha2->fresh()->hasLoungeAccess())->toBeFalse();
+
+    // 5. Granting access to entire Section Alpha unlocks all students in Section Alpha
+    $component->call('grantSectionAccess', $sectionA->id);
+    expect($studentAlpha1->fresh()->hasLoungeAccess())->toBeTrue();
+    expect($studentAlpha2->fresh()->hasLoungeAccess())->toBeTrue();
+    expect($studentBeta->fresh()->hasLoungeAccess())->toBeFalse();
+
+    // 6. Selecting all visible students and revoking bulk access locks them
+    $component->call('toggleSelectAllVisible')
+        ->assertSet('selectedStudentIds', [$studentAlpha1->id, $studentAlpha2->id])
+        ->call('revokeSelectedAccess')
+        ->assertSet('selectedStudentIds', []);
+
+    expect($studentAlpha1->fresh()->hasLoungeAccess())->toBeFalse();
+    expect($studentAlpha2->fresh()->hasLoungeAccess())->toBeFalse();
+});
+
 it('flashes first_time_lounge_join on initial invite acceptance and delivers isFirstTimeJoin to Inertia', function () {
     $invite = CommunityInvite::create([
         'workspace_id' => $this->workspace->id,

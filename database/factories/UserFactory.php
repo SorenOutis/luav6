@@ -28,6 +28,12 @@ class UserFactory extends Factory
                 && Schema::hasTable('workspaces')
                 && $user->workspaces()->doesntExist()
             ) {
+                if ($user->current_workspace_id && Workspace::query()->whereKey($user->current_workspace_id)->exists()) {
+                    $user->workspaces()->attach($user->current_workspace_id, ['role' => Workspace::ROLE_OWNER]);
+
+                    return;
+                }
+
                 Workspace::createForOwner($user);
             }
         });
