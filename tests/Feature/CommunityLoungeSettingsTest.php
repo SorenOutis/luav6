@@ -443,3 +443,51 @@ it('refreshes feed posts, stories, and trending topics when switching active sec
             ->where('trendingTopics.0.tag', 'betalab')
         );
 });
+
+it('publishes an image post to the public disk and rejects failed storage writes without creating an empty post', function () {
+    Storage::fake('public');
+
+    $photo = UploadedFile::fake()->image('campus-photo.jpg', 800, 600);
+
+    actingAs($this->studentA)
+        ->from('/community')
+        ->followingRedirects()
+        ->post(route('community.posts.store'), [
+            'content' => 'Campus sunset photo',
+            'section_id' => $this->sectionA->id,
+            'attachments' => [$photo],
+        ])
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Community')
+            ->has('posts', 1)
+            ->where('posts.0.content', 'Campus sunset photo')
+            ->where('posts.0.attachment_type', 'image')
+            ->has('posts.0.media', 1)
+        );
+
+    $post = CommunityPost::latest('id')->first();
+    expect($post)->not->toBeNull();
+    expect($post->attachment_url)->toBeString()->not->toBeEmpty();
+    Storage::disk('public')->assertExists($post->attachment_url);
+    expect($post->media()->count())->toBe(1);
+
+    // Simulate S3/R2 putFile returning false (e.g. bucket ACL/region/endpoint failure when throw=false)
+    $countBefore = CommunityPost::count();
+    Storage::shouldReceive('disk')
+        ->with('public')
+        ->andReturnSelf();
+    Storage::shouldReceive('putFile')
+        ->once()
+        ->andReturn(false);
+
+    actingAs($this->studentA)
+        ->from('/community')
+        ->post(route('community.posts.store'), [
+            'content' => 'Should not save when S3 fails',
+            'attachments' => [UploadedFile::fake()->image('broken-s3.jpg')],
+        ])
+        ->assertSessionHasErrors(['attachments']);
+
+    expect(CommunityPost::count())->toBe($countBefore);
+});
