@@ -48,6 +48,11 @@ class CommunityStoryController extends Controller
             ->first();
 
         $path = Storage::disk('public')->putFile('community-stories', $file);
+        if (! is_string($path) || $path === '') {
+            throw ValidationException::withMessages([
+                'media' => ['We could not save the story media to storage. Please try again.'],
+            ]);
+        }
         $duration = (int) ($request->input('duration_seconds') ?: ($isImage ? 5 : 15));
 
         $story = CommunityStory::create([

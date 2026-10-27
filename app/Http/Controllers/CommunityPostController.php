@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CommunityPostController extends Controller
 {
@@ -52,10 +53,16 @@ class CommunityPostController extends Controller
             ?? $viewer->workspaces()->first()?->id;
 
         $section = null;
-        if (! empty($validated['section_id'])) {
+        $requestedSectionId = ! empty($validated['section_id'])
+            ? (int) $validated['section_id']
+            : (int) ($request->session()->get('community_active_section_id')
+                ?? Cache::get('community:active_section:'.$viewer->id.':'.($workspaceId ?? 0))
+                ?? 0);
+
+        if ($requestedSectionId > 0) {
             $candidate = Section::query()
                 ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
-                ->find($validated['section_id']);
+                ->find($requestedSectionId);
 
             if ($candidate) {
                 if ($viewer->is_admin || $viewer->sections()->where('sections.id', $candidate->id)->exists()) {
@@ -78,6 +85,11 @@ class CommunityPostController extends Controller
 
         if (CommunitySettings::isRestrictedToSection() && ! $section && ! $viewer->is_admin) {
             abort(422, 'You must be enrolled in a section to post in section-only mode.');
+        }
+
+        if ($section) {
+            $request->session()->put('community_active_section_id', (int) $section->id);
+            Cache::forever('community:active_section:'.$viewer->id.':'.($workspaceId ?? 0), (int) $section->id);
         }
 
         $isAnonymous = (bool) ($validated['is_anonymous'] ?? false);
@@ -116,10 +128,18 @@ class CommunityPostController extends Controller
 
             foreach ($files as $index => $file) {
                 if (! $file || ! $file->isValid()) {
-                    continue;
+                    throw ValidationException::withMessages([
+                        'attachments' => 'The uploaded file did not complete or exceeds the server upload limit. Please try again with a smaller file.',
+                    ]);
                 }
 
                 $path = Storage::disk('public')->putFile('community-attachments', $file);
+                if (! is_string($path) || $path === '') {
+                    throw ValidationException::withMessages([
+                        'attachments' => 'We could not save the uploaded media to storage. Please check your connection and try again.',
+                    ]);
+                }
+
                 $mime = $file->getClientMimeType() ?: '';
                 $ext = strtolower($file->getClientOriginalExtension());
 
@@ -137,7 +157,7 @@ class CommunityPostController extends Controller
                     'sort_order' => $index,
                 ];
 
-                if ($index === 0 && ! $request->hasFile('attachment')) {
+                if ($index === 0) {
                     $attachmentUrl = $path;
                     $attachmentType = $mediaType;
                     $attachmentName = $file->getClientOriginalName();
@@ -146,8 +166,14 @@ class CommunityPostController extends Controller
             }
         }
 
-        if ($request->hasFile('attachment')) {
+        if ($request->hasFile('attachment') && empty($mediaToCreate)) {
             $file = $request->file('attachment');
+            if (! $file || ! $file->isValid()) {
+                throw ValidationException::withMessages([
+                    'attachment' => 'The uploaded file did not complete or exceeds the server upload limit. Please try again.',
+                ]);
+            }
+
             $mime = $file->getClientMimeType() ?: '';
             $ext = strtolower($file->getClientOriginalExtension());
 
@@ -160,6 +186,12 @@ class CommunityPostController extends Controller
             }
 
             $path = Storage::disk('public')->putFile('community-attachments', $file);
+            if (! is_string($path) || $path === '') {
+                throw ValidationException::withMessages([
+                    'attachment' => 'We could not save the uploaded file to storage. Please try again.',
+                ]);
+            }
+
             $attachmentUrl = $path;
             $attachmentName = $file->getClientOriginalName();
             $attachmentSize = $file->getSize();
