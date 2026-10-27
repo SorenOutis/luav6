@@ -119,7 +119,9 @@ export interface PostMusicTrack {
     artist: string;
     duration?: number;
     audio_url: string;
+    audioUrl?: string;
     cover_image_url?: string | null;
+    coverImageUrl?: string | null;
 }
 
 export interface CommunityFeedPost {

@@ -82,7 +82,11 @@ class CommunityController extends Controller
                     'title' => $track->title,
                     'artist' => $track->artist,
                     'duration' => (float) $track->duration_seconds,
+                    'audio_url' => route('profile-music.stream', $track->id),
                     'audioUrl' => route('profile-music.stream', $track->id),
+                    'cover_image_url' => $track->cover_image_path
+                        ? PublicFileUrl::resolve($track->cover_image_path)
+                        : null,
                     'coverImageUrl' => $track->cover_image_path
                         ? PublicFileUrl::resolve($track->cover_image_path)
                         : null,

@@ -4700,7 +4700,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                     title: 'Lofi Chill',
                     artist: 'Producer',
                     duration: 120,
+                    audio_url: '/audio/1.mp3',
                     audioUrl: '/audio/1.mp3',
+                    cover_image_url: null,
                     coverImageUrl: null,
                 },
             ];
