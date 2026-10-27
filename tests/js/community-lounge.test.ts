@@ -4651,5 +4651,46 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                     .text(),
             ).toContain('BSIT 3-A');
         });
+
+        it('renders inline composer action tray with responsive mobile wrapping for triggers, options, and post button', async () => {
+            const multiSections = [
+                { id: 101, name: 'Computer Networks and Security' },
+                { id: 102, name: 'Web Development' },
+            ];
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    availableSections: multiSections,
+                    currentSectionId: 101,
+                },
+            });
+
+            const mediaTrigger = wrapper.find(
+                '[data-test="open-media-modal-button"]',
+            );
+            const sectionTrigger = wrapper.find(
+                '[data-test="inline-composer-section-trigger"]',
+            );
+            const postButton = wrapper
+                .findAll('button')
+                .find((b) => b.text().trim() === 'Post');
+
+            expect(mediaTrigger.exists()).toBe(true);
+            expect(sectionTrigger.exists()).toBe(true);
+            expect(postButton).toBeDefined();
+
+            // Open section menu and check alignment classes
+            await sectionTrigger.trigger('click');
+            await nextTick();
+
+            const menu = wrapper.find(
+                '[data-test="inline-composer-section-menu"]',
+            );
+            expect(menu.exists()).toBe(true);
+            expect(menu.classes()).toContain('right-0');
+            expect(menu.classes()).toContain('sm:left-0');
+            wrapper.unmount();
+        });
     });
 });
