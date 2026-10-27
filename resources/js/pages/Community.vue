@@ -440,6 +440,8 @@ watch(
     (newId) => {
         if (newId !== undefined && newId !== null) {
             selectedSectionId.value = newId;
+            composerSectionId.value = newId;
+            composerForm.section_id = newId;
         }
     },
 );
@@ -466,6 +468,8 @@ const handleSharePost = async (post: CommunityFeedPost) => {
 const selectSection = (sectionId: number) => {
     isSectionDropdownOpen.value = false;
     isMobileSectionDropdownOpen.value = false;
+    composerSectionId.value = sectionId;
+    composerForm.section_id = sectionId;
     if (selectedSectionId.value === sectionId) return;
 
     selectedSectionId.value = sectionId;
@@ -3689,7 +3693,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                         props.availableSections &&
                                                         props.availableSections
                                                             .length > 1
-                                                            ? 'hidden 2xl:inline-flex'
+                                                            ? 'hidden lg:inline-flex'
                                                             : 'hidden sm:inline-flex',
                                                     ]"
                                                 >
@@ -3722,7 +3726,20 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
 
                                             <!-- Post Options (Anonymous Toggle & Section Picker: Line 2 on mobile, middle order on desktop) -->
                                             <div
-                                                class="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:mr-auto sm:ml-1 sm:shrink-0 sm:flex-nowrap sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0"
+                                                v-if="
+                                                    props.allowsAnonymous !==
+                                                        false ||
+                                                    (props.availableSections &&
+                                                        props.availableSections
+                                                            .length > 1)
+                                                "
+                                                :class="[
+                                                    'col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:mr-auto sm:ml-1 sm:shrink-0 sm:flex-nowrap sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0',
+                                                    props.allowsAnonymous ===
+                                                    false
+                                                        ? 'lg:hidden'
+                                                        : '',
+                                                ]"
                                             >
                                                 <!-- Anonymous Toggle -->
                                                 <label
@@ -3744,14 +3761,14 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                                     >
                                                 </label>
 
-                                                <!-- Section Picker for Multi-Section Students -->
+                                                <!-- Section Picker for Multi-Section Students (Mobile/Tablet only; desktop uses Classroom Presence switcher) -->
                                                 <div
                                                     v-if="
                                                         props.availableSections &&
                                                         props.availableSections
                                                             .length > 1
                                                     "
-                                                    class="relative shrink-0"
+                                                    class="relative shrink-0 lg:hidden"
                                                 >
                                                     <button
                                                         type="button"
