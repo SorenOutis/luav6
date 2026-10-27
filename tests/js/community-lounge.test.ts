@@ -4678,6 +4678,11 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
 
             expect(mediaTrigger.exists()).toBe(true);
             expect(sectionTrigger.exists()).toBe(true);
+            expect(
+                sectionTrigger.element.parentElement?.classList.contains(
+                    'lg:hidden',
+                ),
+            ).toBe(true);
             expect(postButton).toBeDefined();
 
             // Open section menu and check alignment classes
