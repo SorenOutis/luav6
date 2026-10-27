@@ -479,7 +479,7 @@ const selectSection = (sectionId: number) => {
     if (typeof router.post === 'function') {
         router.post(
             '/community/section',
-            { section_id: sectionId },
+            { section_id: sectionId, tab: activeTab.value },
             {
                 preserveState: true,
                 preserveScroll: true,

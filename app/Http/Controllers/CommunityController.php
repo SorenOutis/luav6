@@ -47,6 +47,9 @@ class CommunityController extends Controller
 
         // Determine viewer's active section
         $availableSections = $this->getAvailableSections($viewer, $workspace);
+        if ($request->filled('section_id')) {
+            $request->session()->put('community_active_section_id', (int) $request->query('section_id'));
+        }
         $requestedSectionId = $request->query('section_id') ?? $request->session()->get('community_active_section_id');
         $section = $this->resolveViewerSection($viewer, $requestedSectionId);
 
@@ -157,9 +160,15 @@ class CommunityController extends Controller
 
         $validated = $request->validate([
             'section_id' => ['required', 'integer'],
+            'tab' => ['nullable', 'string', 'in:all,section,saved'],
         ]);
 
         $request->session()->put('community_active_section_id', (int) $validated['section_id']);
+
+        $tab = $validated['tab'] ?? $request->query('tab');
+        if (is_string($tab) && in_array($tab, ['section', 'saved'], true)) {
+            return redirect()->route('community.index', ['tab' => $tab]);
+        }
 
         return back();
     }
