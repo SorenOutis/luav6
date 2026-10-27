@@ -61,6 +61,7 @@ class CommunityController extends Controller
 
         // Query posts
         $posts = $this->getPosts($viewer, $section, $tab);
+        $hiddenOwnPosts = $this->getHiddenOwnPosts($viewer, $section);
 
         // Trending topics (derived from visible feed posts so hidden/other-section posts never leak)
         $trendingTopics = $this->getTrendingTopics($posts);
@@ -104,6 +105,7 @@ class CommunityController extends Controller
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
             'posts' => $posts,
+            'hiddenOwnPosts' => $hiddenOwnPosts,
             'musicTracks' => $musicTracks,
             'trendingTopics' => $trendingTopics,
             'currentTab' => $tab,
@@ -204,6 +206,7 @@ class CommunityController extends Controller
         $recentPosts = CommunityPost::query()
             ->where('user_id', $user->id)
             ->where('is_anonymous', false)
+            ->where('is_hidden', false)
             ->latest()
             ->limit(6)
             ->get(['id', 'content', 'attachment_url', 'attachment_type', 'created_at', 'likes_count', 'comments_count'])
@@ -238,8 +241,8 @@ class CommunityController extends Controller
             'is_following' => $isFollowing,
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
-            'posts_count' => $user->communityPosts()->where('is_anonymous', false)->count(),
-            'likes_received' => (int) $user->communityPosts()->where('is_anonymous', false)->sum('likes_count'),
+            'posts_count' => $user->communityPosts()->where('is_anonymous', false)->where('is_hidden', false)->count(),
+            'likes_received' => (int) $user->communityPosts()->where('is_anonymous', false)->where('is_hidden', false)->sum('likes_count'),
             'recent_posts' => $recentPosts,
         ]);
     }
@@ -325,6 +328,7 @@ class CommunityController extends Controller
         // Lounge posts for this user
         $posts = CommunityPost::query()
             ->where('user_id', $user->id)
+            ->where('is_hidden', false)
             ->when(! $isSelf, fn ($q) => $q->where('is_anonymous', false))
             ->with(['section:id,name', 'media', 'musicTrack', ...$this->commentRelations($viewer)])
             ->latest()
@@ -728,6 +732,13 @@ class CommunityController extends Controller
 
         $query = CommunityPost::query()
             ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->where('is_hidden', false)
+            ->when($viewer, fn ($q) => $q->whereNotExists(function ($sub) use ($viewer): void {
+                $sub->select(DB::raw(1))
+                    ->from('community_post_hides')
+                    ->whereColumn('community_post_hides.post_id', 'community_posts.id')
+                    ->where('community_post_hides.user_id', $viewer->id);
+            }))
             ->with([
                 'user:id,public_id,name,avatar,level',
                 'section:id,name',
@@ -877,6 +888,77 @@ class CommunityController extends Controller
                     'section_name' => $authorSectionName,
                 ],
                 'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section))->values()->all(),
+            ];
+        })->all();
+    }
+
+    /**
+     * Get the viewer's own hidden posts so they can view and unhide them.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getHiddenOwnPosts(?User $viewer, ?Section $section): array
+    {
+        if (! $viewer) {
+            return [];
+        }
+
+        $workspaceId = app(WorkspaceContext::class)->id();
+
+        $posts = CommunityPost::query()
+            ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->where('user_id', $viewer->id)
+            ->where('is_hidden', true)
+            ->with([
+                'user:id,public_id,name,avatar,level',
+                'section:id,name',
+                'media',
+                'musicTrack',
+            ])
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section): array {
+            $author = $post->user;
+
+            return [
+                'id' => $post->id,
+                'content' => $post->content,
+                'created_at' => $post->created_at->diffForHumans(short: true),
+                'attachment_url' => $post->attachment_url ? PublicFileUrl::resolve($post->attachment_url) : null,
+                'attachment_type' => $post->attachment_type,
+                'attachment_name' => $post->attachment_name,
+                'attachment_size' => $post->attachment_size,
+                'media' => $post->media->map(fn ($m) => [
+                    'id' => $m->id,
+                    'url' => PublicFileUrl::resolve($m->media_url),
+                    'type' => $m->media_type,
+                    'name' => $m->file_name,
+                    'size' => $m->file_size,
+                    'likes_count' => (int) $m->likes_count,
+                    'is_liked' => false,
+                    'comments_count' => (int) $m->comments_count,
+                    'comments' => [],
+                ])->values()->all(),
+                'music' => null,
+                'likes_count' => (int) $post->likes_count,
+                'comments_count' => (int) $post->comments_count,
+                'is_liked' => false,
+                'is_bookmarked' => false,
+                'is_hidden' => true,
+                'author' => [
+                    'id' => (string) ($author?->id ?? $viewer->id),
+                    'public_id' => (string) ($author?->public_id ?? $viewer->public_id ?? ''),
+                    'name' => $author?->name ?? $viewer->name,
+                    'handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $author?->name ?? $viewer->name)),
+                    'avatar' => $author?->avatar ? PublicFileUrl::resolve($author->avatar) : null,
+                    'is_same_section' => true,
+                    'is_masked' => false,
+                    'is_following' => false,
+                    'section_name' => $post->section?->name ?? $section?->name ?? 'Your Section',
+                ],
+                'comments' => [],
             ];
         })->all();
     }

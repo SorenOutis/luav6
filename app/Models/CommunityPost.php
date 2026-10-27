@@ -24,6 +24,7 @@ class CommunityPost extends Model
         'attachment_name',
         'attachment_size',
         'is_anonymous',
+        'is_hidden',
         'likes_count',
         'comments_count',
     ];
@@ -32,6 +33,7 @@ class CommunityPost extends Model
     {
         return [
             'is_anonymous' => 'boolean',
+            'is_hidden' => 'boolean',
             'likes_count' => 'integer',
             'comments_count' => 'integer',
             'attachment_size' => 'integer',

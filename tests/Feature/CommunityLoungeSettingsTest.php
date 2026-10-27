@@ -340,3 +340,57 @@ it('only computes trending topics from visible feed posts and excludes hidden cr
         ->where('trendingTopics.0.count', 1)
     );
 });
+
+it('persists hidden post state across page refreshes and allows unhiding own post', function () {
+    $postA = CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentA->id,
+        'section_id' => $this->sectionA->id,
+        'content' => 'My post with #NoClass #NoPasok',
+    ]);
+
+    // Student A hides their own post
+    actingAs($this->studentA)
+        ->postJson(route('community.posts.hide', $postA))
+        ->assertSuccessful()
+        ->assertJson([
+            'status' => 'hidden',
+            'is_hidden' => true,
+            'scope' => 'everyone',
+        ]);
+
+    expect($postA->fresh()->is_hidden)->toBeTrue();
+
+    // Refreshing /community: post stays hidden from feed & trendingTopics, and appears in hiddenOwnPosts
+    $responseAfterRefresh = actingAs($this->studentA)->get('/community');
+    $responseAfterRefresh->assertSuccessful();
+    $responseAfterRefresh->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->has('posts', 0)
+        ->has('trendingTopics', 0)
+        ->has('hiddenOwnPosts', 1)
+        ->where('hiddenOwnPosts.0.id', $postA->id)
+    );
+
+    // Student A unhides their post
+    actingAs($this->studentA)
+        ->postJson(route('community.posts.hide', $postA))
+        ->assertSuccessful()
+        ->assertJson([
+            'status' => 'unhidden',
+            'is_hidden' => false,
+            'scope' => 'everyone',
+        ]);
+
+    expect($postA->fresh()->is_hidden)->toBeFalse();
+
+    // Refreshing /community again: post and trending hashtags are back in the feed
+    $responseAfterUnhide = actingAs($this->studentA)->get('/community');
+    $responseAfterUnhide->assertSuccessful();
+    $responseAfterUnhide->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->has('posts', 1)
+        ->has('trendingTopics', 2)
+        ->has('hiddenOwnPosts', 0)
+    );
+});

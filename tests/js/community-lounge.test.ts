@@ -4853,6 +4853,28 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(
                 wrapper.find('[data-test="section-topics-card"]').text(),
             ).toContain('No trending tags yet');
+
+            // Hidden (1) trigger button appears for owned hidden post and allows unhiding
+            const hiddenTrigger = wrapper.find(
+                '[data-test="open-hidden-posts-modal-button"]',
+            );
+            expect(hiddenTrigger.exists()).toBe(true);
+            expect(hiddenTrigger.text()).toContain('Hidden (1)');
+
+            await hiddenTrigger.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="hidden-posts-modal"]').exists(),
+            ).toBe(true);
+            await wrapper
+                .find('[data-test="unhide-post-button"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.findAll('[data-test="trending-topic-item"]').length,
+            ).toBe(2);
             wrapper.unmount();
         });
     });

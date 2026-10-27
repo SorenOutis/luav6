@@ -206,6 +206,7 @@ interface Props {
     onlineCount?: number;
     totalEnrolledCount?: number;
     posts?: CommunityFeedPost[];
+    hiddenOwnPosts?: CommunityFeedPost[];
     musicTracks?: PostMusicTrack[];
     trendingTopics?: TrendingTopic[];
     currentTab?: 'all' | 'section' | 'saved';
@@ -585,6 +586,10 @@ try {
 // ─── Dynamic Feed Posts ─────────────────────────────────────────────────────
 const localPosts = ref<CommunityFeedPost[]>([...(props.posts ?? [])]);
 const hiddenPostIds = ref<Set<string>>(new Set());
+const localHiddenOwnPosts = ref<CommunityFeedPost[]>([
+    ...(props.hiddenOwnPosts ?? []),
+]);
+const isHiddenPostsModalOpen = ref(false);
 
 watch(
     () => props.posts,
@@ -596,17 +601,78 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => props.hiddenOwnPosts,
+    (newHidden) => {
+        localHiddenOwnPosts.value = [...(newHidden ?? [])];
+    },
+    { immediate: true },
+);
+
 const displayPosts = computed<CommunityFeedPost[]>(() => {
     return localPosts.value.filter(
         (post) => !hiddenPostIds.value.has(String(post.id)),
     );
 });
 
-const hidePost = (post: CommunityFeedPost) => {
+const hidePost = async (post: CommunityFeedPost) => {
     activePostMenuId.value = null;
+    const key = String(post.id);
     const next = new Set(hiddenPostIds.value);
-    next.add(String(post.id));
+    next.add(key);
     hiddenPostIds.value = next;
+
+    for (const tabKey of Object.keys(tabPostsCache.value)) {
+        tabPostsCache.value[tabKey] = tabPostsCache.value[tabKey].filter(
+            (p) => String(p.id) !== key,
+        );
+    }
+
+    if (
+        canManagePost(post) &&
+        !localHiddenOwnPosts.value.some((p) => String(p.id) === key)
+    ) {
+        localHiddenOwnPosts.value = [post, ...localHiddenOwnPosts.value];
+    }
+
+    try {
+        await axios.post(
+            `/community/posts/${post.id}/hide`,
+            {},
+            { headers: { Accept: 'application/json' } },
+        );
+    } catch {
+        // Ignore network errors in test/offline mode; optimistic state remains
+    }
+};
+
+const unhidePost = async (post: CommunityFeedPost) => {
+    const key = String(post.id);
+    const next = new Set(hiddenPostIds.value);
+    next.delete(key);
+    hiddenPostIds.value = next;
+
+    localHiddenOwnPosts.value = localHiddenOwnPosts.value.filter(
+        (p) => String(p.id) !== key,
+    );
+
+    if (!localPosts.value.some((p) => String(p.id) === key)) {
+        localPosts.value = [post, ...localPosts.value];
+    }
+
+    if (localHiddenOwnPosts.value.length === 0) {
+        isHiddenPostsModalOpen.value = false;
+    }
+
+    try {
+        await axios.post(
+            `/community/posts/${post.id}/hide`,
+            {},
+            { headers: { Accept: 'application/json' } },
+        );
+    } catch {
+        // Ignore network errors in test/offline mode
+    }
 };
 
 // ─── Post & Comment Ownership / Moderation Helpers ──────────────────────────
@@ -3416,6 +3482,22 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                     v-if="isMobileDrawerOpen"
                                     class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
                                 />
+                            </button>
+
+                            <!-- Hidden Own Posts Trigger -->
+                            <button
+                                v-if="localHiddenOwnPosts.length > 0"
+                                type="button"
+                                data-test="open-hidden-posts-modal-button"
+                                class="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-border hover:bg-muted hover:text-foreground"
+                                @click="isHiddenPostsModalOpen = true"
+                            >
+                                <EyeOff class="h-3 w-3" />
+                                <span
+                                    >Hidden ({{
+                                        localHiddenOwnPosts.length
+                                    }})</span
+                                >
                             </button>
                         </div>
 
@@ -8343,6 +8425,85 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                                 />
                             </button>
                         </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Hidden Own Posts Modal (Archive / Unhide) ═══ -->
+        <div
+            v-if="isHiddenPostsModalOpen"
+            class="fixed inset-0 z-[165] flex items-center justify-center p-4"
+            data-test="hidden-posts-modal"
+        >
+            <div
+                class="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity"
+                @click="isHiddenPostsModalOpen = false"
+            />
+            <div
+                class="relative z-[175] flex max-h-[84vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-2xl"
+            >
+                <div
+                    class="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4"
+                >
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                        >
+                            <EyeOff class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-foreground">
+                                Hidden Posts
+                            </h2>
+                            <p class="text-[11px] text-muted-foreground">
+                                Hidden from the lounge feed and trending tags
+                                until you unhide them
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        data-test="close-hidden-posts-modal-button"
+                        @click="isHiddenPostsModalOpen = false"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div class="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+                    <div
+                        v-if="localHiddenOwnPosts.length === 0"
+                        class="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-8 text-center text-xs text-muted-foreground"
+                    >
+                        You have no hidden posts.
+                    </div>
+
+                    <article
+                        v-for="post in localHiddenOwnPosts"
+                        :key="'hidden-own-post-' + post.id"
+                        data-test="hidden-own-post-item"
+                        class="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 p-3.5 shadow-2xs"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[11px] text-muted-foreground">
+                                {{ post.created_at }}
+                            </p>
+                            <p
+                                class="mt-1 line-clamp-3 text-xs leading-relaxed whitespace-pre-wrap text-foreground"
+                            >
+                                {{ post.content || '(Media post)' }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            data-test="unhide-post-button"
+                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand"
+                            @click="unhidePost(post)"
+                        >
+                            <span>Unhide</span>
+                        </button>
                     </article>
                 </div>
             </div>
