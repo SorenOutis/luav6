@@ -422,4 +422,62 @@ class CommunityPostController extends Controller
 
         return back();
     }
+
+    /**
+     * Toggle hidden status on a post.
+     * - If the viewer owns the post (or is an admin), toggles `is_hidden` on `community_posts` for everyone.
+     * - Otherwise, toggles a per-viewer hide record in `community_post_hides`.
+     */
+    public function toggleHide(Request $request, CommunityPost $post): JsonResponse|RedirectResponse
+    {
+        $viewer = $request->user();
+        abort_unless($viewer, 401);
+        abort_unless($viewer->hasLoungeAccess(), 403);
+
+        $isOwnerOrAdmin = $viewer->id === $post->user_id || $viewer->is_admin;
+
+        if ($isOwnerOrAdmin) {
+            $post->update([
+                'is_hidden' => ! $post->is_hidden,
+            ]);
+            $isHidden = (bool) $post->is_hidden;
+            $scope = 'everyone';
+        } else {
+            $existing = DB::table('community_post_hides')
+                ->where('post_id', $post->id)
+                ->where('user_id', $viewer->id)
+                ->exists();
+
+            if ($existing) {
+                DB::table('community_post_hides')
+                    ->where('post_id', $post->id)
+                    ->where('user_id', $viewer->id)
+                    ->delete();
+                $isHidden = false;
+            } else {
+                DB::table('community_post_hides')->insert([
+                    'post_id' => $post->id,
+                    'user_id' => $viewer->id,
+                    'created_at' => now(),
+                ]);
+                $isHidden = true;
+            }
+            $scope = 'personal';
+        }
+
+        $workspaceId = $post->workspace_id;
+        if ($workspaceId) {
+            Cache::forget("workspace:{$workspaceId}:trending_topics");
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status' => $isHidden ? 'hidden' : 'unhidden',
+                'is_hidden' => $isHidden,
+                'scope' => $scope,
+            ]);
+        }
+
+        return back();
+    }
 }

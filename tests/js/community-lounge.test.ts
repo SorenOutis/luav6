@@ -4763,5 +4763,119 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             ).toBe(true);
             enabledWrapper.unmount();
         });
+
+        it('hides trending topics when feed posts are hidden and opens related posts modal when a trending topic is clicked', async () => {
+            const postsWithHashtags = [
+                {
+                    id: 'post-101',
+                    author: {
+                        id: '1',
+                        public_id: 'student-1',
+                        name: 'Juan Dela Cruz',
+                        handle: 'juandc',
+                        section_name: 'Computer Application',
+                        is_masked: false,
+                        is_same_section: true,
+                        is_following: false,
+                        avatar: null,
+                    },
+                    content: 'Suspension announced today! #NoClass #NoPasok',
+                    media: [],
+                    music: null,
+                    likes_count: 5,
+                    comments_count: 2,
+                    is_liked: false,
+                    is_bookmarked: false,
+                    created_at: '2m ago',
+                    comments: [],
+                },
+            ];
+
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    posts: postsWithHashtags,
+                    trendingTopics: [
+                        { tag: 'noclass', name: 'NoClass', count: 1 },
+                        { tag: 'nopasok', name: 'NoPasok', count: 1 },
+                    ],
+                },
+            });
+
+            // Both trending topics should be displayed while post-101 is visible
+            const trendingItems = wrapper.findAll(
+                '[data-test="trending-topic-item"]',
+            );
+            expect(trendingItems.length).toBe(2);
+            expect(trendingItems[0].text()).toContain('#NoClass');
+
+            // Clicking #NoClass opens the Trending Topic Modal showing the related post
+            await trendingItems[0].trigger('click');
+            await nextTick();
+
+            const modal = wrapper.find('[data-test="trending-topic-modal"]');
+            expect(modal.exists()).toBe(true);
+            expect(
+                wrapper.find('[data-test="trending-topic-modal-title"]').text(),
+            ).toContain('#NoClass');
+
+            const modalPosts = wrapper.findAll(
+                '[data-test="trending-modal-post-item"]',
+            );
+            expect(modalPosts.length).toBe(1);
+            expect(modalPosts[0].text()).toContain(
+                'Suspension announced today! #NoClass #NoPasok',
+            );
+
+            // Close the modal
+            await wrapper
+                .find('[data-test="close-trending-modal-button"]')
+                .trigger('click');
+            await nextTick();
+            expect(
+                wrapper.find('[data-test="trending-topic-modal"]').exists(),
+            ).toBe(false);
+
+            // Now hide the post from the feed via post options menu
+            await wrapper
+                .find('[data-test="post-options-button"]')
+                .trigger('click');
+            await nextTick();
+            await wrapper
+                .find('[data-test="hide-post-button"]')
+                .trigger('click');
+            await nextTick();
+
+            // Feed should be empty AND Trending in Section should no longer show #NoClass or #NoPasok
+            expect(
+                wrapper.findAll('[data-test="trending-topic-item"]').length,
+            ).toBe(0);
+            expect(
+                wrapper.find('[data-test="section-topics-card"]').text(),
+            ).toContain('No trending tags yet');
+
+            // Hidden (1) trigger button appears for owned hidden post and allows unhiding
+            const hiddenTrigger = wrapper.find(
+                '[data-test="open-hidden-posts-modal-button"]',
+            );
+            expect(hiddenTrigger.exists()).toBe(true);
+            expect(hiddenTrigger.text()).toContain('Hidden (1)');
+
+            await hiddenTrigger.trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="hidden-posts-modal"]').exists(),
+            ).toBe(true);
+            await wrapper
+                .find('[data-test="unhide-post-button"]')
+                .trigger('click');
+            await nextTick();
+
+            expect(
+                wrapper.findAll('[data-test="trending-topic-item"]').length,
+            ).toBe(2);
+            wrapper.unmount();
+        });
     });
 });

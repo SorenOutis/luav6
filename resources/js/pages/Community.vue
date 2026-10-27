@@ -206,6 +206,7 @@ interface Props {
     onlineCount?: number;
     totalEnrolledCount?: number;
     posts?: CommunityFeedPost[];
+    hiddenOwnPosts?: CommunityFeedPost[];
     musicTracks?: PostMusicTrack[];
     trendingTopics?: TrendingTopic[];
     currentTab?: 'all' | 'section' | 'saved';
@@ -584,6 +585,11 @@ try {
 
 // ─── Dynamic Feed Posts ─────────────────────────────────────────────────────
 const localPosts = ref<CommunityFeedPost[]>([...(props.posts ?? [])]);
+const hiddenPostIds = ref<Set<string>>(new Set());
+const localHiddenOwnPosts = ref<CommunityFeedPost[]>([
+    ...(props.hiddenOwnPosts ?? []),
+]);
+const isHiddenPostsModalOpen = ref(false);
 
 watch(
     () => props.posts,
@@ -595,9 +601,79 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => props.hiddenOwnPosts,
+    (newHidden) => {
+        localHiddenOwnPosts.value = [...(newHidden ?? [])];
+    },
+    { immediate: true },
+);
+
 const displayPosts = computed<CommunityFeedPost[]>(() => {
-    return localPosts.value;
+    return localPosts.value.filter(
+        (post) => !hiddenPostIds.value.has(String(post.id)),
+    );
 });
+
+const hidePost = async (post: CommunityFeedPost) => {
+    activePostMenuId.value = null;
+    const key = String(post.id);
+    const next = new Set(hiddenPostIds.value);
+    next.add(key);
+    hiddenPostIds.value = next;
+
+    for (const tabKey of Object.keys(tabPostsCache.value)) {
+        tabPostsCache.value[tabKey] = tabPostsCache.value[tabKey].filter(
+            (p) => String(p.id) !== key,
+        );
+    }
+
+    if (
+        canManagePost(post) &&
+        !localHiddenOwnPosts.value.some((p) => String(p.id) === key)
+    ) {
+        localHiddenOwnPosts.value = [post, ...localHiddenOwnPosts.value];
+    }
+
+    try {
+        await axios.post(
+            `/community/posts/${post.id}/hide`,
+            {},
+            { headers: { Accept: 'application/json' } },
+        );
+    } catch {
+        // Ignore network errors in test/offline mode; optimistic state remains
+    }
+};
+
+const unhidePost = async (post: CommunityFeedPost) => {
+    const key = String(post.id);
+    const next = new Set(hiddenPostIds.value);
+    next.delete(key);
+    hiddenPostIds.value = next;
+
+    localHiddenOwnPosts.value = localHiddenOwnPosts.value.filter(
+        (p) => String(p.id) !== key,
+    );
+
+    if (!localPosts.value.some((p) => String(p.id) === key)) {
+        localPosts.value = [post, ...localPosts.value];
+    }
+
+    if (localHiddenOwnPosts.value.length === 0) {
+        isHiddenPostsModalOpen.value = false;
+    }
+
+    try {
+        await axios.post(
+            `/community/posts/${post.id}/hide`,
+            {},
+            { headers: { Accept: 'application/json' } },
+        );
+    } catch {
+        // Ignore network errors in test/offline mode
+    }
+};
 
 // ─── Post & Comment Ownership / Moderation Helpers ──────────────────────────
 const canManagePost = (post: CommunityFeedPost): boolean => {
@@ -2604,6 +2680,10 @@ const handleStoryKeydown = (e: KeyboardEvent) => {
         closeMediaModal();
         return;
     }
+    if (selectedTrendingTopic.value && e.key === 'Escape') {
+        closeTrendingTopicModal();
+        return;
+    }
     if (isWelcomeModalOpen.value && e.key === 'Escape') {
         dismissWelcomeModal();
         return;
@@ -3011,7 +3091,7 @@ onBeforeUnmount(() => {
     }
 });
 
-// ─── Trending Topics ─────────────────────────────────────────────────────────
+// ─── Trending Topics & Related Posts Modal ───────────────────────────────────
 const defaultTrendingTopics: TrendingTopic[] = [
     { tag: 'midterm-exam', name: 'MidtermExam', count: 28 },
     { tag: 'networking-lab', name: 'NetworkingLab', count: 14 },
@@ -3020,12 +3100,98 @@ const defaultTrendingTopics: TrendingTopic[] = [
     { tag: 'study-group', name: 'StudyGroup', count: 4 },
 ];
 
+const computeTrendingFromPosts = (
+    postsList: CommunityFeedPost[],
+): TrendingTopic[] => {
+    const tagCounts: Record<string, number> = {};
+    const tagDisplayNames: Record<string, string> = {};
+
+    for (const post of postsList) {
+        const content = post.content || '';
+        const matches = content.matchAll(/#([a-zA-Z0-9_]+)/g);
+        const seenInPost = new Set<string>();
+        for (const match of matches) {
+            const rawTag = match[1];
+            if (!rawTag) continue;
+            const lower = rawTag.toLowerCase();
+            if (seenInPost.has(lower)) continue;
+            seenInPost.add(lower);
+            tagCounts[lower] = (tagCounts[lower] ?? 0) + 1;
+            if (!tagDisplayNames[lower]) {
+                tagDisplayNames[lower] = rawTag;
+            }
+        }
+    }
+
+    return Object.entries(tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([lowerTag, count]) => ({
+            tag: lowerTag,
+            name: tagDisplayNames[lowerTag] || lowerTag,
+            count,
+        }));
+};
+
 const trendingTopics = computed<TrendingTopic[]>(() => {
+    if (props.posts !== undefined) {
+        return computeTrendingFromPosts(displayPosts.value);
+    }
     if (props.trendingTopics !== undefined) {
         return props.trendingTopics;
     }
     return defaultTrendingTopics;
 });
+
+const selectedTrendingTopic = ref<TrendingTopic | null>(null);
+
+const postContainsHashtag = (
+    post: CommunityFeedPost,
+    tagOrName: string,
+): boolean => {
+    const content = post.content || '';
+    const target = tagOrName.replace(/^#/, '').toLowerCase();
+    if (!target) return false;
+    const matches = content.matchAll(/#([a-zA-Z0-9_]+)/g);
+    for (const match of matches) {
+        if (match[1] && match[1].toLowerCase() === target) {
+            return true;
+        }
+    }
+    return false;
+};
+
+const trendingRelatedPosts = computed<CommunityFeedPost[]>(() => {
+    if (!selectedTrendingTopic.value) {
+        return [];
+    }
+    const targetTag =
+        selectedTrendingTopic.value.tag || selectedTrendingTopic.value.name;
+    return displayPosts.value.filter((post) =>
+        postContainsHashtag(post, targetTag),
+    );
+});
+
+const openTrendingTopicModal = (topic: TrendingTopic) => {
+    selectedTrendingTopic.value = topic;
+};
+
+const closeTrendingTopicModal = () => {
+    selectedTrendingTopic.value = null;
+};
+
+const jumpToPostFromTrending = (post: CommunityFeedPost) => {
+    closeTrendingTopicModal();
+    expandedComments.value[String(post.id)] = true;
+    nextTick(() => {
+        if (typeof document !== 'undefined') {
+            const el = document.getElementById(`community-post-${post.id}`);
+            if (el && typeof el.scrollIntoView === 'function') {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+};
 </script>
 
 <template>
@@ -3317,6 +3483,22 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                     class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-emerald-500"
                                 />
                             </button>
+
+                            <!-- Hidden Own Posts Trigger -->
+                            <button
+                                v-if="localHiddenOwnPosts.length > 0"
+                                type="button"
+                                data-test="open-hidden-posts-modal-button"
+                                class="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-border hover:bg-muted hover:text-foreground"
+                                @click="isHiddenPostsModalOpen = true"
+                            >
+                                <EyeOff class="h-3 w-3" />
+                                <span
+                                    >Hidden ({{
+                                        localHiddenOwnPosts.length
+                                    }})</span
+                                >
+                            </button>
                         </div>
 
                         <!-- ─── Feed Container ─────────────────────────────────────── -->
@@ -3425,7 +3607,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         >
                                             <!-- Media Triggers (Photo, Music, Code) -->
                                             <div
-                                                class="flex items-center gap-1 text-muted-foreground sm:gap-1.5"
+                                                class="flex shrink-0 items-center gap-1 text-muted-foreground sm:gap-1.5"
                                             >
                                                 <!-- Photo / Video Trigger (Instagram / Facebook / TikTok Style Modal) -->
                                                 <button
@@ -3499,10 +3681,17 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                             <!-- Post Button & Privacy info (Right on mobile line 1, end on desktop) -->
                                             <div
-                                                class="flex items-center justify-end gap-2 sm:order-last"
+                                                class="flex shrink-0 items-center justify-end gap-2 sm:order-last"
                                             >
                                                 <span
-                                                    class="hidden text-[11px] text-muted-foreground sm:inline-flex"
+                                                    :class="[
+                                                        'text-[11px] whitespace-nowrap text-muted-foreground',
+                                                        props.availableSections &&
+                                                        props.availableSections
+                                                            .length > 1
+                                                            ? 'hidden 2xl:inline-flex'
+                                                            : 'hidden sm:inline-flex',
+                                                    ]"
                                                 >
                                                     {{
                                                         composerForm.is_anonymous
@@ -3533,7 +3722,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                             <!-- Post Options (Anonymous Toggle & Section Picker: Line 2 on mobile, middle order on desktop) -->
                                             <div
-                                                class="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0"
+                                                class="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:mr-auto sm:ml-1 sm:shrink-0 sm:flex-nowrap sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0"
                                             >
                                                 <!-- Anonymous Toggle -->
                                                 <label
@@ -3541,7 +3730,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         props.allowsAnonymous !==
                                                         false
                                                     "
-                                                    class="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                                                    class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] whitespace-nowrap text-muted-foreground hover:text-foreground"
                                                 >
                                                     <input
                                                         v-model="
@@ -3562,11 +3751,11 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         props.availableSections
                                                             .length > 1
                                                     "
-                                                    class="relative"
+                                                    class="relative shrink-0"
                                                 >
                                                     <button
                                                         type="button"
-                                                        class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground transition hover:border-border hover:bg-muted"
+                                                        class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-foreground transition hover:border-border hover:bg-muted"
                                                         data-test="inline-composer-section-trigger"
                                                         title="Choose posting section"
                                                         @click.stop="
@@ -3575,7 +3764,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         "
                                                     >
                                                         <Users
-                                                            class="h-3 w-3 text-brand"
+                                                            class="h-3 w-3 shrink-0 text-brand"
                                                         />
                                                         <span
                                                             class="max-w-[120px] truncate sm:max-w-[130px]"
@@ -3584,7 +3773,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                             }}</span
                                                         >
                                                         <ChevronDown
-                                                            class="h-2.5 w-2.5 text-muted-foreground"
+                                                            class="h-2.5 w-2.5 shrink-0 text-muted-foreground"
                                                         />
                                                     </button>
 
@@ -3682,6 +3871,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             <!-- ─── Post Cards List ────────────────────────────────────── -->
                             <article
                                 v-for="post in displayPosts"
+                                :id="'community-post-' + post.id"
                                 :key="post.id"
                                 class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xs transition-colors hover:border-border"
                             >
@@ -3827,15 +4017,25 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         </div>
                                     </div>
 
-                                    <div
-                                        v-if="canManagePost(post)"
-                                        class="relative"
-                                    >
+                                    <div class="relative">
                                         <button
+                                            v-if="canManagePost(post)"
                                             type="button"
                                             class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                             aria-label="Post options"
                                             data-test="post-options-button"
+                                            @click.stop="
+                                                togglePostMenu(post.id)
+                                            "
+                                        >
+                                            <MoreHorizontal class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            aria-label="Post options"
+                                            data-test="other-post-options-button"
                                             @click.stop="
                                                 togglePostMenu(post.id)
                                             "
@@ -3847,10 +4047,20 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 activePostMenuId ===
                                                 String(post.id)
                                             "
-                                            class="absolute top-full right-0 z-20 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
+                                            class="absolute top-full right-0 z-20 mt-1 min-w-[130px] overflow-hidden rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
                                             data-test="post-options-menu"
                                         >
                                             <button
+                                                type="button"
+                                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted"
+                                                data-test="hide-post-button"
+                                                @click="hidePost(post)"
+                                            >
+                                                <EyeOff class="h-3.5 w-3.5" />
+                                                <span>Hide post</span>
+                                            </button>
+                                            <button
+                                                v-if="canManagePost(post)"
                                                 type="button"
                                                 class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted"
                                                 data-test="edit-post-button"
@@ -3860,6 +4070,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 <span>Edit</span>
                                             </button>
                                             <button
+                                                v-if="canManagePost(post)"
                                                 type="button"
                                                 class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10"
                                                 data-test="delete-post-button"
@@ -3870,14 +4081,6 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             </button>
                                         </div>
                                     </div>
-                                    <button
-                                        v-else
-                                        type="button"
-                                        class="cursor-pointer rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        aria-label="Post options"
-                                    >
-                                        <MoreHorizontal class="h-4 w-4" />
-                                    </button>
                                 </div>
 
                                 <!-- Post Text Content -->
@@ -5435,11 +5638,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 <div
                                     v-for="topic in trendingTopics"
                                     :key="topic.tag"
-                                    class="flex cursor-pointer items-center justify-between py-1.5 text-xs transition-colors hover:text-brand"
+                                    data-test="trending-topic-item"
+                                    class="group flex cursor-pointer items-center justify-between rounded-lg px-1.5 py-1.5 text-xs transition-colors hover:bg-muted/50 hover:text-brand"
+                                    @click="openTrendingTopicModal(topic)"
                                 >
                                     <div>
                                         <p
-                                            class="font-semibold text-foreground"
+                                            class="font-semibold text-foreground transition-colors group-hover:text-brand"
                                         >
                                             #{{ topic.name }}
                                         </p>
@@ -5450,7 +5655,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                         </p>
                                     </div>
                                     <span
-                                        class="text-[10px] text-muted-foreground"
+                                        class="text-[10px] text-muted-foreground transition-colors group-hover:text-brand"
                                         >Trending</span
                                     >
                                 </div>
@@ -7994,6 +8199,312 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Trending Topic Related Posts Modal ═══ -->
+        <div
+            v-if="selectedTrendingTopic"
+            class="fixed inset-0 z-[165] flex items-center justify-center p-4"
+            data-test="trending-topic-modal"
+        >
+            <div
+                class="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity"
+                data-test="trending-topic-modal-backdrop"
+                @click="closeTrendingTopicModal"
+            />
+            <div
+                class="relative z-[175] flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-2xl"
+            >
+                <!-- Modal Header -->
+                <div
+                    class="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4"
+                >
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/15 text-sm font-bold text-brand"
+                        >
+                            #
+                        </div>
+                        <div>
+                            <h2
+                                class="text-sm font-bold text-foreground"
+                                data-test="trending-topic-modal-title"
+                            >
+                                #{{ selectedTrendingTopic.name }}
+                            </h2>
+                            <p class="text-[11px] text-muted-foreground">
+                                {{ trendingRelatedPosts.length }}
+                                {{
+                                    trendingRelatedPosts.length === 1
+                                        ? 'related post'
+                                        : 'related posts'
+                                }}
+                                in {{ sectionDisplayName }}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Close trending topic modal"
+                        data-test="close-trending-modal-button"
+                        @click="closeTrendingTopicModal"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <!-- Modal Body: Related Posts List -->
+                <div class="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+                    <div
+                        v-if="trendingRelatedPosts.length === 0"
+                        class="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-8 text-center text-xs text-muted-foreground"
+                    >
+                        No visible posts found for #{{
+                            selectedTrendingTopic.name
+                        }}.
+                    </div>
+
+                    <article
+                        v-for="post in trendingRelatedPosts"
+                        :key="'trending-modal-post-' + post.id"
+                        data-test="trending-modal-post-item"
+                        class="overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xs transition-colors hover:border-border"
+                    >
+                        <!-- Author Row -->
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <div
+                                    v-if="post.author.is_masked"
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted text-xs font-semibold text-muted-foreground"
+                                >
+                                    <EyeOff class="h-4 w-4" />
+                                </div>
+                                <div
+                                    v-else
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                                >
+                                    <img
+                                        v-if="post.author.avatar"
+                                        :src="post.author.avatar"
+                                        :alt="post.author.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <span v-else>{{
+                                        getInitials(post.author.name)
+                                    }}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span
+                                            class="truncate text-xs font-bold text-foreground"
+                                        >
+                                            {{ post.author.name }}
+                                        </span>
+                                        <span
+                                            v-if="
+                                                !post.author.is_masked &&
+                                                post.author.handle
+                                            "
+                                            class="truncate text-[11px] text-muted-foreground"
+                                        >
+                                            @{{ post.author.handle }}
+                                        </span>
+                                    </div>
+                                    <p
+                                        class="text-[11px] text-muted-foreground"
+                                    >
+                                        {{
+                                            post.author.section_name ||
+                                            sectionDisplayName
+                                        }}
+                                        · {{ post.created_at }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-foreground transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand"
+                                data-test="trending-modal-view-post-button"
+                                @click="jumpToPostFromTrending(post)"
+                            >
+                                <span>View in Feed</span>
+                                <ExternalLink class="h-3 w-3" />
+                            </button>
+                        </div>
+
+                        <!-- Post Content -->
+                        <p
+                            class="mt-3 text-xs leading-relaxed whitespace-pre-wrap text-foreground sm:text-[13px]"
+                        >
+                            {{ post.content }}
+                        </p>
+
+                        <!-- Media Preview if present -->
+                        <div
+                            v-if="post.media && post.media.length > 0"
+                            class="mt-3 overflow-hidden rounded-xl border border-border/50 bg-black/5"
+                        >
+                            <img
+                                v-if="post.media[0].type === 'image'"
+                                :src="post.media[0].url"
+                                alt="Post attachment"
+                                class="max-h-56 w-full object-cover"
+                            />
+                            <video
+                                v-else
+                                :src="post.media[0].url"
+                                controls
+                                preload="metadata"
+                                class="max-h-56 w-full object-cover"
+                            />
+                        </div>
+
+                        <!-- Music Track Badge if present -->
+                        <div
+                            v-if="post.music"
+                            class="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+                        >
+                            <Music class="h-3 w-3 shrink-0" />
+                            <span class="truncate">
+                                {{ post.music.title }}
+                                <template v-if="post.music.artist">
+                                    — {{ post.music.artist }}
+                                </template>
+                            </span>
+                        </div>
+
+                        <!-- Engagement Footer -->
+                        <div
+                            class="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5 text-[11px] text-muted-foreground"
+                        >
+                            <div class="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-rose-500"
+                                    :class="
+                                        post.is_liked
+                                            ? 'font-semibold text-rose-500'
+                                            : ''
+                                    "
+                                    @click="toggleLike(post.id)"
+                                >
+                                    <Heart
+                                        class="h-3.5 w-3.5"
+                                        :class="
+                                            post.is_liked ? 'fill-current' : ''
+                                        "
+                                    />
+                                    <span>{{ post.likes_count }}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                                    @click="jumpToPostFromTrending(post)"
+                                >
+                                    <MessageCircle class="h-3.5 w-3.5" />
+                                    <span>{{ post.comments_count }}</span>
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                class="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-amber-500"
+                                :class="
+                                    post.is_bookmarked ? 'text-amber-500' : ''
+                                "
+                                @click="toggleBookmark(post.id)"
+                            >
+                                <Bookmark
+                                    class="h-3.5 w-3.5"
+                                    :class="
+                                        post.is_bookmarked ? 'fill-current' : ''
+                                    "
+                                />
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Hidden Own Posts Modal (Archive / Unhide) ═══ -->
+        <div
+            v-if="isHiddenPostsModalOpen"
+            class="fixed inset-0 z-[165] flex items-center justify-center p-4"
+            data-test="hidden-posts-modal"
+        >
+            <div
+                class="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity"
+                @click="isHiddenPostsModalOpen = false"
+            />
+            <div
+                class="relative z-[175] flex max-h-[84vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-2xl"
+            >
+                <div
+                    class="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4"
+                >
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                        >
+                            <EyeOff class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-foreground">
+                                Hidden Posts
+                            </h2>
+                            <p class="text-[11px] text-muted-foreground">
+                                Hidden from the lounge feed and trending tags
+                                until you unhide them
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        data-test="close-hidden-posts-modal-button"
+                        @click="isHiddenPostsModalOpen = false"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div class="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+                    <div
+                        v-if="localHiddenOwnPosts.length === 0"
+                        class="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-8 text-center text-xs text-muted-foreground"
+                    >
+                        You have no hidden posts.
+                    </div>
+
+                    <article
+                        v-for="post in localHiddenOwnPosts"
+                        :key="'hidden-own-post-' + post.id"
+                        data-test="hidden-own-post-item"
+                        class="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 p-3.5 shadow-2xs"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[11px] text-muted-foreground">
+                                {{ post.created_at }}
+                            </p>
+                            <p
+                                class="mt-1 line-clamp-3 text-xs leading-relaxed whitespace-pre-wrap text-foreground"
+                            >
+                                {{ post.content || '(Media post)' }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            data-test="unhide-post-button"
+                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand"
+                            @click="unhidePost(post)"
+                        >
+                            <span>Unhide</span>
+                        </button>
+                    </article>
                 </div>
             </div>
         </div>

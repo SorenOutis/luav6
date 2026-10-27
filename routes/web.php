@@ -170,6 +170,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('community/posts/{post}/bookmark', [CommunityPostController::class, 'toggleBookmark'])
         ->middleware('student.page:community')
         ->name('community.posts.bookmark');
+    Route::post('community/posts/{post}/hide', [CommunityPostController::class, 'toggleHide'])
+        ->middleware('student.page:community')
+        ->name('community.posts.hide');
     Route::match(['put', 'patch'], 'community/posts/{post}', [CommunityPostController::class, 'update'])
         ->middleware('student.page:community')
         ->name('community.posts.update');

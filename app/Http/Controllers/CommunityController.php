@@ -61,9 +61,10 @@ class CommunityController extends Controller
 
         // Query posts
         $posts = $this->getPosts($viewer, $section, $tab);
+        $hiddenOwnPosts = $this->getHiddenOwnPosts($viewer, $section);
 
-        // Trending topics
-        $trendingTopics = $this->getTrendingTopics($workspace?->id);
+        // Trending topics (derived from visible feed posts so hidden/other-section posts never leak)
+        $trendingTopics = $this->getTrendingTopics($posts);
 
         // Active 24h stories tray
         $stories = $this->getActiveStoriesTray($viewer, $workspace, $section);
@@ -104,6 +105,7 @@ class CommunityController extends Controller
             'onlineCount' => $presenceData['onlineCount'],
             'totalEnrolledCount' => $presenceData['totalEnrolled'],
             'posts' => $posts,
+            'hiddenOwnPosts' => $hiddenOwnPosts,
             'musicTracks' => $musicTracks,
             'trendingTopics' => $trendingTopics,
             'currentTab' => $tab,
@@ -204,6 +206,7 @@ class CommunityController extends Controller
         $recentPosts = CommunityPost::query()
             ->where('user_id', $user->id)
             ->where('is_anonymous', false)
+            ->where('is_hidden', false)
             ->latest()
             ->limit(6)
             ->get(['id', 'content', 'attachment_url', 'attachment_type', 'created_at', 'likes_count', 'comments_count'])
@@ -238,8 +241,8 @@ class CommunityController extends Controller
             'is_following' => $isFollowing,
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
-            'posts_count' => $user->communityPosts()->where('is_anonymous', false)->count(),
-            'likes_received' => (int) $user->communityPosts()->where('is_anonymous', false)->sum('likes_count'),
+            'posts_count' => $user->communityPosts()->where('is_anonymous', false)->where('is_hidden', false)->count(),
+            'likes_received' => (int) $user->communityPosts()->where('is_anonymous', false)->where('is_hidden', false)->sum('likes_count'),
             'recent_posts' => $recentPosts,
         ]);
     }
@@ -325,6 +328,7 @@ class CommunityController extends Controller
         // Lounge posts for this user
         $posts = CommunityPost::query()
             ->where('user_id', $user->id)
+            ->where('is_hidden', false)
             ->when(! $isSelf, fn ($q) => $q->where('is_anonymous', false))
             ->with(['section:id,name', 'media', 'musicTrack', ...$this->commentRelations($viewer)])
             ->latest()
@@ -728,6 +732,13 @@ class CommunityController extends Controller
 
         $query = CommunityPost::query()
             ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->where('is_hidden', false)
+            ->when($viewer, fn ($q) => $q->whereNotExists(function ($sub) use ($viewer): void {
+                $sub->select(DB::raw(1))
+                    ->from('community_post_hides')
+                    ->whereColumn('community_post_hides.post_id', 'community_posts.id')
+                    ->where('community_post_hides.user_id', $viewer->id);
+            }))
             ->with([
                 'user:id,public_id,name,avatar,level',
                 'section:id,name',
@@ -741,17 +752,17 @@ class CommunityController extends Controller
             $query->where('section_id', $section->id);
         } elseif ($tab === 'saved' && $viewer) {
             $query->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id));
-            if ($isRestricted && ! $viewer->is_admin) {
+            if ($isRestricted) {
                 if ($section) {
                     $query->where('section_id', $section->id);
-                } else {
+                } elseif (! $viewer->is_admin) {
                     $query->whereRaw('1 = 0');
                 }
             }
-        } elseif ($isRestricted && ! $viewer?->is_admin) {
+        } elseif ($isRestricted) {
             if ($section) {
                 $query->where('section_id', $section->id);
-            } else {
+            } elseif (! $viewer?->is_admin) {
                 $query->whereRaw('1 = 0');
             }
         }
@@ -882,6 +893,77 @@ class CommunityController extends Controller
     }
 
     /**
+     * Get the viewer's own hidden posts so they can view and unhide them.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getHiddenOwnPosts(?User $viewer, ?Section $section): array
+    {
+        if (! $viewer) {
+            return [];
+        }
+
+        $workspaceId = app(WorkspaceContext::class)->id();
+
+        $posts = CommunityPost::query()
+            ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->where('user_id', $viewer->id)
+            ->where('is_hidden', true)
+            ->with([
+                'user:id,public_id,name,avatar,level',
+                'section:id,name',
+                'media',
+                'musicTrack',
+            ])
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section): array {
+            $author = $post->user;
+
+            return [
+                'id' => $post->id,
+                'content' => $post->content,
+                'created_at' => $post->created_at->diffForHumans(short: true),
+                'attachment_url' => $post->attachment_url ? PublicFileUrl::resolve($post->attachment_url) : null,
+                'attachment_type' => $post->attachment_type,
+                'attachment_name' => $post->attachment_name,
+                'attachment_size' => $post->attachment_size,
+                'media' => $post->media->map(fn ($m) => [
+                    'id' => $m->id,
+                    'url' => PublicFileUrl::resolve($m->media_url),
+                    'type' => $m->media_type,
+                    'name' => $m->file_name,
+                    'size' => $m->file_size,
+                    'likes_count' => (int) $m->likes_count,
+                    'is_liked' => false,
+                    'comments_count' => (int) $m->comments_count,
+                    'comments' => [],
+                ])->values()->all(),
+                'music' => null,
+                'likes_count' => (int) $post->likes_count,
+                'comments_count' => (int) $post->comments_count,
+                'is_liked' => false,
+                'is_bookmarked' => false,
+                'is_hidden' => true,
+                'author' => [
+                    'id' => (string) ($author?->id ?? $viewer->id),
+                    'public_id' => (string) ($author?->public_id ?? $viewer->public_id ?? ''),
+                    'name' => $author?->name ?? $viewer->name,
+                    'handle' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $author?->name ?? $viewer->name)),
+                    'avatar' => $author?->avatar ? PublicFileUrl::resolve($author->avatar) : null,
+                    'is_same_section' => true,
+                    'is_masked' => false,
+                    'is_following' => false,
+                    'section_name' => $post->section?->name ?? $section?->name ?? 'Your Section',
+                ],
+                'comments' => [],
+            ];
+        })->all();
+    }
+
+    /**
      * @return array<string, \Closure>
      */
     private function commentRelations(?User $viewer): array
@@ -938,43 +1020,49 @@ class CommunityController extends Controller
     }
 
     /**
-     * Get trending hashtags for this workspace (cached for 10 minutes).
+     * Get trending hashtags from the visible feed posts.
+     *
+     * @param  array<int, array<string, mixed>>  $posts
+     * @return array<int, array{tag: string, name: string, count: int}>
      */
-    private function getTrendingTopics(?int $workspaceId): array
+    private function getTrendingTopics(array $posts): array
     {
-        $cacheKey = 'workspace:'.($workspaceId ?? 0).':trending_topics';
+        $tagCounts = [];
+        $tagDisplayNames = [];
 
-        return Cache::remember($cacheKey, 600, function () use ($workspaceId): array {
-            $recentPosts = CommunityPost::query()
-                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
-                ->where('created_at', '>=', now()->subDays(7))
-                ->pluck('content');
-
-            $tagCounts = [];
-            foreach ($recentPosts as $content) {
-                if (preg_match_all('/#([a-zA-Z0-9_]+)/', $content, $matches)) {
-                    foreach ($matches[1] as $tag) {
-                        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+        foreach ($posts as $post) {
+            $content = (string) ($post['content'] ?? '');
+            if ($content !== '' && preg_match_all('/#([a-zA-Z0-9_]+)/', $content, $matches)) {
+                $seenInPost = [];
+                foreach ($matches[1] as $rawTag) {
+                    $lower = strtolower($rawTag);
+                    if (isset($seenInPost[$lower])) {
+                        continue;
+                    }
+                    $seenInPost[$lower] = true;
+                    $tagCounts[$lower] = ($tagCounts[$lower] ?? 0) + 1;
+                    if (! isset($tagDisplayNames[$lower])) {
+                        $tagDisplayNames[$lower] = $rawTag;
                     }
                 }
             }
+        }
 
-            if (! empty($tagCounts)) {
-                arsort($tagCounts);
-                $result = [];
-                foreach (array_slice($tagCounts, 0, 5, true) as $tag => $count) {
-                    $result[] = [
-                        'tag' => strtolower($tag),
-                        'name' => $tag,
-                        'count' => $count,
-                    ];
-                }
-
-                return $result;
-            }
-
+        if (empty($tagCounts)) {
             return [];
-        });
+        }
+
+        arsort($tagCounts);
+        $result = [];
+        foreach (array_slice($tagCounts, 0, 5, true) as $lowerTag => $count) {
+            $result[] = [
+                'tag' => $lowerTag,
+                'name' => $tagDisplayNames[$lowerTag],
+                'count' => $count,
+            ];
+        }
+
+        return $result;
     }
 
     /**
