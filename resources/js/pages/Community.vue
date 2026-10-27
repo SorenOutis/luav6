@@ -119,7 +119,9 @@ export interface PostMusicTrack {
     artist: string;
     duration?: number;
     audio_url: string;
+    audioUrl?: string;
     cover_image_url?: string | null;
+    coverImageUrl?: string | null;
 }
 
 export interface CommunityFeedPost {
@@ -213,11 +215,17 @@ interface Props {
     feedScope?: 'workspace' | 'section';
     allowsAnonymous?: boolean;
     storiesEnabled?: boolean;
+    musicEnabled?: boolean;
+    mediaUploadsEnabled?: boolean;
+    fileAttachmentsEnabled?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     storiesEnabled: true,
     allowsAnonymous: true,
+    musicEnabled: true,
+    mediaUploadsEnabled: true,
+    fileAttachmentsEnabled: true,
     isSectionOnly: false,
     feedScope: 'workspace',
 });
@@ -3421,6 +3429,10 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                             >
                                                 <!-- Photo / Video Trigger (Instagram / Facebook / TikTok Style Modal) -->
                                                 <button
+                                                    v-if="
+                                                        props.mediaUploadsEnabled !==
+                                                        false
+                                                    "
                                                     type="button"
                                                     class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                                                     title="Attach photos or videos"
@@ -3441,6 +3453,8 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                 <!-- Music Soundtrack Trigger -->
                                                 <button
                                                     v-if="
+                                                        props.musicEnabled !==
+                                                            false &&
                                                         props.musicTracks &&
                                                         props.musicTracks
                                                             .length > 0
@@ -3465,9 +3479,14 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                                 <!-- Code / File Trigger -->
                                                 <button
+                                                    v-if="
+                                                        props.fileAttachmentsEnabled !==
+                                                        false
+                                                    "
                                                     type="button"
                                                     class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                                                     title="Attach document or code snippet"
+                                                    data-test="open-code-snippet-button"
                                                     @click="
                                                         fileInputRef?.click()
                                                     "
@@ -3932,7 +3951,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                 </div>
 
                                 <!-- Post Music Soundtrack (Instagram / TikTok Style) -->
-                                <div v-if="post.music" class="px-4 pb-2.5">
+                                <div
+                                    v-if="
+                                        props.musicEnabled !== false &&
+                                        post.music
+                                    "
+                                    class="px-4 pb-2.5"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition-all hover:bg-brand/20 active:scale-95"
@@ -7242,6 +7267,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                         <!-- Music Soundtrack Selector Row -->
                         <div
+                            v-if="props.musicEnabled !== false"
                             class="rounded-xl border border-border/70 bg-muted/30 p-3"
                         >
                             <div class="flex items-center justify-between">
@@ -7600,7 +7626,13 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                         </p>
 
                         <!-- Attached Soundtrack if any -->
-                        <div v-if="lightboxPost.music" class="pt-1">
+                        <div
+                            v-if="
+                                props.musicEnabled !== false &&
+                                lightboxPost.music
+                            "
+                            class="pt-1"
+                        >
                             <button
                                 type="button"
                                 class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand transition hover:bg-brand/20 active:scale-95"

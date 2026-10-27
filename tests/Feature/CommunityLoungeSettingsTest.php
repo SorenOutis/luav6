@@ -4,10 +4,13 @@ use App\Filament\Pages\LoungeSettings;
 use App\Models\CommunityInvite;
 use App\Models\CommunityPost;
 use App\Models\CommunityStory;
+use App\Models\ProfileMusicTrack;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\CommunitySettings;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -60,10 +63,16 @@ it('allows admin to view and update lounge settings via filament page', function
     Livewire::actingAs($this->admin)
         ->test(LoungeSettings::class)
         ->assertSet('data.feed_scope', CommunitySettings::SCOPE_WORKSPACE)
+        ->assertSet('data.music_enabled', true)
+        ->assertSet('data.media_uploads_enabled', true)
+        ->assertSet('data.file_attachments_enabled', true)
         ->fillForm([
             'feed_scope' => CommunitySettings::SCOPE_SECTION,
             'allow_anonymous' => false,
             'stories_enabled' => true,
+            'music_enabled' => false,
+            'media_uploads_enabled' => false,
+            'file_attachments_enabled' => false,
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -71,6 +80,9 @@ it('allows admin to view and update lounge settings via filament page', function
     expect(CommunitySettings::feedScope())->toBe(CommunitySettings::SCOPE_SECTION);
     expect(CommunitySettings::isRestrictedToSection())->toBeTrue();
     expect(CommunitySettings::allowsAnonymous())->toBeFalse();
+    expect(CommunitySettings::musicEnabled())->toBeFalse();
+    expect(CommunitySettings::mediaUploadsEnabled())->toBeFalse();
+    expect(CommunitySettings::fileAttachmentsEnabled())->toBeFalse();
 });
 
 it('shows posts across all sections in workspace feed when feed scope is workspace', function () {
@@ -210,4 +222,81 @@ it('isolates 24h stories tray to student section in section-only mode', function
         ->has('stories', 1)
         ->where('stories.0.user_id', $this->studentA->id)
     );
+});
+
+it('disables music tracks on community page and ignores music attachments when music is disabled', function () {
+    $track = ProfileMusicTrack::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'title' => 'Lofi Study Beats',
+        'artist' => 'Chill Artist',
+        'is_active' => true,
+    ]);
+
+    CommunitySettings::save(['music_enabled' => false]);
+
+    $response = actingAs($this->studentA)->get('/community');
+    $response->assertSuccessful();
+
+    $response->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->where('musicEnabled', false)
+        ->has('musicTracks', 0)
+    );
+
+    // Posting with profile_music_track_id should not attach the track
+    actingAs($this->studentA)
+        ->post(route('community.posts.store'), [
+            'content' => 'Post with music while music is disabled',
+            'profile_music_track_id' => $track->id,
+        ])
+        ->assertRedirect();
+
+    $createdPost = CommunityPost::latest('id')->first();
+    expect($createdPost->content)->toBe('Post with music while music is disabled');
+    expect($createdPost->profile_music_track_id)->toBeNull();
+});
+
+it('blocks media uploads when media uploads are disabled', function () {
+    Storage::fake('public');
+    CommunitySettings::save(['media_uploads_enabled' => false]);
+
+    $response = actingAs($this->studentA)->get('/community');
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->where('mediaUploadsEnabled', false)
+    );
+
+    actingAs($this->studentA)
+        ->post(route('community.posts.store'), [
+            'content' => 'Attempting photo upload',
+            'attachment' => UploadedFile::fake()->image('photo.jpg'),
+        ])
+        ->assertStatus(422);
+
+    actingAs($this->studentA)
+        ->post(route('community.posts.store'), [
+            'content' => 'Attempting multi media upload',
+            'attachments' => [UploadedFile::fake()->image('photo1.jpg')],
+        ])
+        ->assertStatus(422);
+});
+
+it('blocks file attachments when document and code attachments are disabled', function () {
+    Storage::fake('public');
+    CommunitySettings::save(['file_attachments_enabled' => false]);
+
+    $response = actingAs($this->studentA)->get('/community');
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Community')
+        ->where('fileAttachmentsEnabled', false)
+    );
+
+    actingAs($this->studentA)
+        ->post(route('community.posts.store'), [
+            'content' => 'Attempting snippet upload',
+            'attachment' => UploadedFile::fake()->create('script.py', 100, 'text/x-python'),
+        ])
+        ->assertStatus(422);
 });

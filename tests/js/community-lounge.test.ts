@@ -4692,5 +4692,76 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(menu.classes()).toContain('sm:left-0');
             wrapper.unmount();
         });
+
+        it('respects mediaUploadsEnabled, musicEnabled, and fileAttachmentsEnabled flags in inline composer', async () => {
+            const tracks = [
+                {
+                    id: 1,
+                    title: 'Lofi Chill',
+                    artist: 'Producer',
+                    duration: 120,
+                    audio_url: '/audio/1.mp3',
+                    audioUrl: '/audio/1.mp3',
+                    cover_image_url: null,
+                    coverImageUrl: null,
+                },
+            ];
+
+            // When disabled
+            const disabledWrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: tracks,
+                    mediaUploadsEnabled: false,
+                    musicEnabled: false,
+                    fileAttachmentsEnabled: false,
+                },
+            });
+
+            expect(
+                disabledWrapper
+                    .find('[data-test="open-media-modal-button"]')
+                    .exists(),
+            ).toBe(false);
+            expect(
+                disabledWrapper
+                    .find('[data-test="open-music-modal-button"]')
+                    .exists(),
+            ).toBe(false);
+            expect(
+                disabledWrapper
+                    .find('[data-test="open-code-snippet-button"]')
+                    .exists(),
+            ).toBe(false);
+            disabledWrapper.unmount();
+
+            // When enabled
+            const enabledWrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    musicTracks: tracks,
+                    mediaUploadsEnabled: true,
+                    musicEnabled: true,
+                    fileAttachmentsEnabled: true,
+                },
+            });
+
+            expect(
+                enabledWrapper
+                    .find('[data-test="open-media-modal-button"]')
+                    .exists(),
+            ).toBe(true);
+            expect(
+                enabledWrapper
+                    .find('[data-test="open-music-modal-button"]')
+                    .exists(),
+            ).toBe(true);
+            expect(
+                enabledWrapper
+                    .find('[data-test="open-code-snippet-button"]')
+                    .exists(),
+            ).toBe(true);
+            enabledWrapper.unmount();
+        });
     });
 });
