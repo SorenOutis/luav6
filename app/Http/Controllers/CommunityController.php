@@ -71,23 +71,25 @@ class CommunityController extends Controller
         $isFirstTimeJoin = (bool) $request->session()->get('first_time_lounge_join', false);
 
         $userWorkspaceId = $workspace?->id ?? app(WorkspaceContext::class)->id();
-        $musicTracks = ProfileMusicTrack::query()
-            ->where('is_active', true)
-            ->availableForWorkspace($userWorkspaceId)
-            ->orderBy('title')
-            ->get()
-            ->map(fn (ProfileMusicTrack $track) => [
-                'id' => $track->id,
-                'title' => $track->title,
-                'artist' => $track->artist,
-                'duration' => (float) $track->duration_seconds,
-                'audioUrl' => route('profile-music.stream', $track->id),
-                'coverImageUrl' => $track->cover_image_path
-                    ? PublicFileUrl::resolve($track->cover_image_path)
-                    : null,
-            ])
-            ->values()
-            ->all();
+        $musicTracks = CommunitySettings::musicEnabled()
+            ? ProfileMusicTrack::query()
+                ->where('is_active', true)
+                ->availableForWorkspace($userWorkspaceId)
+                ->orderBy('title')
+                ->get()
+                ->map(fn (ProfileMusicTrack $track) => [
+                    'id' => $track->id,
+                    'title' => $track->title,
+                    'artist' => $track->artist,
+                    'duration' => (float) $track->duration_seconds,
+                    'audioUrl' => route('profile-music.stream', $track->id),
+                    'coverImageUrl' => $track->cover_image_path
+                        ? PublicFileUrl::resolve($track->cover_image_path)
+                        : null,
+                ])
+                ->values()
+                ->all()
+            : [];
 
         return Inertia::render('Community', [
             'workspace' => $workspace,
@@ -107,6 +109,9 @@ class CommunityController extends Controller
             'feedScope' => CommunitySettings::feedScope(),
             'allowsAnonymous' => CommunitySettings::allowsAnonymous(),
             'storiesEnabled' => CommunitySettings::storiesEnabled(),
+            'musicEnabled' => CommunitySettings::musicEnabled(),
+            'mediaUploadsEnabled' => CommunitySettings::mediaUploadsEnabled(),
+            'fileAttachmentsEnabled' => CommunitySettings::fileAttachmentsEnabled(),
         ]);
     }
 

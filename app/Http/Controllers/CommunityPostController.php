@@ -86,7 +86,7 @@ class CommunityPostController extends Controller
         }
 
         $musicTrackId = null;
-        if (! empty($validated['profile_music_track_id'])) {
+        if (CommunitySettings::musicEnabled() && ! empty($validated['profile_music_track_id'])) {
             $track = ProfileMusicTrack::query()
                 ->where('id', $validated['profile_music_track_id'])
                 ->where('is_active', true)
@@ -95,6 +95,9 @@ class CommunityPostController extends Controller
             $musicTrackId = $track?->id;
         }
 
+        $mediaUploadsEnabled = CommunitySettings::mediaUploadsEnabled();
+        $fileAttachmentsEnabled = CommunitySettings::fileAttachmentsEnabled();
+
         $attachmentUrl = null;
         $attachmentType = null;
         $attachmentName = null;
@@ -102,6 +105,10 @@ class CommunityPostController extends Controller
         $mediaToCreate = [];
 
         if ($request->hasFile('attachments')) {
+            if (! $mediaUploadsEnabled) {
+                abort(422, 'Media uploads (photos and videos) are currently disabled.');
+            }
+
             $files = $request->file('attachments');
             if (! is_array($files)) {
                 $files = [$files];
@@ -141,13 +148,21 @@ class CommunityPostController extends Controller
 
         if ($request->hasFile('attachment')) {
             $file = $request->file('attachment');
+            $mime = $file->getClientMimeType() ?: '';
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            $isMedia = Str::startsWith($mime, 'image/') || Str::startsWith($mime, 'video/') || in_array($ext, ['mp4', 'mov', 'webm', 'm4v'], true);
+            if ($isMedia && ! $mediaUploadsEnabled) {
+                abort(422, 'Media uploads (photos and videos) are currently disabled.');
+            }
+            if (! $isMedia && ! $fileAttachmentsEnabled) {
+                abort(422, 'Document and code attachments are currently disabled.');
+            }
+
             $path = Storage::disk('public')->putFile('community-attachments', $file);
             $attachmentUrl = $path;
             $attachmentName = $file->getClientOriginalName();
             $attachmentSize = $file->getSize();
-
-            $mime = $file->getClientMimeType() ?: '';
-            $ext = strtolower($file->getClientOriginalExtension());
 
             if (Str::startsWith($mime, 'image/')) {
                 $attachmentType = 'image';

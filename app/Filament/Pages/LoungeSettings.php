@@ -78,6 +78,18 @@ class LoungeSettings extends Page implements HasSchemas
                         Toggle::make('stories_enabled')
                             ->label('Enable 24-Hour Stories (MyDay)')
                             ->helperText('Allows students to share ephemeral photos and video stories to the top stories tray in the lounge.'),
+
+                        Toggle::make('music_enabled')
+                            ->label('Enable Background Music (Soundtracks)')
+                            ->helperText('Allows students to attach background music soundtracks to their posts and browse the soundtrack library.'),
+
+                        Toggle::make('media_uploads_enabled')
+                            ->label('Enable Photo & Video Uploads')
+                            ->helperText('Allows students to attach photos and videos to posts and open the media creator modal.'),
+
+                        Toggle::make('file_attachments_enabled')
+                            ->label('Enable Document & Code Attachments')
+                            ->helperText('Allows students to attach documents, text files, and code snippets to their posts.'),
                     ]),
             ])
             ->statePath('data');
