@@ -3413,10 +3413,11 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
 
                                         <!-- Composer Action Tray -->
                                         <div
-                                            class="mt-3 flex items-center justify-between border-t border-border/30 pt-2.5 text-xs"
+                                            class="mt-3 grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-2 border-t border-border/30 pt-2.5 text-xs sm:flex sm:items-center sm:justify-between"
                                         >
+                                            <!-- Media Triggers (Photo, Music, Code) -->
                                             <div
-                                                class="flex items-center gap-1.5 text-muted-foreground"
+                                                class="flex items-center gap-1 text-muted-foreground sm:gap-1.5"
                                             >
                                                 <!-- Photo / Video Trigger (Instagram / Facebook / TikTok Style Modal) -->
                                                 <button
@@ -3475,14 +3476,53 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         class="h-3.5 w-3.5"
                                                     />
                                                 </button>
+                                            </div>
 
+                                            <!-- Post Button & Privacy info (Right on mobile line 1, end on desktop) -->
+                                            <div
+                                                class="flex items-center justify-end gap-2 sm:order-last"
+                                            >
+                                                <span
+                                                    class="hidden text-[11px] text-muted-foreground sm:inline-flex"
+                                                >
+                                                    {{
+                                                        composerForm.is_anonymous
+                                                            ? 'Identity hidden from everyone'
+                                                            : props.isSectionOnly
+                                                              ? 'Visible only to your section'
+                                                              : 'Identity masked outside section'
+                                                    }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    :disabled="
+                                                        !composerForm.content.trim() ||
+                                                        composerForm.processing
+                                                    "
+                                                    class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    @click="submitPost"
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            composerForm.processing
+                                                        "
+                                                        class="h-3 w-3 animate-spin"
+                                                    />
+                                                    <span>Post</span>
+                                                </button>
+                                            </div>
+
+                                            <!-- Post Options (Anonymous Toggle & Section Picker: Line 2 on mobile, middle order on desktop) -->
+                                            <div
+                                                class="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/20 pt-1.5 sm:order-2 sm:col-span-1 sm:justify-start sm:gap-2.5 sm:border-0 sm:pt-0"
+                                            >
                                                 <!-- Anonymous Toggle -->
                                                 <label
                                                     v-if="
                                                         props.allowsAnonymous !==
                                                         false
                                                     "
-                                                    class="ml-2 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                                                    class="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                                                 >
                                                     <input
                                                         v-model="
@@ -3503,7 +3543,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         props.availableSections
                                                             .length > 1
                                                     "
-                                                    class="relative ml-2"
+                                                    class="relative"
                                                 >
                                                     <button
                                                         type="button"
@@ -3519,7 +3559,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                             class="h-3 w-3 text-brand"
                                                         />
                                                         <span
-                                                            class="max-w-[100px] truncate sm:max-w-[130px]"
+                                                            class="max-w-[120px] truncate sm:max-w-[130px]"
                                                             >{{
                                                                 postingSectionName
                                                             }}</span
@@ -3533,7 +3573,7 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         v-if="
                                                             isInlineSectionDropdownOpen
                                                         "
-                                                        class="absolute bottom-full left-0 z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10"
+                                                        class="absolute right-0 bottom-full z-50 mb-1 max-h-48 w-48 overflow-y-auto rounded-xl border border-border/80 bg-card p-1 shadow-2xl ring-1 ring-black/10 sm:right-auto sm:left-0"
                                                         data-test="inline-composer-section-menu"
                                                     >
                                                         <button
@@ -3571,39 +3611,6 @@ const trendingTopics = computed<TrendingTopic[]>(() => {
                                                         </button>
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <div
-                                                class="flex items-center gap-2"
-                                            >
-                                                <span
-                                                    class="hidden text-[11px] text-muted-foreground sm:inline-flex"
-                                                >
-                                                    {{
-                                                        composerForm.is_anonymous
-                                                            ? 'Identity hidden from everyone'
-                                                            : props.isSectionOnly
-                                                              ? 'Visible only to your section'
-                                                              : 'Identity masked outside section'
-                                                    }}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    :disabled="
-                                                        !composerForm.content.trim() ||
-                                                        composerForm.processing
-                                                    "
-                                                    class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                                                    @click="submitPost"
-                                                >
-                                                    <Loader2
-                                                        v-if="
-                                                            composerForm.processing
-                                                        "
-                                                        class="h-3 w-3 animate-spin"
-                                                    />
-                                                    <span>Post</span>
-                                                </button>
                                             </div>
                                         </div>
                                     </div>
