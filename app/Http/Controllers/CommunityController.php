@@ -1078,7 +1078,9 @@ class CommunityController extends Controller
             return [];
         }
 
-        $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
+        $viewerSectionIds = $section
+            ? [$section->id]
+            : $viewer->sections()->pluck('sections.id')->all();
         $isRestricted = CommunitySettings::isRestrictedToSection();
 
         $stories = CommunityStory::query()

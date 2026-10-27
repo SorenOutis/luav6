@@ -473,6 +473,7 @@ const selectSection = (sectionId: number) => {
     if (selectedSectionId.value === sectionId) return;
 
     selectedSectionId.value = sectionId;
+    tabPostsCache.value = {};
     isRefreshingPresence.value = true;
 
     if (typeof router.post === 'function') {
@@ -489,7 +490,21 @@ const selectSection = (sectionId: number) => {
                     'sectionName',
                     'currentSectionId',
                     'stories',
+                    'posts',
+                    'hiddenOwnPosts',
+                    'trendingTopics',
                 ],
+                onSuccess: (page) => {
+                    const serverPosts = (page.props as any)?.posts;
+                    if (Array.isArray(serverPosts)) {
+                        localPosts.value = [...serverPosts];
+                        tabPostsCache.value[activeTab.value] = [...serverPosts];
+                    }
+                    const serverHidden = (page.props as any)?.hiddenOwnPosts;
+                    if (Array.isArray(serverHidden)) {
+                        localHiddenOwnPosts.value = [...serverHidden];
+                    }
+                },
                 onFinish: () => {
                     isRefreshingPresence.value = false;
                 },
