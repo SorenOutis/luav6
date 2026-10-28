@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Download, Share, SquarePlus, X } from 'lucide-vue-next';
+import {
+    Download,
+    Monitor,
+    Share,
+    Sparkles,
+    SquarePlus,
+    X,
+} from 'lucide-vue-next';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useCommunityPwa } from '@/composables/useCommunityPwa';
 
@@ -80,19 +87,25 @@ const {
             </transition>
         </Teleport>
 
-        <!-- iPhone / iPad: Safari has no install prompt, so guide the student -->
+        <!-- Install guidance modal: iOS Safari or Desktop/Android without native prompt -->
         <ResponsiveModal
             :open="isIosGuideOpen"
-            title="Add the Lounge to your Home Screen"
+            :title="
+                isIos
+                    ? 'Add the Lounge to your Home Screen'
+                    : 'Install Community Lounge'
+            "
             :description="
                 isIos
                     ? 'Install the Community Lounge in three quick steps.'
-                    : 'Use your browser menu to install the Community Lounge.'
+                    : 'Install the Community Lounge as a standalone app on your device.'
             "
             content-class="sm:max-w-sm"
             @close="closeIosGuide"
         >
+            <!-- iOS Safari guide -->
             <ol
+                v-if="isIos"
                 class="space-y-3 text-sm text-foreground"
                 data-test="community-ios-install-guide"
             >
@@ -131,6 +144,52 @@ const {
                     </span>
                 </li>
             </ol>
+
+            <!-- Desktop & Android guide -->
+            <ol
+                v-else
+                class="space-y-3 text-sm text-foreground"
+                data-test="community-desktop-install-guide"
+            >
+                <li class="flex items-start gap-3">
+                    <span
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
+                    >
+                        <Monitor class="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    <span class="pt-1">
+                        Click the <strong>Install</strong> icon in your
+                        browser's address bar, or open the browser menu (<strong
+                            >⋮</strong
+                        >
+                        or <strong>⋯</strong>) and choose
+                        <strong>Install Community Lounge</strong>.
+                    </span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
+                    >
+                        <Download class="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    <span class="pt-1">
+                        Click <strong>Install</strong> to confirm and add the
+                        app to your desktop or device.
+                    </span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
+                    >
+                        <Sparkles class="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    <span class="pt-1">
+                        Launch directly from your desktop, taskbar, or home
+                        screen for a full-screen experience.
+                    </span>
+                </li>
+            </ol>
+
             <p class="mt-4 text-xs text-muted-foreground">
                 Login and an internet connection are required.
             </p>

@@ -181,10 +181,7 @@ export function useCommunityPwa() {
     });
 
     const canInstall = computed(
-        () =>
-            !isStandalone.value &&
-            !isInstalled.value &&
-            (installPromptEvent.value !== null || isIos.value),
+        () => !isStandalone.value && !isInstalled.value,
     );
 
     const showInstallBanner = computed(
@@ -212,8 +209,7 @@ export function useCommunityPwa() {
                 isInstalled.value = true;
             }
         } catch {
-            // A deferred prompt can only be used once; the browser menu
-            // install option still works.
+            isIosGuideOpen.value = true;
         }
     };
 

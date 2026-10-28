@@ -5005,7 +5005,7 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             ).toBeNull();
         });
 
-        it('shows install button when beforeinstallprompt fires and prompts on click', async () => {
+        it('prompts native install on click when beforeinstallprompt is available', async () => {
             const promptSpy = vi.fn().mockResolvedValue(undefined);
             const userChoicePromise = Promise.resolve({
                 outcome: 'accepted' as const,
@@ -5015,14 +5015,9 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             fakePromptEvent.prompt = promptSpy;
             fakePromptEvent.userChoice = userChoicePromise;
 
-            const wrapper = mount(CommunityInstallPrompt);
-            expect(
-                wrapper.find('[data-test="community-install-button"]').exists(),
-            ).toBe(false);
-
             window.dispatchEvent(fakePromptEvent);
-            await nextTick();
 
+            const wrapper = mount(CommunityInstallPrompt);
             const installBtn = wrapper.find(
                 '[data-test="community-install-button"]',
             );
@@ -5038,6 +5033,28 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             expect(
                 wrapper.find('[data-test="community-install-button"]').exists(),
             ).toBe(false);
+            wrapper.unmount();
+        });
+
+        it('opens desktop install guide modal when install button is clicked without native prompt', async () => {
+            const wrapper = mount(CommunityInstallPrompt);
+            const installBtn = wrapper.find(
+                '[data-test="community-install-button"]',
+            );
+            expect(installBtn.exists()).toBe(true);
+
+            await installBtn.trigger('click');
+            await nextTick();
+
+            expect(document.body.innerHTML).toContain(
+                'Install Community Lounge',
+            );
+            expect(
+                document.body.querySelector(
+                    '[data-test="community-desktop-install-guide"]',
+                ),
+            ).not.toBeNull();
+
             wrapper.unmount();
         });
 
