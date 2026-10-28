@@ -2895,10 +2895,40 @@ const handleClassmatesWheel = (event: WheelEvent) => {
     event.stopPropagation();
 };
 
+const handleStoriesTrayWheel = (event: WheelEvent) => {
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el) return;
+
+    const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+            ? event.deltaX
+            : event.deltaY;
+
+    if (delta === 0) return;
+
+    const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    const canScrollLeft = el.scrollLeft > 0;
+
+    if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
+        if (typeof el.scrollBy === 'function') {
+            el.scrollBy({ left: delta, behavior: 'auto' });
+        } else {
+            el.scrollLeft += delta;
+        }
+    }
+
+    // Isolate horizontal stories tray scrolling: never scroll the vertical feed when hovering the tray
+    event.preventDefault();
+    event.stopPropagation();
+};
+
 const handleLayoutWheel = (event: WheelEvent) => {
     if (!isDesktopLayout()) return;
 
     const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-test="stories-tray"]')) {
+        return;
+    }
     if (target?.closest('[data-test="classmates-list"]')) {
         return;
     }
@@ -3334,7 +3364,10 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                         <section
                             v-if="props.storiesEnabled !== false"
                             aria-label="Classmate Stories"
-                            class="flex scrollbar-none items-center gap-3 overflow-x-auto rounded-xl border border-border/50 bg-card/60 p-2.5 pb-2 shadow-2xs backdrop-blur-xs"
+                            data-test="stories-tray"
+                            data-lenis-prevent
+                            class="flex [scrollbar-width:none] scrollbar-none items-center gap-3 overflow-x-auto overscroll-x-contain rounded-xl border border-border/50 bg-card/60 p-2.5 pb-2 shadow-2xs backdrop-blur-xs [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                            @wheel="handleStoriesTrayWheel"
                         >
                             <!-- Story Item -->
                             <div

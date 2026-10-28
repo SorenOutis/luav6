@@ -7,6 +7,7 @@
         $visibleIds = $roster->pluck('id')->map(fn ($id) => (int) $id)->all();
         $selectedCount = count($this->selectedStudentIds);
         $allVisibleSelected = count($visibleIds) > 0 && count(array_intersect($visibleIds, $this->selectedStudentIds)) === count($visibleIds);
+        $sectionViewableMap = $this->sectionViewableMap;
     @endphp
 
     <div class="space-y-6" x-data="{
@@ -19,16 +20,39 @@
             }, 2000);
         }
     }">
-        {{-- Intro banner --}}
+        {{-- Intro banner & Feed Visibility Scope --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-gray-950 dark:text-white">
                         Community Lounge Access Controls
                     </h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        The Community Lounge is private and invite-only. Browse workspace sections below, select individual or multiple students to grant access, or generate personal invite links.
+                        The Community Lounge is private and invite-only. Browse workspace sections below, configure which sections can view other sections, or grant student access.
                     </p>
+                </div>
+
+                {{-- Feed Scope Quick Switcher --}}
+                <div class="flex shrink-0 flex-col gap-1 sm:items-end">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Default Feed Scope
+                    </span>
+                    <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/10 dark:bg-white/5">
+                        <button
+                            type="button"
+                            wire:click="updateFeedScope('workspace')"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {{ $feedScope === 'workspace' ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}"
+                        >
+                            Entire Workspace Feed
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="updateFeedScope('section')"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {{ $feedScope === 'section' ? 'bg-amber-500 text-gray-950 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}"
+                        >
+                            Section-Only (With Allowed Sections)
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,6 +130,11 @@
                         $isSelectedSection = (string) $sectionFilter === (string) $sectionItem->id;
                         $secTotal = (int) ($sectionItem->students_count ?? 0);
                         $secUnlocked = (int) ($sectionItem->unlocked_students_count ?? 0);
+                        $secViewableRaw = $sectionViewableMap[(int) $sectionItem->id] ?? [];
+                        $secCanViewAll = in_array('*', $secViewableRaw, true);
+                        $secAllowedCount = $secCanViewAll
+                            ? max(0, $workspaceSections->count() - 1)
+                            : count($secViewableRaw);
                     @endphp
                     <button
                         type="button"
@@ -119,8 +148,17 @@
                                     {{ $sectionItem->name }}
                                 </span>
                             </div>
-                            <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                {{ $secTotal }} {{ str('student')->plural($secTotal) }}
+                            <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                <span>{{ $secTotal }} {{ str('student')->plural($secTotal) }}</span>
+                                @if ($secCanViewAll)
+                                    <span class="inline-flex items-center rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                                        Views: All Sections
+                                    </span>
+                                @elseif ($secAllowedCount > 0)
+                                    <span class="inline-flex items-center rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                                        Views: +{{ $secAllowedCount }} {{ str('section')->plural($secAllowedCount) }}
+                                    </span>
+                                @endif
                             </div>
                         </div>
 
@@ -153,6 +191,75 @@
                     </button>
                 @endif
             </div>
+
+            {{-- Per-Section Cross-Section Viewing Permissions Panel --}}
+            @if ($activeSection && $workspaceSections->count() > 1)
+                @php
+                    $activeViewableRaw = $sectionViewableMap[(int) $activeSection->id] ?? [];
+                    $activeCanViewAll = in_array('*', $activeViewableRaw, true);
+                    $activeTargetIds = $activeCanViewAll
+                        ? $workspaceSections->where('id', '!=', $activeSection->id)->pluck('id')->map(fn ($id) => (int) $id)->all()
+                        : array_map('intval', $activeViewableRaw);
+                    $otherSections = $workspaceSections->where('id', '!=', $activeSection->id);
+                @endphp
+                <div class="mt-5 rounded-xl border border-sky-500/25 bg-sky-500/[0.04] p-4 dark:border-sky-400/20 dark:bg-sky-500/[0.06]">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <x-filament::icon icon="heroicon-o-eye" class="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200">
+                                    Cross-Section Viewing for {{ $activeSection->name }}
+                                </h4>
+                            </div>
+                            <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
+                                Select which other sections students in <strong>{{ $activeSection->name }}</strong> can view in their feed and switch to in the Lounge section switcher (with real student names &amp; avatars shown).
+                            </p>
+                        </div>
+
+                        <div class="flex shrink-0 flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                wire:click="toggleSectionViewAll({{ $activeSection->id }})"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition {{ $activeCanViewAll ? 'bg-sky-600 text-white hover:bg-sky-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700' }}"
+                            >
+                                <x-filament::icon icon="heroicon-o-globe-alt" class="h-3.5 w-3.5" />
+                                {{ $activeCanViewAll ? 'Viewing All Sections (Enabled)' : 'Allow Viewing All Sections' }}
+                            </button>
+
+                            @if ($activeCanViewAll || count($activeTargetIds) > 0)
+                                <button
+                                    type="button"
+                                    wire:click="clearSectionViewable({{ $activeSection->id }})"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    Own Section Only
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        @foreach ($otherSections as $otherSection)
+                            @php
+                                $isTargetAllowed = $activeCanViewAll || in_array((int) $otherSection->id, $activeTargetIds, true);
+                            @endphp
+                            <button
+                                type="button"
+                                wire:key="view-target-{{ $activeSection->id }}-{{ $otherSection->id }}"
+                                wire:click="toggleSectionViewTarget({{ $activeSection->id }}, {{ $otherSection->id }})"
+                                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition {{ $isTargetAllowed ? 'border-sky-500 bg-sky-500/15 text-sky-900 dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-white/20' }}"
+                            >
+                                @if ($isTargetAllowed)
+                                    <x-filament::icon icon="heroicon-s-check-circle" class="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                @else
+                                    <span class="h-3.5 w-3.5 rounded-full border border-gray-300 dark:border-white/20"></span>
+                                @endif
+                                <span>{{ $otherSection->name }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- Student Search Box --}}

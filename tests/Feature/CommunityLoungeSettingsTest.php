@@ -491,3 +491,56 @@ it('publishes an image post to the public disk and rejects failed storage writes
 
     expect(CommunityPost::count())->toBe($countBefore);
 });
+
+it('allows a specific section to view, switch to, and interact with allowed other sections with unmasked identities', function () {
+    CommunitySettings::save(['feed_scope' => CommunitySettings::SCOPE_SECTION]);
+    CommunitySettings::setSectionViewable($this->sectionA->id, [$this->sectionB->id]);
+
+    $postB = CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->studentB->id,
+        'section_id' => $this->sectionB->id,
+        'content' => 'Beta project showcase #BetaDemo',
+        'is_anonymous' => false,
+    ]);
+
+    // Student A (enrolled only in Section Alpha) can see Section Beta's post with unmasked author and section name,
+    // and gets Section Beta in availableSections for the section switcher.
+    actingAs($this->studentA)
+        ->get('/community')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Community')
+            ->has('availableSections', 2)
+            ->has('posts', 1)
+            ->where('posts.0.id', $postB->id)
+            ->where('posts.0.author.is_masked', false)
+            ->where('posts.0.author.name', $this->studentB->name)
+            ->where('posts.0.author.section_name', 'Section Beta')
+        );
+
+    // Student A can switch active section to Section Beta in the section switcher
+    actingAs($this->studentA)
+        ->from('/community')
+        ->followingRedirects()
+        ->post(route('community.section.select'), ['section_id' => $this->sectionB->id])
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Community')
+            ->where('currentSectionId', $this->sectionB->id)
+            ->where('sectionName', 'Section Beta')
+            ->has('posts', 1)
+            ->where('posts.0.id', $postB->id)
+        );
+
+    // Student A can like and comment on Section Beta's post even in section-only mode
+    actingAs($this->studentA)
+        ->postJson(route('community.posts.like', $postB))
+        ->assertSuccessful();
+
+    actingAs($this->studentA)
+        ->postJson(route('community.posts.comments.store', $postB), [
+            'content' => 'Great work Section Beta!',
+        ])
+        ->assertSuccessful();
+});

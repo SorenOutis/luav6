@@ -26,8 +26,11 @@ class CommunityCommentController extends Controller
         abort_unless($viewer->hasLoungeAccess(), 403);
 
         if (CommunitySettings::isRestrictedToSection() && ! $viewer->is_admin) {
-            $viewerSectionIds = $viewer->sections()->pluck('sections.id')->all();
-            if ($post->section_id && ! in_array($post->section_id, $viewerSectionIds, true)) {
+            $viewerSectionIds = CommunitySettings::resolveViewableSectionIds(
+                $viewer->sections()->pluck('sections.id')->all(),
+                $post->workspace_id,
+            );
+            if ($post->section_id && ! in_array((int) $post->section_id, $viewerSectionIds, true)) {
                 abort(403, 'Cross-section interactions are restricted.');
             }
         }

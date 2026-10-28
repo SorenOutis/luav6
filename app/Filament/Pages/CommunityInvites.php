@@ -6,6 +6,7 @@ use App\Models\CommunityInvite;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\CommunitySettings;
 use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -50,10 +51,122 @@ class CommunityInvites extends Page
 
     public ?int $workspaceId = null;
 
+    public string $feedScope = CommunitySettings::SCOPE_WORKSPACE;
+
     public function mount(): void
     {
         $context = app(WorkspaceContext::class);
         $this->workspaceId = $context->id();
+        $this->feedScope = CommunitySettings::feedScope();
+    }
+
+    public function updateFeedScope(string $scope): void
+    {
+        $normalized = $scope === CommunitySettings::SCOPE_SECTION
+            ? CommunitySettings::SCOPE_SECTION
+            : CommunitySettings::SCOPE_WORKSPACE;
+
+        $state = CommunitySettings::formState();
+        $state['feed_scope'] = $normalized;
+        CommunitySettings::save($state);
+
+        $this->feedScope = $normalized;
+
+        Notification::make()
+            ->title('Lounge Feed Scope Updated')
+            ->body($normalized === CommunitySettings::SCOPE_SECTION
+                ? 'Feed is now confined to each section and its explicitly allowed sections.'
+                : 'Feed is now shared across the entire workspace.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * @return array<int, array<int, int|string>>
+     */
+    public function getSectionViewableMapProperty(): array
+    {
+        return CommunitySettings::sectionViewableMap();
+    }
+
+    public function toggleSectionViewAll(int $sectionId): void
+    {
+        $section = $this->workspaceSections->firstWhere('id', $sectionId);
+        if (! $section) {
+            return;
+        }
+
+        $currentlyAll = CommunitySettings::canSectionViewAll($sectionId);
+        CommunitySettings::setSectionViewable($sectionId, [], ! $currentlyAll);
+
+        Notification::make()
+            ->title('Section Visibility Updated')
+            ->body(! $currentlyAll
+                ? "{$section->name} can now view and switch to all sections in this workspace."
+                : "{$section->name} is now restricted to its own section.")
+            ->success()
+            ->send();
+    }
+
+    public function toggleSectionViewTarget(int $sectionId, int $targetSectionId): void
+    {
+        if ($sectionId === $targetSectionId) {
+            return;
+        }
+
+        $section = $this->workspaceSections->firstWhere('id', $sectionId);
+        $target = $this->workspaceSections->firstWhere('id', $targetSectionId);
+        if (! $section || ! $target) {
+            return;
+        }
+
+        $otherSectionIds = $this->workspaceSections
+            ->where('id', '!=', $sectionId)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+
+        if (CommunitySettings::canSectionViewAll($sectionId)) {
+            $nextTargets = array_values(array_diff($otherSectionIds, [$targetSectionId]));
+            CommunitySettings::setSectionViewable($sectionId, $nextTargets, false);
+        } else {
+            $currentTargets = array_values(array_filter(
+                array_map('intval', CommunitySettings::viewableForSection($sectionId)),
+                fn (int $id): bool => $id > 0 && $id !== $sectionId,
+            ));
+
+            if (in_array($targetSectionId, $currentTargets, true)) {
+                $nextTargets = array_values(array_diff($currentTargets, [$targetSectionId]));
+            } else {
+                $nextTargets = array_values(array_unique(array_merge($currentTargets, [$targetSectionId])));
+            }
+
+            $allSelected = $otherSectionIds !== [] && count(array_intersect($otherSectionIds, $nextTargets)) === count($otherSectionIds);
+            CommunitySettings::setSectionViewable($sectionId, $allSelected ? [] : $nextTargets, $allSelected);
+        }
+
+        Notification::make()
+            ->title('Section Visibility Updated')
+            ->body("Updated viewable sections for {$section->name}.")
+            ->success()
+            ->send();
+    }
+
+    public function clearSectionViewable(int $sectionId): void
+    {
+        $section = $this->workspaceSections->firstWhere('id', $sectionId);
+        if (! $section) {
+            return;
+        }
+
+        CommunitySettings::setSectionViewable($sectionId, [], false);
+
+        Notification::make()
+            ->title('Section Visibility Reset')
+            ->body("{$section->name} now only views its own section.")
+            ->success()
+            ->send();
     }
 
     public function selectSection(int|string|null $section = null): void
@@ -469,7 +582,9 @@ class CommunityInvites extends Page
 
     protected function currentWorkspaceId(): ?int
     {
-        return $this->workspaceId ?: app(WorkspaceContext::class)->id();
+        return $this->workspaceId
+            ?: app(WorkspaceContext::class)->id()
+            ?: Filament::auth()->user()?->current_workspace_id;
     }
 
     protected function scopeSectionsToWorkspace(BelongsToMany $query, ?int $workspaceId): BelongsToMany

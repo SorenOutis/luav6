@@ -6,6 +6,7 @@ use App\Models\CommunityPost;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\CommunitySettings;
 use App\Support\StudentPageRegistry;
 use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
@@ -462,4 +463,45 @@ it('blocks access with 423 unavailable when community page is disabled in studen
         'message' => null,
     ];
     StudentPageRegistry::setControls($controls);
+});
+
+it('allows admin to configure cross-section viewing permissions and feed scope from the lounge invites page', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+    ]);
+    $admin->workspaces()->syncWithoutDetaching([$this->workspace->id => ['role' => Workspace::ROLE_OWNER]]);
+    $admin->forceFill(['current_workspace_id' => $this->workspace->id])->save();
+
+    $sectionA = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Alpha',
+    ]);
+    $sectionB = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Beta',
+    ]);
+    $sectionC = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Charlie',
+    ]);
+
+    $this->actingAs($admin);
+
+    $component = Livewire::test(CommunityInvites::class)
+        ->call('updateFeedScope', CommunitySettings::SCOPE_SECTION)
+        ->assertSet('feedScope', CommunitySettings::SCOPE_SECTION)
+        ->call('selectSection', $sectionA->id)
+        ->assertSee('Cross-Section Viewing for Section Alpha')
+        ->call('toggleSectionViewTarget', $sectionA->id, $sectionB->id);
+
+    expect(CommunitySettings::feedScope())->toBe(CommunitySettings::SCOPE_SECTION);
+    expect(CommunitySettings::viewableForSection($sectionA->id))->toBe([$sectionB->id]);
+
+    // Toggle all sections for Section Alpha
+    $component->call('toggleSectionViewAll', $sectionA->id);
+    expect(CommunitySettings::canSectionViewAll($sectionA->id))->toBeTrue();
+
+    // Reset back to own section only
+    $component->call('clearSectionViewable', $sectionA->id);
+    expect(CommunitySettings::viewableForSection($sectionA->id))->toBe([]);
 });
