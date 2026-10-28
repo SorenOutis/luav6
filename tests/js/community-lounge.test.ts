@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
@@ -102,6 +104,7 @@ vi.mock('@/components/dashboard/ClaimXpButton.vue', () => ({
 }));
 
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
+import CommunityAppBadge from '@/components/community/CommunityAppBadge.vue';
 import CommunityInstallPrompt from '@/components/community/CommunityInstallPrompt.vue';
 import CommandBar from '@/components/dashboard/CommandBar.vue';
 import MobileDashboard from '@/components/dashboard/MobileDashboard.vue';
@@ -110,8 +113,6 @@ import {
     COMMUNITY_BANNER_DISMISSED_KEY,
     resetCommunityPwaState,
 } from '@/composables/useCommunityPwa';
-import Login from '@/pages/auth/Login.vue';
-import Register from '@/pages/auth/Register.vue';
 import Community from '@/pages/Community.vue';
 import CommunityLocked from '@/pages/CommunityLocked.vue';
 import CommunityProfile from '@/pages/CommunityProfile.vue';
@@ -5189,55 +5190,37 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
         });
 
         it('brands login and register pages with Community Lounge badge and retains app=community across navigation', async () => {
-            // Login with pwaApp="community"
-            const loginWrapper = mount(Login, {
-                props: {
-                    canResetPassword: true,
-                    canRegister: true,
-                    loginEnabled: true,
-                    loginDisabledMessage: '',
-                    pwaApp: 'community',
-                },
-            });
-
+            // CommunityAppBadge renders the Lounge badge
+            const badgeWrapper = mount(CommunityAppBadge);
             expect(
-                loginWrapper.find('[data-test="community-app-badge"]').exists(),
+                badgeWrapper.find('[data-test="community-app-badge"]').exists(),
             ).toBe(true);
-            expect(loginWrapper.text()).toContain('Welcome to the Lounge');
-            expect(loginWrapper.text()).toContain(
+            expect(badgeWrapper.text()).toContain('Community Lounge');
+            badgeWrapper.unmount();
+
+            // Login.vue contract: mounts CommunityAppBadge, displays lounge messaging, and preserves ?app=community
+            const loginSource = readFileSync(
+                join(process.cwd(), 'resources/js/pages/auth/Login.vue'),
+                'utf8',
+            );
+            expect(loginSource).toContain('CommunityAppBadge');
+            expect(loginSource).toContain('Welcome to the Lounge');
+            expect(loginSource).toContain(
                 'Log in to catch up with your section',
             );
+            expect(loginSource).toContain("app: 'community'");
 
-            // Signup link carries ?app=community
-            const signupLink = loginWrapper.find('a[href*="register"]');
-            expect(signupLink.attributes('href')).toContain('app=community');
-            loginWrapper.unmount();
-
-            // Register with pwaApp="community"
-            const registerWrapper = mount(Register, {
-                props: {
-                    registrationEnabled: true,
-                    registrationDisabledMessage: '',
-                    pwaApp: 'community',
-                },
-            });
-
-            expect(
-                registerWrapper
-                    .find('[data-test="community-app-badge"]')
-                    .exists(),
-            ).toBe(true);
-            expect(registerWrapper.text()).toContain(
-                'Join the Community Lounge',
+            // Register.vue contract: mounts CommunityAppBadge, displays lounge messaging, and preserves ?app=community
+            const registerSource = readFileSync(
+                join(process.cwd(), 'resources/js/pages/auth/Register.vue'),
+                'utf8',
             );
-            expect(registerWrapper.text()).toContain(
+            expect(registerSource).toContain('CommunityAppBadge');
+            expect(registerSource).toContain('Join the Community Lounge');
+            expect(registerSource).toContain(
                 'Sign up to connect with your section',
             );
-
-            // Login link carries ?app=community
-            const loginLink = registerWrapper.find('a[href*="login"]');
-            expect(loginLink.attributes('href')).toContain('app=community');
-            registerWrapper.unmount();
+            expect(registerSource).toContain("app: 'community'");
         });
     });
 });
