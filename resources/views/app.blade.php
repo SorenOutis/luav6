@@ -132,6 +132,27 @@
             <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         @endif
 
+        {{--
+            Community Lounge student PWA. The manifest is only advertised on the
+            Lounge itself so the install prompt never shows up elsewhere in the
+            portal; useCommunityPwa() re-adds it after client-side Inertia visits.
+            beforeinstallprompt can fire before Vue mounts, so stash it here for
+            the in-app "Install app" button to pick up.
+        --}}
+        @if (request()->is('community', 'community/*'))
+            <link rel="manifest" href="{{ route('community-app-manifest') }}" data-community-manifest>
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-title" content="Lounge">
+            <meta name="apple-mobile-web-app-status-bar-style" content="default">
+            <script nonce="{{ Vite::cspNonce() }}">
+                window.addEventListener('beforeinstallprompt', function (event) {
+                    event.preventDefault();
+                    window.__communityInstallPrompt = event;
+                });
+            </script>
+        @endif
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link rel="preload" href="https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
         {{--

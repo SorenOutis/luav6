@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import {
     Check,
@@ -18,6 +18,7 @@ import {
     ref,
     watch,
 } from 'vue';
+import CommunityAppBadge from '@/components/community/CommunityAppBadge.vue';
 import InputError from '@/components/InputError.vue';
 import SocialAuthButtons from '@/components/SocialAuthButtons.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -26,10 +27,14 @@ import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    isStandaloneDisplay,
+    useStandaloneDisplay,
+} from '@/composables/useCommunityPwa';
 import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { isLowEndDeviceSignal } from '@/lib/device';
 import { withForm } from '@/lib/route-helpers';
-import { login } from '@/routes';
+import { login, register } from '@/routes';
 import { store } from '@/routes/register';
 
 type SocialProvider = {
@@ -37,18 +42,39 @@ type SocialProvider = {
     label: string;
 };
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         registrationEnabled: boolean;
         registrationDisabledMessage: string;
         socialProviders?: SocialProvider[];
+        pwaApp?: string | null;
     }>(),
     {
         socialProviders: () => [],
+        pwaApp: null,
     },
 );
 
 defineOptions({ layout: AuthCard });
+
+const { isStandalone } = useStandaloneDisplay();
+
+const isLoungeApp = computed(
+    () => props.pwaApp === 'community' || isStandalone.value,
+);
+const loginHref = computed(() =>
+    isLoungeApp.value ? login({ query: { app: 'community' } }) : login(),
+);
+
+onMounted(() => {
+    if (props.pwaApp !== 'community' && isStandaloneDisplay()) {
+        router.get(
+            register.url({ query: { app: 'community' } }),
+            {},
+            { replace: true, preserveScroll: true },
+        );
+    }
+});
 
 // ─────────────────────────────────────────────────────────────
 // Wizard state
@@ -414,7 +440,7 @@ onBeforeUnmount(() => {
             <p class="text-sm text-muted-foreground">
                 Already have an account?
                 <TextLink
-                    :href="login()"
+                    :href="loginHref"
                     class="underline underline-offset-4"
                     :tabindex="7"
                     >Log in</TextLink
@@ -434,15 +460,24 @@ onBeforeUnmount(() => {
         @success="onFormSuccess"
     >
         <div class="text-center">
+            <CommunityAppBadge v-if="isLoungeApp" class="mb-3" />
             <h1
                 class="text-2xl leading-tight font-bold tracking-tight text-foreground"
             >
-                Create your account
+                {{
+                    isLoungeApp
+                        ? 'Join the Community Lounge'
+                        : 'Create your account'
+                }}
             </h1>
             <p
                 class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
             >
-                Complete the steps below to get started
+                {{
+                    isLoungeApp
+                        ? 'Sign up to connect with your section and start sharing'
+                        : 'Complete the steps below to get started'
+                }}
             </p>
         </div>
 
@@ -922,7 +957,7 @@ onBeforeUnmount(() => {
 
         <div class="text-center text-sm text-muted-foreground">
             Already have an account?
-            <TextLink :href="login()" class="underline underline-offset-4"
+            <TextLink :href="loginHref" class="underline underline-offset-4"
                 >Log in</TextLink
             >
         </div>

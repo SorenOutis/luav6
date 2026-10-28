@@ -27,14 +27,30 @@ vi.mock('axios', () => ({
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: defineComponent({
-        props: { href: { type: String, default: '#' } },
+        props: { href: { type: [String, Object], default: '#' } },
         setup(props, { slots }) {
-            return () => h('a', { href: props.href }, slots.default?.());
+            const resolvedHref =
+                typeof props.href === 'object' &&
+                props.href !== null &&
+                'url' in (props.href as Record<string, unknown>)
+                    ? (props.href as { url: string }).url
+                    : String(props.href ?? '#');
+            return () => h('a', { href: resolvedHref }, slots.default?.());
         },
     }),
     Head: defineComponent({
         setup(props, { slots }) {
             return () => h('div', { class: 'head-stub' }, slots.default?.());
+        },
+    }),
+    Form: defineComponent({
+        setup(props, { slots }) {
+            return () =>
+                h(
+                    'form',
+                    {},
+                    slots.default?.({ errors: {}, processing: false }),
+                );
         },
     }),
     router: {
@@ -86,8 +102,16 @@ vi.mock('@/components/dashboard/ClaimXpButton.vue', () => ({
 }));
 
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
+import CommunityInstallPrompt from '@/components/community/CommunityInstallPrompt.vue';
 import CommandBar from '@/components/dashboard/CommandBar.vue';
 import MobileDashboard from '@/components/dashboard/MobileDashboard.vue';
+import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
+import {
+    COMMUNITY_BANNER_DISMISSED_KEY,
+    resetCommunityPwaState,
+} from '@/composables/useCommunityPwa';
+import Login from '@/pages/auth/Login.vue';
+import Register from '@/pages/auth/Register.vue';
 import Community from '@/pages/Community.vue';
 import CommunityLocked from '@/pages/CommunityLocked.vue';
 import CommunityProfile from '@/pages/CommunityProfile.vue';
@@ -4938,6 +4962,282 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
                 wrapper.findAll('[data-test="trending-topic-item"]').length,
             ).toBe(2);
             wrapper.unmount();
+        });
+    });
+
+    describe('Community Lounge PWA install & standalone flows', () => {
+        beforeEach(() => {
+            resetCommunityPwaState();
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+            } catch {
+                // ignore
+            }
+            window.__communityInstallPrompt = null;
+            document
+                .querySelectorAll('link[data-community-manifest]')
+                .forEach((el) => el.remove());
+        });
+
+        it('injects community manifest link on mount and cleans up on unmount', async () => {
+            expect(
+                document.querySelector('link[data-community-manifest]'),
+            ).toBeNull();
+
+            const wrapper = mount(Community, {
+                props: { workspace: null },
+            });
+            await nextTick();
+
+            const manifest = document.querySelector(
+                'link[data-community-manifest]',
+            ) as HTMLLinkElement | null;
+            expect(manifest).not.toBeNull();
+            expect(manifest?.getAttribute('href')).toBe(
+                '/community.webmanifest',
+            );
+
+            wrapper.unmount();
+            expect(
+                document.querySelector('link[data-community-manifest]'),
+            ).toBeNull();
+        });
+
+        it('shows install button when beforeinstallprompt fires and prompts on click', async () => {
+            const promptSpy = vi.fn().mockResolvedValue(undefined);
+            const userChoicePromise = Promise.resolve({
+                outcome: 'accepted' as const,
+            });
+
+            const fakePromptEvent = new Event('beforeinstallprompt') as any;
+            fakePromptEvent.prompt = promptSpy;
+            fakePromptEvent.userChoice = userChoicePromise;
+
+            const wrapper = mount(CommunityInstallPrompt);
+            expect(
+                wrapper.find('[data-test="community-install-button"]').exists(),
+            ).toBe(false);
+
+            window.dispatchEvent(fakePromptEvent);
+            await nextTick();
+
+            const installBtn = wrapper.find(
+                '[data-test="community-install-button"]',
+            );
+            expect(installBtn.exists()).toBe(true);
+
+            await installBtn.trigger('click');
+            expect(promptSpy).toHaveBeenCalledTimes(1);
+
+            await userChoicePromise;
+            await nextTick();
+
+            // Once installed, button hides
+            expect(
+                wrapper.find('[data-test="community-install-button"]').exists(),
+            ).toBe(false);
+            wrapper.unmount();
+        });
+
+        it('opens iOS Safari guide modal when install button is clicked on iOS', async () => {
+            const origUserAgent = navigator.userAgent;
+            Object.defineProperty(navigator, 'userAgent', {
+                value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+                configurable: true,
+            });
+
+            const wrapper = mount(CommunityInstallPrompt);
+            await nextTick();
+
+            const installBtn = wrapper.find(
+                '[data-test="community-install-button"]',
+            );
+            expect(installBtn.exists()).toBe(true);
+
+            await installBtn.trigger('click');
+            await nextTick();
+
+            expect(document.body.innerHTML).toContain(
+                'Add the Lounge to your Home Screen',
+            );
+            expect(document.body.innerHTML).toContain('Open this page in');
+
+            wrapper.unmount();
+            Object.defineProperty(navigator, 'userAgent', {
+                value: origUserAgent,
+                configurable: true,
+            });
+        });
+
+        it('renders dismissible mobile install banner and stores dismissal timestamp in localStorage', async () => {
+            const origUserAgent = navigator.userAgent;
+            Object.defineProperty(navigator, 'userAgent', {
+                value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+                configurable: true,
+            });
+
+            const wrapper = mount(CommunityInstallPrompt);
+            await nextTick();
+
+            const banner = document.querySelector(
+                '[data-test="community-install-banner"]',
+            );
+            expect(banner).not.toBeNull();
+            expect(banner?.textContent).toContain('Get the Lounge app');
+
+            const dismissBtn = document.querySelector(
+                '[data-test="community-install-banner-dismiss"]',
+            ) as HTMLButtonElement | null;
+            expect(dismissBtn).not.toBeNull();
+
+            dismissBtn?.click();
+            await nextTick();
+
+            expect(
+                localStorage.getItem(COMMUNITY_BANNER_DISMISSED_KEY),
+            ).toBeTruthy();
+
+            wrapper.unmount();
+            Object.defineProperty(navigator, 'userAgent', {
+                value: origUserAgent,
+                configurable: true,
+            });
+        });
+
+        it('hides back button and shows standalone logout & portal exit buttons when running as installed standalone app', async () => {
+            const matchMediaOrig = window.matchMedia;
+            window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+                matches: query === '(display-mode: standalone)',
+                media: query,
+                onchange: null,
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+                dispatchEvent: vi.fn(),
+            })) as any;
+
+            const wrapper = mount(Community, {
+                props: { workspace: null },
+            });
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="community-back-button"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper
+                    .find('[data-test="community-standalone-logout"]')
+                    .exists(),
+            ).toBe(true);
+            expect(
+                wrapper
+                    .find('[data-test="community-standalone-exit"]')
+                    .exists(),
+            ).toBe(true);
+
+            // Clicking logout button opens LogoutConfirmationModal
+            await wrapper
+                .find('[data-test="community-standalone-logout"]')
+                .trigger('click');
+            await nextTick();
+            await nextTick();
+
+            expect(
+                document.body.querySelector(
+                    '[data-test="logout-confirm-button"]',
+                ),
+            ).not.toBeNull();
+
+            wrapper.unmount();
+            window.matchMedia = matchMediaOrig;
+        });
+
+        it('submits app=community payload on logout when inside standalone PWA', async () => {
+            const matchMediaOrig = window.matchMedia;
+            window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+                matches: query === '(display-mode: standalone)',
+                media: query,
+                onchange: null,
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+            })) as any;
+
+            const wrapper = mount(LogoutConfirmationModal, {
+                props: { open: true },
+            });
+            await nextTick();
+            await nextTick();
+
+            const confirmBtn = document.body.querySelector<HTMLButtonElement>(
+                '[data-test="logout-confirm-button"]',
+            );
+            expect(confirmBtn).not.toBeNull();
+            confirmBtn?.click();
+
+            expect(mockRouterPost).toHaveBeenCalledWith(
+                expect.any(Object),
+                { app: 'community' },
+                expect.any(Object),
+            );
+
+            wrapper.unmount();
+            window.matchMedia = matchMediaOrig;
+        });
+
+        it('brands login and register pages with Community Lounge badge and retains app=community across navigation', async () => {
+            // Login with pwaApp="community"
+            const loginWrapper = mount(Login, {
+                props: {
+                    canResetPassword: true,
+                    canRegister: true,
+                    loginEnabled: true,
+                    loginDisabledMessage: '',
+                    pwaApp: 'community',
+                },
+            });
+
+            expect(
+                loginWrapper.find('[data-test="community-app-badge"]').exists(),
+            ).toBe(true);
+            expect(loginWrapper.text()).toContain('Welcome to the Lounge');
+            expect(loginWrapper.text()).toContain(
+                'Log in to catch up with your section',
+            );
+
+            // Signup link carries ?app=community
+            const signupLink = loginWrapper.find('a[href*="register"]');
+            expect(signupLink.attributes('href')).toContain('app=community');
+            loginWrapper.unmount();
+
+            // Register with pwaApp="community"
+            const registerWrapper = mount(Register, {
+                props: {
+                    registrationEnabled: true,
+                    registrationDisabledMessage: '',
+                    pwaApp: 'community',
+                },
+            });
+
+            expect(
+                registerWrapper
+                    .find('[data-test="community-app-badge"]')
+                    .exists(),
+            ).toBe(true);
+            expect(registerWrapper.text()).toContain(
+                'Join the Community Lounge',
+            );
+            expect(registerWrapper.text()).toContain(
+                'Sign up to connect with your section',
+            );
+
+            // Login link carries ?app=community
+            const loginLink = registerWrapper.find('a[href*="login"]');
+            expect(loginLink.attributes('href')).toContain('app=community');
+            registerWrapper.unmount();
         });
     });
 });

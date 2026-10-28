@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Http\Responses\LogoutResponse;
 use App\Models\Setting;
 use App\Support\SocialProviders;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -22,7 +24,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
     }
 
     /**
@@ -56,6 +58,7 @@ class FortifyServiceProvider extends ServiceProvider
             'loginDisabledMessage' => Setting::get('login_disabled_message', 'Login is currently disabled.'),
             'socialProviders' => SocialProviders::forInertia(),
             'status' => $request->session()->get('status'),
+            'pwaApp' => $this->rememberPwaApp($request),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
@@ -71,15 +74,42 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+        Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [
             'registrationEnabled' => (bool) Setting::get('registration_enabled', true),
             'registrationDisabledMessage' => Setting::get('registration_disabled_message', 'Registration is currently disabled.'),
             'socialProviders' => SocialProviders::forInertia(),
+            'pwaApp' => $this->rememberPwaApp($request),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
 
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword'));
+    }
+
+    /**
+     * Detect a sign-in screen opened from the installed Community Lounge PWA
+     * (?app=community) and make sure a successful login, registration, 2FA
+     * challenge or social sign-in returns the student to the Lounge.
+     *
+     * Fortify's login/register/2FA responses and SocialAuthController all
+     * honour the session's intended URL, so storing it here covers every flow.
+     * An intended URL that already points inside the Lounge (e.g. a classmate
+     * profile the student was viewing when their session expired) is kept.
+     */
+    private function rememberPwaApp(Request $request): ?string
+    {
+        if ($request->query('app') !== 'community') {
+            return null;
+        }
+
+        $loungeUrl = route('community.index');
+        $intended = (string) $request->session()->get('url.intended', '');
+
+        if (! str_starts_with($intended, $loungeUrl)) {
+            $request->session()->put('url.intended', $loungeUrl);
+        }
+
+        return 'community';
     }
 
     /**

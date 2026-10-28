@@ -25,6 +25,7 @@ import {
     Music,
     Play,
     Plus,
+    LogOut,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
@@ -55,6 +56,9 @@ import {
     watch,
 } from 'vue';
 import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
+import CommunityInstallPrompt from '@/components/community/CommunityInstallPrompt.vue';
+import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
+import { useCommunityPwa } from '@/composables/useCommunityPwa';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { compressImage } from '@/lib/image-compression';
 import { like as likeMedia } from '@/routes/community/media';
@@ -255,6 +259,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Community Lounge', href: '/community' },
 ];
+
+const { isStandalone } = useCommunityPwa();
+const showLogoutModal = ref(false);
 
 const curtainRef = ref<InstanceType<typeof CurtainWipeOverlay> | null>(null);
 
@@ -3306,7 +3313,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="isStandalone">
         <Head title="Community Lounge" />
 
         <div
@@ -3325,6 +3332,7 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                 >
                     <div class="flex items-center gap-3">
                         <button
+                            v-if="!isStandalone"
                             type="button"
                             data-test="community-back-button"
                             class="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-2xs backdrop-blur-xs transition hover:bg-muted"
@@ -3334,7 +3342,10 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                             <span>Back to Dashboard</span>
                         </button>
 
-                        <div class="h-4 w-px bg-border/60" />
+                        <div
+                            v-if="!isStandalone"
+                            class="h-4 w-px bg-border/60"
+                        />
 
                         <div class="flex items-center gap-2">
                             <h1
@@ -3342,6 +3353,42 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                             >
                                 Community Lounge
                             </h1>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <CommunityInstallPrompt />
+
+                        <div
+                            v-if="isStandalone"
+                            class="flex items-center gap-1.5"
+                        >
+                            <button
+                                type="button"
+                                data-test="community-standalone-logout"
+                                class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                title="Log out"
+                                @click="showLogoutModal = true"
+                            >
+                                <LogOut
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span class="hidden sm:inline">Log out</span>
+                            </button>
+                            <button
+                                type="button"
+                                data-test="community-standalone-exit"
+                                class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                title="Open Main Portal"
+                                @click="handleReturn"
+                            >
+                                <ExternalLink
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span class="hidden sm:inline">Portal</span>
+                            </button>
                         </div>
                     </div>
                 </header>
@@ -8665,6 +8712,12 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
             title="Dashboard"
             subtitle="Returning to dashboard..."
             expected-mount-direction="to_community"
+        />
+
+        <!-- Standalone Logout Confirmation Modal -->
+        <LogoutConfirmationModal
+            :open="showLogoutModal"
+            @close="showLogoutModal = false"
         />
     </AppLayout>
 </template>

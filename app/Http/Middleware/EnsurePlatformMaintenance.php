@@ -34,7 +34,7 @@ class EnsurePlatformMaintenance
         // Livewire endpoint is versioned (livewire-{hash}/update), so match
         // the livewire* prefix rather than the literal livewire/* path —
         // otherwise the Filament login submit is 503'd during maintenance.
-        if ($request->is('admin*', 'livewire*', 'filament/*', 'up', 'logout', 'impersonation/leave', 'api/maintenance-status', 'storage/*', 'build/*', 'favicon.png', 'robots.txt', 'sitemap.xml', 'csp/report', 'echo-ai.webmanifest')) {
+        if ($request->is('admin*', 'livewire*', 'filament/*', 'up', 'logout', 'impersonation/leave', 'api/maintenance-status', 'storage/*', 'build/*', 'favicon.png', 'robots.txt', 'sitemap.xml', 'csp/report', 'echo-ai.webmanifest', 'community.webmanifest')) {
             return $next($request);
         }
 
