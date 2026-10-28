@@ -201,9 +201,13 @@ class CommunityController extends Controller
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
 
-        $sharesSection = $user->sections()
-            ->whereIn('sections.id', $viewer->sections()->pluck('sections.id'))
-            ->exists();
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
+            $viewer->sections()->pluck('sections.id')->all(),
+            $workspaceId,
+        );
+        $sharesSection = ! empty($viewerViewableSectionIds)
+            && $user->sections()->whereIn('sections.id', $viewerViewableSectionIds)->exists();
 
         $isSelf = $viewer->is($user);
         $isMasked = ! $sharesSection && ! $isSelf;
@@ -295,9 +299,13 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
-        $sharesSection = $user->sections()
-            ->whereIn('sections.id', $viewer->sections()->pluck('sections.id'))
-            ->exists();
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
+            $viewer->sections()->pluck('sections.id')->all(),
+            $workspaceId,
+        );
+        $sharesSection = ! empty($viewerViewableSectionIds)
+            && $user->sections()->whereIn('sections.id', $viewerViewableSectionIds)->exists();
 
         $isSelf = $viewer->is($user);
         $isMasked = ! $sharesSection && ! $isSelf;
@@ -599,12 +607,21 @@ class CommunityController extends Controller
                     return $section;
                 }
             } else {
-                $section = $user->sections()
+                $enrolledIds = $user->sections()
                     ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
-                    ->where('sections.id', $requestedSectionId)
-                    ->first();
-                if ($section) {
-                    return $section;
+                    ->pluck('sections.id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->all();
+                $viewableIds = CommunitySettings::resolveViewableSectionIds($enrolledIds, $workspaceId);
+
+                if (in_array((int) $requestedSectionId, $viewableIds, true)) {
+                    $section = Section::query()
+                        ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                        ->whereKey($requestedSectionId)
+                        ->first();
+                    if ($section) {
+                        return $section;
+                    }
                 }
             }
         }
@@ -646,10 +663,22 @@ class CommunityController extends Controller
                 ->all();
         }
 
-        return $viewer->sections()
+        $enrolledIds = $viewer->sections()
             ->when($workspaceId, fn ($q) => $q->where('sections.workspace_id', $workspaceId))
-            ->orderBy('sections.name')
-            ->get(['sections.id', 'sections.name'])
+            ->pluck('sections.id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $viewableIds = CommunitySettings::resolveViewableSectionIds($enrolledIds, $workspaceId);
+        if ($viewableIds === []) {
+            return [];
+        }
+
+        return Section::query()
+            ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->whereIn('id', $viewableIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
             ->map(fn ($s) => ['id' => (int) $s->id, 'name' => (string) $s->name])
             ->values()
             ->all();
@@ -776,20 +805,25 @@ class CommunityController extends Controller
             ])
             ->latest();
 
+        $viewerSectionId = $section?->id;
+        $activeSectionViewableIds = $viewerSectionId
+            ? CommunitySettings::resolveViewableSectionIdsForSection((int) $viewerSectionId, $workspaceId)
+            : [];
+
         if ($tab === 'section' && $section) {
             $query->where('section_id', $section->id);
         } elseif ($tab === 'saved' && $viewer) {
             $query->whereHas('bookmarks', fn ($q) => $q->where('user_id', $viewer->id));
             if ($isRestricted) {
-                if ($section) {
-                    $query->where('section_id', $section->id);
+                if (! empty($activeSectionViewableIds)) {
+                    $query->whereIn('section_id', $activeSectionViewableIds);
                 } elseif (! $viewer->is_admin) {
                     $query->whereRaw('1 = 0');
                 }
             }
         } elseif ($isRestricted) {
-            if ($section) {
-                $query->where('section_id', $section->id);
+            if (! empty($activeSectionViewableIds)) {
+                $query->whereIn('section_id', $activeSectionViewableIds);
             } elseif (! $viewer?->is_admin) {
                 $query->whereRaw('1 = 0');
             }
@@ -797,7 +831,6 @@ class CommunityController extends Controller
 
         $posts = $query->limit(30)->get();
 
-        $viewerSectionId = $section?->id;
         $viewerLikedIds = $viewer
             ? DB::table('community_post_likes')
                 ->where('user_id', $viewer->id)
@@ -827,9 +860,10 @@ class CommunityController extends Controller
                 ->all()
             : [];
 
-        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerMediaLikedIds): array {
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $activeSectionViewableIds, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerMediaLikedIds): array {
             $author = $post->user;
-            $isSameSection = $viewerSectionId && $post->section_id === $viewerSectionId;
+            $isSameSection = ($viewerSectionId && (int) $post->section_id === (int) $viewerSectionId)
+                || ($post->section_id && in_array((int) $post->section_id, $activeSectionViewableIds, true));
             $isOwnPost = $viewer && $post->user_id === $viewer->id;
             $isMasked = ($post->is_anonymous || ! $isSameSection) && ! $isOwnPost;
 
@@ -859,7 +893,7 @@ class CommunityController extends Controller
                 'likes_count' => (int) $m->likes_count,
                 'is_liked' => in_array($m->id, $viewerMediaLikedIds, true),
                 'comments_count' => (int) $m->comments_count,
-                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section))->values()->all(),
+                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds))->values()->all(),
             ])->values()->all();
 
             if (empty($mediaItems) && $post->attachment_url) {
@@ -915,7 +949,7 @@ class CommunityController extends Controller
                     'is_following' => in_array($post->user_id, $viewerFollowingIds, true),
                     'section_name' => $authorSectionName,
                 ],
-                'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section))->values()->all(),
+                'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds))->values()->all(),
             ];
         })->all();
     }
@@ -1015,12 +1049,21 @@ class CommunityController extends Controller
         ];
     }
 
-    private function serializeComment(CommunityComment $comment, ?User $viewer, ?Section $section): array
+    private function serializeComment(CommunityComment $comment, ?User $viewer, ?Section $section, array $viewableSectionIds = []): array
     {
         $author = $comment->user;
-        $isSameSection = $section && $viewer && $author && $author->sections->contains('id', $section->id);
+        $allowedIds = $viewableSectionIds !== []
+            ? $viewableSectionIds
+            : ($section ? [(int) $section->id] : []);
+        $isSameSection = $viewer && $author && $author->sections
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->intersect($allowedIds)
+            ->isNotEmpty();
         $isOwn = $viewer && $comment->user_id === $viewer->id;
         $isMasked = ! $isSameSection && ! $isOwn;
+        $authorSectionName = $author?->sections->firstWhere(fn ($s): bool => in_array((int) $s->id, $allowedIds, true))?->name
+            ?? ($section?->name ?? 'Your Section');
 
         return [
             'id' => $comment->id,
@@ -1035,13 +1078,13 @@ class CommunityController extends Controller
             'author_handle' => $isMasked ? 'student.'.substr(md5((string) $comment->user_id), 0, 4) : strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $author?->name ?? 'student')),
             'author_avatar' => $isMasked ? null : ($author?->avatar ? PublicFileUrl::resolve($author->avatar) : null),
             'is_masked' => $isMasked,
-            'section_name' => $isMasked ? 'Anonymous' : ($section?->name ?? 'Your Section'),
+            'section_name' => $isMasked ? 'Anonymous' : $authorSectionName,
             'likes_count' => (int) $comment->likes_count,
             'is_liked' => (bool) $comment->is_liked,
             'replies' => $comment->relationLoaded('replies')
                 ? $comment->replies
                     ->filter(fn (CommunityComment $reply): bool => $reply->post_id === $comment->post_id && $reply->post_media_id === $comment->post_media_id)
-                    ->map(fn (CommunityComment $reply): array => $this->serializeComment($reply, $viewer, $section))
+                    ->map(fn (CommunityComment $reply): array => $this->serializeComment($reply, $viewer, $section, $allowedIds))
                     ->values()->all()
                 : [],
         ];
@@ -1107,8 +1150,11 @@ class CommunityController extends Controller
         }
 
         $viewerSectionIds = $section
-            ? [$section->id]
-            : $viewer->sections()->pluck('sections.id')->all();
+            ? CommunitySettings::resolveViewableSectionIdsForSection((int) $section->id, $workspace?->id)
+            : CommunitySettings::resolveViewableSectionIds(
+                $viewer->sections()->pluck('sections.id')->all(),
+                $workspace?->id,
+            );
         $isRestricted = CommunitySettings::isRestrictedToSection();
 
         $stories = CommunityStory::query()
