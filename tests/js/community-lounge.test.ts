@@ -1724,6 +1724,52 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             wrapper.unmount();
         });
 
+        it('scrolls horizontal stories tray when hovering with mouse wheel without scrolling the feed', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    currentTab: 'all',
+                },
+            });
+
+            const storiesTray = wrapper.get('[data-test="stories-tray"]');
+            const feed = wrapper.get('[data-test="community-feed-scroll"]');
+
+            storiesTray.element.scrollLeft = 0;
+            feed.element.scrollTop = 0;
+            Object.defineProperty(storiesTray.element, 'scrollWidth', {
+                configurable: true,
+                value: 960,
+            });
+            Object.defineProperty(storiesTray.element, 'clientWidth', {
+                configurable: true,
+                value: 320,
+            });
+
+            // Vertical wheel on horizontal stories tray translates into horizontal scrollLeft
+            const trayWheelDown = new WheelEvent('wheel', {
+                deltaY: 80,
+                bubbles: true,
+                cancelable: true,
+            });
+            storiesTray.element.dispatchEvent(trayWheelDown);
+            expect(storiesTray.element.scrollLeft).toBe(80);
+            expect(feed.element.scrollTop).toBe(0);
+            expect(trayWheelDown.defaultPrevented).toBe(true);
+
+            // Wheel up scrolls back left
+            const trayWheelUp = new WheelEvent('wheel', {
+                deltaY: -30,
+                bubbles: true,
+                cancelable: true,
+            });
+            storiesTray.element.dispatchEvent(trayWheelUp);
+            expect(storiesTray.element.scrollLeft).toBe(50);
+            expect(trayWheelUp.defaultPrevented).toBe(true);
+
+            wrapper.unmount();
+        });
+
         it('styles tabs with tailored semantic colors for Feed, My Section, and Saved', async () => {
             const wrapper = mount(Community, {
                 props: {
