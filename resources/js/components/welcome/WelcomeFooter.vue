@@ -9,7 +9,8 @@ const isLowEndDevice = isLowEndDeviceSignal();
 
 const platformLinks = [
     { label: 'How it works', href: '/#how-it-works' },
-    { label: 'Features', href: '/#features' },
+    { label: 'Capabilities', href: '/#capabilities' },
+    { label: 'Safety', href: '/#safety' },
     { label: 'Pricing', href: '/#pricing' },
 ];
 
@@ -119,6 +120,19 @@ const scrollTop = () => {
                         Cookie settings
                     </button>
                 </nav>
+            </div>
+
+            <!-- Big cropped outlined brand text watermark (x.ai style) -->
+            <div
+                class="pointer-events-none mt-16 -mb-6 flex justify-center overflow-hidden opacity-[0.06] select-none sm:mt-24 sm:-mb-10 dark:opacity-[0.04]"
+                aria-hidden="true"
+            >
+                <span
+                    class="font-sans text-[20vw] leading-none font-black tracking-tighter text-transparent"
+                    style="-webkit-text-stroke: 2px currentColor"
+                >
+                    LSI
+                </span>
             </div>
 
             <div
