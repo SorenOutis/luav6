@@ -70,11 +70,20 @@ const STEP_DURATIONS = [1400, 1400, 1600, 2600];
 <template>
     <section
         id="safety"
-        class="safety-band relative left-1/2 w-screen -translate-x-1/2 scroll-mt-24 overflow-hidden border-y border-white/10 bg-zinc-950 py-24 text-zinc-50 sm:py-32"
+        class="safety-band relative left-1/2 w-screen -translate-x-1/2 scroll-mt-24 overflow-hidden border-y border-white/[0.08] bg-[#09090b] py-24 text-zinc-50 sm:py-32"
         aria-labelledby="safety-heading"
     >
+        <!-- Clean cinematic studio lighting — no grid, no AI slop -->
         <div
-            class="safety-glow pointer-events-none absolute inset-0"
+            class="safety-ambient pointer-events-none absolute inset-0"
+            aria-hidden="true"
+        ></div>
+        <div
+            class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
+            aria-hidden="true"
+        ></div>
+        <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
             aria-hidden="true"
         ></div>
 
@@ -205,18 +214,18 @@ const STEP_DURATIONS = [1400, 1400, 1600, 2600];
 </template>
 
 <style scoped>
-.safety-glow {
+.safety-ambient {
     background:
         radial-gradient(
-            60% 50% at 50% 0%,
-            color-mix(in oklab, var(--color-brand) 22%, transparent),
+            ellipse 80% 50% at 50% -10%,
+            rgb(255 255 255 / 0.04),
             transparent 70%
         ),
-        linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px)
-            0 0 / 64px 64px,
-        linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px)
-            0 0 / 64px 64px;
-    mask-image: radial-gradient(80% 70% at 50% 30%, #000 30%, transparent 100%);
+        radial-gradient(
+            ellipse 60% 40% at 50% 100%,
+            rgb(255 255 255 / 0.02),
+            transparent 70%
+        );
 }
 
 .safety-rail-fill {
@@ -250,7 +259,7 @@ const STEP_DURATIONS = [1400, 1400, 1600, 2600];
         color-mix(in oklab, var(--color-brand) 20%, transparent);
 }
 
-:global(html[data-low-end]) .safety-glow {
+:global(html[data-low-end]) .safety-ambient {
     display: none;
 }
 
