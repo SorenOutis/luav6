@@ -189,10 +189,6 @@ const {
                     </span>
                 </li>
             </ol>
-
-            <p class="mt-4 text-xs text-muted-foreground">
-                Login and an internet connection are required.
-            </p>
         </ResponsiveModal>
     </div>
 </template>

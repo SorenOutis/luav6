@@ -43,14 +43,21 @@ class CommunityAppManifestController extends Controller
             'theme_color' => self::ThemeColor,
             'categories' => ['education', 'social'],
             'icons' => [
-                ['src' => FaviconUrl::url(192), 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => FaviconUrl::url(512), 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => FaviconUrl::url(512), 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => FaviconUrl::url(192, false), 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => FaviconUrl::url(512, false), 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => FaviconUrl::url(512, false), 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
             ],
             'shortcuts' => [
                 ['name' => 'Community Feed', 'short_name' => 'Feed', 'url' => '/community'],
                 ['name' => 'My Section', 'short_name' => 'Section', 'url' => '/community?tab=section'],
                 ['name' => 'Saved Posts', 'short_name' => 'Saved', 'url' => '/community?tab=saved'],
+            ],
+            'related_applications' => [
+                [
+                    'platform' => 'webapp',
+                    'url' => '/community.webmanifest',
+                    'id' => '/community',
+                ],
             ],
         ];
 

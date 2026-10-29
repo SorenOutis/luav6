@@ -17,7 +17,7 @@ declare global {
 
 export const COMMUNITY_MANIFEST_URL = '/community.webmanifest';
 export const COMMUNITY_SW_URL = '/community-sw.js';
-export const COMMUNITY_SW_SCOPE = '/community';
+export const COMMUNITY_SW_SCOPE = '/';
 export const COMMUNITY_BANNER_DISMISSED_KEY = 'communityPwa.bannerDismissedAt';
 
 /** A dismissed mobile install banner stays hidden for two weeks. */
@@ -101,16 +101,35 @@ const detectEnvironment = () => {
     isMobileDevice.value =
         isIos.value || coarsePointer || window.innerWidth < 1024;
     isBannerDismissed.value = readBannerDismissed();
+
+    if (
+        typeof window !== 'undefined' &&
+        'getInstalledRelatedApps' in window.navigator
+    ) {
+        (window.navigator as any)
+            .getInstalledRelatedApps?.()
+            .then((apps: any[]) => {
+                if (Array.isArray(apps) && apps.length > 0) {
+                    isInstalled.value = true;
+                }
+            })
+            .catch(() => {});
+    }
 };
 
 const handleBeforeInstallPrompt = (event: Event) => {
     event.preventDefault();
     installPromptEvent.value = event as BeforeInstallPromptEvent;
+    if (typeof window !== 'undefined') {
+        window.__communityInstallPrompt = event as BeforeInstallPromptEvent;
+    }
 };
 
 const handleAppInstalled = () => {
     installPromptEvent.value = null;
-    window.__communityInstallPrompt = null;
+    if (typeof window !== 'undefined') {
+        window.__communityInstallPrompt = null;
+    }
     isInstalled.value = true;
     isIosGuideOpen.value = false;
 };
@@ -122,6 +141,13 @@ const attachGlobalListeners = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 };
+
+if (typeof window !== 'undefined') {
+    attachGlobalListeners();
+    if (window.__communityInstallPrompt && !installPromptEvent.value) {
+        installPromptEvent.value = window.__communityInstallPrompt;
+    }
+}
 
 /**
  * Lightweight standalone detection for pages outside the Lounge (login,
@@ -192,7 +218,11 @@ export function useCommunityPwa() {
     );
 
     const promptInstall = async (): Promise<void> => {
-        const deferred = installPromptEvent.value;
+        const deferred =
+            installPromptEvent.value ||
+            (typeof window !== 'undefined'
+                ? window.__communityInstallPrompt
+                : null);
 
         if (!deferred) {
             isIosGuideOpen.value = true;
@@ -200,7 +230,9 @@ export function useCommunityPwa() {
         }
 
         installPromptEvent.value = null;
-        window.__communityInstallPrompt = null;
+        if (typeof window !== 'undefined') {
+            window.__communityInstallPrompt = null;
+        }
 
         try {
             await deferred.prompt();

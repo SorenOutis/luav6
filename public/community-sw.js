@@ -11,7 +11,7 @@
  * - hashed /build/ assets are cache-first (immutable),
  * - fonts/images are network-first with a cache fallback.
  */
-const VERSION = 'community-lounge-v1';
+const VERSION = 'community-lounge-v2';
 const CACHE_NAME = `${VERSION}-static`;
 const OFFLINE_URL = '/community-offline.html';
 
@@ -62,7 +62,11 @@ self.addEventListener('fetch', (event) => {
 
     if (url.origin !== self.location.origin) return;
 
+    if (url.pathname.startsWith('/admin')) return;
+
     if (request.mode === 'navigate') {
+        if (!url.pathname.startsWith('/community')) return;
+
         event.respondWith(
             fetch(request).catch(() =>
                 caches.match(OFFLINE_URL).then((cached) => cached || Response.error())
