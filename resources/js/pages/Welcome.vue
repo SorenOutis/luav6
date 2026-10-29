@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowRight } from 'lucide-vue-next';
+import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
+import CapabilitiesBento from '@/components/welcome/CapabilitiesBento.vue';
+import EchoPromptCta from '@/components/welcome/EchoPromptCta.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
 import RevealGroup from '@/components/welcome/RevealGroup.vue';
-import RolePillSwitcher from '@/components/welcome/RolePillSwitcher.vue';
+import SafetyBand from '@/components/welcome/SafetyBand.vue';
+import SectionRail from '@/components/welcome/SectionRail.vue';
+import StatsBand from '@/components/welcome/StatsBand.vue';
+import TestimonialMarquee from '@/components/welcome/TestimonialMarquee.vue';
+import UpdatesList from '@/components/welcome/UpdatesList.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-import WelcomeStatement from '@/components/welcome/WelcomeStatement.vue';
+import WelcomeManifesto from '@/components/welcome/WelcomeManifesto.vue';
 import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
 
@@ -72,24 +76,6 @@ const webSiteJsonLd = [
             'https://github.com/SorenOutis/luav6',
             'https://koamishin.com',
         ],
-        aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: '5.0',
-            reviewCount: '12',
-            bestRating: '5',
-        },
-    },
-    {
-        '@context': 'https://schema.org',
-        '@type': 'Review',
-        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
-        author: {
-            '@type': 'Person',
-            name: 'Maria Santos, Grade 8 Math',
-        },
-        reviewBody:
-            'LSI cut our grading time by half and students finally get feedback while the lesson is still fresh. The Library Hub alone saved us hours of printing reviewers.',
-        itemReviewed: { '@id': 'https://lsi.koamishin.com/#organization' },
     },
     {
         '@context': 'https://schema.org',
@@ -101,11 +87,6 @@ const webSiteJsonLd = [
             'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
         url: 'https://lsi.koamishin.com',
         publisher: { '@id': 'https://lsi.koamishin.com/#organization' },
-        potentialAction: {
-            '@type': 'SearchAction',
-            target: 'https://lsi.koamishin.com/?q={search_term_string}',
-            'query-input': 'required name=search_term_string',
-        },
     },
     {
         '@context': 'https://schema.org',
@@ -175,6 +156,8 @@ const webSiteJsonLd = [
     <div
         class="welcome-root mobile-ui-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
+        <SectionRail />
+
         <WelcomeHeader
             :can-register="props.canRegister"
             :auth="$page.props.auth"
@@ -198,7 +181,7 @@ const webSiteJsonLd = [
                 :prefers-reduced-motion="prefersReducedMotion"
             />
 
-            <WelcomeStatement
+            <WelcomeManifesto
                 :prefers-reduced-motion="effectiveReducedMotion"
             />
 
@@ -212,96 +195,15 @@ const webSiteJsonLd = [
                 />
             </div>
 
-            <RolePillSwitcher :prefers-reduced-motion="prefersReducedMotion" />
+            <CapabilitiesBento />
 
-            <RevealGroup
-                as="section"
-                :stagger="90"
-                class="surface-card mx-auto my-20 w-full max-w-6xl overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-xs sm:my-24 sm:p-10 lg:p-12 xl:max-w-7xl"
-                aria-labelledby="field-note-heading"
-            >
-                <div
-                    class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-                >
-                    <div class="max-w-3xl">
-                        <blockquote
-                            id="field-note-heading"
-                            class="rv mt-4 font-sans text-xl leading-relaxed font-normal text-foreground sm:text-2xl"
-                            :style="{ '--rv-i': 0 }"
-                        >
-                            “LSI cut our grading turnaround by half. Students
-                            receive feedback while the lesson is still fresh in
-                            their minds, and our teachers retain 100% approval
-                            authority over every AI draft.”
-                        </blockquote>
-                        <div
-                            class="rv mt-5 flex items-center gap-3"
-                            :style="{ '--rv-i': 1 }"
-                        >
-                            <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-brand"
-                            >
-                                MS
-                            </div>
-                            <div>
-                                <p
-                                    class="text-sm font-semibold text-foreground"
-                                >
-                                    Maria Santos
-                                </p>
-                                <p class="text-xs text-muted-foreground">
-                                    Grade 8 Mathematics Head
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            <SafetyBand :prefers-reduced-motion="effectiveReducedMotion" />
 
-                    <!-- Real metric badges -->
-                    <div
-                        class="grid grid-cols-2 gap-4 border-t border-border/70 pt-6 sm:grid-cols-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
-                    >
-                        <div
-                            class="rv rv-pop space-y-1"
-                            :style="{ '--rv-i': 2 }"
-                        >
-                            <p
-                                class="font-sans text-3xl font-bold tracking-tight text-foreground"
-                            >
-                                50%+
-                            </p>
-                            <p class="text-xs text-muted-foreground">
-                                Time saved on item grading
-                            </p>
-                        </div>
-                        <div
-                            class="rv rv-pop space-y-1"
-                            :style="{ '--rv-i': 3 }"
-                        >
-                            <p
-                                class="font-sans text-3xl font-bold tracking-tight text-foreground"
-                            >
-                                &lt; 2 hrs
-                            </p>
-                            <p class="text-xs text-muted-foreground">
-                                Feedback dispatch speed
-                            </p>
-                        </div>
-                        <div
-                            class="rv rv-pop col-span-2 space-y-1 sm:col-span-1"
-                            :style="{ '--rv-i': 4 }"
-                        >
-                            <p
-                                class="font-sans text-3xl font-bold tracking-tight text-brand"
-                            >
-                                100%
-                            </p>
-                            <p class="text-xs text-muted-foreground">
-                                Teacher approval control
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </RevealGroup>
+            <StatsBand :prefers-reduced-motion="effectiveReducedMotion" />
+
+            <TestimonialMarquee
+                :prefers-reduced-motion="effectiveReducedMotion"
+            />
 
             <PricingSection
                 :auth="$page.props.auth"
@@ -318,115 +220,78 @@ const webSiteJsonLd = [
                 class="welcome-faq scroll-mt-32 border-y border-border/70 py-20 sm:py-28"
                 aria-labelledby="faq-heading"
             >
-                <h2
-                    id="faq-heading"
-                    class="rv text-center font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-                    :style="{ '--rv-i': 0 }"
-                >
-                    Questions, answered.
-                </h2>
                 <div
-                    class="mx-auto mt-8 max-w-4xl divide-y divide-border/70 border-y border-border/70"
-                >
-                    <details
-                        v-for="(faq, index) in faqs"
-                        :key="faq.question"
-                        class="rv group py-5"
-                        :style="{ '--rv-i': index + 1 }"
-                    >
-                        <summary
-                            class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                        >
-                            {{ faq.question }}
-                            <span
-                                class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
-                                aria-hidden="true"
-                                >+</span
-                            >
-                        </summary>
-                        <p
-                            class="max-w-3xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
-                        >
-                            {{ faq.answer }}
-                        </p>
-                    </details>
-                </div>
-            </RevealGroup>
-
-            <RevealGroup
-                as="section"
-                id="contact"
-                class="welcome-cta relative mx-auto mt-16 w-full max-w-6xl overflow-hidden rounded-3xl border border-border/80 bg-card px-6 py-14 text-foreground shadow-xs sm:mt-24 sm:px-10 sm:py-20 lg:px-14 xl:max-w-7xl"
-                aria-labelledby="cta-heading"
-            >
-                <!-- Giant outline Echo watermark -->
-                <div
-                    class="rv pointer-events-none absolute -right-6 -bottom-16 z-0 origin-bottom-right scale-[1.8] opacity-[0.08] select-none sm:-bottom-20"
-                    :style="{ '--rv-i': 2 }"
-                    aria-hidden="true"
-                >
-                    <ChatAiOrb
-                        size="lg"
-                        variant="outline"
-                        state="micro"
-                        :delay="1500"
-                        color="var(--color-brand)"
-                    />
-                </div>
-
-                <div
-                    class="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                    class="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_2fr] lg:gap-16 xl:max-w-7xl"
                 >
                     <div>
-                        <p
-                            class="rv font-mono text-xs font-medium tracking-wider text-brand uppercase"
+                        <span
+                            class="rv inline-flex items-center gap-3 font-mono text-xs font-medium tracking-widest text-muted-foreground uppercase"
                             :style="{ '--rv-i': 0 }"
                         >
-                            Get started
-                        </p>
+                            <span class="text-brand">07</span>
+                            <span
+                                class="h-px w-8 bg-border"
+                                aria-hidden="true"
+                            ></span>
+                            FAQ
+                        </span>
                         <h2
-                            id="cta-heading"
-                            class="rv mt-3 max-w-xl font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+                            id="faq-heading"
+                            class="rv mt-4 font-sans text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl"
                             :style="{ '--rv-i': 1 }"
                         >
-                            If assessment matters to your school, let’s talk.
+                            Questions, answered.
                         </h2>
                         <p
-                            class="rv mt-4 text-sm font-normal text-muted-foreground sm:text-base"
+                            class="rv mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base"
                             :style="{ '--rv-i': 2 }"
                         >
-                            Start with a teacher, a class, or a whole school.
+                            Have questions not covered here? Reach out directly
+                            to our team.
                         </p>
                     </div>
+
                     <div
-                        class="rv rv-pop flex flex-col gap-3 sm:flex-row"
-                        :style="{ '--rv-i': 3 }"
+                        class="divide-y divide-border/70 border-y border-border/70"
                     >
-                        <Link
-                            v-if="$page.props.auth?.user"
-                            :href="dashboard().url"
-                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-sm font-semibold text-background shadow-xs transition-all hover:opacity-90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
+                        <details
+                            v-for="(faq, index) in faqs"
+                            :key="faq.question"
+                            class="rv group py-5"
+                            :style="{ '--rv-i': index + 1 }"
                         >
-                            Open dashboard
-                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
-                        </Link>
-                        <Link
-                            v-else-if="props.canRegister"
-                            :href="register().url"
-                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-sm font-semibold text-background shadow-xs transition-all hover:opacity-90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
-                        >
-                            Create free account
-                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
-                        </Link>
-                        <Link
-                            :href="login().url"
-                            class="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]"
-                        >
-                            Sign in
-                        </Link>
+                            <summary
+                                class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                            >
+                                {{ faq.question }}
+                                <span
+                                    class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
+                                    aria-hidden="true"
+                                    >+</span
+                                >
+                            </summary>
+                            <p
+                                class="max-w-3xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                            >
+                                {{ faq.answer }}
+                            </p>
+                        </details>
                     </div>
                 </div>
             </RevealGroup>
+
+            <UpdatesList />
+
+            <div id="contact" class="scroll-mt-32 pt-8 sm:pt-12">
+                <EchoPromptCta
+                    :auth="$page.props.auth"
+                    :can-register="props.canRegister"
+                    :dashboard="() => dashboard().url"
+                    :login="() => login().url"
+                    :register="() => register().url"
+                    :prefers-reduced-motion="effectiveReducedMotion"
+                />
+            </div>
 
             <RevealGroup
                 as="section"

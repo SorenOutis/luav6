@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-    CheckCircle2,
-    ListChecks,
-    ShieldCheck,
-    TrendingUp,
-    Zap,
-} from 'lucide-vue-next';
+import { CheckCircle2, TrendingUp } from 'lucide-vue-next';
 import { computed } from 'vue';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
 import MiniDemo from '@/components/welcome/MiniDemo.vue';
@@ -60,9 +54,11 @@ const builderOptions = [
     >
         <RevealGroup class="mx-auto max-w-3xl px-4 text-center">
             <span
-                class="rv font-mono text-xs font-medium tracking-wider text-brand uppercase"
+                class="rv inline-flex items-center gap-3 font-mono text-xs font-medium tracking-widest text-muted-foreground uppercase"
                 :style="{ '--rv-i': 0 }"
             >
+                <span class="text-brand">02</span>
+                <span class="h-px w-8 bg-border" aria-hidden="true"></span>
                 The Classroom Loop
             </span>
             <h2
@@ -203,12 +199,6 @@ const builderOptions = [
                     </MiniDemo>
                 </div>
                 <div class="flex flex-1 flex-col gap-2 p-6 sm:p-7">
-                    <div class="flex items-center gap-2">
-                        <span class="font-mono text-xs font-semibold text-brand"
-                            >01 · Create</span
-                        >
-                        <ListChecks class="h-4 w-4 text-brand" />
-                    </div>
                     <h3
                         class="font-sans text-lg font-semibold tracking-tight text-foreground"
                     >
@@ -351,12 +341,6 @@ const builderOptions = [
                     </MiniDemo>
                 </div>
                 <div class="flex flex-1 flex-col gap-2 p-6 sm:p-7">
-                    <div class="flex items-center gap-2">
-                        <span class="font-mono text-xs font-semibold text-brand"
-                            >02 · Auto-score</span
-                        >
-                        <Zap class="h-4 w-4 text-brand" />
-                    </div>
                     <h3
                         class="font-sans text-lg font-semibold tracking-tight text-foreground"
                     >
@@ -492,12 +476,6 @@ const builderOptions = [
                     </MiniDemo>
                 </div>
                 <div class="flex flex-1 flex-col gap-2 p-6 sm:p-7">
-                    <div class="flex items-center gap-2">
-                        <span class="font-mono text-xs font-semibold text-brand"
-                            >03 · Review</span
-                        >
-                        <ShieldCheck class="h-4 w-4 text-brand" />
-                    </div>
                     <h3
                         class="font-sans text-lg font-semibold tracking-tight text-foreground"
                     >
@@ -609,12 +587,6 @@ const builderOptions = [
                     </MiniDemo>
                 </div>
                 <div class="flex flex-1 flex-col gap-2 p-6 sm:p-7">
-                    <div class="flex items-center gap-2">
-                        <span class="font-mono text-xs font-semibold text-brand"
-                            >04 · Grow</span
-                        >
-                        <TrendingUp class="h-4 w-4 text-brand" />
-                    </div>
                     <h3
                         class="font-sans text-lg font-semibold tracking-tight text-foreground"
                     >
