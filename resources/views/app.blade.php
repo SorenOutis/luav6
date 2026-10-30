@@ -132,6 +132,25 @@
             <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         @endif
 
+        {{--
+            Community Lounge student PWA manifest and beforeinstallprompt capture.
+            Available across the student portal so client-side Inertia visits
+            to the Lounge retain the prompt and manifest.
+        --}}
+        @if (\App\Support\CommunitySettings::pwaEnabled())
+            <link rel="manifest" href="{{ route('community-app-manifest') }}" data-community-manifest>
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-title" content="Lounge">
+            <meta name="apple-mobile-web-app-status-bar-style" content="default">
+            <script nonce="{{ Vite::cspNonce() }}">
+                window.addEventListener('beforeinstallprompt', function (event) {
+                    event.preventDefault();
+                    window.__communityInstallPrompt = event;
+                });
+            </script>
+        @endif
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link rel="preload" href="https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
         {{--

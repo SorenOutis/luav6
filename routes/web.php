@@ -24,6 +24,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CommunityAppManifestController;
 use App\Http\Controllers\CommunityCommentController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CommunityInviteController;
@@ -112,6 +113,9 @@ Route::get('/favicon.png', FaviconController::class)->name('favicon');
 // public/ai-assistant.webmanifest remains the source of truth for
 // name/scope/icons; this only overrides theme/background colors.
 Route::get('/echo-ai.webmanifest', AiAppManifestController::class)->name('ai-app-manifest');
+
+// Community Lounge student PWA manifest (school-branded name and icons).
+Route::get('/community.webmanifest', CommunityAppManifestController::class)->name('community-app-manifest');
 
 // Streams approved profile music with full CORS headers so Web Audio
 // AnalyserNode can read real frequency amplitudes with 0 CORS errors.
