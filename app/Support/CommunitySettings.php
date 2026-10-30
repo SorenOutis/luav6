@@ -21,6 +21,8 @@ class CommunitySettings
 
     public const SETTING_FILE_ATTACHMENTS_ENABLED = 'community_file_attachments_enabled';
 
+    public const SETTING_PWA_ENABLED = 'community_pwa_enabled';
+
     public const SETTING_SECTION_VIEWABLE_MAP = 'community_section_viewable_sections';
 
     public const SCOPE_WORKSPACE = 'workspace';
@@ -99,8 +101,18 @@ class CommunitySettings
         return filter_var($setting, FILTER_VALIDATE_BOOLEAN);
     }
 
+    public static function pwaEnabled(): bool
+    {
+        $setting = Setting::get(self::SETTING_PWA_ENABLED);
+        if ($setting === null) {
+            return true;
+        }
+
+        return filter_var($setting, FILTER_VALIDATE_BOOLEAN);
+    }
+
     /**
-     * @return array{feed_scope: string, allow_anonymous: bool, stories_enabled: bool, music_enabled: bool, media_uploads_enabled: bool, file_attachments_enabled: bool}
+     * @return array{feed_scope: string, allow_anonymous: bool, stories_enabled: bool, music_enabled: bool, media_uploads_enabled: bool, file_attachments_enabled: bool, pwa_enabled: bool}
      */
     public static function formState(): array
     {
@@ -111,11 +123,12 @@ class CommunitySettings
             'music_enabled' => static::musicEnabled(),
             'media_uploads_enabled' => static::mediaUploadsEnabled(),
             'file_attachments_enabled' => static::fileAttachmentsEnabled(),
+            'pwa_enabled' => static::pwaEnabled(),
         ];
     }
 
     /**
-     * @param  array{feed_scope?: string, allow_anonymous?: bool, stories_enabled?: bool, music_enabled?: bool, media_uploads_enabled?: bool, file_attachments_enabled?: bool}  $data
+     * @param  array{feed_scope?: string, allow_anonymous?: bool, stories_enabled?: bool, music_enabled?: bool, media_uploads_enabled?: bool, file_attachments_enabled?: bool, pwa_enabled?: bool}  $data
      */
     public static function save(array $data): void
     {
@@ -129,6 +142,7 @@ class CommunitySettings
         $musicEnabled = (bool) ($data['music_enabled'] ?? true);
         $mediaUploadsEnabled = (bool) ($data['media_uploads_enabled'] ?? true);
         $fileAttachmentsEnabled = (bool) ($data['file_attachments_enabled'] ?? true);
+        $pwaEnabled = (bool) ($data['pwa_enabled'] ?? true);
 
         // Update platform global settings
         Setting::setGlobal(self::SETTING_FEED_SCOPE, $scope);
@@ -138,6 +152,7 @@ class CommunitySettings
         Setting::setGlobal(self::SETTING_MUSIC_ENABLED, $musicEnabled ? '1' : '0');
         Setting::setGlobal(self::SETTING_MEDIA_UPLOADS_ENABLED, $mediaUploadsEnabled ? '1' : '0');
         Setting::setGlobal(self::SETTING_FILE_ATTACHMENTS_ENABLED, $fileAttachmentsEnabled ? '1' : '0');
+        Setting::setGlobal(self::SETTING_PWA_ENABLED, $pwaEnabled ? '1' : '0');
 
         if (array_key_exists('section_viewable_map', $data) && is_array($data['section_viewable_map'])) {
             static::saveSectionViewableMap($data['section_viewable_map']);

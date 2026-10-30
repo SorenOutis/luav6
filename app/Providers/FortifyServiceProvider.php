@@ -6,6 +6,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LogoutResponse;
 use App\Models\Setting;
+use App\Support\CommunitySettings;
 use App\Support\SocialProviders;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -98,6 +99,10 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function rememberPwaApp(Request $request): ?string
     {
+        if (! CommunitySettings::pwaEnabled()) {
+            return null;
+        }
+
         if ($request->query('app') !== 'community') {
             return null;
         }

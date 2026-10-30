@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CommunityInvite;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workspace;
@@ -87,10 +88,56 @@ it('renders community lounge manifest link on the lounge page for students', fun
     $workspace = Workspace::factory()->create();
     $student = User::factory()->create(['current_workspace_id' => $workspace->id]);
     $student->workspaces()->attach($workspace->id, ['role' => 'student']);
+    CommunityInvite::create([
+        'workspace_id' => $workspace->id,
+        'user_id' => $student->id,
+        'token' => 'token-'.uniqid(),
+        'accepted_at' => now(),
+    ]);
 
     $this->actingAs($student)
         ->get(route('community.index'))
         ->assertOk()
         ->assertSee('data-community-manifest', escape: false)
         ->assertSee('community.webmanifest', escape: false);
+});
+
+it('hides the community lounge manifest and returns 404 when pwa is disabled', function () {
+    Setting::setGlobal('community_pwa_enabled', '0');
+
+    $this->get(route('community-app-manifest'))
+        ->assertNotFound()
+        ->assertJson(['message' => 'Community Lounge PWA is disabled.']);
+
+    $workspace = Workspace::factory()->create();
+    $student = User::factory()->create(['current_workspace_id' => $workspace->id]);
+    $student->workspaces()->attach($workspace->id, ['role' => 'student']);
+    CommunityInvite::create([
+        'workspace_id' => $workspace->id,
+        'user_id' => $student->id,
+        'token' => 'token-'.uniqid(),
+        'accepted_at' => now(),
+    ]);
+
+    $this->actingAs($student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertDontSee('data-community-manifest', escape: false)
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('pwaEnabled', false)
+        );
+});
+
+it('does not arm community redirect on login when pwa is disabled in settings', function () {
+    Setting::setGlobal('community_pwa_enabled', '0');
+
+    $this->get(route('login', ['app' => 'community']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/Login')
+            ->where('pwaApp', null)
+        );
+
+    expect(session('url.intended'))->toBeNull();
 });

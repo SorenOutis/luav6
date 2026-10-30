@@ -5206,6 +5206,43 @@ describe('Community Lounge & Curtain Wipe Flow', () => {
             window.matchMedia = matchMediaOrig;
         });
 
+        it('hides install button, mobile banner and manifest when pwa is disabled', async () => {
+            const wrapper = mount(CommunityInstallPrompt, {
+                props: { enabled: false },
+            });
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="community-install-button"]').exists(),
+            ).toBe(false);
+            expect(
+                document.querySelector(
+                    '[data-test="community-install-banner"]',
+                ),
+            ).toBeNull();
+            expect(
+                document.querySelector('link[data-community-manifest]'),
+            ).toBeNull();
+
+            wrapper.unmount();
+        });
+
+        it('hides install prompt component in Community page when pwaEnabled prop is false', async () => {
+            const wrapper = mount(Community, {
+                props: {
+                    workspace: null,
+                    pwaEnabled: false,
+                },
+            });
+            await nextTick();
+
+            expect(wrapper.findComponent(CommunityInstallPrompt).exists()).toBe(
+                false,
+            );
+
+            wrapper.unmount();
+        });
+
         it('brands login and register pages with Community Lounge badge and retains app=community across navigation', async () => {
             // CommunityAppBadge renders the Lounge badge
             const badgeWrapper = mount(CommunityAppBadge);

@@ -66,6 +66,7 @@ it('allows admin to view and update lounge settings via filament page', function
         ->assertSet('data.music_enabled', true)
         ->assertSet('data.media_uploads_enabled', true)
         ->assertSet('data.file_attachments_enabled', true)
+        ->assertSet('data.pwa_enabled', true)
         ->fillForm([
             'feed_scope' => CommunitySettings::SCOPE_SECTION,
             'allow_anonymous' => false,
@@ -73,6 +74,7 @@ it('allows admin to view and update lounge settings via filament page', function
             'music_enabled' => false,
             'media_uploads_enabled' => false,
             'file_attachments_enabled' => false,
+            'pwa_enabled' => false,
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -83,6 +85,7 @@ it('allows admin to view and update lounge settings via filament page', function
     expect(CommunitySettings::musicEnabled())->toBeFalse();
     expect(CommunitySettings::mediaUploadsEnabled())->toBeFalse();
     expect(CommunitySettings::fileAttachmentsEnabled())->toBeFalse();
+    expect(CommunitySettings::pwaEnabled())->toBeFalse();
 });
 
 it('shows posts across all sections in workspace feed when feed scope is workspace', function () {

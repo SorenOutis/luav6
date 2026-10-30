@@ -91,6 +91,14 @@ class LoungeSettings extends Page implements HasSchemas
                             ->label('Enable Document & Code Attachments')
                             ->helperText('Allows students to attach documents, text files, and code snippets to their posts.'),
                     ]),
+
+                Section::make('App Installation (PWA)')
+                    ->description('Manage Progressive Web App (PWA) installation and home-screen prompts for the Community Lounge.')
+                    ->schema([
+                        Toggle::make('pwa_enabled')
+                            ->label('Enable Community Lounge PWA (App Install)')
+                            ->helperText('Allows students and members to install Community Lounge as a standalone desktop or mobile web app. When disabled, the in-app install buttons, mobile prompt banners, and the web manifest are disabled.'),
+                    ]),
             ])
             ->statePath('data');
     }

@@ -1,4 +1,5 @@
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, toValue } from 'vue';
 
 /**
  * The deferred `beforeinstallprompt` event (Chromium only, not in lib.dom).
@@ -163,12 +164,23 @@ export function useStandaloneDisplay() {
     return { isStandalone: standalone };
 }
 
+export interface UseCommunityPwaOptions {
+    /** Whether the Community PWA feature is enabled by platform settings. Defaults to true. */
+    enabled?: MaybeRefOrGetter<boolean> | boolean;
+}
+
 /**
  * Community Lounge PWA wiring: advertises the manifest after client-side
  * Inertia visits, registers the /community service worker and drives the
  * in-app "Install app" button, mobile banner and iOS guide.
  */
-export function useCommunityPwa() {
+export function useCommunityPwa(options: UseCommunityPwaOptions = {}) {
+    const isFeatureEnabled = computed(() =>
+        options.enabled !== undefined
+            ? Boolean(toValue(options.enabled))
+            : true,
+    );
+
     let addedManifestLink: HTMLLinkElement | null = null;
 
     onMounted(() => {
@@ -179,6 +191,10 @@ export function useCommunityPwa() {
 
         if (window.__communityInstallPrompt && !installPromptEvent.value) {
             installPromptEvent.value = window.__communityInstallPrompt;
+        }
+
+        if (!isFeatureEnabled.value) {
+            return;
         }
 
         if (!document.querySelector('link[rel="manifest"]')) {
@@ -207,7 +223,8 @@ export function useCommunityPwa() {
     });
 
     const canInstall = computed(
-        () => !isStandalone.value && !isInstalled.value,
+        () =>
+            isFeatureEnabled.value && !isStandalone.value && !isInstalled.value,
     );
 
     const showInstallBanner = computed(
@@ -218,6 +235,10 @@ export function useCommunityPwa() {
     );
 
     const promptInstall = async (): Promise<void> => {
+        if (!isFeatureEnabled.value) {
+            return;
+        }
+
         const deferred =
             installPromptEvent.value ||
             (typeof window !== 'undefined'

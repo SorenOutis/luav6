@@ -224,6 +224,7 @@ interface Props {
     musicEnabled?: boolean;
     mediaUploadsEnabled?: boolean;
     fileAttachmentsEnabled?: boolean;
+    pwaEnabled?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -232,6 +233,7 @@ const props = withDefaults(defineProps<Props>(), {
     musicEnabled: true,
     mediaUploadsEnabled: true,
     fileAttachmentsEnabled: true,
+    pwaEnabled: true,
     isSectionOnly: false,
     feedScope: 'workspace',
 });
@@ -3357,7 +3359,10 @@ const jumpToPostFromTrending = (post: CommunityFeedPost) => {
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <CommunityInstallPrompt />
+                        <CommunityInstallPrompt
+                            v-if="props.pwaEnabled"
+                            :enabled="props.pwaEnabled"
+                        />
 
                         <div
                             v-if="isStandalone"

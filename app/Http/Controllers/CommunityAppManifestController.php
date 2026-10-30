@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Support\CommunitySettings;
 use App\Support\FaviconUrl;
 use Illuminate\Http\JsonResponse;
 
@@ -27,6 +28,12 @@ class CommunityAppManifestController extends Controller
      */
     public function __invoke(): JsonResponse
     {
+        if (! CommunitySettings::pwaEnabled()) {
+            return response()->json([
+                'message' => 'Community Lounge PWA is disabled.',
+            ], 404);
+        }
+
         $schoolName = Setting::get('school_name', config('app.name'));
         $schoolName = is_string($schoolName) && $schoolName !== '' ? $schoolName : 'Community';
 

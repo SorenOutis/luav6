@@ -129,6 +129,7 @@ class CommunityController extends Controller
             'musicEnabled' => CommunitySettings::musicEnabled(),
             'mediaUploadsEnabled' => CommunitySettings::mediaUploadsEnabled(),
             'fileAttachmentsEnabled' => CommunitySettings::fileAttachmentsEnabled(),
+            'pwaEnabled' => CommunitySettings::pwaEnabled(),
         ]);
     }
 

@@ -10,6 +10,15 @@ import {
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useCommunityPwa } from '@/composables/useCommunityPwa';
 
+const props = withDefaults(
+    defineProps<{
+        enabled?: boolean;
+    }>(),
+    {
+        enabled: true,
+    },
+);
+
 const {
     isIos,
     canInstall,
@@ -18,11 +27,15 @@ const {
     promptInstall,
     dismissInstallBanner,
     closeIosGuide,
-} = useCommunityPwa();
+} = useCommunityPwa({ enabled: () => props.enabled });
 </script>
 
 <template>
-    <div class="flex items-center" data-test="community-install-prompt">
+    <div
+        v-if="props.enabled"
+        class="flex items-center"
+        data-test="community-install-prompt"
+    >
         <!-- Subtle header pill: hidden once installed / in the app window -->
         <button
             v-if="canInstall"
