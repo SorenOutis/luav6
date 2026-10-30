@@ -7,7 +7,7 @@ Status: **proposed** — no code written yet.
 | Scope | Build the *pattern* natively. **Do not** embed Grok Bot (closed product, no public API) |
 | Unit of work | A named **Bot** row in the database, not a PHP class |
 | Capability boundary | Tools + Skills shared per workspace; **Memory + Routines per Bot** |
-| Handoff | Async, persisted (`ai_bot_messages`) — a Bot wakes and replies later |
+| Handoff | Async, persisted (`ai_bot_handoffs`) — a Bot wakes and replies later |
 | Writes | Never bypass the existing `PendingAiAction` approval boundary |
 | Storage | New tables; **no change** to `laravel/ai` dependency |
 
@@ -16,7 +16,7 @@ Status: **proposed** — no code written yet.
 ## 1. Problem
 
 luav6 has a strong single-agent assistant ("Echo") for admins
-(`AdminAssistantAgent`, 75 tools, `MaxSteps(12)`) and a student assistant
+(`AdminAssistantAgent`, 63 mounted tools, `MaxSteps(12)`) and a student assistant
 (`AssistantAgent`). Both are **hardcoded PHP classes**. That gives three
 limitations that the Grok Bot product exists to solve:
 
@@ -24,7 +24,7 @@ limitations that the Grok Bot product exists to solve:
    is exactly one assistant, with one instruction set, one tool surface, and one
    memory stream. A registrar task and a facilities task compete for the same
    context window.
-2. **No delegation.** A single agent with 75 tools has to do research, drafting,
+2. **No delegation.** A single agent with 63 mounted tools has to do research, drafting,
    and verification itself. It cannot hand a well-scoped subtask to a
    specialist that only carries the three tools that subtask needs.
 3. **No standing responsibilities.** Work that should happen every morning
@@ -48,13 +48,13 @@ inside luav6 using the assets already present:
 | Grok Bot concept | luav6 asset today | Gap |
 | --- | --- | --- |
 | Named Bot with its own identity | `AdminAssistantAgent` / `AssistantAgent` (hardcoded classes) | `ai_bots` table + generic `BotAgent` |
-| **Memory per Bot**, Tools per account | `ChatSession`/`ChatMessage` scoped to *user*; 75 tools; `AdminAssistantSkill` | Memory is per-session, not per-Bot |
+| **Memory per Bot**, Tools per account | `ChatSession`/`ChatMessage` scoped to *user*; 63 mounted tools; `AdminAssistantSkill` | Memory is per-session, not per-Bot |
 | Bot → Bot handoff | `Laravel\Ai\Tools\AgentTool` ships with `laravel/ai` v0.9.1 | Not wired; sync-only |
 | Group chat (2–6 Bots) | — | Coordinator agent + multi-participant messages |
 | Routines (cron) | Scheduler + `ai` queue + 7 jobs | `ai_bot_routines` + dispatch command |
 | "Returns only when it needs approval" | `PendingAiAction` + nonce + `AiActionExecutor` + `AiPolicyEngineService` | **Already there** — reuse unchanged |
 | Cost governance | `AiBudgetManager`, `AiUsageTracker`, `AiCostEstimator` | Needs per-Bot attribution |
-| Per-Bot "own computer" | 75 workspace-scoped, approval-gated tools | **Deliberately not replicated** |
+| Per-Bot "own computer" | 63 workspace-scoped, approval-gated tools | **Deliberately not replicated** |
 
 ### 2.1 Deliberate non-goals
 
@@ -84,9 +84,11 @@ Concretely:
 
 - A Bot's `allowed_tools` is an **allowlist** drawn from the shared registry.
   Two Bots in the same workspace may have disjoint tool sets.
-- A Bot's `instructions` and `memory` belong to that Bot and are never shared.
-- A `ChatSession` records which Bot (or Bots) participated, so transcripts stay
-  attributable.
+- A Bot's `instructions` belong to that Bot and are never shared. Its `memory`
+  is private to the user who created it by default; only an admin can promote a
+  fact to workspace-shared.
+- A `ChatSession` records its Bot roster, so transcripts stay attributable and
+  the coordinator knows the team before the first message.
 
 ### 3.2 Bot lifecycle
 
@@ -94,7 +96,7 @@ Concretely:
 ai_bots row created (admin)  →  Bot appears in roster
       │
       ├─ direct chat          → BotAgent runs in a chat_session
-      ├─ delegated handoff    → ai_bot_messages row → RunAiBotHandoff job → reply
+      ├─ delegated handoff    → ai_bot_handoffs row → RunAiBotHandoff job → reply
       └─ routine fired        → RunAiBotRoutine job → transcript stored
 ```
 
@@ -103,7 +105,7 @@ ai_bots row created (admin)  →  Bot appears in roster
 | Mode | Mechanism | Use when |
 | --- | --- | --- |
 | **Sync** | `Laravel\Ai\Tools\AgentTool` wrapping a `BotAgent` | The caller needs the answer *in this turn* to compose its own reply |
-| **Async** | `App\Ai\Tools\DelegateToBot` writes `ai_bot_messages`, a job runs the target | Work that outlives the turn (Grok Bot's model) |
+| **Async** | `App\Ai\Tools\DelegateToBot` writes `ai_bot_handoffs`, a job runs the target | Work that outlives the turn (Grok Bot's model) |
 
 Phase 2 ships both: sync for intra-turn composition, async for the "wake and
 reply later" behaviour.
@@ -135,16 +137,17 @@ Indexes:
 
 Uses `App\Models\Concerns\BelongsToWorkspace` — the house tenant convention.
 
-### 4.2 New: `ai_bot_messages` (handoff log)
+### 4.2 New: `ai_bot_handoffs` (handoff log)
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | pk | |
 | `workspace_id` | fk → workspaces | denormalised so the tenant scope check is a single `where` |
-| `from_bot_id` | fk → ai_bots | nullable for user-initiated handoffs |
-| `to_bot_id` | fk → ai_bots cascade | the woken Bot |
-| `chat_session_id` | fk → chat_sessions nullable | conversation the handoff belongs to |
-| `parent_message_id` | fk → ai_bot_messages nullable | threads a reply to its request |
+| `from_bot_id` | fk → ai_bots nullable, nullOnDelete | null for user-initiated handoffs |
+| `requested_by_user_id` | fk → users nullable, nullOnDelete | the human who started the chain; null for system/routine work. Drives approval attribution and actor-scoped tools |
+| `to_bot_id` | fk → ai_bots nullable, nullOnDelete | the woken Bot; nullable so deleting a Bot never erases audit history |
+| `chat_session_id` | fk → chat_sessions nullable, nullOnDelete | conversation the handoff belongs to; retained if the session is deleted |
+| `parent_handoff_id` | fk → ai_bot_handoffs nullable, nullOnDelete | threads a reply to its request |
 | `task` | text | the delegated instruction, verbatim |
 | `result` | text nullable | the target Bot's reply |
 | `status` | enum-string | `queued`, `running`, `completed`, `failed`, `rejected`, `expired` |
@@ -156,7 +159,13 @@ Uses `App\Models\Concerns\BelongsToWorkspace` — the house tenant convention.
 Indexes:
 - index `(workspace_id, status)`
 - index `(to_bot_id, status)` — the "what is waiting for me" query
+- index `(requested_by_user_id, status)` — the "what needs my approval" query
 - index `(chat_session_id, id)`
+
+**Audit retention:** this table is the audit trail. `to_bot_id` and
+`chat_session_id` use `nullOnDelete` (never cascade), so removing a Bot or a
+chat session cannot erase evidence of a handoff. Deleting a workspace still
+cascades, which is the intended tenant-erasure behaviour.
 
 ### 4.3 New: `ai_bot_routines`
 
@@ -176,6 +185,11 @@ Indexes:
 
 Index: `(bot_id, is_active)`.
 
+**Actor:** a routine runs as `ai_bots.created_by`. If that user is missing or
+inactive, the run is skipped (`last_status = skipped`) rather than executing
+without an actor, because tool policies and `PendingAiAction` attribution need
+a real user.
+
 ### 4.4 New: `ai_bot_memories`
 
 Distinct from chat history — this is the durable "learned" store that makes a
@@ -187,17 +201,26 @@ separate from transcripts).
 | `id` | pk | |
 | `workspace_id` | fk → workspaces | |
 | `bot_id` | fk → ai_bots cascade | |
+| `user_id` | fk → users nullable | null = workspace-shared fact; non-null = private to that user |
 | `content` | text | the fact |
 | `source` | enum-string | `manual` (admin wrote it) or `approved` (Bot proposed, human approved) |
-| `importance` | unsigned tinyint | 1–5; 1 = always injected, 5 = retrieved on demand |
+| `importance` | unsigned tinyint | 1–5; v1 injects only 1–2, 3–5 are stored but not retrieved yet |
 | `created_by` | fk → users nullable | |
 | timestamps | | |
 
-Index: `(bot_id, importance)`.
+Index: `(bot_id, user_id, importance)`.
 
 **Population rule:** a Bot may never write its own memory directly. It stages a
 `PendingAiAction` of type `remember_bot_memory`, and a human approves. This
-mirrors the existing write-tool rule exactly.
+mirrors the existing write-tool rule exactly. A Bot-proposed fact inherits the
+current session's `user_id`, so it is **private by default**. Only an admin may
+promote it to shared by clearing `user_id`; a Bot can never widen its own
+memory visibility.
+
+**Retrieval rule (v1):** only `importance <= 2` rows are injected, capped at 20
+rows / ~2,000 characters. Levels 3–5 are stored but not injected until a
+keyword or embedding retrieval strategy is specified. "Retrieved on demand"
+without a retrieval mechanism is not a plan.
 
 ### 4.5 Changed: `chat_sessions`
 
@@ -205,9 +228,11 @@ mirrors the existing write-tool rule exactly.
 | --- | --- | --- |
 | `bot_id` | fk → ai_bots nullable | the primary Bot for a solo session |
 | `mode` | enum-string | `solo` (default) or `group` |
+| `participant_bot_ids` | json nullable | group roster (max 6 active workspace Bots), validated on write |
 
-For `mode = group`, `bot_id` is null and participation is derived from
-`chat_messages.bot_id`.
+For `mode = group`, `bot_id` is null and the roster lives in
+`participant_bot_ids`, so the coordinator knows the team before the first
+message. `chat_messages.bot_id` remains the per-message attribution source.
 
 ### 4.6 Changed: `chat_messages`
 
@@ -221,7 +246,7 @@ For `mode = group`, `bot_id` is null and participation is derived from
 | --- | --- | --- |
 | `bot_id` | fk → ai_bots nullable | per-Bot cost attribution |
 
-### 4.8 New: `ai_bot_handoffs` — *not needed*
+### 4.8 New: `ai_bot_handoff_budgets` — *not needed*
 
 Early drafts proposed a separate handoff-budget table. Rejected: the existing
 `ai_budget_periods` / `ai_budget_reservations` pair already models period
@@ -240,11 +265,24 @@ the agent class.
 ```php
 final class ToolRegistry
 {
-    /** @var array<string, class-string<Tool>> */
+    /**
+     * @var array<string, array{
+     *     class: class-string<Tool>,
+     *     write: bool,
+     *     intents: list<string>,
+     * }>
+     */
     private const MAP = [
-        'students' => StudentsTool::class,
-        'grades_admin' => AdminGradesTool::class,
-        'record_grade' => RecordGradeTool::class,
+        'students' => [
+            'class' => StudentsTool::class,
+            'write' => false,
+            'intents' => [AdminAssistantIntent::ALL],
+        ],
+        'record_grade' => [
+            'class' => RecordGradeTool::class,
+            'write' => true,
+            'intents' => [AdminAssistantIntent::GRADES],
+        ],
         // …
     ];
 
@@ -252,16 +290,20 @@ final class ToolRegistry
     public static function classFor(string $key): ?string;
     public static function make(string $key, ?int $chatSessionId = null): ?Tool;
     public static function isWrite(string $key): bool;
+    public static function keysForIntent(string $intent): array;
 }
 ```
 
-`isWrite()` is derived from a parallel `WRITE_KEYS` list — the registry becomes
-the single source of truth for "which tools stage approvals". Today that truth
-is split between `PendingAiActionService::ALLOWED_TYPES` (43 action types) and
-the agent's own conditional mounting.
+Each entry carries the class, the write flag, and the intent group. There is
+**no** parallel `WRITE_KEYS` list — a second list would recreate exactly the
+drift the registry exists to remove. The registry becomes the single source of
+truth for "which tools stage approvals" and for `AdminAssistantIntent` routing,
+replacing the split between `PendingAiActionService::ALLOWED_TYPES` (41 action
+types) and the agent's own conditional mounting.
 
 **Refactor requirement:** `AdminAssistantAgent::tools()` must be rewritten to
-build from the registry so the two lists cannot drift. This also fixes the
+build from `ToolRegistry::keysForIntent()` so tool mounting, write detection,
+and intent routing cannot drift. This also fixes the
 `OpenAiCompatibleProviderTest` fragility described in §9.3.
 
 ### 5.2 `App\Ai\Agents\BotAgent`
@@ -293,9 +335,12 @@ class BotAgent implements Agent, Conversational, HasTools
   with `chatSessionId:` where the tool accepts it (every write tool does).
 - `messages()` honours `memory_scope`:
   - `session` → the current `chat_session`'s messages (today's behaviour).
-  - `bot` → the last *N* (default 20) messages where `bot_id = $bot->id` or the
-    session includes this Bot, across sessions in the workspace, plus the
-    top `importance <= 2` rows from `ai_bot_memories`.
+  - `bot` → the last *N* (default 20) messages from sessions **owned by the
+    same actor** (`chat_sessions.user_id = $actor->id`) where this Bot
+    participated, plus memory rows with `importance <= 2` and
+    (`user_id` is null or `user_id = $actor->id`).
+  - Bot-scoped recall **never** reads another user's transcripts or private
+    memory rows. If `$actor` is null, only shared memory is injected.
 
 `max_steps` is dynamic per Bot. **The SDK already supports this**:
 `TextGenerationOptions::resolve()` (`vendor/laravel/ai/src/Gateway/TextGenerationOptions.php:111`)
@@ -340,6 +385,11 @@ returns a string. Note its own description states the sub-agent "runs in
 isolation and has no access to the parent conversation history" — which is
 correct, and is why the *task* must be self-contained.
 
+Sync delegation is mounted **only** on `CoordinatorAgent` at depth 0, and a
+`BotAgent` never mounts an `AgentTool` for another Bot. That is what makes the
+sync path non-recursive even though it writes no handoff row. Async delegation
+carries `depth` in `ai_bot_handoffs` and is capped at 2 (§6.4).
+
 ### 5.4 `App\Ai\Tools\DelegateToBot` (async)
 
 ```php
@@ -347,32 +397,40 @@ class DelegateToBot implements Tool
 {
     public function handle(Request $request): Stringable|string
     {
-        // validate target bot is in the same workspace + active
-        // insert ai_bot_messages row (status = queued)
+        // validate: same workspace, target active, depth < 2,
+        // pending-handoff cap (50) not exceeded
+        // insert ai_bot_handoffs row:
+        //   from_bot_id, requested_by_user_id = current actor,
+        //   depth = current depth + 1, status = queued
         // dispatch RunAiBotHandoff
         // return "Handoff queued to <Bot>. Reference #<id>."
     }
 }
 ```
 
-The tool **never** returns the result inline. The waking Bot's reply is
-delivered later as a `chat_message` authored by the target Bot.
+The current depth comes from the `BotRunContext` (§5.8), never from `auth()` or
+a static property. The tool **never** returns the result inline. The waking
+Bot's reply is delivered later as a `chat_message` authored by the target Bot.
 
 ### 5.5 `App\Jobs\RunAiBotHandoff`
 
 Queue: `ai`. Mirrors the existing `GenerateAiDailyReport` job shape
 (`ShouldBeUnique`, `tries`, `timeout`, `failOnTimeout`).
 
-1. Load the `ai_bot_messages` row; if not `queued`, return (idempotent).
+1. Load the `ai_bot_handoffs` row; if not `queued`, return (idempotent).
 2. Mark `running`.
-3. Build a `BotAgent` for the target Bot with `memory_scope = bot`.
-4. Prompt it with the task. **Wrap the task through
+3. Execute inside `BotRunContext::run()` (§5.8) with `requested_by_user_id` as
+   the actor and the row's `depth`.
+4. Build a `BotAgent` for the target Bot with `memory_scope = bot`.
+5. Prompt it with the task. **Wrap the task through
    `AiInputGuardrailService::wrapUntrusted()`** — a handoff body originates
    from another model and must be treated as untrusted input (§6.3).
-5. Persist `result`, set `status = completed`, store the transcript as
+6. Persist `result`, set `status = completed`, store the transcript as
    `chat_messages` authored by the target Bot.
-6. If the target Bot staged a `PendingAiAction`, surface the approval card
-   against the **originating human's** session.
+7. If the target Bot staged a `PendingAiAction`, surface the approval card
+   against `requested_by_user_id`'s session. If the row has no user (routine),
+   attribute it to `ai_bots.created_by`; if that user is gone, fail closed.
+8. Any throw marks `failed` with `error`; the job never leaves a row `running`.
 
 ### 5.6 `App\Jobs\RunAiBotRoutine` + `App\Console\Commands\DispatchAiBotRoutines`
 
@@ -385,8 +443,11 @@ Schedule::command(DispatchAiBotRoutines::class, ['--no-interaction'])
     ->withoutOverlapping(5)->onOneServer();
 ```
 
-Each due routine dispatches `RunAiBotRoutine`, which prompts the Bot and
-stores the transcript in a dedicated session (`source = 'routine'`).
+Each due routine dispatches `RunAiBotRoutine`, which runs inside
+`BotRunContext::run()` as `ai_bots.created_by` at depth 0, prompts the Bot, and
+stores the transcript in a dedicated session (`source = 'routine'`). If the
+creator is missing or inactive, the run is recorded as `skipped` and no model
+call is made.
 
 ### 5.7 Wiring into `ChatService`
 
@@ -405,6 +466,44 @@ New resolution order:
 `promptAgent()` / `streamAgent()` currently type the parameter as
 `class-string`; this must widen to `Agent` so a `BotAgent` instance can be
 passed. Existing behaviour must not change for non-Bot sessions.
+
+### 5.8 `App\Ai\Support\BotRunContext` — tenant + actor for queued work
+
+`BelongsToWorkspace` resolves tenants through `WorkspaceContext` and
+`auth()->user()`. A queued job has neither, so `RunAiBotHandoff` and
+`RunAiBotRoutine` must not touch bot-scoped models until context is bound.
+
+`BotRunContext` is a small, non-static value object + runner:
+
+```php
+final class BotRunContext
+{
+    public function __construct(
+        public AiBot $bot,
+        public ?User $actor,
+        public int $depth = 0,
+        public ?int $chatSessionId = null,
+    ) {}
+
+    public function run(Closure $callback): mixed;
+}
+```
+
+`run()` does exactly four things:
+
+1. `WorkspaceContext::set($this->bot->workspace_id)` so every
+   `BelongsToWorkspace` global scope resolves to the Bot's tenant.
+2. Authenticates the actor for the duration of the call
+   (`Auth::guard('web')->setUser($actor)`) so policies, `PendingAiAction`
+   attribution, and `BelongsToWorkspace::creating` behave like a request.
+3. Exposes `depth` and `chatSessionId` to `BotAgent` / `DelegateToBot`.
+4. Clears both in `finally` (`WorkspaceContext::clear()`,
+   `Auth::forgetGuards()`) — mandatory under Octane and long-lived queue
+   workers.
+
+No bot or job code may hold this in a static or singleton. It is created per
+job and passed explicitly. If the actor is null and the work needs one, the job
+fails closed instead of running unscoped.
 
 ## 6. Guardrails and security
 
@@ -427,8 +526,9 @@ human approving a `PendingAiAction`.**
 ### 6.2 Tenant isolation
 
 Every delegation validates `from_bot.workspace_id === to_bot.workspace_id`
-before writing an `ai_bot_messages` row. A cross-workspace delegation is
-rejected with an audit event, not a silent no-op.
+before writing an `ai_bot_handoffs` row, and that the target Bot is active and
+visible to the actor. A cross-workspace delegation is rejected with an audit
+event, not a silent no-op.
 
 Platform Bots (`workspace_id = null`) may only delegate to platform Bots.
 
@@ -452,25 +552,44 @@ and are treated as trusted. A Bot may never modify its own instructions.
 | Pending handoffs per workspace | 50 | Bounds queue depth |
 | Routine handoffs per day per Bot | 10 | Bounds unattended spend |
 
+These caps are enforced on **both** delegation paths. Async rows carry `depth`,
+and the pending count is checked inside the insert transaction. Sync
+`AgentTool` delegation is mounted only on `CoordinatorAgent` at depth 0;
+`BotAgent` never mounts a delegation tool, so the sync path cannot recurse.
+
 ### 6.5 Approval spoofing
 
 `EchoReplyGuard` already strips invented approval/export claims from replies.
 The same guard must apply to Bot replies — a Bot must not claim an approval
-card exists unless a write tool actually ran in that turn. `ChatService::
-guardAdminReply()` currently applies only when
-`$agent instanceof AdminAssistantAgent`; extend it to any Bot.
+card exists unless a write tool actually ran in that turn.
+
+`ChatService::guardAdminReply()` currently keys on
+`$agent instanceof AdminAssistantAgent`. Replace that class check with a
+`RequiresReplyGuard` marker interface implemented by both
+`AdminAssistantAgent` and `BotAgent`, so future agent types opt in explicitly
+instead of every Bot being caught by a growing `instanceof` chain.
+
+### 6.6 Memory isolation
+
+Bot-scoped memory is **not** workspace-public. Transcript recall is limited to
+sessions owned by the acting user, and `ai_bot_memories` rows are filtered by
+`user_id IS NULL OR user_id = actor.id`. A shared fact exists only when an admin
+promotes it, and a Bot can never widen its own memory visibility. A handoff runs
+as the originating user, so it sees exactly that user's private memory — never
+another user's.
 
 ## 7. Cost control
 
-Tool definitions dominate input tokens. 75 tools ≈ several thousand tokens per
+Tool definitions dominate input tokens. 63 tools ≈ several thousand tokens per
 request, multiplied by every agent in a chain.
 
 | Lever | Mechanism |
 | --- | --- |
-| **Per-Bot allowlist** | `allowed_tools` — a narrow Bot ships 3 tools instead of 75. This is the single biggest lever. |
+| **Per-Bot allowlist** | `allowed_tools` — a narrow Bot ships 3 tools instead of 63. This is the single biggest lever. |
 | **Per-Bot model override** | `model` — cheap models for narrow bots, expensive for the coordinator |
 | **`max_steps`** | Bounds tool-call loops per turn |
 | **Per-Bot usage attribution** | `ai_usage_logs.bot_id` surfaces which Bot burns tokens |
+| **Sync delegation attribution** | `ai_usage_logs.bot_id` is the source of truth for sync `AgentTool` calls; `ai_bot_handoffs.estimated_cost_micros` covers only async work |
 | **Budget feature keys** | Extend `AiBudgetManager` with a `bot_handoff` feature so delegated spend is budgeted separately from `chat` |
 | **Deferred tool loading** | **Not available.** `laravel/ai` v0.9.1 ships only `WebSearch`, `WebFetch`, `FileSearch` as provider tools — there is no `ToolSearch` (that arrived in a later release). Tool scoping must therefore be **manual**, via the per-Bot allowlist. Do not plan around deferred loading. |
 
@@ -499,11 +618,11 @@ Pest. The project's rule is that every change is programmatically tested.
 
 | File | Covers |
 | --- | --- |
-| `tests/Feature/Ai/ToolRegistryTest.php` | every registry key resolves to a class; every `PendingAiActionService::ALLOWED_TYPES` write tool has a registry key; no duplicates |
-| `tests/Feature/Ai/BotAgentTest.php` | instructions include bot text; tools honour the allowlist; `memory_scope` selects the right history; `max_steps` respected |
-| `tests/Feature/Ai/BotHandoffTest.php` | delegation creates a `queued` row; `RunAiBotHandoff` runs the target and stores the result; cross-workspace delegation rejected; depth cap enforced; idempotent re-run |
-| `tests/Feature/Ai/BotRoutineTest.php` | due routines dispatch; overlapping runs are skipped; a failed routine records `last_status`/`last_error` |
-| `tests/Feature/Ai/BotGuardrailTest.php` | delegated writes still stage approvals and never execute; `EchoReplyGuard` strips invented approval claims from Bot replies; handoff bodies are wrapped as untrusted; no cross-tenant reads |
+| `tests/Feature/Ai/ToolRegistryTest.php` | every registry key resolves to a class; the single map carries `write` + `intents`; every `PendingAiActionService::ALLOWED_TYPES` write tool has a registry key; no duplicates |
+| `tests/Feature/Ai/BotAgentTest.php` | instructions include bot text; tools honour the allowlist; `memory_scope` selects the right history; `max_steps` respected; bot-scoped memory never reads another user's sessions |
+| `tests/Feature/Ai/BotHandoffTest.php` | delegation creates a `queued` row; `RunAiBotHandoff` runs the target and stores the result; cross-workspace delegation rejected; depth cap enforced on async; sync delegation cannot recurse; queued jobs bind `WorkspaceContext` + actor; audit rows survive Bot/session deletion; idempotent re-run |
+| `tests/Feature/Ai/BotRoutineTest.php` | due routines dispatch; overlapping runs are skipped; a failed routine records `last_status`/`last_error`; a routine with an inactive creator is `skipped` |
+| `tests/Feature/Ai/BotGuardrailTest.php` | delegated writes still stage approvals and never execute; `EchoReplyGuard` strips invented approval claims from Bot replies; handoff bodies are wrapped as untrusted; no cross-tenant reads; no cross-user memory reads |
 
 ### 9.2 Existing tests that must keep passing
 
@@ -524,11 +643,11 @@ drop is still caught.
 
 | Phase | Deliverable | Acceptance criteria |
 | --- | --- | --- |
-| **0 — Foundation** | `ToolRegistry`, `ai_bots` migration + model + factory + seeder, `BotAgent`, `AiBotResource` (CRUD only) | An admin can create a Bot with an allowlist; the Bot answers a chat turn using only its allowlisted tools; registry test green |
+| **0 — Foundation** | `ToolRegistry`, `ai_bots` migration + model + factory + seeder, `BotAgent`, `AiBotResource` (CRUD only) | An admin can create a Bot with an allowlist; the Bot answers a chat turn using only its allowlisted tools; the registry map carries `write` + `intents` and its parity test is green |
 | **1 — Direct use** | `ChatService` resolves `BotAgent` when a session names a Bot; Bot picker in `AdminAiChat` | A Bot behaves as a named teammate with its own instructions and session memory; Echo behaviour unchanged when no Bot is selected |
-| **2 — Delegation** | `ai_bot_messages`, `DelegateToBot`, `RunAiBotHandoff`, `CoordinatorAgent`, group sessions | A coordinator hands a subtask to a specialist and the specialist's reply lands in the transcript; depth and tenant caps enforced; all delegated writes require approval |
+| **2 — Delegation** | `ai_bot_handoffs`, `DelegateToBot`, `RunAiBotHandoff`, `CoordinatorAgent`, group sessions | A coordinator hands a subtask to a specialist and the specialist's reply lands in the transcript; async depth and tenant caps enforced; sync delegation is coordinator-only and non-recursive; queued jobs bind tenant + actor; all delegated writes require approval |
 | **3 — Routines** | `ai_bot_routines`, `RunAiBotRoutine`, `DispatchAiBotRoutines` | A daily routine fires once per day, stores its transcript, and respects the daily cap |
-| **4 — Memory** | `ai_bot_memories`, approval-gated `remember_bot_memory` action | A Bot's durable facts persist across sessions and can only be written with human approval |
+| **4 — Memory** | `ai_bot_memories`, approval-gated `remember_bot_memory` action | A Bot's durable facts persist across sessions and can only be written with human approval; facts are private to their user by default and never read across users |
 
 Phases 0–1 are the smallest slice that delivers the headline value ("a named
 teammate with its own role and memory"). Phases 2–4 add delegation, autonomy,
@@ -543,8 +662,11 @@ and durability.
 | Approval spoofing across a chain | Approval cards show the full chain; nonce stays server-side; `EchoReplyGuard` extended to Bot replies |
 | Prompt injection from one Bot into another | `wrapUntrusted()` on every handoff body and Bot-authored message |
 | Cross-tenant data leak via delegation | `workspace_id` equality check on every delegation, audited |
+| Cross-user memory leak | Transcript recall scoped to `chat_sessions.user_id`; memory rows filtered by `user_id IS NULL OR actor.id`; private by default |
+| Queue/Octane context loss | `BotRunContext` binds `WorkspaceContext` + auth per job and clears both in `finally`; no static/singleton state |
+| Audit loss when a Bot or session is deleted | `ai_bot_handoffs` FKs are nullable with `nullOnDelete`; only workspace deletion cascades |
 | Octane state bleed between requests | No static/singleton state; `AiManager` is already flushed per request via `config/octane.php`; `AiSdkProviderService` reads immutable `env_key`/`env_url` for fallbacks — **do not** introduce a per-request mutable static |
-| Registry drift vs `ALLOWED_TYPES` | Single registry test asserts parity; registry is the source of truth for both |
+| Registry drift vs `ALLOWED_TYPES` | One map entry carries class + write + intent; a parity test asserts `ALLOWED_TYPES`; registry is the source of truth for both |
 | Feature creep toward a general agent framework | Non-goals in §2.1 are binding; no new Composer dependency |
 
 ## 12. Open questions
@@ -566,6 +688,10 @@ and durability.
    per-Bot memory, no cross-Bot handoff, no Routines — but it is a good
    complement for one-shot research and should be wired into
    `AiSdkProviderService` independently.
+6. **Is Bot memory shared across admins or private per user?** Recommendation:
+   private per user by default (`ai_bot_memories.user_id` set), with an explicit
+   admin promotion to workspace-shared. Shared-by-default memory would leak one
+   admin's context into another admin's prompts.
 
 ---
 
@@ -575,10 +701,12 @@ and durability.
 
 ```
 app/Models/AiBot.php
-app/Models/AiBotMessage.php
+app/Models/AiBotHandoff.php
 app/Models/AiBotRoutine.php
 app/Models/AiBotMemory.php
 app/Ai/Support/ToolRegistry.php
+app/Ai/Support/BotRunContext.php
+app/Ai/Contracts/RequiresReplyGuard.php
 app/Ai/Agents/BotAgent.php
 app/Ai/Agents/CoordinatorAgent.php
 app/Ai/Tools/DelegateToBot.php
@@ -590,7 +718,7 @@ app/Filament/Resources/AiBots/{ListAiBots,CreateAiBot,EditAiBot}.php
 app/Filament/Pages/AiBotRoutines.php
 app/Filament/Pages/AiBotActivity.php
 database/migrations/xxxx_xx_xx_create_ai_bots_table.php
-database/migrations/xxxx_xx_xx_create_ai_bot_messages_table.php
+database/migrations/xxxx_xx_xx_create_ai_bot_handoffs_table.php
 database/migrations/xxxx_xx_xx_create_ai_bot_routines_table.php
 database/migrations/xxxx_xx_xx_create_ai_bot_memories_table.php
 database/migrations/xxxx_xx_xx_add_bot_columns_to_chat_tables.php
@@ -600,13 +728,13 @@ database/factories/AiBotFactory.php
 ### Modified files
 
 ```
-app/Services/ChatService.php                        # resolve Bot / Coordinator agent
+app/Services/ChatService.php                        # resolve Bot / Coordinator agent; guard via RequiresReplyGuard
 app/Services/PendingAiActionService.php             # ALLOWED_TYPES + remember_bot_memory
 app/Services/AiActionExecutor.php                   # prepareRememberBotMemory()
 app/Services/AiBudgetManager.php                    # bot_handoff feature key
-app/Ai/Agents/AdminAssistantAgent.php               # build tools from ToolRegistry
-app/Ai/Support/AdminAssistantIntent.php             # optional: intent hints per Bot
-app/Models/ChatSession.php                          # bot_id, mode
+app/Ai/Agents/AdminAssistantAgent.php               # build tools from ToolRegistry; implement RequiresReplyGuard
+app/Ai/Support/AdminAssistantIntent.php             # intent keys consumed by ToolRegistry
+app/Models/ChatSession.php                          # bot_id, mode, participant_bot_ids
 app/Models/ChatMessage.php                          # bot_id
 app/Models/AiUsageLog.php                           # bot_id
 app/Services/AiOutputSanitizerService.php           # allow Bot-authored message markers
