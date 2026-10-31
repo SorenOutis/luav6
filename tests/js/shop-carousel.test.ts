@@ -288,4 +288,63 @@ describe('Shop.vue studio world', () => {
         expect(storeLink.attributes('href')).toBe('https://koamishin.com/');
         expect(storeLink.text()).toContain('Visit store');
     });
+
+    it('navigates pieces on stage using the stage switcher controls', async () => {
+        const wrapper = mountShop();
+        await nextTick();
+
+        // Sample merches start with the hoodie (index 1) because it has variants
+        expect(wrapper.find('.studio-stage h2').text()).toBe(
+            'KOAMISHIN Techwear Hoodie',
+        );
+
+        const nextButtons = wrapper.findAll(
+            'button[aria-label="Next piece on stage"]',
+        );
+        expect(nextButtons.length).toBeGreaterThan(0);
+
+        await nextButtons[0].trigger('click');
+        await nextTick();
+
+        // Next item in array is Cap (index 2)
+        expect(wrapper.find('.studio-stage h2').text()).toBe(
+            'KOAMISHIN Structured Snapback Cap',
+        );
+    });
+
+    it('filters collection items by stock status using the segmented control', async () => {
+        const wrapper = mountShop();
+        await nextTick();
+
+        expect(wrapper.findAll('.piece-tile').length).toBe(4);
+
+        const filterButtons = wrapper.findAll('[role="toolbar"] button');
+        const inStockButton = filterButtons.find((btn) =>
+            btn.text().includes('In stock'),
+        );
+        expect(inStockButton?.exists()).toBe(true);
+
+        await inStockButton?.trigger('click');
+        await nextTick();
+
+        // Only 3 in-stock items
+        expect(wrapper.findAll('.piece-tile').length).toBe(3);
+        expect(wrapper.text()).not.toContain('Classroom Canvas Field Tote');
+
+        const allButton = filterButtons.find((btn) =>
+            btn.text().includes('All'),
+        );
+        await allButton?.trigger('click');
+        await nextTick();
+
+        expect(wrapper.findAll('.piece-tile').length).toBe(4);
+    });
+
+    it('renders craftsmanship commitments at the foot of the line', () => {
+        const wrapper = mountShop();
+
+        expect(wrapper.text()).toContain('Curated drops');
+        expect(wrapper.text()).toContain('Heavyweight craft');
+        expect(wrapper.text()).toContain('Direct fulfillment');
+    });
 });
