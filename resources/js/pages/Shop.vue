@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ExternalLink, ShoppingBag } from 'lucide-vue-next';
+import {
+    ChevronLeft,
+    ChevronRight,
+    ExternalLink,
+    ShoppingBag,
+} from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import ShopQuickViewModal from '@/components/shop/ShopQuickViewModal.vue';
@@ -67,6 +72,135 @@ const selectPiece = (index: number) => {
     const piece = frames.value[index];
     variantIndex.value = piece ? preferredVariantIndex(piece) : 0;
 };
+
+const previousPiece = () => {
+    if (frames.value.length <= 1) {
+        return;
+    }
+    const prev =
+        (pieceIndex.value - 1 + frames.value.length) % frames.value.length;
+    selectPiece(prev);
+};
+
+const nextPiece = () => {
+    if (frames.value.length <= 1) {
+        return;
+    }
+    const next = (pieceIndex.value + 1) % frames.value.length;
+    selectPiece(next);
+};
+
+const colorwaySwatch = (name: string): string => {
+    const lower = name.toLowerCase();
+    if (
+        lower.includes('obsidian') ||
+        lower.includes('black') ||
+        lower.includes('noir') ||
+        lower.includes('dark')
+    ) {
+        return '#1b1b1f';
+    }
+    if (
+        lower.includes('alabaster') ||
+        lower.includes('white') ||
+        lower.includes('cream') ||
+        lower.includes('ivory') ||
+        lower.includes('light')
+    ) {
+        return '#f4efe6';
+    }
+    if (
+        lower.includes('heather') ||
+        lower.includes('grey') ||
+        lower.includes('gray')
+    ) {
+        return '#8e8e93';
+    }
+    if (
+        lower.includes('navy') ||
+        lower.includes('blue') ||
+        lower.includes('indigo')
+    ) {
+        return '#1e293b';
+    }
+    if (
+        lower.includes('olive') ||
+        lower.includes('green') ||
+        lower.includes('sage') ||
+        lower.includes('forest')
+    ) {
+        return '#3f4f44';
+    }
+    if (
+        lower.includes('crimson') ||
+        lower.includes('red') ||
+        lower.includes('rust') ||
+        lower.includes('terracotta')
+    ) {
+        return '#b85437';
+    }
+    if (
+        lower.includes('tan') ||
+        lower.includes('sand') ||
+        lower.includes('camel') ||
+        lower.includes('khaki') ||
+        lower.includes('beige')
+    ) {
+        return '#d4c7b5';
+    }
+    return '#8a8378';
+};
+
+const specChips = computed<string[]>(() => {
+    const desc = currentPiece.value?.description;
+    if (!desc) {
+        return [];
+    }
+
+    const chips: string[] = [];
+    const text = desc.toLowerCase();
+
+    if (text.includes('gsm')) {
+        const match = desc.match(/\b\d+\s*gsm\b/i);
+        if (match) {
+            chips.push(match[0].toUpperCase());
+        }
+    } else if (text.includes('16oz') || text.includes('oz')) {
+        const match = desc.match(/\b\d+\s*oz\b/i);
+        if (match) {
+            chips.push(match[0]);
+        }
+    }
+
+    if (text.includes('combed cotton')) {
+        chips.push('Combed Cotton');
+    } else if (text.includes('cotton canvas')) {
+        chips.push('Cotton Canvas');
+    } else if (text.includes('fleece')) {
+        chips.push('Fleece Knit');
+    } else if (text.includes('wool-blend') || text.includes('wool blend')) {
+        chips.push('Wool Blend');
+    }
+
+    if (text.includes('embroidered') || text.includes('embroidery')) {
+        chips.push('Embroidered');
+    } else if (text.includes('double-lined') || text.includes('double lined')) {
+        chips.push('Double-Lined Hood');
+    } else if (text.includes('structured')) {
+        chips.push('Structured Crown');
+    }
+
+    return chips.slice(0, 3);
+});
+
+const activeFilter = ref<'all' | 'in_stock'>('all');
+
+const filteredFrames = computed<MerchItem[]>(() => {
+    if (activeFilter.value === 'in_stock') {
+        return frames.value.filter((m) => !m.is_out_of_stock && m.stock > 0);
+    }
+    return frames.value;
+});
 
 const selectVariant = (index: number) => {
     variantIndex.value = index;
@@ -311,14 +445,97 @@ onMounted(() => {
                         >
                             <ShoppingBag class="h-10 w-10" aria-hidden="true" />
                         </span>
+
+                        <div
+                            v-if="frames.length > 1"
+                            class="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center gap-1.5"
+                            aria-hidden="true"
+                        >
+                            <span
+                                v-for="(_, idx) in frames"
+                                :key="`stage-dot-${idx}`"
+                                class="h-1 rounded-full transition-all duration-300"
+                                :class="
+                                    idx === pieceIndex
+                                        ? 'w-5 bg-[var(--st-ink)]'
+                                        : 'w-1.5 bg-[var(--st-ink)]/25'
+                                "
+                            />
+                        </div>
+
+                        <div
+                            v-if="frames.length > 1"
+                            class="pointer-events-none absolute inset-x-3 inset-y-0 z-20 flex items-center justify-between opacity-0 transition-opacity duration-200 group-hover/garment:opacity-100 sm:inset-x-5"
+                        >
+                            <button
+                                type="button"
+                                class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-[var(--st-hairline)] bg-[var(--st-stage-bg)]/85 text-[var(--st-ink)] shadow-xs backdrop-blur-xs transition hover:scale-105 hover:bg-[var(--st-stage-bg)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                aria-label="Previous piece on stage"
+                                @click.stop="previousPiece"
+                            >
+                                <ChevronLeft
+                                    class="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-[var(--st-hairline)] bg-[var(--st-stage-bg)]/85 text-[var(--st-ink)] shadow-xs backdrop-blur-xs transition hover:scale-105 hover:bg-[var(--st-stage-bg)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                aria-label="Next piece on stage"
+                                @click.stop="nextPiece"
+                            >
+                                <ChevronRight
+                                    class="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                        </div>
                     </button>
 
                     <div
                         class="flex flex-col justify-center rounded-[24px] border border-[var(--st-hairline)] bg-[var(--st-panel-bg)] p-6 sm:p-8 lg:p-9"
                     >
-                        <p class="st-label text-[var(--st-ink-mute)]">
-                            On stage
-                        </p>
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="st-label text-[var(--st-ink-mute)]">
+                                On stage
+                            </p>
+                            <div
+                                v-if="frames.length > 1"
+                                class="flex items-center gap-1.5"
+                                role="group"
+                                aria-label="Browse pieces on stage"
+                            >
+                                <button
+                                    type="button"
+                                    class="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--st-hairline)] text-[var(--st-ink-mute)] transition hover:border-[var(--st-ink)] hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                    aria-label="Previous piece on stage"
+                                    @click.stop="previousPiece"
+                                >
+                                    <ChevronLeft
+                                        class="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                                <span
+                                    class="st-label text-xs text-[var(--st-ink-mute)] tabular-nums"
+                                >
+                                    {{ pad(pieceIndex + 1) }} /
+                                    {{ pad(frames.length) }}
+                                </span>
+                                <button
+                                    type="button"
+                                    class="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--st-hairline)] text-[var(--st-ink-mute)] transition hover:border-[var(--st-ink)] hover:text-[var(--st-ink)] focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                                    aria-label="Next piece on stage"
+                                    @click.stop="nextPiece"
+                                >
+                                    <ChevronRight
+                                        class="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
                         <h2
                             class="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--st-ink)] sm:text-[1.75rem]"
                         >
@@ -330,6 +547,19 @@ onMounted(() => {
                         >
                             {{ currentPiece.description }}
                         </p>
+
+                        <div
+                            v-if="specChips.length > 0"
+                            class="mt-4 flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="chip in specChips"
+                                :key="chip"
+                                class="inline-flex items-center rounded-md border border-[var(--st-hairline)] bg-[var(--st-well-bg)]/60 px-2 py-0.5 text-[11px] font-medium tracking-tight text-[var(--st-ink-mute)]"
+                            >
+                                {{ chip }}
+                            </span>
+                        </div>
 
                         <div class="mt-6">
                             <div class="st-row">
@@ -381,7 +611,21 @@ onMounted(() => {
                                 "
                                 @click="selectVariant(index)"
                             >
-                                {{ variant.name }}
+                                <span
+                                    class="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-black/10 transition-transform duration-200 dark:border-white/20"
+                                    :class="
+                                        index === variantIndex
+                                            ? 'scale-110 ring-1 ring-[var(--st-ink)]/20'
+                                            : ''
+                                    "
+                                    :style="{
+                                        backgroundColor: colorwaySwatch(
+                                            variant.name,
+                                        ),
+                                    }"
+                                    aria-hidden="true"
+                                />
+                                <span>{{ variant.name }}</span>
                             </button>
                         </div>
 
@@ -476,16 +720,53 @@ onMounted(() => {
                         </a>
                     </div>
                 </div>
-                <p class="st-label mt-3 text-[var(--st-ink-mute)] opacity-80">
-                    Prices shown for reference · checkout &amp; fulfillment on
-                    koamishin.com
-                </p>
+                <div
+                    class="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--st-hairline)] pb-4"
+                    role="toolbar"
+                    aria-label="Filter collection"
+                >
+                    <div
+                        class="inline-flex items-center rounded-full border border-[var(--st-hairline)] bg-[var(--st-well-bg)] p-1 text-xs"
+                    >
+                        <button
+                            type="button"
+                            class="rounded-full px-3.5 py-1 font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                            :class="
+                                activeFilter === 'all'
+                                    ? 'bg-[var(--st-panel-bg)] text-[var(--st-ink)] shadow-xs'
+                                    : 'text-[var(--st-ink-mute)] hover:text-[var(--st-ink)]'
+                            "
+                            :aria-pressed="activeFilter === 'all'"
+                            @click="activeFilter = 'all'"
+                        >
+                            All ({{ pad(frames.length) }})
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-full px-3.5 py-1 font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#d97757] focus-visible:outline-none"
+                            :class="
+                                activeFilter === 'in_stock'
+                                    ? 'bg-[var(--st-panel-bg)] text-[var(--st-ink)] shadow-xs'
+                                    : 'text-[var(--st-ink-mute)] hover:text-[var(--st-ink)]'
+                            "
+                            :aria-pressed="activeFilter === 'in_stock'"
+                            @click="activeFilter = 'in_stock'"
+                        >
+                            In stock ({{ pad(inStockCount) }})
+                        </button>
+                    </div>
+
+                    <p class="st-label text-[var(--st-ink-mute)] opacity-80">
+                        Prices shown for reference · checkout &amp; fulfillment
+                        on koamishin.com
+                    </p>
+                </div>
 
                 <div
                     class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5"
                 >
                     <article
-                        v-for="merch in frames"
+                        v-for="merch in filteredFrames"
                         :key="merch.id"
                         class="piece-tile"
                     >
@@ -496,9 +777,15 @@ onMounted(() => {
                             @click="openQuickView(merch)"
                         >
                             <span
-                                class="block aspect-square w-full overflow-hidden transition-colors duration-300"
+                                class="relative block aspect-square w-full overflow-hidden transition-colors duration-300"
                                 :style="backdropStyle(merch.image_url)"
                             >
+                                <span
+                                    v-if="merch.id === currentPiece?.id"
+                                    class="absolute top-3 left-3 z-10 rounded-full border border-[var(--st-hairline)] bg-[var(--st-panel-bg)]/90 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--st-accent-text)] uppercase backdrop-blur-xs"
+                                >
+                                    On stage
+                                </span>
                                 <img
                                     v-if="merch.image_url"
                                     :src="merch.image_url"
@@ -534,6 +821,64 @@ onMounted(() => {
                             </span>
                         </button>
                     </article>
+                </div>
+            </section>
+
+            <section
+                class="mt-16 border-t border-[var(--st-hairline)] pt-12 sm:mt-24 sm:pt-16"
+                aria-label="KOAMISHIN studio standards"
+            >
+                <div
+                    class="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6 lg:gap-10"
+                >
+                    <div class="space-y-2">
+                        <p class="st-label text-[var(--st-ink-mute)]">
+                            01 / Curated drops
+                        </p>
+                        <h3
+                            class="text-base font-semibold tracking-tight text-[var(--st-ink)]"
+                        >
+                            Small-batch releases
+                        </h3>
+                        <p
+                            class="text-sm leading-relaxed text-[var(--st-ink-mute)]"
+                        >
+                            Engineered exclusively for the KOAMISHIN educator
+                            and learner community with strict run limits.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="st-label text-[var(--st-ink-mute)]">
+                            02 / Heavyweight craft
+                        </p>
+                        <h3
+                            class="text-base font-semibold tracking-tight text-[var(--st-ink)]"
+                        >
+                            Durable tactile goods
+                        </h3>
+                        <p
+                            class="text-sm leading-relaxed text-[var(--st-ink-mute)]"
+                        >
+                            High-density embroidery, premium combed textiles,
+                            and reinforced seams tested for daily wear.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="st-label text-[var(--st-ink-mute)]">
+                            03 / Direct fulfillment
+                        </p>
+                        <h3
+                            class="text-base font-semibold tracking-tight text-[var(--st-ink)]"
+                        >
+                            Official shop checkout
+                        </h3>
+                        <p
+                            class="text-sm leading-relaxed text-[var(--st-ink-mute)]"
+                        >
+                            Transparent stock tracking, direct order status, and
+                            verified handling via koamishin.com.
+                        </p>
+                    </div>
                 </div>
             </section>
         </main>
