@@ -208,6 +208,36 @@ router.on('invalid', (event) => {
     }
 });
 
+router.on('success', () => {
+    try {
+        sessionStorage.removeItem(
+            'vite_preload_retry_' + window.location.pathname,
+        );
+        sessionStorage.removeItem(
+            'inertia_chunk_retry_' + window.location.pathname,
+        );
+    } catch {
+        // Ignore sessionStorage restrictions in sandboxed environments.
+    }
+});
+
+// Vite hook: auto-reloads once when an outdated chunk hash from a previous
+// deployment fails to fetch, preventing stale sessions from remaining on a blank screen.
+if (typeof window !== 'undefined') {
+    window.addEventListener('vite:preloadError', (event) => {
+        try {
+            const reloadKey = 'vite_preload_retry_' + window.location.pathname;
+            if (!sessionStorage.getItem(reloadKey)) {
+                sessionStorage.setItem(reloadKey, '1');
+                event.preventDefault();
+                window.location.reload();
+            }
+        } catch {
+            window.location.reload();
+        }
+    });
+}
+
 /**
  * Ensure all route objects have a form() method.
  *
@@ -281,11 +311,26 @@ function ensureFormMethod(route: any): void {
     try {
         createInertiaApp({
             title: (title) => (title ? `${title} - ${appName}` : appName),
-            resolve: (name) =>
-                resolvePageComponent(
-                    `./pages/${name}.vue`,
-                    import.meta.glob<DefineComponent>('./pages/**/*.vue'),
-                ),
+            resolve: async (name) => {
+                try {
+                    return await resolvePageComponent(
+                        `./pages/${name}.vue`,
+                        import.meta.glob<DefineComponent>('./pages/**/*.vue'),
+                    );
+                } catch (error) {
+                    try {
+                        const reloadKey =
+                            'inertia_chunk_retry_' + window.location.pathname;
+                        if (!sessionStorage.getItem(reloadKey)) {
+                            sessionStorage.setItem(reloadKey, '1');
+                            window.location.reload();
+                        }
+                    } catch {
+                        window.location.reload();
+                    }
+                    throw error;
+                }
+            },
             setup({ el, App, props, plugin }) {
                 const RootApp = {
                     name: 'RootApp',

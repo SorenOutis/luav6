@@ -25,6 +25,19 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', (string) config('security.permissions_policy'));
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
 
+        // Prevent browsers and intermediate proxies from serving stale HTML/Inertia documents.
+        // Hashed Vite assets (/build/assets/*) are immutable, but the HTML shell referencing them
+        // must always revalidate with the server so deployments and fixes take effect immediately.
+        if (! $request->is('build/*', 'images/*', 'fonts/*', 'favicon.*', 'brand/*')) {
+            $contentType = (string) $response->headers->get('Content-Type');
+            $isDownload = str_contains((string) $response->headers->get('Content-Disposition'), 'attachment');
+            if (! $isDownload && (str_contains($contentType, 'text/html') || $request->header('X-Inertia') || $contentType === '')) {
+                $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+                $response->headers->set('Pragma', 'no-cache');
+                $response->headers->set('Expires', '0');
+            }
+        }
+
         if ($this->shouldSendHsts($request)) {
             $response->headers->set('Strict-Transport-Security', $this->hstsValue());
         }
