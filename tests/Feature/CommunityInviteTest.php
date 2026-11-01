@@ -561,11 +561,11 @@ it('masks posts as anonymous when student section is configured for all anonymou
         'accepted_at' => now(),
     ]);
 
-    CommunityPost::create([
+    CommunityPost::factory()->create([
         'workspace_id' => $this->workspace->id,
         'user_id' => $author->id,
         'section_id' => $sectionA->id,
-        'body' => 'Hello classmates!',
+        'content' => 'Hello classmates!',
         'is_anonymous' => false,
     ]);
 
