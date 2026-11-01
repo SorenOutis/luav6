@@ -179,7 +179,7 @@ const webSiteJsonLd = [
                 :login="() => login().url"
                 :register="() => register().url"
                 :is-booted="true"
-                :prefers-reduced-motion="prefersReducedMotion"
+                :prefers-reduced-motion="effectiveReducedMotion"
             />
 
             <WelcomeManifesto

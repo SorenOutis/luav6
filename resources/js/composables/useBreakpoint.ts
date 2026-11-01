@@ -1,4 +1,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+    addMqlListener,
+    removeMqlListener,
+    safeMatchMediaList,
+} from '@/lib/device';
 
 /**
  * Tailwind's default `md` breakpoint (768px, min-width). Kept as a plain
@@ -60,16 +65,18 @@ export function useMdBreakpoint() {
 
     onMounted(() => {
         recompute();
-        if (typeof window.matchMedia === 'function') {
-            mql = window.matchMedia(`(min-width: ${MD_BREAKPOINT_PX}px)`);
-            mql.addEventListener('change', recompute);
+        mql = safeMatchMediaList(`(min-width: ${MD_BREAKPOINT_PX}px)`);
+        addMqlListener(mql, recompute);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', onResizeDebounced);
         }
-        window.addEventListener('resize', onResizeDebounced);
     });
 
     onBeforeUnmount(() => {
-        mql?.removeEventListener('change', recompute);
-        window.removeEventListener('resize', onResizeDebounced);
+        removeMqlListener(mql, recompute);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('resize', onResizeDebounced);
+        }
         if (resizeTimer) clearTimeout(resizeTimer);
     });
 
@@ -116,19 +123,21 @@ export function useDashboardLayoutBreakpoint() {
 
     onMounted(() => {
         update();
-        if (typeof window.matchMedia === 'function') {
-            mqlMd = window.matchMedia(`(min-width: ${MD_BREAKPOINT_PX}px)`);
-            mqlCoarse = window.matchMedia('(pointer: coarse)');
-            mqlMd.addEventListener('change', update);
-            mqlCoarse.addEventListener('change', update);
+        mqlMd = safeMatchMediaList(`(min-width: ${MD_BREAKPOINT_PX}px)`);
+        mqlCoarse = safeMatchMediaList('(pointer: coarse)');
+        addMqlListener(mqlMd, update);
+        addMqlListener(mqlCoarse, update);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', onResizeDebounced);
         }
-        window.addEventListener('resize', onResizeDebounced);
     });
 
     onBeforeUnmount(() => {
-        mqlMd?.removeEventListener('change', update);
-        mqlCoarse?.removeEventListener('change', update);
-        window.removeEventListener('resize', onResizeDebounced);
+        removeMqlListener(mqlMd, update);
+        removeMqlListener(mqlCoarse, update);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('resize', onResizeDebounced);
+        }
         if (resizeTimer) clearTimeout(resizeTimer);
     });
 
