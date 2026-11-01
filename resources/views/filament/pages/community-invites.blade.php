@@ -159,6 +159,18 @@
                                         Views: +{{ $secAllowedCount }} {{ str('section')->plural($secAllowedCount) }}
                                     </span>
                                 @endif
+                                @php
+                                    $secAnonMode = $this->sectionAnonymousViewMap[(string) $sectionItem->id] ?? 'none';
+                                @endphp
+                                @if ($secAnonMode === 'all')
+                                    <span class="inline-flex items-center gap-0.5 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-400/15 dark:text-amber-300">
+                                        🎭 All Anonymous
+                                    </span>
+                                @elseif ($secAnonMode === 'cross_section')
+                                    <span class="inline-flex items-center gap-0.5 rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-300">
+                                        🎭 Cross-Section Anon
+                                    </span>
+                                @endif
                             </div>
                         </div>
 
@@ -192,9 +204,10 @@
                 @endif
             </div>
 
-            {{-- Per-Section Cross-Section Viewing Permissions Panel --}}
-            @if ($activeSection && $workspaceSections->count() > 1)
+            {{-- Per-Section Viewing & Identity Privacy Permissions Panel --}}
+            @if ($activeSection)
                 @php
+                    $activeAnonMode = $this->sectionAnonymousViewMap[(string) $activeSection->id] ?? 'none';
                     $activeViewableRaw = $sectionViewableMap[(int) $activeSection->id] ?? [];
                     $activeCanViewAll = in_array('*', $activeViewableRaw, true);
                     $activeTargetIds = $activeCanViewAll
@@ -203,61 +216,136 @@
                     $otherSections = $workspaceSections->where('id', '!=', $activeSection->id);
                 @endphp
                 <div class="mt-5 rounded-xl border border-sky-500/25 bg-sky-500/[0.04] p-4 dark:border-sky-400/20 dark:bg-sky-500/[0.06]">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <x-filament::icon icon="heroicon-o-eye" class="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200">
-                                    Cross-Section Viewing for {{ $activeSection->name }}
-                                </h4>
+                    {{-- Identity Privacy Setting for this section --}}
+                    <div class="rounded-lg border border-sky-500/20 bg-white/70 p-3 shadow-xs dark:border-white/10 dark:bg-gray-900/60 {{ $otherSections->isNotEmpty() ? 'mb-4' : '' }}">
+                        <div class="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                                    <x-filament::icon icon="heroicon-o-user-circle" class="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                                    <span>Post Identity Visibility for {{ $activeSection->name }}</span>
+                                </div>
+                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                    Choose whether students in <strong>{{ $activeSection->name }}</strong> see author identities or see posts masked as anonymous.
+                                </p>
                             </div>
-                            <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
-                                Select which other sections students in <strong>{{ $activeSection->name }}</strong> can view in their feed and switch to in the Lounge section switcher (with real student names &amp; avatars shown).
-                            </p>
-                        </div>
 
-                        <div class="flex shrink-0 flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                wire:click="toggleSectionViewAll({{ $activeSection->id }})"
-                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition {{ $activeCanViewAll ? 'bg-sky-600 text-white hover:bg-sky-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700' }}"
-                            >
-                                <x-filament::icon icon="heroicon-o-globe-alt" class="h-3.5 w-3.5" />
-                                {{ $activeCanViewAll ? 'Viewing All Sections (Enabled)' : 'Allow Viewing All Sections' }}
-                            </button>
-
-                            @if ($activeCanViewAll || count($activeTargetIds) > 0)
+                            <div class="inline-flex shrink-0 flex-wrap items-center rounded-lg border border-gray-200 bg-gray-100 p-0.5 dark:border-white/10 dark:bg-gray-800">
                                 <button
                                     type="button"
-                                    wire:click="clearSectionViewable({{ $activeSection->id }})"
-                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    wire:click="setSectionAnonymousMode({{ $activeSection->id }}, 'none')"
+                                    class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {{ $activeAnonMode === 'none' ? 'bg-white text-gray-950 shadow-xs dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white' }}"
                                 >
-                                    Own Section Only
+                                    @if ($activeAnonMode === 'none')
+                                        <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5 text-emerald-500" />
+                                    @endif
+                                    <span>Real Names (Default)</span>
                                 </button>
+                                <button
+                                    type="button"
+                                    wire:click="setSectionAnonymousMode({{ $activeSection->id }}, 'cross_section')"
+                                    class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {{ $activeAnonMode === 'cross_section' ? 'bg-amber-500 text-white shadow-xs dark:bg-amber-600' : 'text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white' }}"
+                                    title="Students see classmates with real names, but other sections as anonymous"
+                                >
+                                    @if ($activeAnonMode === 'cross_section')
+                                        <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5 text-white" />
+                                    @endif
+                                    <span>🎭 Cross-Section Anon</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="setSectionAnonymousMode({{ $activeSection->id }}, 'all')"
+                                    class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {{ $activeAnonMode === 'all' ? 'bg-purple-600 text-white shadow-xs dark:bg-purple-600' : 'text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white' }}"
+                                    title="All posts and comments appear as anonymous (Student #xxxx)"
+                                >
+                                    @if ($activeAnonMode === 'all')
+                                        <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5 text-white" />
+                                    @endif
+                                    <span>🎭 See All as Anonymous</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-2 text-[11px]">
+                            @if ($activeAnonMode === 'all')
+                                <span class="font-medium text-purple-700 dark:text-purple-300">
+                                    🔒 <strong>All Anonymous:</strong> Students in this section see ALL posts, comments, and stories as anonymous ("Student #xxxx"), even from their own classmates.
+                                </span>
+                            @elseif ($activeAnonMode === 'cross_section')
+                                <span class="font-medium text-amber-700 dark:text-amber-300">
+                                    👥 <strong>Cross-Section Anonymous:</strong> Students see real names for their classmates, but all posts and comments from other sections appear as anonymous ("Student #xxxx").
+                                </span>
+                            @else
+                                <span class="font-medium text-emerald-700 dark:text-emerald-300">
+                                    👤 <strong>Real Names:</strong> Students see real student names and avatars across their feed (unless an author originally posted anonymously).
+                                </span>
                             @endif
                         </div>
                     </div>
 
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        @foreach ($otherSections as $otherSection)
-                            @php
-                                $isTargetAllowed = $activeCanViewAll || in_array((int) $otherSection->id, $activeTargetIds, true);
-                            @endphp
-                            <button
-                                type="button"
-                                wire:key="view-target-{{ $activeSection->id }}-{{ $otherSection->id }}"
-                                wire:click="toggleSectionViewTarget({{ $activeSection->id }}, {{ $otherSection->id }})"
-                                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition {{ $isTargetAllowed ? 'border-sky-500 bg-sky-500/15 text-sky-900 dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-white/20' }}"
-                            >
-                                @if ($isTargetAllowed)
-                                    <x-filament::icon icon="heroicon-s-check-circle" class="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
-                                @else
-                                    <span class="h-3.5 w-3.5 rounded-full border border-gray-300 dark:border-white/20"></span>
+                    @if ($otherSections->isNotEmpty())
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-sky-500/15 pt-3 dark:border-white/10">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <x-filament::icon icon="heroicon-o-eye" class="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200">
+                                        Cross-Section Viewing for {{ $activeSection->name }}
+                                    </h4>
+                                </div>
+                                <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
+                                    Select which other sections students in <strong>{{ $activeSection->name }}</strong> can view in their feed and switch to in the Lounge section switcher
+                                    @if ($activeAnonMode === 'all')
+                                        <span class="text-purple-700 dark:text-purple-300 font-semibold">(all posts will be seen as anonymous)</span>.
+                                    @elseif ($activeAnonMode === 'cross_section')
+                                        <span class="text-amber-700 dark:text-amber-300 font-semibold">(other sections will be seen as anonymous)</span>.
+                                    @else
+                                        <span>(with real student names &amp; avatars shown)</span>.
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="toggleSectionViewAll({{ $activeSection->id }})"
+                                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition {{ $activeCanViewAll ? 'bg-sky-600 text-white hover:bg-sky-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700' }}"
+                                >
+                                    <x-filament::icon icon="heroicon-o-globe-alt" class="h-3.5 w-3.5" />
+                                    {{ $activeCanViewAll ? 'Viewing All Sections (Enabled)' : 'Allow Viewing All Sections' }}
+                                </button>
+
+                                @if ($activeCanViewAll || count($activeTargetIds) > 0)
+                                    <button
+                                        type="button"
+                                        wire:click="clearSectionViewable({{ $activeSection->id }})"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    >
+                                        Own Section Only
+                                    </button>
                                 @endif
-                                <span>{{ $otherSection->name }}</span>
-                            </button>
-                        @endforeach
-                    </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @foreach ($otherSections as $otherSection)
+                                @php
+                                    $isTargetAllowed = $activeCanViewAll || in_array((int) $otherSection->id, $activeTargetIds, true);
+                                @endphp
+                                <button
+                                    type="button"
+                                    wire:key="view-target-{{ $activeSection->id }}-{{ $otherSection->id }}"
+                                    wire:click="toggleSectionViewTarget({{ $activeSection->id }}, {{ $otherSection->id }})"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition {{ $isTargetAllowed ? 'border-sky-500 bg-sky-500/15 text-sky-900 dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-white/20' }}"
+                                >
+                                    @if ($isTargetAllowed)
+                                        <x-filament::icon icon="heroicon-s-check-circle" class="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                    @else
+                                        <span class="h-3.5 w-3.5 rounded-full border border-gray-300 dark:border-white/20"></span>
+                                    @endif
+                                    <span>{{ $otherSection->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             @endif
         </div>

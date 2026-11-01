@@ -25,6 +25,14 @@ class CommunitySettings
 
     public const SETTING_SECTION_VIEWABLE_MAP = 'community_section_viewable_sections';
 
+    public const SETTING_SECTION_ANONYMOUS_VIEW_MAP = 'community_section_anonymous_view_map';
+
+    public const ANONYMOUS_VIEW_NONE = 'none';
+
+    public const ANONYMOUS_VIEW_ALL = 'all';
+
+    public const ANONYMOUS_VIEW_CROSS_SECTION = 'cross_section';
+
     public const SCOPE_WORKSPACE = 'workspace';
 
     public const SCOPE_SECTION = 'section';
@@ -352,5 +360,81 @@ class CommunitySettings
         }
 
         return array_values(array_unique($merged));
+    }
+
+    /**
+     * Map of section IDs to their anonymous viewing mode.
+     * Modes:
+     * - 'none': Real names & avatars shown (default)
+     * - 'all': Students in this section see all posts as anonymous (Student #xxxx)
+     * - 'cross_section': Classmates shown with real names, other sections masked as anonymous
+     *
+     * @return array<string, string>
+     */
+    public static function sectionAnonymousViewMap(): array
+    {
+        $setting = Setting::get(self::SETTING_SECTION_ANONYMOUS_VIEW_MAP);
+        if ($setting === null || $setting === '') {
+            return [];
+        }
+
+        $decoded = json_decode($setting, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($decoded as $secId => $mode) {
+            $id = (int) $secId;
+            if ($id <= 0) {
+                continue;
+            }
+            $cleanMode = in_array($mode, [self::ANONYMOUS_VIEW_ALL, self::ANONYMOUS_VIEW_CROSS_SECTION], true)
+                ? $mode
+                : (filter_var($mode, FILTER_VALIDATE_BOOLEAN) ? self::ANONYMOUS_VIEW_ALL : self::ANONYMOUS_VIEW_NONE);
+
+            if ($cleanMode !== self::ANONYMOUS_VIEW_NONE) {
+                $result[(string) $id] = $cleanMode;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get the anonymous viewing mode for a single section.
+     */
+    public static function sectionAnonymousViewMode(int $sectionId): string
+    {
+        if ($sectionId <= 0) {
+            return self::ANONYMOUS_VIEW_NONE;
+        }
+
+        $map = static::sectionAnonymousViewMap();
+
+        return $map[(string) $sectionId] ?? self::ANONYMOUS_VIEW_NONE;
+    }
+
+    /**
+     * Update anonymous viewing mode for a single section.
+     */
+    public static function setSectionAnonymousViewMode(int $sectionId, string $mode): void
+    {
+        if ($sectionId <= 0) {
+            return;
+        }
+
+        $map = static::sectionAnonymousViewMap();
+        $cleanMode = in_array($mode, [self::ANONYMOUS_VIEW_ALL, self::ANONYMOUS_VIEW_CROSS_SECTION], true)
+            ? $mode
+            : self::ANONYMOUS_VIEW_NONE;
+
+        if ($cleanMode === self::ANONYMOUS_VIEW_NONE) {
+            unset($map[(string) $sectionId]);
+        } else {
+            $map[(string) $sectionId] = $cleanMode;
+        }
+
+        Setting::setGlobal(self::SETTING_SECTION_ANONYMOUS_VIEW_MAP, json_encode($map));
     }
 }

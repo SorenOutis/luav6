@@ -202,16 +202,24 @@ class CommunityController extends Controller
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
 
-        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $viewerEnrolledSectionIds = $viewer->sections()->pluck('sections.id')->all();
         $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
-            $viewer->sections()->pluck('sections.id')->all(),
+            $viewerEnrolledSectionIds,
             $workspaceId,
         );
         $sharesSection = ! empty($viewerViewableSectionIds)
             && $user->sections()->whereIn('sections.id', $viewerViewableSectionIds)->exists();
 
+        $viewerHasAnonAll = false;
+        foreach ($viewerEnrolledSectionIds as $secId) {
+            if (CommunitySettings::sectionAnonymousViewMode((int) $secId) === CommunitySettings::ANONYMOUS_VIEW_ALL) {
+                $viewerHasAnonAll = true;
+                break;
+            }
+        }
+
         $isSelf = $viewer->is($user);
-        $isMasked = ! $sharesSection && ! $isSelf;
+        $isMasked = (! $sharesSection || $viewerHasAnonAll) && ! $isSelf;
 
         if ($isMasked) {
             return response()->json([
@@ -300,16 +308,24 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
-        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
+        $viewerEnrolledSectionIds = $viewer->sections()->pluck('sections.id')->all();
         $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
-            $viewer->sections()->pluck('sections.id')->all(),
+            $viewerEnrolledSectionIds,
             $workspaceId,
         );
         $sharesSection = ! empty($viewerViewableSectionIds)
             && $user->sections()->whereIn('sections.id', $viewerViewableSectionIds)->exists();
 
+        $viewerHasAnonAll = false;
+        foreach ($viewerEnrolledSectionIds as $secId) {
+            if (CommunitySettings::sectionAnonymousViewMode((int) $secId) === CommunitySettings::ANONYMOUS_VIEW_ALL) {
+                $viewerHasAnonAll = true;
+                break;
+            }
+        }
+
         $isSelf = $viewer->is($user);
-        $isMasked = ! $sharesSection && ! $isSelf;
+        $isMasked = (! $sharesSection || $viewerHasAnonAll) && ! $isSelf;
 
         if ($isMasked) {
             return Inertia::render('CommunityProfile', [
@@ -810,6 +826,9 @@ class CommunityController extends Controller
         $activeSectionViewableIds = $viewerSectionId
             ? CommunitySettings::resolveViewableSectionIdsForSection((int) $viewerSectionId, $workspaceId)
             : [];
+        $viewerSectionAnonMode = $viewerSectionId
+            ? CommunitySettings::sectionAnonymousViewMode((int) $viewerSectionId)
+            : CommunitySettings::ANONYMOUS_VIEW_NONE;
 
         if ($tab === 'section' && $section) {
             $query->where('section_id', $section->id);
@@ -861,12 +880,18 @@ class CommunityController extends Controller
                 ->all()
             : [];
 
-        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $activeSectionViewableIds, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerMediaLikedIds): array {
+        return $posts->map(function (CommunityPost $post) use ($viewer, $section, $viewerSectionId, $activeSectionViewableIds, $viewerSectionAnonMode, $viewerLikedIds, $viewerBookmarkedIds, $viewerFollowingIds, $viewerMediaLikedIds): array {
             $author = $post->user;
             $isSameSection = ($viewerSectionId && (int) $post->section_id === (int) $viewerSectionId)
                 || ($post->section_id && in_array((int) $post->section_id, $activeSectionViewableIds, true));
             $isOwnPost = $viewer && $post->user_id === $viewer->id;
-            $isMasked = ($post->is_anonymous || ! $isSameSection) && ! $isOwnPost;
+
+            $forceAnonymousForViewer = ! $isOwnPost && (
+                $viewerSectionAnonMode === CommunitySettings::ANONYMOUS_VIEW_ALL
+                || ($viewerSectionAnonMode === CommunitySettings::ANONYMOUS_VIEW_CROSS_SECTION && (! $viewerSectionId || (int) $post->section_id !== (int) $viewerSectionId))
+            );
+
+            $isMasked = ($post->is_anonymous || ! $isSameSection || $forceAnonymousForViewer) && ! $isOwnPost;
 
             $handle = $isMasked
                 ? 'student.'.substr(md5((string) $post->user_id), 0, 4)
@@ -881,7 +906,7 @@ class CommunityController extends Controller
                 : ($author?->avatar ? PublicFileUrl::resolve($author->avatar) : null);
 
             $authorSectionName = $post->section?->name ?? 'Workspace';
-            if ($post->is_anonymous || ! $isSameSection) {
+            if ($post->is_anonymous || ! $isSameSection || $forceAnonymousForViewer) {
                 $authorSectionName = 'Anonymous';
             }
 
@@ -894,7 +919,7 @@ class CommunityController extends Controller
                 'likes_count' => (int) $m->likes_count,
                 'is_liked' => in_array($m->id, $viewerMediaLikedIds, true),
                 'comments_count' => (int) $m->comments_count,
-                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds))->values()->all(),
+                'comments' => $m->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds, $viewerSectionAnonMode))->values()->all(),
             ])->values()->all();
 
             if (empty($mediaItems) && $post->attachment_url) {
@@ -950,7 +975,7 @@ class CommunityController extends Controller
                     'is_following' => in_array($post->user_id, $viewerFollowingIds, true),
                     'section_name' => $authorSectionName,
                 ],
-                'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds))->values()->all(),
+                'comments' => $post->comments->map(fn (CommunityComment $comment) => $this->serializeComment($comment, $viewer, $section, $activeSectionViewableIds, $viewerSectionAnonMode))->values()->all(),
             ];
         })->all();
     }
@@ -1050,7 +1075,7 @@ class CommunityController extends Controller
         ];
     }
 
-    private function serializeComment(CommunityComment $comment, ?User $viewer, ?Section $section, array $viewableSectionIds = []): array
+    private function serializeComment(CommunityComment $comment, ?User $viewer, ?Section $section, array $viewableSectionIds = [], string $viewerAnonMode = CommunitySettings::ANONYMOUS_VIEW_NONE): array
     {
         $author = $comment->user;
         $allowedIds = $viewableSectionIds !== []
@@ -1062,9 +1087,23 @@ class CommunityController extends Controller
             ->intersect($allowedIds)
             ->isNotEmpty();
         $isOwn = $viewer && $comment->user_id === $viewer->id;
-        $isMasked = ! $isSameSection && ! $isOwn;
+
+        $sharesDirectSection = $viewer && $section && $author && $author->sections
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->contains((int) $section->id);
+
+        $forceAnonymous = ! $isOwn && (
+            $viewerAnonMode === CommunitySettings::ANONYMOUS_VIEW_ALL
+            || ($viewerAnonMode === CommunitySettings::ANONYMOUS_VIEW_CROSS_SECTION && ! $sharesDirectSection)
+        );
+
+        $isMasked = (! $isSameSection || $forceAnonymous) && ! $isOwn;
         $authorSectionName = $author?->sections->firstWhere(fn ($s): bool => in_array((int) $s->id, $allowedIds, true))?->name
             ?? ($section?->name ?? 'Your Section');
+        if ($forceAnonymous) {
+            $authorSectionName = 'Anonymous';
+        }
 
         return [
             'id' => $comment->id,
@@ -1085,7 +1124,7 @@ class CommunityController extends Controller
             'replies' => $comment->relationLoaded('replies')
                 ? $comment->replies
                     ->filter(fn (CommunityComment $reply): bool => $reply->post_id === $comment->post_id && $reply->post_media_id === $comment->post_media_id)
-                    ->map(fn (CommunityComment $reply): array => $this->serializeComment($reply, $viewer, $section, $allowedIds))
+                    ->map(fn (CommunityComment $reply): array => $this->serializeComment($reply, $viewer, $section, $allowedIds, $viewerAnonMode))
                     ->values()->all()
                 : [],
         ];
@@ -1156,6 +1195,9 @@ class CommunityController extends Controller
                 $viewer->sections()->pluck('sections.id')->all(),
                 $workspace?->id,
             );
+        $viewerAnonMode = $section
+            ? CommunitySettings::sectionAnonymousViewMode((int) $section->id)
+            : CommunitySettings::ANONYMOUS_VIEW_NONE;
         $isRestricted = CommunitySettings::isRestrictedToSection();
 
         $stories = CommunityStory::query()
@@ -1186,7 +1228,7 @@ class CommunityController extends Controller
                 continue;
             }
 
-            $isMasked = ! $sharesSection && ! $isSelf;
+            $isMasked = (! $sharesSection || $viewerAnonMode === CommunitySettings::ANONYMOUS_VIEW_ALL) && ! $isSelf;
 
             $items = $userStories->map(function (CommunityStory $s) use ($isSelf, $viewer) {
                 $userReaction = $s->reactions->firstWhere('user_id', $viewer?->id)?->reaction;

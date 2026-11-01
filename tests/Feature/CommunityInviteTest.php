@@ -505,3 +505,88 @@ it('allows admin to configure cross-section viewing permissions and feed scope f
     $component->call('clearSectionViewable', $sectionA->id);
     expect(CommunitySettings::viewableForSection($sectionA->id))->toBe([]);
 });
+
+it('allows admin to configure per-section anonymous post viewing mode', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+    ]);
+    $admin->workspaces()->syncWithoutDetaching([$this->workspace->id => ['role' => Workspace::ROLE_OWNER]]);
+    $admin->forceFill(['current_workspace_id' => $this->workspace->id])->save();
+
+    $sectionA = Section::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'name' => 'Section Alpha',
+    ]);
+
+    $this->actingAs($admin);
+
+    $component = Livewire::test(CommunityInvites::class)
+        ->call('selectSection', $sectionA->id)
+        ->assertSee('Post Identity Visibility for Section Alpha')
+        ->call('setSectionAnonymousMode', $sectionA->id, CommunitySettings::ANONYMOUS_VIEW_ALL);
+
+    expect(CommunitySettings::sectionAnonymousViewMode($sectionA->id))
+        ->toBe(CommunitySettings::ANONYMOUS_VIEW_ALL);
+
+    $component->call('setSectionAnonymousMode', $sectionA->id, CommunitySettings::ANONYMOUS_VIEW_CROSS_SECTION);
+
+    expect(CommunitySettings::sectionAnonymousViewMode($sectionA->id))
+        ->toBe(CommunitySettings::ANONYMOUS_VIEW_CROSS_SECTION);
+
+    $component->call('setSectionAnonymousMode', $sectionA->id, CommunitySettings::ANONYMOUS_VIEW_NONE);
+
+    expect(CommunitySettings::sectionAnonymousViewMode($sectionA->id))
+        ->toBe(CommunitySettings::ANONYMOUS_VIEW_NONE);
+});
+
+it('masks posts as anonymous when student section is configured for all anonymous viewing', function () {
+    $sectionA = Section::factory()->create(['workspace_id' => $this->workspace->id, 'name' => 'Section Alpha']);
+
+    $author = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+        'section_id' => $sectionA->id,
+        'name' => 'Real Author Name',
+    ]);
+
+    $viewer = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+        'section_id' => $sectionA->id,
+        'name' => 'Viewer Student',
+    ]);
+
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $viewer->id,
+        'token' => 'viewer-token-123',
+        'accepted_at' => now(),
+    ]);
+
+    CommunityPost::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $author->id,
+        'body' => 'Hello classmates!',
+        'is_anonymous' => false,
+    ]);
+
+    // By default (mode 'none'), author name is visible to classmate
+    $this->actingAs($viewer)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('posts.0.author.name', 'Real Author Name')
+            ->where('posts.0.is_masked', false)
+        );
+
+    // Set Section Alpha to see all posts as anonymous
+    CommunitySettings::setSectionAnonymousViewMode($sectionA->id, CommunitySettings::ANONYMOUS_VIEW_ALL);
+
+    $this->actingAs($viewer)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('posts.0.is_masked', true)
+            ->where('posts.0.author.name', fn (string $name) => str_starts_with($name, 'Student #'))
+        );
+});
