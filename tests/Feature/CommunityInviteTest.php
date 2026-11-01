@@ -576,7 +576,7 @@ it('masks posts as anonymous when student section is configured for all anonymou
         ->assertInertia(fn (Assert $page) => $page
             ->component('Community')
             ->where('posts.0.author.name', 'Real Author Name')
-            ->where('posts.0.is_masked', false)
+            ->where('posts.0.author.is_masked', false)
         );
 
     // Set Section Alpha to see all posts as anonymous
@@ -587,7 +587,7 @@ it('masks posts as anonymous when student section is configured for all anonymou
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Community')
-            ->where('posts.0.is_masked', true)
+            ->where('posts.0.author.is_masked', true)
             ->where('posts.0.author.name', fn (string $name) => str_starts_with($name, 'Student #'))
         );
 });
