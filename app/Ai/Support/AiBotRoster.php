@@ -138,6 +138,7 @@ final class AiBotRoster
                     'update_section',
                     'delete_section',
                     'send_notification',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -176,6 +177,7 @@ final class AiBotRoster
                     'delete_assignment',
                     'manage_lesson',
                     'manage_lesson_quiz',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -210,6 +212,7 @@ final class AiBotRoster
                     'update_grade',
                     'delete_grade',
                     'grade_submission',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -238,6 +241,7 @@ final class AiBotRoster
                     'leaderboard',
                     'send_notification',
                     'award_student_xp',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -267,6 +271,7 @@ final class AiBotRoster
                     'delete_announcement',
                     'send_notification',
                     'reply_support_ticket',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -302,6 +307,7 @@ final class AiBotRoster
                     'update_course',
                     'delete_course',
                     'send_notification',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -333,6 +339,7 @@ final class AiBotRoster
                     'submissions_to_grade',
                     'daily_report',
                     'export_report',
+                    'remember_bot_memory',
                 ],
             ],
             [
@@ -362,6 +369,7 @@ final class AiBotRoster
                     'award_student_xp',
                     'record_activity_task_score',
                     'send_notification',
+                    'remember_bot_memory',
                 ],
                 'routines' => [
                     [

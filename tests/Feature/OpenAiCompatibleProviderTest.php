@@ -3,6 +3,7 @@
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
 use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
+use App\Ai\Support\AdminAssistantIntent;
 use App\Ai\Support\ToolRegistry;
 use App\Models\Exam;
 use App\Models\PendingAiAction;
@@ -240,9 +241,10 @@ it('exposes admin tool names matching the agent instructions', function () {
     $agent = new AdminAssistantAgent;
     $names = array_map(fn ($tool): string => ToolNameResolver::resolve($tool), $agent->tools());
 
-    expect($names)->toBe(ToolRegistry::keys());
+    expect($names)->toBe(ToolRegistry::keysForIntent(AdminAssistantIntent::ALL));
 
-    // Keep an explicit count so a silent tool drop is still caught.
+    // Keep an explicit count so a silent tool drop is still caught. Echo must
+    // never mount bot-only tools such as remember_bot_memory.
     expect(count($names))->toBe(63);
 
     $documentedInInstructions = [

@@ -46,6 +46,7 @@ use App\Ai\Tools\PlatformCountsTool;
 use App\Ai\Tools\PostAnnouncementTool;
 use App\Ai\Tools\RecordActivityTaskScoreTool;
 use App\Ai\Tools\RecordGradeTool;
+use App\Ai\Tools\RememberBotMemory;
 use App\Ai\Tools\ReplySupportTicketTool;
 use App\Ai\Tools\ResearchTopicTool;
 use App\Ai\Tools\ResetUserPasswordTool;
@@ -148,6 +149,8 @@ final class ToolRegistry
         'reply_support_ticket' => ['class' => ReplySupportTicketTool::class, 'write' => true, 'intents' => [AdminAssistantIntent::SUPPORT]],
         'manage_lesson' => ['class' => ManageLessonTool::class, 'write' => true, 'intents' => [AdminAssistantIntent::LESSONS]],
         'manage_lesson_quiz' => ['class' => ManageLessonQuizTool::class, 'write' => true, 'intents' => [AdminAssistantIntent::LESSONS]],
+        // Bot-only capability: Echo has no bot identity, so it must never mount this.
+        'remember_bot_memory' => ['class' => RememberBotMemory::class, 'write' => true, 'intents' => []],
     ];
 
     /** @return list<string> */
@@ -187,7 +190,10 @@ final class ToolRegistry
     public static function keysForIntent(string $intent): array
     {
         if ($intent === AdminAssistantIntent::ALL) {
-            return array_keys(self::MAP);
+            return array_keys(array_filter(
+                self::MAP,
+                fn (array $entry): bool => $entry['intents'] !== [],
+            ));
         }
 
         return array_keys(array_filter(

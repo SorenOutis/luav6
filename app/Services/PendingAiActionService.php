@@ -64,6 +64,7 @@ class PendingAiActionService
         'generate_exam_questions',
         'manage_maintenance',
         'export_report',
+        'remember_bot_memory',
     ];
 
     public function __construct(

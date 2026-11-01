@@ -6,6 +6,8 @@ use App\Enums\QuestionType;
 use App\Exceptions\PendingAiActionException;
 use App\Models\ActivityTask;
 use App\Models\ActivityTaskScore;
+use App\Models\AiBot;
+use App\Models\AiBotMemory;
 use App\Models\AiQuestionDraft;
 use App\Models\Announcement;
 use App\Models\Assignment;
@@ -90,6 +92,7 @@ class AiActionExecutor
             'generate_exam_questions' => $this->prepareGenerateExamQuestions($action),
             'manage_maintenance' => $this->prepareManageMaintenance($action),
             'export_report' => $this->prepareExportReport($action),
+            'remember_bot_memory' => $this->prepareRememberBotMemory($action),
             default => throw new PendingAiActionException('This AI action type is no longer supported.'),
         };
     }
@@ -1236,6 +1239,58 @@ class AiActionExecutor
             $status = ! empty($payload['maintenance_enabled']) ? 'enabled' : 'disabled';
 
             return "Platform maintenance mode has been successfully {$status}.";
+        };
+    }
+
+    /** @return Closure(): string */
+    private function prepareRememberBotMemory(PendingAiAction $action): Closure
+    {
+        $payload = $action->payload ?? [];
+        $botId = (int) ($payload['bot_id'] ?? 0);
+        $content = trim((string) ($payload['content'] ?? ''));
+        $importance = max(1, min(5, (int) ($payload['importance'] ?? 2)));
+        $userId = array_key_exists('user_id', $payload) ? $payload['user_id'] : $action->user_id;
+
+        return function () use ($action, $botId, $content, $importance, $userId): string {
+            if ($botId < 1 || $content === '') {
+                throw new PendingAiActionException('The bot memory payload is incomplete.');
+            }
+
+            // A bot-proposed fact is private to the approving administrator.
+            // Shared memory must be created by an admin, never widened by a bot.
+            if ($userId !== null && (int) $userId !== (int) $action->user_id) {
+                throw new PendingAiActionException('Bot-proposed memory cannot target another user.');
+            }
+
+            $bot = AiBot::query()
+                ->withoutGlobalScope('workspace')
+                ->whereKey($botId)
+                ->where('workspace_id', $action->workspace_id)
+                ->first();
+
+            if (! $bot) {
+                throw new PendingAiActionException('The bot for this memory no longer exists in this workspace.');
+            }
+
+            $owner = $userId !== null ? User::query()->find((int) $userId) : null;
+
+            if ($userId !== null && ! $owner) {
+                throw new PendingAiActionException('The memory owner no longer exists.');
+            }
+
+            AiBotMemory::query()->create([
+                'workspace_id' => $action->workspace_id,
+                'bot_id' => $bot->id,
+                'user_id' => $owner?->id,
+                'content' => $content,
+                'source' => AiBotMemory::SOURCE_APPROVED,
+                'importance' => $importance,
+                'created_by' => $action->user_id,
+            ]);
+
+            return $owner
+                ? "Memory saved for {$bot->name}, private to {$owner->name}."
+                : "Shared memory saved for {$bot->name}.";
         };
     }
 
