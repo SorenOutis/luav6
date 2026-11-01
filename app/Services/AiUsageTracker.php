@@ -80,6 +80,7 @@ class AiUsageTracker
         string $source,
         int $inputTokens,
         int $outputTokens,
+        ?int $botId = null,
     ): void {
         if ($reservation) {
             try {
@@ -97,7 +98,7 @@ class AiUsageTracker
             return;
         }
 
-        $this->record($provider, $model, $source, $inputTokens, $outputTokens);
+        $this->record($provider, $model, $source, $inputTokens, $outputTokens, $botId);
     }
 
     public function cancel(?AiBudgetReservation $reservation, ?string $reason = null): void
@@ -125,10 +126,11 @@ class AiUsageTracker
         ?string $model,
         string $source,
         int $inputTokens,
-        int $outputTokens
+        int $outputTokens,
+        ?int $botId = null,
     ): void {
         try {
-            $this->recordOrFail($provider, $model, $source, $inputTokens, $outputTokens);
+            $this->recordOrFail($provider, $model, $source, $inputTokens, $outputTokens, $botId);
         } catch (\Throwable $e) {
             // Usage tracking must never break a real AI call, but tests should
             // fail loudly so accounting schema regressions cannot be hidden.
@@ -147,6 +149,7 @@ class AiUsageTracker
         string $source,
         int $inputTokens,
         int $outputTokens,
+        ?int $botId = null,
     ): void {
         $inputTokens = max(0, $inputTokens);
         $outputTokens = max(0, $outputTokens);
@@ -157,6 +160,7 @@ class AiUsageTracker
             'provider' => Str::limit($provider, 80, ''),
             'model' => $model ? Str::limit($model, 191, '') : null,
             'source' => Str::limit($source, 32, ''),
+            'bot_id' => $botId,
             'input_tokens' => $inputTokens,
             'output_tokens' => $outputTokens,
             'neurons' => $provider === 'cloudflare'

@@ -25,6 +25,8 @@ class PendingAiAction extends Model
         'workspace_id',
         'user_id',
         'chat_session_id',
+        'bot_id',
+        'handoff_id',
         'action_type',
         'title',
         'summary',
@@ -83,6 +85,16 @@ class PendingAiAction extends Model
     public function chatSession(): BelongsTo
     {
         return $this->belongsTo(ChatSession::class);
+    }
+
+    public function bot(): BelongsTo
+    {
+        return $this->belongsTo(AiBot::class, 'bot_id');
+    }
+
+    public function handoff(): BelongsTo
+    {
+        return $this->belongsTo(AiBotHandoff::class, 'handoff_id');
     }
 
     public function audits(): HasMany

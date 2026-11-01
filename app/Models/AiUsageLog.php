@@ -14,6 +14,7 @@ class AiUsageLog extends Model
         'provider',
         'model',
         'source',
+        'bot_id',
         'input_tokens',
         'output_tokens',
         'neurons',
@@ -33,5 +34,10 @@ class AiUsageLog extends Model
     public function budgetReservation()
     {
         return $this->belongsTo(AiBudgetReservation::class, 'ai_budget_reservation_id');
+    }
+
+    public function bot()
+    {
+        return $this->belongsTo(AiBot::class, 'bot_id');
     }
 }
