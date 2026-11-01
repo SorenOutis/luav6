@@ -8,7 +8,7 @@
  * - hashed /build/ assets are cache-first (immutable),
  * - other static assets are network-first with a cache fallback.
  */
-const VERSION = 'echo-ai-v1';
+const VERSION = 'echo-ai-v2';
 const CACHE_NAME = `${VERSION}-static`;
 
 const PRECACHE_URLS = [
