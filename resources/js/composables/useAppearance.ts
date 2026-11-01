@@ -1,7 +1,12 @@
 import gsap from 'gsap';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
-import { addMqlListener, readDeviceSnapshot } from '@/lib/device';
+import {
+    addMqlListener,
+    readDeviceSnapshot,
+    safeMatchMedia,
+    safeMatchMediaList,
+} from '@/lib/device';
 import type {
     Appearance,
     CardStylePreset,
@@ -148,7 +153,7 @@ const mediaQuery = () => {
         return null;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)');
+    return safeMatchMediaList('(prefers-color-scheme: dark)');
 };
 
 const getStoredAppearance = () => {
@@ -190,7 +195,7 @@ const prefersDark = (): boolean => {
         return false;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return safeMatchMedia('(prefers-color-scheme: dark)');
 };
 
 const handleSystemThemeChange = () => {

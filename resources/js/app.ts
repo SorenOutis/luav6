@@ -216,10 +216,29 @@ router.on('success', () => {
         sessionStorage.removeItem(
             'inertia_chunk_retry_' + window.location.pathname,
         );
+        sessionStorage.removeItem(
+            'lsi_landing_recovery_' + window.location.pathname,
+        );
+        sessionStorage.removeItem(
+            'lsi_script_recovery_' + window.location.pathname,
+        );
     } catch {
         // Ignore sessionStorage restrictions in sandboxed environments.
     }
 });
+
+function clearCachesAndReload(): void {
+    if (typeof caches !== 'undefined' && typeof caches.keys === 'function') {
+        caches
+            .keys()
+            .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            .finally(() => {
+                window.location.reload();
+            });
+    } else {
+        window.location.reload();
+    }
+}
 
 // Vite hook: auto-reloads once when an outdated chunk hash from a previous
 // deployment fails to fetch, preventing stale sessions from remaining on a blank screen.
@@ -230,10 +249,38 @@ if (typeof window !== 'undefined') {
             if (!sessionStorage.getItem(reloadKey)) {
                 sessionStorage.setItem(reloadKey, '1');
                 event.preventDefault();
-                window.location.reload();
+                clearCachesAndReload();
             }
         } catch {
             window.location.reload();
+        }
+    });
+
+    // Uncaught script / chunk error recovery on landing page
+    window.addEventListener('error', (event) => {
+        if (
+            window.location.pathname === '/' ||
+            window.location.pathname === ''
+        ) {
+            const msg = String(event.message || '');
+            const isChunkOrScriptError =
+                msg.includes('addEventListener') ||
+                msg.includes('chunk') ||
+                msg.includes('Failed to fetch') ||
+                msg.includes('Loading module');
+
+            if (isChunkOrScriptError) {
+                try {
+                    const reloadKey =
+                        'lsi_script_recovery_' + window.location.pathname;
+                    if (!sessionStorage.getItem(reloadKey)) {
+                        sessionStorage.setItem(reloadKey, '1');
+                        clearCachesAndReload();
+                    }
+                } catch {
+                    // Fallback
+                }
+            }
         }
     });
 }
@@ -346,7 +393,33 @@ function ensureFormMethod(route: any): void {
                     },
                 };
 
-                createApp(RootApp).use(plugin).mount(el);
+                const app = createApp(RootApp);
+
+                app.config.errorHandler = (err, instance, info) => {
+                    console.error('[Vue Error]', err, info);
+
+                    const isLanding =
+                        typeof window !== 'undefined' &&
+                        (window.location.pathname === '/' ||
+                            window.location.pathname === '');
+
+                    if (isLanding) {
+                        try {
+                            const reloadKey =
+                                'lsi_landing_recovery_' +
+                                window.location.pathname;
+                            if (!sessionStorage.getItem(reloadKey)) {
+                                sessionStorage.setItem(reloadKey, '1');
+                                clearCachesAndReload();
+                                return;
+                            }
+                        } catch {
+                            // Ignore sessionStorage restrictions
+                        }
+                    }
+                };
+
+                app.use(plugin).mount(el);
             },
             // The full-screen GlobalLoader is reserved for auth flows, so
             // ordinary page clicks previously had NO feedback at all — the UI

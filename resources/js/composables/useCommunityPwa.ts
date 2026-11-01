@@ -207,7 +207,13 @@ export function useCommunityPwa(options: UseCommunityPwaOptions = {}) {
 
         if ('serviceWorker' in window.navigator) {
             window.navigator.serviceWorker
-                ?.register(COMMUNITY_SW_URL, { scope: COMMUNITY_SW_SCOPE })
+                ?.register(COMMUNITY_SW_URL, {
+                    scope: COMMUNITY_SW_SCOPE,
+                    updateViaCache: 'none',
+                })
+                .then((registration) => {
+                    registration.update().catch(() => {});
+                })
                 .catch(() => {
                     // Registration is an offline/installability nicety; the
                     // Lounge works without it.

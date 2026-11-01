@@ -11,7 +11,7 @@
  * - hashed /build/ assets are cache-first (immutable),
  * - fonts/images are network-first with a cache fallback.
  */
-const VERSION = 'community-lounge-v3';
+const VERSION = 'community-lounge-v4';
 const CACHE_NAME = `${VERSION}-static`;
 const OFFLINE_URL = '/community-offline.html';
 
