@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { ArrowRight } from 'lucide-vue-next';
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import CapabilitiesBento from '@/components/welcome/CapabilitiesBento.vue';

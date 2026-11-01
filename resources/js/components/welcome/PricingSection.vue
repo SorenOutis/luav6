@@ -4,7 +4,7 @@ import { ArrowRight, Building2, School, UserRound } from 'lucide-vue-next';
 import RevealGroup from '@/components/welcome/RevealGroup.vue';
 
 const props = defineProps<{
-    auth: { user: any };
+    auth?: { user?: any };
     dashboard: () => string;
     register: () => string;
     isCoarsePointer?: boolean;
@@ -146,7 +146,7 @@ const tiers = [
                 </ul>
                 <div class="mt-auto pt-8">
                     <Link
-                        v-if="tier.price === 'Free' && !auth.user"
+                        v-if="tier.price === 'Free' && !auth?.user"
                         :href="props.register()"
                         class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-4 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
                     >
