@@ -5,8 +5,8 @@ paths:
 
 # Ai
 
-## New admin AI tool = 5 touch points; provider test asserts exact tool list
-Adding a tool to the admin assistant requires: (1) tool class, (2) `AdminAssistantAgent::tools()` AND a matching instruction line, (3) write tools only: `PendingAiActionService::ALLOWED_TYPES`, (4) write tools only: `AiActionExecutor` dispatch match + `prepareX()` handler. (5) `OpenAiCompatibleProviderTest` asserts an EXACT ORDERED list of tool names plus that instructions mention every name — update it or tests fail. Staging an unknown action_type is rejected by ALLOWED_TYPES.
+## New admin AI tool = registry entry + 4 touch points; provider test derives from ToolRegistry
+Adding a tool to the admin assistant requires: (1) tool class, (2) a `ToolRegistry::MAP` entry (`class`, `write`, `intents`) — `AdminAssistantAgent::tools()` mounts from the registry in registry order, so never re-inline a tool list there — plus a matching instruction line, (3) write tools only: `PendingAiActionService::ALLOWED_TYPES`, (4) write tools only: `AiActionExecutor` dispatch match + `prepareX()` handler. `OpenAiCompatibleProviderTest` asserts the exact `ToolRegistry::keys()` order plus a hard count of 63 — bump the count and keep registry order stable. Bot allowlists, policy `allowed_actions`, and drift warnings also derive from the registry. Staging an unknown action_type is rejected by ALLOWED_TYPES.
 
 ## Student lookups in AI tools are workspace-scoped with enrollment guards
 Student lookups in admin tools are workspace-scoped: create_exam blocked-student name search only matches users who are workspace members (hint/section/current_workspace) and not admins; record_grade requires the student to be section-enrolled and re-checks enrollment inside AiActionExecutor::prepareRecordGrade (throws PendingAiActionException if they were unenrolled between staging and approval). Fallback to "first section in workspace" was removed. Tests must attach students via `$section->users()->attach($student->id)` or tools legitimately refuse.
