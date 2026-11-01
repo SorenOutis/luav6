@@ -2064,6 +2064,12 @@ html.theme-fade {
    cursor gliding to the next thread is the demo's story, and a pointer that
    teleports reads as a bug. They are only excluded — the `revert` block below
    rolls durations back to the UA default, which is instant, not restored. */
+html,
+html[data-low-end],
+body {
+    display: block !important;
+}
+
 /* prettier-ignore */
 html[data-low-end] *:not(
     .wolf-persona,
@@ -2124,8 +2130,13 @@ html[data-low-end] [class*='animate-bounce'] {
 html[data-low-end] .welcome-bg-grid,
 html[data-low-end] .scanline,
 html[data-low-end] .particle-canvas,
-html[data-low-end] .ambient-orb {
+html[data-low-end] .ambient-orb,
+html[data-low-end] .safety-ambient {
     display: none !important;
+}
+
+html[data-low-end] .voices-track.is-animated {
+    animation: none !important;
 }
 
 /* Skip painting below-the-fold welcome sections on phones. Desktop keeps

@@ -119,10 +119,6 @@ const isAnimated = computed(() => !props.prefersReducedMotion);
     }
 }
 
-:global(html[data-low-end]) .voices-track.is-animated {
-    animation: none !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .voices-track.is-animated {
         animation: none;

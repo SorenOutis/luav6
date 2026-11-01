@@ -29,16 +29,32 @@ describe('welcome mobile performance', () => {
         expect(blade).toContain("setAttribute('data-low-end'");
         expect(blade).toContain('(pointer: coarse)');
         expect(blade).toContain('deviceMemory');
+        expect(blade).toContain('display: block !important');
     });
 
-    it('applies low-end CSS that kills backdrop-filter and looping animation', () => {
+    it('applies low-end CSS that kills backdrop-filter and looping animation while preserving html visibility', () => {
         const css = read('resources/css/app.css');
 
+        expect(css).toContain('html[data-low-end]');
+        expect(css).toContain('display: block !important');
         expect(css).toContain('html[data-low-end] *');
         expect(css).toContain('backdrop-filter: none !important');
         expect(css).toContain('content-visibility: auto');
         expect(css).toContain('.welcome-bg-grid');
+        expect(css).toContain('.safety-ambient');
+        expect(css).toContain('.voices-track.is-animated');
         expect(css).toContain('touch-action: manipulation');
+    });
+
+    it('prevents scoped Vue SFCs from compiling into rogue html[data-low-end] root display:none', () => {
+        const safetyBand = read('resources/js/components/welcome/SafetyBand.vue');
+        const testimonialMarquee = read('resources/js/components/welcome/TestimonialMarquee.vue');
+
+        // Vue SFC compiler transforms :global(html[data-low-end]) .child into html[data-low-end]{...},
+        // which in scoped styles strips the child selector and sets display:none on <html>.
+        // These rules must live in resources/css/app.css instead.
+        expect(safetyBand).not.toContain(':global(html[data-low-end])');
+        expect(testimonialMarquee).not.toContain(':global(html[data-low-end])');
     });
 
     it('keeps the welcome page free of autoplay media and expensive hero effects', () => {
