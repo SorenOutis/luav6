@@ -115,8 +115,13 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Inline style to set the HTML display and background color based on our theme in app.css --}}
         <style nonce="{{ Vite::cspNonce() }}">
+            html,
+            body {
+                display: block !important;
+            }
+
             html {
                 background-color: #f5f0e8;
             }

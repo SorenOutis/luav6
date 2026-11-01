@@ -259,10 +259,6 @@ const STEP_DURATIONS = [1400, 1400, 1600, 2600];
         color-mix(in oklab, var(--color-brand) 20%, transparent);
 }
 
-:global(html[data-low-end]) .safety-ambient {
-    display: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .safety-rail-fill,
     .safety-node {
