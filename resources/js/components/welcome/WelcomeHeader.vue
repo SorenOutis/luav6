@@ -16,7 +16,7 @@ import type { SchoolBranding } from '@/types/branding';
 
 const props = defineProps<{
     canRegister: boolean;
-    auth: { user: any };
+    auth?: { user?: any };
     dashboard: () => string;
     login: () => string;
     register: () => string;
@@ -317,7 +317,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
                         <!-- Auth footer -->
                         <div class="border-t border-border/10 px-3 py-4">
-                            <template v-if="auth.user">
+                            <template v-if="auth?.user">
                                 <Link
                                     :href="dashboard()"
                                     @click="closeMobileMenu"
@@ -350,7 +350,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                 </SheetContent>
             </Sheet>
 
-            <template v-if="auth.user">
+            <template v-if="auth?.user">
                 <Link
                     :href="dashboard()"
                     class="hidden items-center gap-2 rounded-full bg-foreground px-5 py-2 text-xs font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] lg:inline-flex"

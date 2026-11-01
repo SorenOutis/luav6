@@ -83,6 +83,56 @@ export function useMobile() {
     let mqlReducedMotion: MediaQueryList | null = null;
     let connection: NetworkInformation | null = null;
 
+    const safeMatchMediaList = (query: string): MediaQueryList | null => {
+        if (
+            typeof window === 'undefined' ||
+            typeof window.matchMedia !== 'function'
+        ) {
+            return null;
+        }
+        try {
+            return window.matchMedia(query);
+        } catch {
+            return null;
+        }
+    };
+
+    const addMqlListener = (
+        mql: MediaQueryList | null,
+        listener: () => void,
+    ) => {
+        if (!mql) return;
+        if (typeof mql.addEventListener === 'function') {
+            mql.addEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as { addListener?: (cb: () => void) => void }
+            ).addListener === 'function'
+        ) {
+            (
+                mql as unknown as { addListener: (cb: () => void) => void }
+            ).addListener(listener);
+        }
+    };
+
+    const removeMqlListener = (
+        mql: MediaQueryList | null,
+        listener: () => void,
+    ) => {
+        if (!mql) return;
+        if (typeof mql.removeEventListener === 'function') {
+            mql.removeEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as { removeListener?: (cb: () => void) => void }
+            ).removeListener === 'function'
+        ) {
+            (
+                mql as unknown as { removeListener: (cb: () => void) => void }
+            ).removeListener(listener);
+        }
+    };
+
     const onMqlUpdate = () => applySnapshot();
 
     const onResizeDebounced = () => {
@@ -93,23 +143,23 @@ export function useMobile() {
     onMounted(() => {
         applySnapshot();
 
-        mqlMobile = window.matchMedia(
+        mqlMobile = safeMatchMediaList(
             `(max-width: ${BREAKPOINT_MOBILE - 1}px)`,
         );
-        mqlDesktop = window.matchMedia(`(min-width: ${BREAKPOINT_DESKTOP}px)`);
-        mqlCoarsePointer = window.matchMedia('(pointer: coarse)');
-        mqlReducedMotion = window.matchMedia(
+        mqlDesktop = safeMatchMediaList(`(min-width: ${BREAKPOINT_DESKTOP}px)`);
+        mqlCoarsePointer = safeMatchMediaList('(pointer: coarse)');
+        mqlReducedMotion = safeMatchMediaList(
             '(prefers-reduced-motion: reduce)',
         );
 
-        mqlMobile.addEventListener('change', onMqlUpdate);
-        mqlDesktop.addEventListener('change', onMqlUpdate);
-        mqlCoarsePointer.addEventListener('change', onMqlUpdate);
-        mqlReducedMotion.addEventListener('change', onMqlUpdate);
+        addMqlListener(mqlMobile, onMqlUpdate);
+        addMqlListener(mqlDesktop, onMqlUpdate);
+        addMqlListener(mqlCoarsePointer, onMqlUpdate);
+        addMqlListener(mqlReducedMotion, onMqlUpdate);
 
         const navConn = navigator as NavigatorWithConnection;
         connection = navConn.connection ?? null;
-        if (connection) {
+        if (connection && typeof connection.addEventListener === 'function') {
             connection.addEventListener('change', onMqlUpdate);
         }
 
@@ -117,12 +167,15 @@ export function useMobile() {
     });
 
     onBeforeUnmount(() => {
-        mqlMobile?.removeEventListener('change', onMqlUpdate);
-        mqlDesktop?.removeEventListener('change', onMqlUpdate);
-        mqlCoarsePointer?.removeEventListener('change', onMqlUpdate);
-        mqlReducedMotion?.removeEventListener('change', onMqlUpdate);
+        removeMqlListener(mqlMobile, onMqlUpdate);
+        removeMqlListener(mqlDesktop, onMqlUpdate);
+        removeMqlListener(mqlCoarsePointer, onMqlUpdate);
+        removeMqlListener(mqlReducedMotion, onMqlUpdate);
 
-        if (connection) {
+        if (
+            connection &&
+            typeof connection.removeEventListener === 'function'
+        ) {
             connection.removeEventListener('change', onMqlUpdate);
         }
 

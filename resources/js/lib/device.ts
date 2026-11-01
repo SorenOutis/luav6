@@ -40,6 +40,20 @@ interface NavigatorWithConnection extends Navigator {
     connection?: NetworkInformation;
 }
 
+export function safeMatchMedia(query: string): boolean {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
+        return false;
+    }
+    try {
+        return window.matchMedia(query).matches;
+    } catch {
+        return false;
+    }
+}
+
 export function emptyDeviceSnapshot(): DeviceSnapshot {
     return {
         isMobile: false,
@@ -76,10 +90,10 @@ export function readDeviceSnapshot(): DeviceSnapshot {
          * though `ontouchstart` exists; treating it as coarse used to flag
          * every Windows laptop as low-end and freeze the whole site.
          */
-        isCoarsePointer: window.matchMedia('(pointer: coarse)').matches,
-        prefersReducedMotion: window.matchMedia(
+        isCoarsePointer: safeMatchMedia('(pointer: coarse)'),
+        prefersReducedMotion: safeMatchMedia(
             '(prefers-reduced-motion: reduce)',
-        ).matches,
+        ),
         deviceMemory: navMem.deviceMemory ?? null,
         hardwareConcurrency: navigator.hardwareConcurrency ?? null,
         connectionType: navConn.connection?.effectiveType ?? null,

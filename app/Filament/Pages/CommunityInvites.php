@@ -89,6 +89,36 @@ class CommunityInvites extends Page
         return CommunitySettings::sectionViewableMap();
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function getSectionAnonymousViewMapProperty(): array
+    {
+        return CommunitySettings::sectionAnonymousViewMap();
+    }
+
+    public function setSectionAnonymousMode(int $sectionId, string $mode): void
+    {
+        $section = $this->workspaceSections->firstWhere('id', $sectionId);
+        if (! $section) {
+            return;
+        }
+
+        CommunitySettings::setSectionAnonymousViewMode($sectionId, $mode);
+
+        $label = match ($mode) {
+            CommunitySettings::ANONYMOUS_VIEW_ALL => "Students in {$section->name} will now see all posts as anonymous (Student #xxxx).",
+            CommunitySettings::ANONYMOUS_VIEW_CROSS_SECTION => "Students in {$section->name} will see classmates with real names, but other sections as anonymous.",
+            default => "Students in {$section->name} will now see real student names and avatars.",
+        };
+
+        Notification::make()
+            ->title('Section Privacy Updated')
+            ->body($label)
+            ->success()
+            ->send();
+    }
+
     public function toggleSectionViewAll(int $sectionId): void
     {
         $section = $this->workspaceSections->firstWhere('id', $sectionId);
