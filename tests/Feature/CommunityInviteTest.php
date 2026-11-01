@@ -544,15 +544,15 @@ it('masks posts as anonymous when student section is configured for all anonymou
 
     $author = User::factory()->create([
         'current_workspace_id' => $this->workspace->id,
-        'section_id' => $sectionA->id,
         'name' => 'Real Author Name',
     ]);
+    $author->sections()->attach($sectionA);
 
     $viewer = User::factory()->create([
         'current_workspace_id' => $this->workspace->id,
-        'section_id' => $sectionA->id,
         'name' => 'Viewer Student',
     ]);
+    $viewer->sections()->attach($sectionA);
 
     CommunityInvite::create([
         'workspace_id' => $this->workspace->id,
@@ -564,6 +564,7 @@ it('masks posts as anonymous when student section is configured for all anonymou
     CommunityPost::create([
         'workspace_id' => $this->workspace->id,
         'user_id' => $author->id,
+        'section_id' => $sectionA->id,
         'body' => 'Hello classmates!',
         'is_anonymous' => false,
     ]);

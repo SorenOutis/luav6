@@ -202,6 +202,7 @@ class CommunityController extends Controller
         abort_unless($viewer, 401);
         abort_unless($viewer->hasLoungeAccess(), 403);
 
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
         $viewerEnrolledSectionIds = $viewer->sections()->pluck('sections.id')->all();
         $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
             $viewerEnrolledSectionIds,
@@ -308,6 +309,7 @@ class CommunityController extends Controller
 
         $this->recordPresence($viewer);
 
+        $workspaceId = app(WorkspaceContext::class)->id() ?? $viewer->current_workspace_id;
         $viewerEnrolledSectionIds = $viewer->sections()->pluck('sections.id')->all();
         $viewerViewableSectionIds = CommunitySettings::resolveViewableSectionIds(
             $viewerEnrolledSectionIds,
