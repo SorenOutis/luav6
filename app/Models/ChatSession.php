@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\WorkspaceContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,14 +12,30 @@ use Illuminate\Support\Str;
 
 class ChatSession extends Model
 {
+    public const MODE_SOLO = 'solo';
+
+    public const MODE_GROUP = 'group';
+
+    public const MAX_GROUP_SPECIALISTS = 6;
+
     protected static ?bool $hasUuidColumn = null;
 
     protected $fillable = [
         'uuid',
         'user_id',
+        'bot_id',
+        'mode',
+        'participant_bot_ids',
         'title',
         'source',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'participant_bot_ids' => 'array',
+        ];
+    }
 
     public static function hasUuidColumn(): bool
     {
@@ -43,6 +60,10 @@ class ChatSession extends Model
         static::creating(function (ChatSession $session): void {
             if (static::hasUuidColumn() && ! $session->uuid) {
                 $session->uuid = (string) Str::uuid7();
+            }
+
+            if (! $session->mode) {
+                $session->mode = self::MODE_SOLO;
             }
         });
     }
@@ -77,9 +98,64 @@ class ChatSession extends Model
         return $query->whereRaw('1 = 0');
     }
 
+    public function isGroup(): bool
+    {
+        return $this->mode === self::MODE_GROUP;
+    }
+
+    public function isBotSession(): bool
+    {
+        return $this->bot_id !== null || $this->isGroup();
+    }
+
+    public function workspaceId(): ?int
+    {
+        if ($this->bot_id) {
+            return $this->bot?->workspace_id;
+        }
+
+        if ($this->isGroup()) {
+            $workspaceId = $this->rosterBots()->value('workspace_id');
+            if ($workspaceId) {
+                return (int) $workspaceId;
+            }
+        }
+
+        return $this->user?->current_workspace_id
+            ?: app(WorkspaceContext::class)->id();
+    }
+
+    public function activeCoordinator(): ?AiBot
+    {
+        return AiBot::activeCoordinatorFor($this->workspaceId());
+    }
+
+    /** @return Builder<AiBot> */
+    public function rosterBots(): Builder
+    {
+        $ids = array_values(array_filter(
+            array_map('intval', (array) $this->participant_bot_ids),
+            fn (int $id): bool => $id > 0,
+        ));
+
+        return AiBot::query()
+            ->whereIn('id', $ids)
+            ->orderBy('name');
+    }
+
+    public function respondingBotId(): ?int
+    {
+        return $this->bot_id ?: $this->activeCoordinator()?->id;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function bot(): BelongsTo
+    {
+        return $this->belongsTo(AiBot::class, 'bot_id');
     }
 
     public function messages(): HasMany

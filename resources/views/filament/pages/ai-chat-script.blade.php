@@ -13,8 +13,11 @@
                 modelName: config.modelName,
                 workspace: config.workspace,
                 adminUser: config.adminUser,
-                sessions: config.initialSessions || [],
-                initialActiveSession: config.initialActiveSession || null,
+                botPicker: config.botPicker || { coordinator: null, specialists: [] },
+                selectedBot: '',
+                teamBotIds: [],
+                activeSessionMode: 'solo',
+                activeBotId: null,
                 workspaceStats: config.workspaceStats || {},
 
                 // Start with the history sidebar closed on phones and in the
@@ -296,6 +299,9 @@
                     if (session) {
                         this.activeSessionId = session.id;
                         this.activeSessionUuid = session.uuid || null;
+                        this.activeSessionMode = session.mode || 'solo';
+                        this.activeBotId = session.bot ? session.bot.id : null;
+                        this.teamBotIds = Array.isArray(session.participantBotIds) ? [...session.participantBotIds] : [];
                     } else {
                         if (typeof identifier === 'number' || (typeof identifier === 'string' && /^\d+$/.test(identifier))) {
                             this.activeSessionId = parseInt(identifier, 10);
@@ -387,6 +393,18 @@
 
                 async createChatSession() {
                     try {
+                        const payload = {};
+                        if (this.selectedBot === 'team') {
+                            if (!Array.isArray(this.teamBotIds) || this.teamBotIds.length === 0) {
+                                alert('Choose at least one specialist for a team chat.');
+                                return null;
+                            }
+                            payload.mode = 'group';
+                            payload.participant_bot_ids = this.teamBotIds.map((id) => parseInt(id, 10));
+                        } else if (this.selectedBot) {
+                            payload.bot_id = parseInt(this.selectedBot, 10);
+                        }
+
                         const res = await fetch('/api/chats', {
                             method: 'POST',
                             headers: {
@@ -395,10 +413,14 @@
                                 'X-CSRF-TOKEN': this.csrfToken,
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
-                            body: JSON.stringify({})
+                            body: JSON.stringify(payload)
                         });
-                        if (res.ok) {
-                            const json = await res.json();
+                        if (!res.ok) {
+                            const error = await res.json().catch(() => null);
+                            alert((error && (error.message || (error.errors && Object.values(error.errors).flat().join(' ')))) || 'Could not create the chat session.');
+                            return null;
+                        }
+                        const json = await res.json();
                             const newSession = {
                                 id: json.session.id,
                                 uuid: json.session.uuid,

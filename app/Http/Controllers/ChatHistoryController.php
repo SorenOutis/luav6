@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AiBudgetExceededException;
 use App\Http\Responses\AiSseResponse;
+use App\Models\AiBot;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
@@ -11,12 +12,14 @@ use App\Services\AiChatLogger;
 use App\Services\AiSdkProviderService;
 use App\Services\ChatService;
 use App\Support\StudentPageRegistry;
+use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\StreamableAgentResponse;
@@ -246,14 +249,7 @@ class ChatHistoryController extends Controller
         $page = $this->messagePage($session, $beforeId);
 
         return response()->json(array_merge($page, [
-            'session' => [
-                'id' => $session->id,
-                'uuid' => $session->uuid,
-                'title' => $session->title ?? 'New chat',
-                'source' => $session->source,
-                'updated_at' => $session->updated_at?->toIso8601String(),
-                'updated_at_human' => $session->updated_at?->diffForHumans(),
-            ],
+            'session' => $this->sessionSummary($session),
         ]));
     }
 
@@ -268,17 +264,25 @@ class ChatHistoryController extends Controller
             ], 503);
         }
 
+        $request->validate([
+            'bot_id' => ['sometimes', 'nullable', 'integer'],
+            'mode' => ['sometimes', 'nullable', 'string', 'in:'.ChatSession::MODE_SOLO.','.ChatSession::MODE_GROUP],
+            'participant_bot_ids' => ['sometimes', 'array', 'max:'.ChatSession::MAX_GROUP_SPECIALISTS],
+            'participant_bot_ids.*' => ['integer', 'distinct'],
+        ]);
+
         try {
-            $session = $request->user()->chatSessions()->create([
+            $attributes = $this->botSessionAttributes($request);
+
+            $session = $request->user()->chatSessions()->create(array_merge([
                 'title' => 'New chat',
-            ]);
+            ], $attributes));
 
             return response()->json([
-                'session' => [
-                    'id' => $session->id,
-                    'uuid' => $session->uuid,
-                ],
+                'session' => $this->sessionPayload($session),
             ]);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             $errorId = $this->logError('Chat History Store Error', $e);
 
@@ -286,6 +290,98 @@ class ChatHistoryController extends Controller
                 'error' => $this->errorPayload($e, $errorId),
             ], 500);
         }
+    }
+
+    /**
+     * Resolve the bot/group attributes for a new chat session.
+     *
+     * Bot chats are admin-only. A solo bot must be active in the current
+     * workspace; a team chat must name the active Chief of Staff plus one to
+     * six active specialists, and never includes the coordinator itself.
+     *
+     * @return array<string, mixed>
+     */
+    private function botSessionAttributes(Request $request): array
+    {
+        $user = $request->user();
+        $botId = $request->filled('bot_id') ? (int) $request->input('bot_id') : null;
+        $mode = (string) $request->input('mode', ChatSession::MODE_SOLO);
+        $participantIds = array_values(array_unique(array_map(
+            'intval',
+            (array) $request->input('participant_bot_ids', []),
+        )));
+        $wantsGroup = $mode === ChatSession::MODE_GROUP || $participantIds !== [];
+
+        if (! $botId && ! $wantsGroup) {
+            return [];
+        }
+
+        if (! $user?->is_admin) {
+            throw ValidationException::withMessages([
+                'bot_id' => 'Bot conversations are available to administrators only.',
+            ]);
+        }
+
+        $workspaceId = app(WorkspaceContext::class)->id();
+
+        if ($wantsGroup) {
+            $coordinator = AiBot::activeCoordinatorFor($workspaceId);
+            if (! $coordinator) {
+                throw ValidationException::withMessages([
+                    'participant_bot_ids' => 'This workspace has no active Chief of Staff.',
+                ]);
+            }
+
+            if ($participantIds === []) {
+                throw ValidationException::withMessages([
+                    'participant_bot_ids' => 'Choose at least one specialist for the team chat.',
+                ]);
+            }
+
+            $specialists = AiBot::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $workspaceId)
+                ->whereIn('id', $participantIds)
+                ->where('kind', AiBot::KIND_SPECIALIST)
+                ->where('is_active', true)
+                ->get();
+
+            if ($specialists->count() !== count($participantIds)) {
+                throw ValidationException::withMessages([
+                    'participant_bot_ids' => 'One or more team participants are inactive or are not specialists.',
+                ]);
+            }
+
+            return [
+                'bot_id' => null,
+                'mode' => ChatSession::MODE_GROUP,
+                'participant_bot_ids' => $participantIds,
+            ];
+        }
+
+        $bot = AiBot::query()
+            ->withoutGlobalScope('workspace')
+            ->whereKey($botId)
+            ->where('workspace_id', $workspaceId)
+            ->first();
+
+        if (! $bot || ! $bot->is_active) {
+            throw ValidationException::withMessages([
+                'bot_id' => 'That bot is inactive or does not belong to this workspace.',
+            ]);
+        }
+
+        if ($bot->isCoordinator()) {
+            throw ValidationException::withMessages([
+                'bot_id' => 'The Chief of Staff coordinates a team chat; it cannot be chatted with directly.',
+            ]);
+        }
+
+        return [
+            'bot_id' => $bot->id,
+            'mode' => ChatSession::MODE_SOLO,
+            'participant_bot_ids' => null,
+        ];
     }
 
     /**
@@ -376,10 +472,11 @@ class ChatHistoryController extends Controller
             ]);
             $session->touch();
 
-            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext);
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext, $session);
 
             $session->messages()->create([
                 'role' => 'assistant',
+                'bot_id' => $session->respondingBotId(),
                 'content' => $response,
             ]);
 
@@ -498,6 +595,7 @@ class ChatHistoryController extends Controller
                 $user,
                 $sdkAttachments,
                 $loggingContext,
+                $session,
             );
 
             // StreamableAgentResponse is lazy: provider exceptions can happen
@@ -549,6 +647,7 @@ class ChatHistoryController extends Controller
                             $user,
                             $sdkAttachments,
                             $loggingContext,
+                            $session,
                         );
 
                         foreach ($this->chatService->streamText($fallbackText) as $event) {
@@ -588,6 +687,7 @@ class ChatHistoryController extends Controller
 
                         $session->messages()->create([
                             'role' => 'assistant',
+                            'bot_id' => $session->respondingBotId(),
                             'content' => $text,
                             'thinking' => $thinking !== '' ? $thinking : null,
                         ]);
@@ -708,7 +808,8 @@ class ChatHistoryController extends Controller
     private function sessionPage($user, ?string $cursor = null): array
     {
         $paginator = $user->chatSessions()
-            ->select(['chat_sessions.id', 'chat_sessions.uuid', 'chat_sessions.user_id', 'chat_sessions.title', 'chat_sessions.source', 'chat_sessions.updated_at'])
+            ->select(['chat_sessions.id', 'chat_sessions.uuid', 'chat_sessions.user_id', 'chat_sessions.bot_id', 'chat_sessions.mode', 'chat_sessions.participant_bot_ids', 'chat_sessions.title', 'chat_sessions.source', 'chat_sessions.updated_at'])
+            ->with('bot:id,name,slug')
             ->withCount('messages')
             ->addSelect([
                 'last_message' => ChatMessage::query()
@@ -733,6 +834,13 @@ class ChatHistoryController extends Controller
                     'uuid' => $session->uuid,
                     'title' => $session->title ?? 'New chat',
                     'source' => $session->source,
+                    'mode' => $session->mode,
+                    'bot' => $session->bot ? [
+                        'id' => $session->bot->id,
+                        'name' => $session->bot->name,
+                        'slug' => $session->bot->slug,
+                    ] : null,
+                    'participantBotIds' => array_values(array_map('intval', (array) $session->participant_bot_ids)),
                     'messageCount' => (int) $session->messages_count,
                     'lastMessage' => $session->last_message,
                     'updatedAt' => $session->updated_at?->toIso8601String(),
@@ -753,7 +861,8 @@ class ChatHistoryController extends Controller
     private function messagePage(ChatSession $session, ?int $beforeId = null): array
     {
         $messages = $session->messages()
-            ->select(['id', 'session_id', 'role', 'content', 'thinking', 'attachments', 'created_at'])
+            ->with('bot:id,name,slug')
+            ->select(['id', 'session_id', 'bot_id', 'role', 'content', 'thinking', 'attachments', 'created_at'])
             ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
             ->reorder()
             ->latest('id')
@@ -770,6 +879,11 @@ class ChatHistoryController extends Controller
                 'content' => $message->content,
                 'thinking' => $message->thinking,
                 'attachments' => $message->attachments,
+                'bot' => $message->bot ? [
+                    'id' => $message->bot->id,
+                    'name' => $message->bot->name,
+                    'slug' => $message->bot->slug,
+                ] : null,
                 'createdAt' => $message->created_at?->toIso8601String(),
             ])->all(),
             'meta' => [
@@ -786,14 +900,32 @@ class ChatHistoryController extends Controller
     {
         $messagePage = $this->messagePage($session);
 
+        return array_merge($this->sessionSummary($session), [
+            'messageCount' => $session->messages()->count(),
+            'messages' => $messagePage['data'],
+            'messagePagination' => $messagePage['meta'],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sessionSummary(ChatSession $session): array
+    {
         return [
             'id' => $session->id,
             'uuid' => $session->uuid,
             'title' => $session->title ?? 'New chat',
             'source' => $session->source,
-            'messageCount' => $session->messages()->count(),
-            'messages' => $messagePage['data'],
-            'messagePagination' => $messagePage['meta'],
+            'mode' => $session->mode,
+            'bot' => $session->bot ? [
+                'id' => $session->bot->id,
+                'name' => $session->bot->name,
+                'slug' => $session->bot->slug,
+            ] : null,
+            'participantBotIds' => array_values(array_map('intval', (array) $session->participant_bot_ids)),
+            'updated_at' => $session->updated_at?->toIso8601String(),
+            'updated_at_human' => $session->updated_at?->diffForHumans(),
             'updatedAt' => $session->updated_at?->toIso8601String(),
         ];
     }

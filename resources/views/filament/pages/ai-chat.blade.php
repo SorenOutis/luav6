@@ -12,6 +12,7 @@
         adminUser: {{ Js::from($adminUser) }},
         initialSessions: {{ Js::from($initialSessions) }},
         initialActiveSession: {{ Js::from($initialActiveSession) }},
+        botPicker: {{ Js::from($botPicker) }},
         workspaceStats: {{ Js::from($workspaceStats) }},
     })"
     class="relative flex h-dvh w-full overflow-hidden bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100"
@@ -55,6 +56,33 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                </div>
+
+                {{-- Bot picker (admin teammate selection) --}}
+                <div x-show="botPicker && (botPicker.coordinator || (botPicker.specialists || []).length)" class="mb-2.5 rounded-xl border border-zinc-200/90 bg-white p-2 text-xs shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <label class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Chat with</label>
+                    <select
+                        x-model="selectedBot"
+                        :disabled="activeSessionId !== null"
+                        class="w-full rounded-lg border border-zinc-200/90 bg-white px-2 py-1.5 text-xs text-zinc-800 focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+                    >
+                        <option value="">Echo (default)</option>
+                        <template x-if="botPicker.coordinator">
+                            <option value="team">Team chat — Chief of Staff + specialists</option>
+                        </template>
+                        <template x-for="bot in (botPicker.specialists || [])" :key="bot.id">
+                            <option :value="String(bot.id)" x-text="bot.name"></option>
+                        </template>
+                    </select>
+                    <div x-show="selectedBot === 'team'" class="mt-2 space-y-1">
+                        <p class="text-[10px] text-zinc-400 dark:text-zinc-500">Participants (max 6)</p>
+                        <template x-for="bot in (botPicker.specialists || []).slice(0, 6)" :key="bot.id">
+                            <label class="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+                                <input type="checkbox" :value="String(bot.id)" x-model="teamBotIds" class="rounded border-zinc-300 text-amber-500 focus:ring-amber-500/50" />
+                                <span x-text="bot.name"></span>
+                            </label>
+                        </template>
+                    </div>
                 </div>
 
                 @if (\Filament\Facades\Filament::auth()->user()?->isSuperAdmin())

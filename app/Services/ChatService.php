@@ -4,7 +4,11 @@ namespace App\Services;
 
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
+use App\Ai\Agents\BotAgent;
+use App\Ai\Agents\CoordinatorAgent;
+use App\Ai\Contracts\RequiresReplyGuard;
 use App\Ai\Support\AdminAssistantIntent;
+use App\Models\AiBot;
 use App\Models\AiBudgetReservation;
 use App\Models\ChatSession;
 use App\Models\Season;
@@ -18,7 +22,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use Laravel\Ai\AiManager;
+use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Files\Document;
 use Laravel\Ai\Files\File;
 use Laravel\Ai\Files\Image;
@@ -467,16 +471,16 @@ class ChatService
      * @param  array<int, array{role: string, content: string}>  $historyData
      * @param  array<int, File>  $attachments
      */
-    public function prompt(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = []): string
+    public function prompt(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = [], ?ChatSession $session = null): string
     {
         $history = $this->buildHistoryMessages($historyData);
         $primary = (string) Setting::get('ai_provider', 'gemini');
-        $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
+        $agent = $this->resolveAgent($user, $session, $history, $userContext);
 
         try {
             return $this->promptWithProvider(
                 $primary,
-                $agentClass,
+                $agent,
                 $history,
                 $historyData,
                 $userContext,
@@ -502,7 +506,7 @@ class ChatService
             try {
                 return $this->promptWithProvider(
                     $fallback,
-                    $agentClass,
+                    $agent,
                     $history,
                     $historyData,
                     $userContext,
@@ -531,16 +535,16 @@ class ChatService
      * @param  array<int, array{role: string, content: string}>  $historyData
      * @param  array<int, File>  $attachments
      */
-    public function stream(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = []): StreamableAgentResponse
+    public function stream(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = [], ?ChatSession $session = null): StreamableAgentResponse
     {
         $history = $this->buildHistoryMessages($historyData);
         $primary = (string) Setting::get('ai_provider', 'gemini');
-        $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
+        $agent = $this->resolveAgent($user, $session, $history, $userContext);
 
         try {
             return $this->streamWithProvider(
                 $primary,
-                $agentClass,
+                $agent,
                 $history,
                 $historyData,
                 $userContext,
@@ -566,7 +570,7 @@ class ChatService
             try {
                 return $this->streamWithProvider(
                     $fallback,
-                    $agentClass,
+                    $agent,
                     $history,
                     $historyData,
                     $userContext,
@@ -588,14 +592,14 @@ class ChatService
     }
 
     /**
-     * @param  class-string  $agentClass
+     * @param  Agent|class-string  $agent
      * @param  array<int, mixed>  $history
      * @param  array<int, array<string, mixed>>  $historyData
      * @param  array<int, File>  $attachments
      */
     private function promptWithProvider(
         string $provider,
-        string $agentClass,
+        Agent|string $agent,
         array $history,
         array $historyData,
         string $userContext,
@@ -605,13 +609,13 @@ class ChatService
         ?string $fallbackFrom = null,
     ): string {
         $startedAt = hrtime(true);
-        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass, $fallbackFrom);
+        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agent, $fallbackFrom);
         $usage = app(AiUsageTracker::class);
         $reservation = null;
 
         try {
             $model = $this->prepareProvider($provider);
-            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agentClass, $fallbackFrom);
+            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agent, $fallbackFrom);
             $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
             $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
             $this->aiChatLogger->info(
@@ -619,10 +623,14 @@ class ChatService
                 $attemptContext,
             );
 
+            if ($provider === 'cloudflare' && $agent instanceof Agent) {
+                throw new \RuntimeException('The active AI provider cannot run tool-using bots.');
+            }
+
             $response = $provider === 'cloudflare'
                 ? (new CloudflareAIService)->prompt($message, $historyData, $userContext, trackUsage: false)
                 : $this->promptAgent(
-                    $agentClass,
+                    $agent,
                     $history,
                     $userContext,
                     $message,
@@ -639,6 +647,7 @@ class ChatService
                 'chat',
                 $inputTokens,
                 AiUsageTracker::tokensFromChars(strlen($response)),
+                $this->agentBotId($agent),
             );
             $this->logCompletedResponse($attemptContext, $response, $startedAt);
 
@@ -656,14 +665,14 @@ class ChatService
     }
 
     /**
-     * @param  class-string  $agentClass
+     * @param  Agent|class-string  $agent
      * @param  array<int, mixed>  $history
      * @param  array<int, array<string, mixed>>  $historyData
      * @param  array<int, File>  $attachments
      */
     private function streamWithProvider(
         string $provider,
-        string $agentClass,
+        Agent|string $agent,
         array $history,
         array $historyData,
         string $userContext,
@@ -672,12 +681,16 @@ class ChatService
         array $loggingContext,
         ?string $fallbackFrom = null,
     ): StreamableAgentResponse {
+        if ($provider === 'cloudflare' && $agent instanceof Agent) {
+            throw new \RuntimeException('The active AI provider cannot run tool-using bots.');
+        }
+
         // Cloudflare has no native streaming or tool calling. Execute its
         // budgeted synchronous request and expose the text as one SSE delta.
         if ($provider === 'cloudflare') {
             return $this->streamText($this->promptWithProvider(
                 $provider,
-                $agentClass,
+                $agent,
                 $history,
                 $historyData,
                 $userContext,
@@ -689,13 +702,13 @@ class ChatService
         }
 
         $startedAt = hrtime(true);
-        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass, $fallbackFrom);
+        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agent, $fallbackFrom);
         $usage = app(AiUsageTracker::class);
         $reservation = null;
 
         try {
             $model = $this->prepareProvider($provider);
-            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agentClass, $fallbackFrom);
+            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agent, $fallbackFrom);
             $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
             $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
             $this->aiChatLogger->info(
@@ -704,7 +717,7 @@ class ChatService
             );
 
             return $this->streamAgent(
-                $agentClass,
+                $agent,
                 $history,
                 $userContext,
                 $message,
@@ -730,50 +743,7 @@ class ChatService
 
     private function prepareProvider(string $provider): ?string
     {
-        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
-            throw new \RuntimeException('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
-        }
-
-        if ($provider === 'cloudflare') {
-            return Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash');
-        }
-
-        if ($provider === 'groq') {
-            $apiKey = Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key');
-            $model = Setting::get('groq_model', 'llama-3.1-8b-instant');
-            if (! $apiKey) {
-                throw new \RuntimeException('Groq is not configured. Paste your API key in Platform Settings.');
-            }
-            config([
-                'ai.providers.groq.key' => $apiKey,
-                'ai.providers.groq.models.text.default' => $model,
-            ]);
-            app(AiManager::class)->forgetInstance('groq');
-
-            return $model;
-        }
-
-        if ($provider === 'gemini') {
-            $gemini = app(GeminiAIService::class);
-            if (! $gemini->apiKey()) {
-                throw new \RuntimeException('Gemini is not configured. Paste your API key in Platform Settings.');
-            }
-            $gemini->applyToSdk();
-
-            return $gemini->chatModel();
-        }
-
-        if (AiSdkProviderService::isSdkRouted($provider)) {
-            $sdkProvider = AiSdkProviderService::for($provider);
-            if (! $sdkProvider->isConfigured()) {
-                throw new \RuntimeException("{$provider} is not configured. Paste its credentials in Platform Settings.");
-            }
-            $sdkProvider->applyToSdk();
-
-            return $sdkProvider->model();
-        }
-
-        throw new \RuntimeException("Unsupported AI provider [{$provider}].");
+        return app(AiProviderConfigurator::class)->prepare($provider);
     }
 
     /**
@@ -809,26 +779,84 @@ class ChatService
     }
 
     /**
-     * Run the role-resolved agent through the Laravel AI SDK and return its
-     * text response.
+     * Resolve the agent for this conversation. Bot sessions always win over
+     * the role default, and group sessions require an active Chief of Staff.
      *
-     * @param  class-string  $agentClass
+     * @param  array<int, mixed>  $history
+     * @return Agent|class-string
+     */
+    private function resolveAgent(?User $user, ?ChatSession $session, array $history, string $userContext): Agent|string
+    {
+        if (! $session?->isBotSession()) {
+            return $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
+        }
+
+        if (! $user?->is_admin) {
+            throw new \RuntimeException('Bot conversations are available to administrators only.');
+        }
+
+        if ($session->isGroup()) {
+            $coordinator = $session->activeCoordinator();
+            if (! $coordinator) {
+                throw new \RuntimeException('This team chat needs an active Chief of Staff.');
+            }
+
+            $participantIds = array_values(array_map('intval', (array) $session->participant_bot_ids));
+            if ($participantIds === [] || count($participantIds) > ChatSession::MAX_GROUP_SPECIALISTS) {
+                throw new \RuntimeException('A team chat needs between one and '.ChatSession::MAX_GROUP_SPECIALISTS.' specialist bots.');
+            }
+
+            $roster = $session->rosterBots()
+                ->where('is_active', true)
+                ->where('kind', AiBot::KIND_SPECIALIST)
+                ->get();
+
+            if ($roster->count() !== count(array_unique($participantIds))) {
+                throw new \RuntimeException('One or more team participants are inactive or are not specialists.');
+            }
+
+            return new CoordinatorAgent(
+                $coordinator,
+                $roster->all(),
+                $user,
+                $session,
+                $history,
+                $userContext,
+            );
+        }
+
+        $bot = $session->bot_id
+            ? AiBot::query()->withoutGlobalScope('workspace')->find($session->bot_id)
+            : null;
+
+        if (! $bot || ! $bot->is_active) {
+            throw new \RuntimeException('This bot is inactive or no longer exists.');
+        }
+
+        $workspaceId = app(WorkspaceContext::class)->id();
+        if ($workspaceId && (int) $bot->workspace_id !== (int) $workspaceId) {
+            throw new \RuntimeException('This bot belongs to another workspace.');
+        }
+
+        return new BotAgent($bot, $user, $session, $history, $userContext);
+    }
+
+    /**
+     * Run the resolved agent through the Laravel AI SDK and return its text
+     * response. Bot and coordinator agents arrive fully constructed; the
+     * legacy class-string path keeps Echo/student behaviour unchanged.
+     *
+     * @param  Agent|class-string  $agentDefinition
      * @param  array<int, mixed>  $history
      * @param  array<int, File>  $attachments
      */
-    private function promptAgent(string $agentClass, array $history, string $userContext, string $message, string $provider, ?string $model = null, array $attachments = [], ?int $chatSessionId = null): string
+    private function promptAgent(Agent|string $agentDefinition, array $history, string $userContext, string $message, string $provider, ?string $model = null, array $attachments = [], ?int $chatSessionId = null): string
     {
-        $agent = new $agentClass;
-        $agent->setHistory($history);
-        $agent->setUserContext($userContext);
-        if ($agent instanceof AdminAssistantAgent) {
-            $agent->setChatSessionId($chatSessionId);
-            $agent->setIntentGroups(AdminAssistantIntent::detect($message));
-        }
+        $agent = $this->makeAgent($agentDefinition, $history, $userContext, $chatSessionId, $message);
 
         $text = $agent->prompt($message, attachments: $attachments, provider: $provider, model: $model)->text;
 
-        if ($agent instanceof AdminAssistantAgent) {
+        if ($agent instanceof RequiresReplyGuard) {
             $text = $this->guardAdminReply((string) $text, $chatSessionId);
         }
 
@@ -836,15 +864,12 @@ class ChatService
     }
 
     /**
-     * Run the role-resolved agent through the Laravel AI SDK and return its
-     * streamable response, chaining usage tracking onto stream completion.
-     *
-     * @param  class-string  $agentClass
+     * @param  Agent|class-string  $agentDefinition
      * @param  array<int, mixed>  $history
      * @param  array<int, File>  $attachments
      */
     private function streamAgent(
-        string $agentClass,
+        Agent|string $agentDefinition,
         array $history,
         string $userContext,
         string $message,
@@ -856,23 +881,18 @@ class ChatService
         ?AiBudgetReservation $reservation = null,
         ?int $inputTokens = null,
     ): StreamableAgentResponse {
-        $agent = new $agentClass;
-        $agent->setHistory($history);
-        $agent->setUserContext($userContext);
         $chatSessionId = $this->sessionIdFrom($loggingContext);
-        if ($agent instanceof AdminAssistantAgent) {
-            $agent->setChatSessionId($chatSessionId);
-            $agent->setIntentGroups(AdminAssistantIntent::detect($message));
-        }
+        $agent = $this->makeAgent($agentDefinition, $history, $userContext, $chatSessionId, $message);
 
         $inputTokens ??= AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext));
         $usage = app(AiUsageTracker::class);
-        $isAdminAgent = $agent instanceof AdminAssistantAgent;
+        $isGuarded = $agent instanceof RequiresReplyGuard;
+        $botId = $this->agentBotId($agent);
         $stream = $agent
             ->stream($message, attachments: $attachments, provider: $provider, model: $model)
-            ->then(function ($response) use ($provider, $model, $inputTokens, $loggingContext, $startedAt, $reservation, $usage, $isAdminAgent, $chatSessionId) {
+            ->then(function ($response) use ($provider, $model, $inputTokens, $loggingContext, $startedAt, $reservation, $usage, $isGuarded, $botId, $chatSessionId) {
                 $text = (string) $response->text;
-                if ($isAdminAgent) {
+                if ($isGuarded) {
                     $text = $this->guardAdminReply($text, $chatSessionId);
                 }
 
@@ -883,6 +903,7 @@ class ChatService
                     'chat',
                     $inputTokens,
                     AiUsageTracker::tokensFromChars(strlen($text)),
+                    $botId,
                 );
 
                 $this->logCompletedResponse($loggingContext, $text, $startedAt ?? hrtime(true), true);
@@ -895,6 +916,37 @@ class ChatService
             $reservation,
             $usage,
         );
+    }
+
+    /**
+     * @param  Agent|class-string  $agentDefinition
+     * @param  array<int, mixed>  $history
+     */
+    private function makeAgent(Agent|string $agentDefinition, array $history, string $userContext, ?int $chatSessionId, string $message): Agent
+    {
+        if ($agentDefinition instanceof Agent) {
+            return $agentDefinition;
+        }
+
+        $agent = new $agentDefinition;
+        $agent->setHistory($history);
+        $agent->setUserContext($userContext);
+
+        if ($agent instanceof AdminAssistantAgent) {
+            $agent->setChatSessionId($chatSessionId);
+            $agent->setIntentGroups(AdminAssistantIntent::detect($message));
+        }
+
+        return $agent;
+    }
+
+    private function agentBotId(Agent|string $agent): ?int
+    {
+        return match (true) {
+            $agent instanceof BotAgent => $agent->bot->id,
+            $agent instanceof CoordinatorAgent => $agent->coordinator->id,
+            default => null,
+        };
     }
 
     private function guardAdminReply(string $text, ?int $chatSessionId): string
@@ -917,12 +969,12 @@ class ChatService
      * @param  array<string, mixed>  $loggingContext
      * @return array<string, mixed>
      */
-    private function providerContext(array $loggingContext, string $provider, ?string $model, string $agentClass, ?string $fallbackFrom = null): array
+    private function providerContext(array $loggingContext, string $provider, ?string $model, Agent|string $agent, ?string $fallbackFrom = null): array
     {
         return array_merge($loggingContext, [
             'provider' => $provider,
             'model' => $model,
-            'agent' => class_basename($agentClass),
+            'agent' => class_basename($agent instanceof Agent ? $agent::class : $agent),
             'fallback_from' => $fallbackFrom,
         ]);
     }
