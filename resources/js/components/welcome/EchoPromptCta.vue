@@ -8,14 +8,18 @@ import { useDemoLoop, useInView } from '@/composables/useDemoLoop';
 
 const props = withDefaults(
     defineProps<{
-        auth: { user: any };
+        auth?: { user?: any };
         canRegister?: boolean;
         dashboard: () => string;
         login: () => string;
         register: () => string;
         prefersReducedMotion?: boolean;
     }>(),
-    { canRegister: true, prefersReducedMotion: false },
+    {
+        auth: () => ({ user: null }),
+        canRegister: true,
+        prefersReducedMotion: false,
+    },
 );
 
 const suggestions = [

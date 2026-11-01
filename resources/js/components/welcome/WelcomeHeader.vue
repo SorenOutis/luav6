@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { Sun, Moon, Menu, X } from 'lucide-vue-next';
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import PublicBrandMark from '@/components/PublicBrandMark.vue';
 import {
     Sheet,
@@ -103,6 +103,13 @@ watch(isMobileMenuOpen, (open) => {
     document.body.style.overflow = open ? 'hidden' : '';
 });
 
+onMounted(() => {
+    if (typeof window !== 'undefined') {
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+    }
+});
+
 // Ensure body scroll is restored if component unmounts while menu is open
 onBeforeUnmount(() => {
     document.body.style.overflow = '';
@@ -110,11 +117,6 @@ onBeforeUnmount(() => {
         window.removeEventListener('scroll', handleScroll);
     }
 });
-
-if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-}
 
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false;

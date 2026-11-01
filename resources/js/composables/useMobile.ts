@@ -2,10 +2,13 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import {
     BREAKPOINT_DESKTOP,
     BREAKPOINT_MOBILE,
+    addMqlListener,
     applyLowEndDocumentFlag,
     emptyDeviceSnapshot,
     isLowEndDeviceFrom,
     readDeviceSnapshot,
+    removeMqlListener,
+    safeMatchMediaList,
 } from '@/lib/device';
 import type { ConnectionEffectiveType } from '@/lib/device';
 
@@ -82,56 +85,6 @@ export function useMobile() {
     let mqlCoarsePointer: MediaQueryList | null = null;
     let mqlReducedMotion: MediaQueryList | null = null;
     let connection: NetworkInformation | null = null;
-
-    const safeMatchMediaList = (query: string): MediaQueryList | null => {
-        if (
-            typeof window === 'undefined' ||
-            typeof window.matchMedia !== 'function'
-        ) {
-            return null;
-        }
-        try {
-            return window.matchMedia(query);
-        } catch {
-            return null;
-        }
-    };
-
-    const addMqlListener = (
-        mql: MediaQueryList | null,
-        listener: () => void,
-    ) => {
-        if (!mql) return;
-        if (typeof mql.addEventListener === 'function') {
-            mql.addEventListener('change', listener);
-        } else if (
-            typeof (
-                mql as unknown as { addListener?: (cb: () => void) => void }
-            ).addListener === 'function'
-        ) {
-            (
-                mql as unknown as { addListener: (cb: () => void) => void }
-            ).addListener(listener);
-        }
-    };
-
-    const removeMqlListener = (
-        mql: MediaQueryList | null,
-        listener: () => void,
-    ) => {
-        if (!mql) return;
-        if (typeof mql.removeEventListener === 'function') {
-            mql.removeEventListener('change', listener);
-        } else if (
-            typeof (
-                mql as unknown as { removeListener?: (cb: () => void) => void }
-            ).removeListener === 'function'
-        ) {
-            (
-                mql as unknown as { removeListener: (cb: () => void) => void }
-            ).removeListener(listener);
-        }
-    };
 
     const onMqlUpdate = () => applySnapshot();
 

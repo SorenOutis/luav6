@@ -54,6 +54,80 @@ export function safeMatchMedia(query: string): boolean {
     }
 }
 
+export function safeMatchMediaList(query: string): MediaQueryList | null {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
+        return null;
+    }
+    try {
+        return window.matchMedia(query);
+    } catch {
+        return null;
+    }
+}
+
+export function addMqlListener(
+    mql: MediaQueryList | null | undefined,
+    listener: (e?: MediaQueryListEvent) => void,
+): void {
+    if (!mql) return;
+    try {
+        if (typeof mql.addEventListener === 'function') {
+            mql.addEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as {
+                    addListener?: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).addListener === 'function'
+        ) {
+            (
+                mql as unknown as {
+                    addListener: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).addListener(listener);
+        }
+    } catch {
+        // Fallback or ignore in restricted/unsupported web environments
+    }
+}
+
+export function removeMqlListener(
+    mql: MediaQueryList | null | undefined,
+    listener: (e?: MediaQueryListEvent) => void,
+): void {
+    if (!mql) return;
+    try {
+        if (typeof mql.removeEventListener === 'function') {
+            mql.removeEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as {
+                    removeListener?: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).removeListener === 'function'
+        ) {
+            (
+                mql as unknown as {
+                    removeListener: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).removeListener(listener);
+        }
+    } catch {
+        // Fallback or ignore
+    }
+}
+
 export function emptyDeviceSnapshot(): DeviceSnapshot {
     return {
         isMobile: false,

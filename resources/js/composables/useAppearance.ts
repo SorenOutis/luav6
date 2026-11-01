@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
-import { readDeviceSnapshot } from '@/lib/device';
+import { addMqlListener, readDeviceSnapshot } from '@/lib/device';
 import type {
     Appearance,
     CardStylePreset,
@@ -218,7 +218,7 @@ export function initializeTheme(): void {
     );
 
     // Set up system theme change listener...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+    addMqlListener(mediaQuery(), handleSystemThemeChange);
 }
 
 const appearance = ref<Appearance>('system');
