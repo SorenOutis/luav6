@@ -55,6 +55,15 @@ const ogTitle = computed(
         seo.siteName ||
         '',
 );
+
+const cspNonce = computed(() => {
+    if (typeof document === 'undefined') return undefined;
+    return (
+        document
+            .querySelector('meta[name="csp-nonce"]')
+            ?.getAttribute('content') || undefined
+    );
+});
 </script>
 
 <template>
@@ -91,6 +100,7 @@ const ogTitle = computed(
             v-for="block in jsonldNodes"
             :key="JSON.stringify(block)"
             type="application/ld+json"
+            :nonce="cspNonce"
         >
             {{ JSON.stringify(block) }}
         </component>

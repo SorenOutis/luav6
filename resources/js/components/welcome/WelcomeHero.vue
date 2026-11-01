@@ -8,7 +8,7 @@ import HeroDemoWindow from '@/components/welcome/HeroDemoWindow.vue';
 withDefaults(
     defineProps<{
         canRegister: boolean;
-        auth: { user: any };
+        auth?: { user?: any };
         dashboard: () => string;
         login: () => string;
         register: () => string;
@@ -116,7 +116,7 @@ withDefaults(
                 class="hero-rise mt-8 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row"
             >
                 <Link
-                    v-if="auth.user"
+                    v-if="auth?.user"
                     :href="dashboard()"
                     class="group inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-foreground px-8 text-sm font-medium text-background shadow-xs transition-all hover:opacity-90 active:scale-[0.98] sm:w-auto"
                 >
@@ -138,7 +138,7 @@ withDefaults(
                     />
                 </Link>
                 <Link
-                    v-if="!auth.user"
+                    v-if="!auth?.user"
                     :href="login()"
                     class="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border/80 bg-card px-7 text-sm font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98] sm:w-auto"
                 >
