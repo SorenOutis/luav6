@@ -257,31 +257,23 @@ final class ToolRegistry
     }
 
     /**
-     * Grouped options for the bot allowlist UI. Write tools are grouped apart
-     * so an admin must opt in to approval-gated capabilities explicitly.
+     * Flat options for the bot allowlist UI. Read tools come first and write
+     * tools last, so an admin must opt in to approval-gated capabilities
+     * explicitly. Filament's CheckboxList does not support grouped options.
      *
-     * @return array<string, array<string, string>>
+     * @return array<string, string>
      */
     public static function options(bool $includeWrites = true): array
     {
-        $read = [];
-        $write = [];
+        $options = [];
 
         foreach (self::MAP as $key => $entry) {
-            $label = str_replace('_', ' ', $key);
-            $label = ucfirst($label);
-
-            if ($entry['write']) {
-                $write[$key] = $label.' (approval required)';
-            } else {
-                $read[$key] = $label;
+            if ($entry['write'] && ! $includeWrites) {
+                continue;
             }
-        }
 
-        $options = ['Read tools' => $read];
-
-        if ($includeWrites) {
-            $options['Write tools — every write stages a human approval'] = $write;
+            $label = ucfirst(str_replace('_', ' ', $key));
+            $options[$key] = $entry['write'] ? $label.' (approval required)' : $label;
         }
 
         return $options;

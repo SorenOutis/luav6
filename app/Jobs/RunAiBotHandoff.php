@@ -89,6 +89,7 @@ class RunAiBotHandoff implements ShouldBeUnique, ShouldQueue
 
         try {
             $model = $providers->prepare($provider);
+            $model = $bot->model ?: $model;
 
             (new BotRunContext($bot, $actor, $handoff->depth, $handoff->chat_session_id, $handoff->id))
                 ->run(function () use ($handoff, $bot, $actor, $session, $provider, $model, $guardrails, $sanitizer, $replyGuard): void {

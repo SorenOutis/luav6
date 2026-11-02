@@ -137,6 +137,53 @@ it('creates a team chat with the active chief of staff and attributes the reply 
     ]);
 });
 
+it('uses the bot model override for solo chats', function () {
+    BotAgent::fake(['Registrar reply']);
+
+    $bot = AiBot::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'model' => 'solo-override-model',
+    ]);
+
+    $session = ChatSession::query()->create([
+        'user_id' => $this->admin->id,
+        'bot_id' => $bot->id,
+        'mode' => ChatSession::MODE_SOLO,
+        'source' => 'echo',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->postJson(route('chats.message', $session), ['message' => 'Who handles enrolment?'])
+        ->assertOk();
+
+    BotAgent::assertPrompted(fn ($prompt): bool => $prompt->model === 'solo-override-model');
+});
+
+it('uses the coordinator model override for team chats', function () {
+    CoordinatorAgent::fake(['Team reply']);
+
+    $coordinator = AiBot::factory()->coordinator()->create([
+        'workspace_id' => $this->workspace->id,
+        'model' => 'team-override-model',
+    ]);
+    $specialists = AiBot::factory()->count(2)->create([
+        'workspace_id' => $this->workspace->id,
+    ]);
+
+    $session = ChatSession::query()->create([
+        'user_id' => $this->admin->id,
+        'mode' => ChatSession::MODE_GROUP,
+        'source' => 'echo',
+        'participant_bot_ids' => $specialists->modelKeys(),
+    ]);
+
+    $this->actingAs($this->admin)
+        ->postJson(route('chats.message', $session), ['message' => 'Plan next term'])
+        ->assertOk();
+
+    CoordinatorAgent::assertPrompted(fn ($prompt): bool => $prompt->model === 'team-override-model');
+});
+
 it('requires an active chief of staff for a team chat', function () {
     $specialists = AiBot::factory()->count(2)->create([
         'workspace_id' => $this->workspace->id,

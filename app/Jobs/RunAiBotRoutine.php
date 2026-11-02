@@ -102,6 +102,7 @@ class RunAiBotRoutine implements ShouldBeUnique, ShouldQueue
 
         try {
             $model = $providers->prepare($provider);
+            $model = $bot->model ?: $model;
 
             (new BotRunContext($bot, $actor))
                 ->run(function () use ($routine, $bot, $actor, $provider, $model, $sanitizer, $replyGuard): void {

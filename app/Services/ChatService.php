@@ -614,7 +614,7 @@ class ChatService
         $reservation = null;
 
         try {
-            $model = $this->prepareProvider($provider);
+            $model = $this->resolveModel($provider, $agent);
             $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agent, $fallbackFrom);
             $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
             $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
@@ -707,7 +707,7 @@ class ChatService
         $reservation = null;
 
         try {
-            $model = $this->prepareProvider($provider);
+            $model = $this->resolveModel($provider, $agent);
             $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agent, $fallbackFrom);
             $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
             $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
@@ -744,6 +744,23 @@ class ChatService
     private function prepareProvider(string $provider): ?string
     {
         return app(AiProviderConfigurator::class)->prepare($provider);
+    }
+
+    /**
+     * Resolve the model for this attempt, letting a bot's explicit override
+     * win over the platform default.
+     *
+     * @param  Agent|class-string  $agent
+     */
+    private function resolveModel(string $provider, Agent|string $agent): ?string
+    {
+        $model = $this->prepareProvider($provider);
+
+        return match (true) {
+            $agent instanceof BotAgent => $agent->model() ?: $model,
+            $agent instanceof CoordinatorAgent => $agent->model() ?: $model,
+            default => $model,
+        };
     }
 
     /**

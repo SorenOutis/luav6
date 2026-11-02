@@ -237,6 +237,23 @@ it('skips routines that target the chief of staff', function () {
         ->and($routine->fresh()->last_error)->toContain('specialist');
 });
 
+it('uses the bot model override for routine runs', function () {
+    BotAgent::fake(['Routine reply']);
+
+    $this->bot->update(['model' => 'routine-override-model']);
+
+    $routine = AiBotRoutine::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'bot_id' => $this->bot->id,
+    ]);
+
+    runAiBotRoutineJob($routine->id);
+
+    BotAgent::assertPrompted(fn ($prompt): bool => $prompt->model === 'routine-override-model');
+
+    expect($routine->fresh()->last_status)->toBe(AiBotRoutine::STATUS_COMPLETED);
+});
+
 it('registers a nonoverlapping minute scheduler for bot routines', function () {
     $events = collect(app(Schedule::class)->events())
         ->filter(fn ($event): bool => str_contains($event->command ?? '', 'ai:bot-routines'));
