@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ActivityTasks\RelationManagers;
 
 use App\Models\ActivityTask;
 use App\Models\ActivityTaskScore;
+use App\Models\Section;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -21,6 +22,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class ScoresRelationManager extends RelationManager
 {
@@ -122,6 +124,94 @@ class ScoresRelationManager extends RelationManager
                     ->toggleable(),
             ])
             ->headerActions([
+                Action::make('exportScores')
+                    ->label('Export Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->action(function () use ($task) {
+                        $section = $task->section;
+                        $schoolLevel = $section?->school_level ? (Section::schoolLevelOptions()[$section->school_level] ?? $section->school_level) : 'College';
+                        $students = $section
+                            ? User::query()
+                                ->whereHas('sections', fn ($q) => $q->where('sections.id', $section->id))
+                                ->where('is_admin', false)
+                                ->orderBy('name')
+                                ->get()
+                            : collect();
+
+                        $scores = ActivityTaskScore::where('activity_task_id', $task->id)
+                            ->get()
+                            ->keyBy('user_id');
+
+                        $slug = Str::slug($task->title) ?: 'task';
+                        $filename = "grade_sheet_{$slug}_".now()->format('Y-m-d').'.csv';
+
+                        return response()->streamDownload(function () use ($task, $section, $schoolLevel, $students, $scores) {
+                            $handle = fopen('php://memory', 'w');
+                            fwrite($handle, "\xEF\xBB\xBF");
+
+                            fputcsv($handle, ['GRADE SHEET / ACTIVITY TASK RECORD']);
+                            fputcsv($handle, ['Task Title', $task->title]);
+                            fputcsv($handle, ['Section', $section?->name ?? 'Unassigned']);
+                            fputcsv($handle, ['School Level', $schoolLevel]);
+                            fputcsv($handle, ['Period / Term', $task->term ?? '—']);
+                            fputcsv($handle, ['Activity Type', $task->task_type ?? '—']);
+                            fputcsv($handle, ['Max Points', $task->max_points]);
+                            fputcsv($handle, ['Date Exported', now()->toDateTimeString()]);
+                            fputcsv($handle, []);
+
+                            fputcsv($handle, [
+                                '#',
+                                'Student Name',
+                                'Student Email',
+                                'Score',
+                                'Max Points',
+                                'Rating (%)',
+                                'Status',
+                                'Remarks',
+                            ]);
+
+                            $index = 1;
+                            foreach ($students as $student) {
+                                $scoreRecord = $scores->get($student->id);
+                                $score = '—';
+                                $rating = '—';
+                                $status = 'Unrecorded';
+                                $remarks = '';
+
+                                if ($scoreRecord) {
+                                    $remarks = $scoreRecord->remarks ?? '';
+                                    if ($scoreRecord->is_missed) {
+                                        $score = 0;
+                                        $rating = '0.0%';
+                                        $status = 'Missed';
+                                    } elseif ($scoreRecord->score !== null) {
+                                        $score = (float) $scoreRecord->score;
+                                        $status = 'Graded';
+                                        if ((float) $task->max_points > 0) {
+                                            $rating = number_format(($score / (float) $task->max_points) * 100, 1).'%';
+                                        }
+                                    }
+                                }
+
+                                fputcsv($handle, [
+                                    $index++,
+                                    $student->name,
+                                    $student->email,
+                                    $score,
+                                    $task->max_points,
+                                    $rating,
+                                    $status,
+                                    $remarks,
+                                ]);
+                            }
+
+                            rewind($handle);
+                            fpassthru($handle);
+                            fclose($handle);
+                        }, $filename, ['Content-Type' => 'text/csv']);
+                    }),
+
                 Action::make('populateSectionStudents')
                     ->label('Add All Section Students')
                     ->icon('heroicon-o-user-group')
