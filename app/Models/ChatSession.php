@@ -108,6 +108,60 @@ class ChatSession extends Model
         return $this->bot_id !== null || $this->isGroup();
     }
 
+    /** @return Builder<ChatSession> */
+    public function scopeBotSessions(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->whereNotNull('bot_id')->orWhere('mode', self::MODE_GROUP);
+        });
+    }
+
+    /**
+     * Restrict to sessions whose solo bot or team participants are in the list.
+     *
+     * @param  array<int, int>  $botIds
+     * @return Builder<ChatSession>
+     */
+    public function scopeForBotIds(Builder $query, array $botIds): Builder
+    {
+        $botIds = array_values(array_unique(array_filter(
+            array_map('intval', $botIds),
+            fn (int $id): bool => $id > 0,
+        )));
+
+        if ($botIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $query) use ($botIds): void {
+            $query
+                ->whereIn('bot_id', $botIds)
+                ->orWhere(function (Builder $query) use ($botIds): void {
+                    $query
+                        ->where('mode', self::MODE_GROUP)
+                        ->where(function (Builder $query) use ($botIds): void {
+                            foreach ($botIds as $botId) {
+                                $query->orWhereJsonContains('participant_bot_ids', $botId);
+                            }
+                        });
+                });
+        });
+    }
+
+    /** @return Builder<ChatSession> */
+    public function scopeForBot(Builder $query, int $botId): Builder
+    {
+        return $query->where(function (Builder $query) use ($botId): void {
+            $query
+                ->where('bot_id', $botId)
+                ->orWhere(function (Builder $query) use ($botId): void {
+                    $query
+                        ->where('mode', self::MODE_GROUP)
+                        ->whereJsonContains('participant_bot_ids', $botId);
+                });
+        });
+    }
+
     public function workspaceId(): ?int
     {
         if ($this->bot_id) {

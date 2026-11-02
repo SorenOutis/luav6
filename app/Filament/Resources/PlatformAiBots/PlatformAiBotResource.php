@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PlatformAiBots;
 
+use App\Filament\Resources\PlatformAiBots\Pages\BotOperations;
 use App\Filament\Resources\PlatformAiBots\Pages\CreatePlatformAiBot;
 use App\Filament\Resources\PlatformAiBots\Pages\EditPlatformAiBot;
 use App\Filament\Resources\PlatformAiBots\Pages\ListPlatformAiBots;
@@ -10,10 +11,13 @@ use App\Filament\Resources\PlatformAiBots\Tables\PlatformAiBotsTable;
 use App\Models\AiBot;
 use BackedEnum;
 use Filament\Facades\Filament;
+use Filament\Navigation\NavigationItem;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+
+use function Filament\Support\original_request;
 
 /**
  * Super-admin-only control center for every workspace's bot roster.
@@ -83,10 +87,44 @@ class PlatformAiBotResource extends Resource
         return PlatformAiBotsTable::configure($table);
     }
 
+    /**
+     * The control center keeps its management table while Operations gets its
+     * own sidebar destination, so both are one click from AI Studio.
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        $items = parent::getNavigationItems();
+
+        if ($items === []) {
+            return [];
+        }
+
+        $routeBase = static::getRouteBaseName();
+
+        $items[0] = $items[0]->isActiveWhen(fn (): bool => original_request()->routeIs([
+            $routeBase.'.index',
+            $routeBase.'.create',
+            $routeBase.'.edit',
+        ]));
+
+        $items[] = NavigationItem::make('Bot Operations')
+            ->key(static::class.'::operations')
+            ->group(static::getNavigationGroup())
+            ->icon('heroicon-o-signal')
+            ->isActiveWhen(fn (): bool => original_request()->routeIs($routeBase.'.operations'))
+            ->sort((static::getNavigationSort() ?? 0) + 1)
+            ->url(static::getUrl('operations'));
+
+        return $items;
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => ListPlatformAiBots::route('/'),
+            'operations' => BotOperations::route('/operations'),
             'create' => CreatePlatformAiBot::route('/create'),
             'edit' => EditPlatformAiBot::route('/{record}/edit'),
         ];
