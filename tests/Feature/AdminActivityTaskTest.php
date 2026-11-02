@@ -1,12 +1,18 @@
 <?php
 
 use App\Filament\Resources\ActivityTasks\Pages\CreateActivityTask;
+use App\Filament\Resources\ActivityTasks\Pages\EditActivityTask;
 use App\Filament\Resources\ActivityTasks\Pages\ListActivityTasks;
+use App\Filament\Resources\ActivityTasks\RelationManagers\ScoresRelationManager;
 use App\Models\ActivityTask;
 use App\Models\ActivityTaskScore;
 use App\Models\Section;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 it('allows admin to list activity tasks', function () {
     $admin = User::factory()->superAdmin()->create();
@@ -103,4 +109,107 @@ it('allows admin to grade students via activity tasks table action', function ()
         ->and((float) $score->score)->toBe(48.0)
         ->and($score->is_missed)->toBeFalse()
         ->and($score->remarks)->toBe('Great delivery');
+});
+
+it('allows admin to export all scores via table header action in performance tasks', function () {
+    $admin = User::factory()->superAdmin()->create();
+    $this->actingAs($admin);
+
+    $section = Section::factory()->create([
+        'name' => 'Computer Networking 1',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+    ]);
+    $student = User::factory()->create([
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'is_admin' => false,
+    ]);
+    $student->sections()->attach($section->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'Cross-Over Cable Crimping',
+        'term' => 'Midterm',
+        'task_type' => 'Laboratory',
+        'max_points' => 50,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $student->id,
+        'score' => 45,
+        'is_missed' => false,
+        'remarks' => 'Clean RJ45 crimp',
+        'graded_by' => $admin->id,
+    ]);
+
+    $response = Livewire::test(ListActivityTasks::class)
+        ->callTableAction('exportScores');
+
+    $response->assertFileDownloaded();
+});
+
+it('allows admin to export single task grade sheet via record action', function () {
+    $admin = User::factory()->superAdmin()->create();
+    $this->actingAs($admin);
+
+    $section = Section::factory()->create([
+        'name' => 'Graphics Designing',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+    ]);
+    $student = User::factory()->create([
+        'name' => 'Jane Smith',
+        'email' => 'jane@example.com',
+        'is_admin' => false,
+    ]);
+    $student->sections()->attach($section->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'Midterm Examination',
+        'term' => 'Midterm',
+        'task_type' => 'Laboratory',
+        'max_points' => 100,
+    ]);
+
+    ActivityTaskScore::create([
+        'activity_task_id' => $task->id,
+        'user_id' => $student->id,
+        'score' => 92,
+        'is_missed' => false,
+        'remarks' => 'Excellent work',
+        'graded_by' => $admin->id,
+    ]);
+
+    $response = Livewire::test(ListActivityTasks::class)
+        ->callTableAction('exportGradeSheet', $task);
+
+    $response->assertFileDownloaded();
+});
+
+it('allows admin to export scores in relation manager', function () {
+    $admin = User::factory()->superAdmin()->create();
+    $this->actingAs($admin);
+
+    $section = Section::factory()->create([
+        'name' => 'Computer Networking 1',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+    ]);
+    $student = User::factory()->create(['name' => 'Mark Cruz', 'is_admin' => false]);
+    $student->sections()->attach($section->id);
+
+    $task = ActivityTask::create([
+        'section_id' => $section->id,
+        'title' => 'Cross-Over Cable Crimping',
+        'term' => 'Midterm',
+        'task_type' => 'Laboratory',
+        'max_points' => 50,
+    ]);
+
+    Livewire::test(ScoresRelationManager::class, [
+        'ownerRecord' => $task,
+        'pageClass' => EditActivityTask::class,
+    ])
+        ->callTableAction('exportScores')
+        ->assertFileDownloaded();
 });

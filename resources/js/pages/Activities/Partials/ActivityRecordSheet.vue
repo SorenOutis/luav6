@@ -174,10 +174,13 @@ const resolveComponentCategory = (
     category: 'written' | 'performance';
     label: string;
 } => {
-    const category =
-        activity.category ??
-        (typeof activity.id === 'string' ? 'performance' : 'written');
-    if (category === 'written') {
+    const isWritten =
+        activity.category === 'written' ||
+        /^(written(\s*work|\s*activities)?|exams?)$/i.test(
+            activity.activity_type?.trim() || '',
+        );
+
+    if (isWritten) {
         return {
             key: 'written',
             category: 'written',
@@ -185,60 +188,10 @@ const resolveComponentCategory = (
         };
     }
 
-    const rawType = activity.activity_type?.trim() || 'Performance Task';
-    if (/^(activities|activity|act\.?)(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Activities',
-            category: 'performance',
-            label: 'Activities',
-        };
-    }
-    if (/^(assignments?|asg\.?)(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Assignments',
-            category: 'performance',
-            label: 'Assignments',
-        };
-    }
-    if (/^(laborator(y|ies)|labs?)(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Laboratory',
-            category: 'performance',
-            label: 'Laboratory',
-        };
-    }
-    if (/^(performance\s*tasks?|pt)(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Performance Task',
-            category: 'performance',
-            label: 'Performance Tasks',
-        };
-    }
-    if (/^presentations?(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Presentation',
-            category: 'performance',
-            label: 'Presentation',
-        };
-    }
-    if (/^projects?(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Project',
-            category: 'performance',
-            label: 'Project',
-        };
-    }
-    if (/^quizz?es?(\s*#?\s*\d+)?$/i.test(rawType)) {
-        return {
-            key: 'performance:Quiz',
-            category: 'performance',
-            label: 'Quiz',
-        };
-    }
     return {
-        key: `performance:${rawType}`,
+        key: 'performance:Performance Task',
         category: 'performance',
-        label: rawType,
+        label: 'Performance Tasks',
     };
 };
 
@@ -250,11 +203,7 @@ const hasSpecificActivityType = (
     if (!raw) {
         return false;
     }
-    if (
-        /^(performance\s*tasks?|written\s*(work|activities)|activities|activity|act\.?|assignments?|asg\.?|laborator(y|ies)|labs?|presentations?|projects?|quizz?es?)$/i.test(
-            raw,
-        )
-    ) {
+    if (/^(performance\s*tasks?|pt|written\s*(work|activities))$/i.test(raw)) {
         return false;
     }
     if (raw.toLowerCase() === componentLabel.trim().toLowerCase()) {
@@ -421,7 +370,6 @@ const availableTypes = computed<TypeOption[]>(() => {
 
     let hasWritten = false;
     let hasPerformance = false;
-    const customTypes = new Set<string>();
 
     for (const activity of allActivities.value) {
         const resolved = resolveComponentCategory(activity);
@@ -429,9 +377,6 @@ const availableTypes = computed<TypeOption[]>(() => {
             hasWritten = true;
         } else {
             hasPerformance = true;
-            if (resolved.key !== 'performance:Performance Task') {
-                customTypes.add(resolved.label);
-            }
         }
     }
 
@@ -440,18 +385,7 @@ const availableTypes = computed<TypeOption[]>(() => {
     }
 
     if (hasPerformance) {
-        if (customTypes.size > 0) {
-            types.push({ key: 'performance', label: 'All Performance Tasks' });
-            types.push({
-                key: 'performance:standard',
-                label: 'Performance Tasks (Standard)',
-            });
-            for (const ct of Array.from(customTypes).sort()) {
-                types.push({ key: `custom:${ct}`, label: ct });
-            }
-        } else {
-            types.push({ key: 'performance', label: 'Performance Tasks' });
-        }
+        types.push({ key: 'performance', label: 'Performance Tasks' });
     }
 
     return types;
@@ -504,7 +438,7 @@ const filteredActivities = computed(() => {
         }
     }
 
-    if (selectedType.value !== 'all') {
+    if (selectedType.value && selectedType.value !== 'all') {
         if (selectedType.value === 'written') {
             list = list.filter((a) => {
                 const resolved = resolveComponentCategory(a);
@@ -607,6 +541,219 @@ const activityPercentageDisplay = (activity: ActivityScoreItem): string => {
 const handlePrint = () => {
     window.print();
 };
+
+const escapeCsvCell = (val: unknown): string => {
+    if (val === null || val === undefined) {
+        return '';
+    }
+    const str = String(val);
+    if (
+        str.includes(',') ||
+        str.includes('"') ||
+        str.includes('\n') ||
+        str.includes('\r')
+    ) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+};
+
+const exportExcel = () => {
+    const lines: string[] = [];
+
+    // Header metadata
+    lines.push(['STUDENT ACTIVITY RECORD'].map(escapeCsvCell).join(','));
+    lines.push(
+        ['Student', currentUser.value?.name ?? 'Student']
+            .map(escapeCsvCell)
+            .join(','),
+    );
+    lines.push(
+        ['Email', currentUser.value?.email ?? '—'].map(escapeCsvCell).join(','),
+    );
+    lines.push(
+        ['Date Generated', new Date().toLocaleDateString()]
+            .map(escapeCsvCell)
+            .join(','),
+    );
+    lines.push(
+        [
+            'Tasks Completed',
+            `${completedCount.value} of ${allActivities.value.length}`,
+        ]
+            .map(escapeCsvCell)
+            .join(','),
+    );
+    lines.push('');
+
+    // Process groupedByTerm (respects active filters)
+    for (const group of groupedByTerm.value) {
+        lines.push([`Period: ${group.term}`].map(escapeCsvCell).join(','));
+
+        for (const section of group.sections) {
+            const sectionTitle = section.seasonName
+                ? `Section: ${section.name} · ${section.seasonName}`
+                : `Section: ${section.name}`;
+            lines.push([sectionTitle].map(escapeCsvCell).join(','));
+
+            for (const component of section.components) {
+                lines.push(
+                    [`Category: ${component.label}`]
+                        .map(escapeCsvCell)
+                        .join(','),
+                );
+                lines.push(
+                    [
+                        '#',
+                        'Type',
+                        'Activity Title',
+                        'Score',
+                        'Total Points',
+                        'Rating (%)',
+                        'Status',
+                    ]
+                        .map(escapeCsvCell)
+                        .join(','),
+                );
+
+                component.activities.forEach((activity, idx) => {
+                    const typeLabel = hasSpecificActivityType(
+                        activity,
+                        component.label,
+                    )
+                        ? activity.activity_type || component.label
+                        : component.label;
+
+                    let scoreVal: string | number = '';
+                    if (
+                        activity.is_missed ||
+                        (activity.state === 'closed' && !activity.submitted)
+                    ) {
+                        scoreVal = 0;
+                    } else if (activity.is_pending_review) {
+                        scoreVal = 'Pending Review';
+                    } else if (
+                        activity.score !== null &&
+                        (activity.state === 'completed' ||
+                            activity.submitted ||
+                            activity.is_incomplete)
+                    ) {
+                        scoreVal = Number(activity.score);
+                    } else {
+                        scoreVal = '—';
+                    }
+
+                    const rating = activityPercentageDisplay(activity);
+
+                    let status = 'Open';
+                    if (activity.is_pending_review) {
+                        status = 'Pending Review';
+                    } else if (
+                        activity.is_missed ||
+                        (activity.state === 'closed' && !activity.submitted)
+                    ) {
+                        status = 'Missed';
+                    } else if (activity.is_incomplete) {
+                        status = 'Incomplete';
+                    } else if (activity.state === 'completed') {
+                        status = 'Completed';
+                    } else if (activity.state === 'in_progress') {
+                        status = 'In Progress';
+                    } else if (activity.state === 'closed') {
+                        status = 'Closed';
+                    }
+
+                    lines.push(
+                        [
+                            idx + 1,
+                            typeLabel,
+                            activity.title,
+                            scoreVal,
+                            activity.total_points,
+                            rating,
+                            status,
+                        ]
+                            .map(escapeCsvCell)
+                            .join(','),
+                    );
+                });
+
+                // Component Subtotal
+                const subtotalRating =
+                    component.subtotalPercentage !== null
+                        ? `${component.subtotalPercentage.toFixed(0)}%`
+                        : '—';
+                lines.push(
+                    [
+                        '',
+                        '',
+                        `${component.label} Total:`,
+                        component.subtotalScore,
+                        component.subtotalMax,
+                        subtotalRating,
+                        '',
+                    ]
+                        .map(escapeCsvCell)
+                        .join(','),
+                );
+                lines.push('');
+            }
+        }
+    }
+
+    // Cumulative Summary
+    lines.push(['CUMULATIVE SUMMARY'].map(escapeCsvCell).join(','));
+    for (const section of allSections.value) {
+        const sectionTitle = section.seasonName
+            ? `Section: ${section.name} · ${section.seasonName}`
+            : `Section: ${section.name}`;
+        lines.push([sectionTitle].map(escapeCsvCell).join(','));
+        lines.push(
+            ['Category', 'Score', 'Total Points', 'Rating (%)']
+                .map(escapeCsvCell)
+                .join(','),
+        );
+        for (const component of section.components) {
+            const subtotalRating =
+                component.subtotalPercentage !== null
+                    ? `${component.subtotalPercentage.toFixed(0)}%`
+                    : '—';
+            lines.push(
+                [
+                    component.label,
+                    component.subtotalScore,
+                    component.subtotalMax,
+                    subtotalRating,
+                ]
+                    .map(escapeCsvCell)
+                    .join(','),
+            );
+        }
+        lines.push('');
+    }
+
+    const csvContent = lines.join('\r\n');
+    const blob = new Blob(['\uFEFF' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const sanitize = (name: string) =>
+        name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
+    const studentName = currentUser.value?.name
+        ? sanitize(currentUser.value.name.toLowerCase())
+        : 'student';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `activity_record_${studentName}_${dateStr}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
 </script>
 
 <template>
@@ -614,7 +761,6 @@ const handlePrint = () => {
         <SheetContent
             class="custom-scrollbar flex w-full touch-pan-y flex-col gap-0 overflow-y-auto overscroll-contain sm:max-w-xl md:max-w-2xl lg:w-1/2 lg:max-w-none"
             data-lenis-prevent
-            @wheel.stop
         >
             <!-- Header -->
             <SheetHeader class="screen-only border-b border-border/50 pb-4">
@@ -639,6 +785,19 @@ const handlePrint = () => {
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 pr-8">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            data-test="activity-record-export-excel"
+                            class="inline-flex h-8 items-center gap-1.5 rounded-lg border-border/60 text-xs font-medium hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-700 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400"
+                            @click="exportExcel"
+                        >
+                            <FileSpreadsheet
+                                class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
+                            />
+                            Export Excel
+                        </Button>
                         <Button
                             type="button"
                             variant="outline"
@@ -906,7 +1065,7 @@ const handlePrint = () => {
                                             <td
                                                 class="border border-black p-1.5 font-medium text-black"
                                             >
-                                                <div
+                                                <p
                                                     v-if="
                                                         hasSpecificActivityType(
                                                             activity,
@@ -916,7 +1075,7 @@ const handlePrint = () => {
                                                     class="text-[10px] font-bold text-neutral-600 uppercase"
                                                 >
                                                     {{ activity.activity_type }}
-                                                </div>
+                                                </p>
                                                 <div>{{ activity.title }}</div>
                                                 <p
                                                     v-if="
@@ -1094,7 +1253,6 @@ const handlePrint = () => {
             <div
                 class="screen-only flex-1 touch-pan-y space-y-6 px-1 py-4"
                 data-lenis-prevent
-                @wheel.stop
             >
                 <div
                     v-if="filteredActivities.length === 0"
@@ -1175,7 +1333,6 @@ const handlePrint = () => {
                                     role="region"
                                     :aria-label="`${group.term} ${section.name} ${section.seasonName} ${component.label} activity records`"
                                     data-lenis-prevent
-                                    @wheel.stop
                                 >
                                     <table
                                         data-test="activity-record-table"

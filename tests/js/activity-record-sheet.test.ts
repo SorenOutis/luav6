@@ -243,16 +243,16 @@ describe('ActivityRecordSheet section grouping', () => {
             {
                 id: 11,
                 name: 'BSIT 1-A',
-                scores: [40, 90, 30],
-                maxima: [50, 100, 40],
-                percentages: ['80%', '90%', '75%'],
+                scores: [40, 90],
+                maxima: [50, 100],
+                percentages: ['80%', '90%'],
             },
             {
                 id: 22,
                 name: 'BSIT 1-B',
-                scores: [12, 30, 10],
-                maxima: [20, 50, 40],
-                percentages: ['60%', '60%', '25%'],
+                scores: [12, 30],
+                maxima: [20, 50],
+                percentages: ['60%', '60%'],
             },
         ];
         const components = [
@@ -261,12 +261,6 @@ describe('ActivityRecordSheet section grouping', () => {
                 key: 'performance:Performance Task',
                 label: 'Performance Tasks',
                 make: task,
-            },
-            {
-                key: 'performance:Laboratory',
-                label: 'Laboratory',
-                make: (overrides: Partial<ActivityScoreItem>) =>
-                    task({ ...overrides, activity_type: 'Laboratory' }),
             },
         ];
         const periods = ['Prelims', 'First Quarter'];
@@ -302,12 +296,12 @@ describe('ActivityRecordSheet section grouping', () => {
         for (const surface of ['table', 'print-component-table']) {
             expect(
                 wrapper.findAll(`[data-test="activity-record-${surface}"]`),
-            ).toHaveLength(12);
+            ).toHaveLength(8);
         }
         for (const surface of ['print-component-summary']) {
             expect(
                 wrapper.findAll(`[data-test="activity-record-${surface}"]`),
-            ).toHaveLength(6);
+            ).toHaveLength(4);
         }
         periods.forEach((term, periodIndex) => {
             for (const section of sections) {
@@ -667,7 +661,7 @@ describe('ActivityRecordSheet component totals', () => {
         expect(print).toHaveBeenCalledOnce();
     });
 
-    it('keeps College Laboratory and Presentation labels and totals distinct', () => {
+    it('simplifies and consolidates College activities under Performance Tasks with a single total and type labels', () => {
         wrapper = mountRecord([
             task({
                 activity_type: 'Laboratory',
@@ -685,33 +679,20 @@ describe('ActivityRecordSheet component totals', () => {
                 total_points: 80,
             }),
         ]);
-        expectComponentCount(2);
+        expectComponentCount(1);
         expectComponent(
-            'performance:Laboratory',
-            'Laboratory',
-            '35 / 50',
-            '70%',
+            'performance:Performance Task',
+            'Performance Tasks',
+            '107 / 130',
+            '82%',
         );
-        expectComponent(
-            'performance:Presentation',
-            'Presentation',
-            '72 / 80',
-            '90%',
+        const screenTable = wrapper.get(
+            selector('table', 'performance:Performance Task'),
         );
-        expect(
-            wrapper.get(selector('table', 'performance:Laboratory')).text(),
-        ).not.toContain('College presentation');
-        expect(
-            wrapper
-                .get(
-                    selector(
-                        'print-component-table',
-                        'performance:Presentation',
-                    ),
-                )
-                .text(),
-        ).not.toContain('College lab');
-        expect(wrapper.text()).not.toContain('107 / 130');
+        expect(screenTable.text()).toContain('College presentation');
+        expect(screenTable.text()).toContain('College lab');
+        expect(screenTable.text()).toContain('Laboratory');
+        expect(screenTable.text()).toContain('Presentation');
     });
 
     it.each(['written', 'performance'] as const)(
@@ -1039,16 +1020,16 @@ describe('ActivityRecordSheet component totals', () => {
                 .map((cell) => cell.attributes('aria-label')),
         ).toEqual(['Section A Written Quiz', 'Section B Written Quiz']);
 
-        // Filter per type: Laboratory only (custom type)
-        await typeSelect.setValue('custom:Laboratory');
+        // Filter per type: Performance Tasks
+        await typeSelect.setValue('performance');
         expect(
             wrapper.findAll('[data-test="activity-record-table"]'),
-        ).toHaveLength(1);
+        ).toHaveLength(2);
         expect(
             wrapper
                 .findAll('[data-test="activity-record-cell"]')
                 .map((cell) => cell.attributes('aria-label')),
-        ).toEqual(['Section B Lab Exam']);
+        ).toEqual(['Section A Performance Task', 'Section B Lab Exam']);
 
         // Reset both dropdowns to all
         await typeSelect.setValue('all');
@@ -1089,7 +1070,7 @@ describe('ActivityRecordSheet component totals', () => {
         ).toEqual(['Solo Quiz']);
     });
 
-    it('groups numbered activity tasks under a single Activities table with one combined total and no per-activity subtotals', async () => {
+    it('groups numbered activity tasks under Performance Tasks with one combined total and specific tags', async () => {
         wrapper = mountRecord([
             task({
                 id: 'act-1',
@@ -1111,14 +1092,14 @@ describe('ActivityRecordSheet component totals', () => {
 
         expectComponentCount(1);
         expectComponent(
-            'performance:Activities',
-            'Activities',
+            'performance:Performance Task',
+            'Performance Tasks',
             '70 / 80',
             '88%',
         );
 
         const screenTable = wrapper.get(
-            selector('table', 'performance:Activities'),
+            selector('table', 'performance:Performance Task'),
         );
         const rows = screenTable.findAll('tbody tr');
         expect(rows).toHaveLength(2);
@@ -1141,7 +1122,7 @@ describe('ActivityRecordSheet component totals', () => {
         ).toBe('70 / 80');
 
         const printTable = wrapper.get(
-            selector('print-component-table', 'performance:Activities'),
+            selector('print-component-table', 'performance:Performance Task'),
         );
         expect(printTable.findAll('tbody tr')).toHaveLength(2);
         expect(printTable.findAll('tfoot tr')).toHaveLength(1);
@@ -1166,11 +1147,11 @@ describe('ActivityRecordSheet component totals', () => {
             text: o.text,
         }));
         expect(options).toContainEqual({
-            value: 'custom:Activities',
-            text: 'Activities',
+            value: 'performance',
+            text: 'Performance Tasks',
         });
 
-        await typeSelect.setValue('custom:Activities');
+        await typeSelect.setValue('performance');
         expect(
             wrapper.findAll('[data-test="activity-record-table"]'),
         ).toHaveLength(1);
@@ -1181,7 +1162,7 @@ describe('ActivityRecordSheet component totals', () => {
         ).toEqual(['Git Setup', 'HTML Basics']);
     });
 
-    it('groups assignments under a single Assignments table with one combined total and no per-activity subtotals', async () => {
+    it('groups assignments under Performance Tasks with one combined total and specific tags', async () => {
         wrapper = mountRecord([
             task({
                 id: 'assignment_1_1',
@@ -1203,24 +1184,22 @@ describe('ActivityRecordSheet component totals', () => {
 
         expectComponentCount(1);
         expectComponent(
-            'performance:Assignments',
-            'Assignments',
+            'performance:Performance Task',
+            'Performance Tasks',
             '85 / 100',
             '85%',
         );
 
         const screenTable = wrapper.get(
-            selector('table', 'performance:Assignments'),
+            selector('table', 'performance:Performance Task'),
         );
         const rows = screenTable.findAll('tbody tr');
         expect(rows).toHaveLength(2);
 
-        // General 'Assignment' type does not duplicate as a specific type label
         const row1Th = rows[0].get('th[scope="row"]');
-        expect(row1Th.find('p').exists()).toBe(false);
+        expect(row1Th.get('p').text()).toBe('Assignment');
         expect(row1Th.text()).toContain('Essay Analysis');
 
-        // Specific 'Assignment 2' type renders the specific tag
         const row2Th = rows[1].get('th[scope="row"]');
         expect(row2Th.get('p').text()).toBe('Assignment 2');
         expect(row2Th.text()).toContain('Peer Review');
@@ -1235,16 +1214,22 @@ describe('ActivityRecordSheet component totals', () => {
         ).toBe('85 / 100');
 
         const printTable = wrapper.get(
-            selector('print-component-table', 'performance:Assignments'),
+            selector('print-component-table', 'performance:Performance Task'),
         );
         expect(printTable.findAll('tbody tr')).toHaveLength(2);
         expect(printTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(printTable.get('tbody tr:first-child td:nth-child(2)').text()),
+        ).toContain('Assignment');
         expect(
             text(printTable.get('tbody tr:first-child td:nth-child(2)').text()),
         ).toContain('Essay Analysis');
         expect(
             text(printTable.get('tbody tr:last-child td:nth-child(2)').text()),
         ).toContain('Assignment 2');
+        expect(
+            text(printTable.get('tbody tr:last-child td:nth-child(2)').text()),
+        ).toContain('Peer Review');
 
         const typeSelect = wrapper.get<HTMLSelectElement>(
             '[data-test="activity-record-type-filter"]',
@@ -1254,11 +1239,11 @@ describe('ActivityRecordSheet component totals', () => {
             text: o.text,
         }));
         expect(options).toContainEqual({
-            value: 'custom:Assignments',
-            text: 'Assignments',
+            value: 'performance',
+            text: 'Performance Tasks',
         });
 
-        await typeSelect.setValue('custom:Assignments');
+        await typeSelect.setValue('performance');
         expect(
             wrapper.findAll('[data-test="activity-record-table"]'),
         ).toHaveLength(1);
@@ -1269,7 +1254,7 @@ describe('ActivityRecordSheet component totals', () => {
         ).toEqual(['Essay Analysis', 'Peer Review']);
     });
 
-    it('orders component groups as Written, Performance Tasks, Activities, Assignments, then others alphabetically', () => {
+    it('simplifies and organizes component groups into Written Activities and Performance Tasks just like SHS', () => {
         wrapper = mountRecord([
             task({
                 id: 'pres-1',
@@ -1308,9 +1293,243 @@ describe('ActivityRecordSheet component totals', () => {
         expect(componentLabels).toEqual([
             'Written Activities',
             'Performance Tasks',
-            'Activities',
-            'Assignments',
-            'Presentation',
         ]);
+    });
+
+    it('simplifies college activity record just like SHS by grouping custom tasks under Performance Tasks with one total', () => {
+        wrapper = mountRecord([
+            task({
+                id: 'task-1',
+                title: 'Additional Points (October 12, 2026)',
+                activity_type: 'Additional Points',
+                school_level: 'college',
+                score: 15,
+                total_points: 15,
+                term: 'Midterm',
+                section_name: 'Computer Networking 1 (2026)',
+            }),
+            task({
+                id: 'task-2',
+                title: 'Cross-Over Cable Crimping',
+                activity_type: 'Cross-Over Cable',
+                school_level: 'college',
+                score: 25,
+                total_points: 25,
+                term: 'Midterm',
+                section_name: 'Computer Networking 1 (2026)',
+            }),
+            task({
+                id: 'task-3',
+                title: 'Cross-Over Cable Laboratory',
+                activity_type: 'Cross-Over Cable Laboratory',
+                school_level: 'college',
+                score: 50,
+                total_points: 50,
+                term: 'Midterm',
+                section_name: 'Computer Networking 1 (2026)',
+            }),
+            task({
+                id: 'task-4',
+                title: 'Midterm Examination',
+                activity_type: 'Laboratory',
+                school_level: 'college',
+                score: null,
+                total_points: 50,
+                term: 'Midterm',
+                section_name: 'Computer Networking 1 (2026)',
+            }),
+            task({
+                id: 'task-5',
+                title: 'Straight Through-B Cable Crimping',
+                activity_type: 'Straight Through-B Cable',
+                school_level: 'college',
+                score: 20,
+                total_points: 20,
+                term: 'Midterm',
+                section_name: 'Computer Networking 1 (2026)',
+            }),
+        ]);
+
+        // All 5 college tasks must be consolidated into 1 Performance Tasks table instead of 5 separate tables
+        expectComponentCount(1);
+        expectComponent(
+            'performance:Performance Task',
+            'Performance Tasks',
+            '110 / 160',
+            '69%',
+        );
+
+        const screenTable = wrapper.get(
+            selector('table', 'performance:Performance Task'),
+        );
+        const rows = screenTable.findAll('tbody tr');
+        expect(rows).toHaveLength(5);
+
+        // Row 1 shows specific type "Additional Points" above title
+        expect(rows[0].get('th[scope="row"] p').text()).toBe(
+            'Additional Points',
+        );
+        expect(rows[0].get('th[scope="row"]').text()).toContain(
+            'Additional Points (October 12, 2026)',
+        );
+
+        // Row 2 shows specific type "Cross-Over Cable"
+        expect(rows[1].get('th[scope="row"] p').text()).toBe(
+            'Cross-Over Cable',
+        );
+        expect(rows[1].get('th[scope="row"]').text()).toContain(
+            'Cross-Over Cable Crimping',
+        );
+
+        // Row 3: type equals title, so no duplicate <p> tag
+        expect(rows[2].get('th[scope="row"]').find('p').exists()).toBe(false);
+        expect(rows[2].get('th[scope="row"]').text()).toContain(
+            'Cross-Over Cable Laboratory',
+        );
+
+        // Row 4 shows specific type "Laboratory" above practical exam title
+        expect(rows[3].get('th[scope="row"] p').text()).toBe('Laboratory');
+        expect(rows[3].get('th[scope="row"]').text()).toContain(
+            'Midterm Examination',
+        );
+
+        // Row 5 shows specific type "Straight Through-B Cable"
+        expect(rows[4].get('th[scope="row"] p').text()).toBe(
+            'Straight Through-B Cable',
+        );
+        expect(rows[4].get('th[scope="row"]').text()).toContain(
+            'Straight Through-B Cable Crimping',
+        );
+
+        // Only 1 Total row with the combined sum
+        expect(screenTable.findAll('tfoot tr')).toHaveLength(1);
+        expect(
+            text(
+                screenTable
+                    .get('[data-test="activity-record-total-cell"]')
+                    .text(),
+            ),
+        ).toBe('110 / 160');
+    });
+
+    it('does not stop wheel event propagation so mouse wheel can scroll the drawer from anywhere', () => {
+        wrapper = mountRecord([activity()]);
+        const elementsWithWheelStop = wrapper.findAll('*').filter((el) => {
+            return (el.element as any).__vnode?.props?.onWheel !== undefined;
+        });
+        expect(elementsWithWheelStop).toHaveLength(0);
+    });
+
+    describe('Excel Export', () => {
+        it('renders an Export Excel button in the drawer header', () => {
+            wrapper = mountRecord([activity()]);
+            const exportBtn = wrapper.find(
+                '[data-test="activity-record-export-excel"]',
+            );
+            expect(exportBtn.exists()).toBe(true);
+            expect(exportBtn.text()).toContain('Export Excel');
+        });
+
+        it('triggers download with correctly formatted CSV containing student and score data', async () => {
+            const createObjectURLMock = vi
+                .fn()
+                .mockReturnValue('blob:mock-excel-url');
+            const revokeObjectURLMock = vi.fn();
+            window.URL.createObjectURL = createObjectURLMock;
+            window.URL.revokeObjectURL = revokeObjectURLMock;
+
+            let clickedDownload: string | null = null;
+            const clickSpy = vi
+                .spyOn(HTMLAnchorElement.prototype, 'click')
+                .mockImplementation(function (this: HTMLAnchorElement) {
+                    clickedDownload = this.getAttribute('download');
+                });
+
+            wrapper = mountRecord([
+                activity({
+                    id: 1,
+                    title: 'Database Design Quiz',
+                    score: 45,
+                    total_points: 50,
+                    term: 'Midterm',
+                    section_name: 'BSIT 3-A',
+                }),
+                task({
+                    id: 2,
+                    title: 'Server Configuration Lab',
+                    score: 95,
+                    total_points: 100,
+                    term: 'Midterm',
+                    section_name: 'BSIT 3-A',
+                }),
+            ]);
+
+            const exportBtn = wrapper.get(
+                '[data-test="activity-record-export-excel"]',
+            );
+            await exportBtn.trigger('click');
+
+            expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+            expect(clickSpy).toHaveBeenCalledTimes(1);
+            expect(clickedDownload).not.toBeNull();
+            expect(clickedDownload).toMatch(
+                /^activity_record_test_student_\d{4}-\d{2}-\d{2}\.csv$/,
+            );
+            expect(revokeObjectURLMock).toHaveBeenCalledWith(
+                'blob:mock-excel-url',
+            );
+
+            const blob = createObjectURLMock.mock.calls[0][0] as Blob;
+            expect(blob.type).toBe('text/csv;charset=utf-8;');
+
+            const buffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(buffer).slice(0, 3);
+            // UTF-8 Byte Order Mark (BOM) [0xEF, 0xBB, 0xBF]
+            expect(bytes).toEqual(new Uint8Array([0xef, 0xbb, 0xbf]));
+
+            const content = await blob.text();
+            expect(content).toContain('STUDENT ACTIVITY RECORD');
+            expect(content).toContain('Student,Test Student');
+            expect(content).toContain('Email,student@example.com');
+            expect(content).toContain('Period: Midterm');
+            expect(content).toContain('Section: BSIT 3-A');
+            expect(content).toContain('Database Design Quiz');
+            expect(content).toContain('Server Configuration Lab');
+            expect(content).toContain('Written Activities Total:');
+            expect(content).toContain('Performance Tasks Total:');
+            expect(content).toContain('CUMULATIVE SUMMARY');
+        });
+
+        it('escapes cells containing commas, quotes, and newlines in Excel export', async () => {
+            const createObjectURLMock = vi
+                .fn()
+                .mockReturnValue('blob:mock-url');
+            window.URL.createObjectURL = createObjectURLMock;
+            window.URL.revokeObjectURL = vi.fn();
+            vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+                () => {},
+            );
+
+            wrapper = mountRecord([
+                activity({
+                    title: 'Essay: "Modern Web, Architecture & API"',
+                    section_name: 'CS 101, Section A',
+                }),
+            ]);
+
+            await wrapper
+                .get('[data-test="activity-record-export-excel"]')
+                .trigger('click');
+
+            const blob = createObjectURLMock.mock.calls[0][0] as Blob;
+            const content = await blob.text();
+
+            expect(content).toContain(
+                '"Essay: ""Modern Web, Architecture & API"""',
+            );
+            expect(content).toContain(
+                '"Section: CS 101, Section A · Season 1"',
+            );
+        });
     });
 });
