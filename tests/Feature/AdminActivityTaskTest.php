@@ -8,11 +8,7 @@ use App\Models\ActivityTask;
 use App\Models\ActivityTaskScore;
 use App\Models\Section;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 it('allows admin to list activity tasks', function () {
     $admin = User::factory()->superAdmin()->create();
