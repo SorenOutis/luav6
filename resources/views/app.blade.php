@@ -4,6 +4,10 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
+        <meta name="csp-nonce" content="{{ Vite::cspNonce() }}">
         <meta name="app-name" content="{{ config('app.name') }}">
         <meta name="theme-color" content="#f5f0e8">
         <meta name="color-scheme" content="light dark">
@@ -15,9 +19,58 @@
             <meta name="pusher-cluster" content="{{ config('broadcasting.connections.pusher.options.cluster', 'mt1') }}">
         @endif
 
+        @php
+            $manifestPath = public_path('build/manifest.json');
+            $buildHash = file_exists($manifestPath) ? substr((string) md5_file($manifestPath), 0, 12) : 'dev';
+        @endphp
+
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script nonce="{{ Vite::cspNonce() }}">
             (function() {
+                // Immediate Stale Cache Buster:
+                // If a visitor's browser or mobile device holds outdated CacheStorage entries
+                // (e.g. community-lounge-v1/v2/v3) from previous deployments, or has an active
+                // service worker intercepting /build/ assets with outdated chunks, purge stale
+                // caches and trigger service worker update so fresh code executes immediately.
+                try {
+                    var buildHash = '{{ $buildHash }}';
+                    var storedKey = '__lsi_build_hash__';
+                    var stored = null;
+                    try {
+                        stored = window.localStorage ? localStorage.getItem(storedKey) : null;
+                    } catch (e) {}
+
+                    if ('caches' in window) {
+                        caches.keys().then(function(keys) {
+                            keys.forEach(function(key) {
+                                if (key.indexOf('community-lounge-v4') === -1 && key.indexOf('echo-ai-v3') === -1) {
+                                    caches.delete(key);
+                                }
+                            });
+                        }).catch(function() {});
+                    }
+
+                    if (stored !== buildHash) {
+                        try {
+                            if (window.localStorage) {
+                                localStorage.setItem(storedKey, buildHash);
+                            }
+                        } catch (e) {}
+
+                        if ('caches' in window) {
+                            caches.keys().then(function(keys) {
+                                keys.forEach(function(k) { caches.delete(k); });
+                            }).catch(function() {});
+                        }
+
+                        if ('serviceWorker' in navigator && typeof navigator.serviceWorker.getRegistrations === 'function') {
+                            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                                regs.forEach(function(r) { r.update(); });
+                            }).catch(function() {});
+                        }
+                    }
+                } catch (e) {}
+
                 const appearance = '{{ $appearance ?? "system" }}';
 
                 if (appearance === 'system') {
@@ -62,8 +115,13 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Inline style to set the HTML display and background color based on our theme in app.css --}}
         <style nonce="{{ Vite::cspNonce() }}">
+            html,
+            body {
+                display: block !important;
+            }
+
             html {
                 background-color: #f5f0e8;
             }
@@ -130,6 +188,25 @@
         @else
             <link rel="icon" href="/favicon.ico" sizes="any">
             <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        @endif
+
+        {{--
+            Community Lounge student PWA manifest and beforeinstallprompt capture.
+            Available across the student portal so client-side Inertia visits
+            to the Lounge retain the prompt and manifest.
+        --}}
+        @if (\App\Support\CommunitySettings::pwaEnabled())
+            <link rel="manifest" href="{{ route('community-app-manifest') }}" data-community-manifest>
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-title" content="Lounge">
+            <meta name="apple-mobile-web-app-status-bar-style" content="default">
+            <script nonce="{{ Vite::cspNonce() }}">
+                window.addEventListener('beforeinstallprompt', function (event) {
+                    event.preventDefault();
+                    window.__communityInstallPrompt = event;
+                });
+            </script>
         @endif
 
         <link rel="preconnect" href="https://fonts.bunny.net">

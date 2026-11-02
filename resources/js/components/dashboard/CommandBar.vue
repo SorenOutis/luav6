@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { ChevronDown, Megaphone, RefreshCw, X } from 'lucide-vue-next';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { ChevronDown, Megaphone, RefreshCw, Users, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+import CurtainWipeOverlay from '@/components/common/CurtainWipeOverlay.vue';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
@@ -48,7 +49,25 @@ const emit = defineEmits<{
     claimed: [];
     'prompt-open': [];
     'prompt-close': [];
+    'open-community': [];
 }>();
+
+const page = usePage();
+const curtainRef = ref<InstanceType<typeof CurtainWipeOverlay> | null>(null);
+
+const isCommunityDisabled = computed(() => {
+    const controls = (page.props as any).studentPageControls?.pages;
+    return controls?.community?.mode === 'disabled';
+});
+
+const handleOpenCommunity = () => {
+    emit('open-community');
+    if (curtainRef.value) {
+        curtainRef.value.wipeTo('/community', 'to_community');
+    } else {
+        router.visit('/community', { preserveScroll: false });
+    }
+};
 
 const initials = computed(() => getInitials(props.userName));
 
@@ -176,7 +195,7 @@ const toggleList = () => {
                 <div
                     v-if="claimXp?.canClaim"
                     data-tour="dashboard-daily-reward"
-                    class="w-56 shrink-0 max-sm:hidden"
+                    class="shrink-0 max-sm:hidden"
                 >
                     <ClaimXpButton
                         :can-claim="claimXp.canClaim"
@@ -190,6 +209,20 @@ const toggleList = () => {
                         @prompt-close="emit('prompt-close')"
                     />
                 </div>
+
+                <!-- Community Lounge Launcher Button -->
+                <button
+                    v-if="!isCommunityDisabled"
+                    type="button"
+                    data-test="community-lounge-button"
+                    class="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-border/60 bg-card px-3 text-xs font-semibold text-foreground transition-all duration-200 hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    aria-label="Community Lounge"
+                    title="Open Community Lounge"
+                    @click="handleOpenCommunity"
+                >
+                    <Users class="h-4 w-4 shrink-0 text-brand" />
+                    <span class="hidden lg:inline">Community</span>
+                </button>
 
                 <button
                     type="button"
@@ -205,6 +238,13 @@ const toggleList = () => {
                 </button>
             </div>
         </div>
+
+        <CurtainWipeOverlay
+            ref="curtainRef"
+            title="Community Lounge"
+            subtitle="Entering workspace lounge..."
+            expected-mount-direction="to_dashboard"
+        />
 
         <!-- Expanded announcement list -->
         <div

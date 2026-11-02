@@ -21,6 +21,8 @@ WORKDIR /app
 # with the PHP_MEMORY_LIMIT arg or at runtime with the PHP_MEMORY_LIMIT env
 # var, which start.sh writes into its own conf.d file.
 ARG PHP_MEMORY_LIMIT=256M
+ARG PHP_UPLOAD_MAX_FILESIZE=64M
+ARG PHP_POST_MAX_SIZE=64M
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl supervisor \
     && install-php-extensions \
@@ -38,7 +40,7 @@ RUN apt-get update \
         sockets \
         zip \
     && ln -sf /usr/local/bin/composer /usr/bin/composer \
-    && printf 'memory_limit = %s\n' "$PHP_MEMORY_LIMIT" > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
+    && printf 'memory_limit = %s\nupload_max_filesize = %s\npost_max_size = %s\n' "$PHP_MEMORY_LIMIT" "$PHP_UPLOAD_MAX_FILESIZE" "$PHP_POST_MAX_SIZE" > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Composer dependencies ────────────────────────────────────────────────
@@ -145,7 +147,7 @@ RUN set -eux; \
         storage/app/public \
         bootstrap/cache; \
     touch database/database.sqlite; \
-    ln -sfn storage/app/public public/storage; \
+    ln -sfn /app/storage/app/public public/storage; \
     chown -R www-data:www-data storage bootstrap/cache database; \
     chmod +x start.sh
 

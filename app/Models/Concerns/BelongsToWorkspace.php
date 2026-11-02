@@ -73,6 +73,8 @@ trait BelongsToWorkspace
                 'ai_bot_handoffs',
                 'ai_bot_routines',
                 'ai_bot_memories',
+                'community_posts',
+                'community_stories',
             ], true);
 
             // Importers and tests may provide only the legacy creator. Resolve

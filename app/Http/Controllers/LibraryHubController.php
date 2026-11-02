@@ -97,7 +97,22 @@ class LibraryHubController extends Controller
             $material->increment('view_count');
         }
 
-        $mime = $material->mime_type ?: $disk->mimeType($material->file_path) ?: 'application/octet-stream';
+        $ext = strtolower($material->file_extension ?: pathinfo($material->file_path, PATHINFO_EXTENSION));
+        $mime = $material->mime_type ?: $disk->mimeType($material->file_path);
+
+        if (! $mime || $mime === 'application/octet-stream') {
+            $mime = match ($ext) {
+                'pdf' => 'application/pdf',
+                'png' => 'image/png',
+                'jpg', 'jpeg' => 'image/jpeg',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+                'txt' => 'text/plain; charset=UTF-8',
+                'csv' => 'text/csv; charset=UTF-8',
+                default => 'application/octet-stream',
+            };
+        }
+
         $sanitizedName = $this->sanitizeFileName($material->file_name ?: basename($material->file_path));
 
         // For inline preview we return file response with inline disposition
@@ -124,7 +139,7 @@ class LibraryHubController extends Controller
                 'slug' => $material->category->slug,
             ] : null,
             'file_name' => $material->file_name,
-            'file_extension' => $material->file_extension,
+            'file_extension' => $material->file_extension ?: strtolower(pathinfo((string) ($material->file_name ?: $material->file_path), PATHINFO_EXTENSION)),
             'file_size' => $material->file_size,
             'file_url' => $material->file_url,
             'cover_image' => $material->cover_image_url,

@@ -5,6 +5,7 @@ import { ref } from 'vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
+import { isStandaloneDisplay } from '@/composables/useCommunityPwa';
 import { logout } from '@/routes';
 
 type Props = {
@@ -31,16 +32,14 @@ const confirmLogout = () => {
     loggingOut.value = true;
     sessionStorage.setItem('logged_out', 'true');
 
-    router.post(
-        logout(),
-        {},
-        {
-            onFinish: () => {
-                loggingOut.value = false;
-                emit('close');
-            },
+    const payload = isStandaloneDisplay() ? { app: 'community' } : {};
+
+    router.post(logout(), payload, {
+        onFinish: () => {
+            loggingOut.value = false;
+            emit('close');
         },
-    );
+    });
 };
 </script>
 

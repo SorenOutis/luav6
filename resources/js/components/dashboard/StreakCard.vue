@@ -44,8 +44,12 @@ defineExpose({ openCalendar });
 
 <template>
     <div
-        class="surface-card group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-2.5 p-3 transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none active:bg-muted/30 sm:gap-4 sm:p-5"
-        :class="{ 'mobile-streak-card': compact }"
+        class="surface-card group relative min-w-0 cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none active:bg-muted/30"
+        :class="
+            compact
+                ? 'mobile-streak-card flex h-full w-full items-center gap-2.5 p-3'
+                : 'flex h-full w-full flex-col justify-between gap-2.5 p-3 sm:gap-4 sm:p-5'
+        "
         tabindex="0"
         role="button"
         aria-label="Open your streak calendar"
@@ -54,12 +58,12 @@ defineExpose({ openCalendar });
         @keydown.space.prevent="openCalendar"
     >
         <template v-if="compact">
-            <div class="mobile-streak-card__icon">
+            <div class="mobile-streak-card__icon shrink-0">
                 <div class="dash-icon-well bg-brand/15 text-brand">
                     <Flame class="h-5 w-5" />
                 </div>
             </div>
-            <div class="mobile-streak-card__content min-w-0">
+            <div class="mobile-streak-card__content min-w-0 flex-1">
                 <p class="dash-label">Streak</p>
                 <p
                     class="dash-metric flex items-baseline gap-1.5 text-[19px] leading-none text-foreground"

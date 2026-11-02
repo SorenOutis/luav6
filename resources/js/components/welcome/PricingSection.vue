@@ -4,7 +4,7 @@ import { ArrowRight, Building2, School, UserRound } from 'lucide-vue-next';
 import RevealGroup from '@/components/welcome/RevealGroup.vue';
 
 const props = defineProps<{
-    auth: { user: any };
+    auth?: { user?: any };
     dashboard: () => string;
     register: () => string;
     isCoarsePointer?: boolean;
@@ -61,9 +61,11 @@ const tiers = [
     >
         <RevealGroup class="mx-auto max-w-3xl px-4 text-center">
             <span
-                class="rv font-mono text-xs font-medium tracking-wider text-brand uppercase"
+                class="rv inline-flex items-center gap-3 font-mono text-xs font-medium tracking-widest text-muted-foreground uppercase"
                 :style="{ '--rv-i': 0 }"
             >
+                <span class="text-brand">06</span>
+                <span class="h-px w-8 bg-border" aria-hidden="true"></span>
                 Pricing
             </span>
             <h2
@@ -144,7 +146,7 @@ const tiers = [
                 </ul>
                 <div class="mt-auto pt-8">
                     <Link
-                        v-if="tier.price === 'Free' && !auth.user"
+                        v-if="tier.price === 'Free' && !auth?.user"
                         :href="props.register()"
                         class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-card px-4 text-xs font-medium text-foreground shadow-xs transition-all hover:border-foreground/30 active:scale-[0.98]"
                     >
@@ -161,7 +163,7 @@ const tiers = [
                     </Link>
                     <a
                         v-else
-                        href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
+                        href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
                         class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 text-xs font-medium shadow-xs transition-all active:scale-[0.98]"
                         :class="
                             tier.featured

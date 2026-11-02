@@ -13,14 +13,22 @@ import {
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useMobile } from '@/composables/useMobile';
 
-const props = defineProps<{
-    canClaim: boolean;
-    amount: number;
-    baseXp?: number;
-    nextClaimAt: string | null;
-    streak: number;
-    showPrompt?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        canClaim: boolean;
+        amount: number;
+        baseXp?: number;
+        nextClaimAt: string | null;
+        streak: number;
+        showPrompt?: boolean;
+        compact?: boolean;
+    }>(),
+    {
+        baseXp: 1,
+        showPrompt: false,
+        compact: false,
+    },
+);
 
 // Configurable base XP (Platform Settings); anything above it is streak bonus.
 const base = computed(() => props.baseXp ?? 1);
@@ -292,12 +300,18 @@ async function handleClaim() {
     }
 
     try {
-        const { data } = await axios.post<{
-            claimed: boolean;
-            amount: number;
-            total_xp: number;
-            streak: number;
-        }>('/api/claim-xp', undefined, { timeout: 15000 });
+        const minSpinPromise = new Promise((resolve) =>
+            setTimeout(resolve, prefersReducedMotion.value ? 0 : 400),
+        );
+        const [{ data }] = await Promise.all([
+            axios.post<{
+                claimed: boolean;
+                amount: number;
+                total_xp: number;
+                streak: number;
+            }>('/api/claim-xp', undefined, { timeout: 15000 }),
+            minSpinPromise,
+        ]);
 
         if (data.claimed) {
             claimedAmount.value = data.amount;
@@ -410,7 +424,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="relative">
+    <div class="relative" :class="{ 'h-full w-full': compact }">
         <ResponsiveModal
             v-model="showClaimModal"
             title="Your daily XP reward is ready"
@@ -573,92 +587,166 @@ onBeforeUnmount(() => {
             </span>
         </div>
 
-        <!-- Claim button -->
-        <button
-            v-if="claimState === 'idle' || claimState === 'claiming'"
-            ref="buttonRef"
-            @click="handleClaim"
-            :disabled="claimState === 'claiming'"
-            class="group relative flex min-h-12 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-brand/10 px-2.5 py-2 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
-        >
-            <div class="relative z-10 flex items-center gap-2.5">
-                <!-- Icon -->
+        <!-- Compact presentation -->
+        <template v-if="compact">
+            <!-- Compact Claimed State -->
+            <div
+                v-if="claimState === 'claimed'"
+                class="flex h-full w-full min-w-0 items-center gap-2.5 text-left"
+            >
                 <div
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-brand/20"
+                    class="dash-icon-well shrink-0 bg-[#4D9375]/15 text-[#4D9375]"
                 >
-                    <Gift
-                        v-if="claimState === 'idle'"
-                        class="h-4 w-4 text-brand"
-                    />
+                    <Check class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="dash-label text-[#4D9375]">Claimed</p>
+                    <p
+                        class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
+                    >
+                        +{{ claimedAmount || amount }}
+                        <span
+                            class="text-[11px] font-medium text-muted-foreground"
+                            >XP</span
+                        >
+                    </p>
+                    <p
+                        v-if="countdownText"
+                        class="mt-1 flex items-center gap-1 truncate text-[11px] font-medium text-muted-foreground"
+                        :title="countdownText"
+                    >
+                        <Clock
+                            class="h-3 w-3 shrink-0 text-muted-foreground/70"
+                        />
+                        <span class="truncate">{{
+                            countdownText.replace(/^Next claim in\s+/i, '')
+                        }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Compact Idle / Claiming State -->
+            <button
+                v-else
+                ref="buttonRef"
+                type="button"
+                @click="handleClaim"
+                :disabled="claimState === 'claiming'"
+                class="group relative flex h-full w-full min-w-0 cursor-pointer items-center gap-2.5 text-left transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+            >
+                <div class="dash-icon-well shrink-0 bg-brand/15 text-brand">
+                    <Gift v-if="claimState === 'idle'" class="h-5 w-5" />
                     <div
                         v-else
                         class="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"
-                    ></div>
+                    />
                 </div>
 
-                <div class="min-w-0">
-                    <p class="text-[13px] font-medium text-brand">
-                        Daily reward
+                <div class="min-w-0 flex-1">
+                    <p class="dash-label text-brand">Daily reward</p>
+                    <p
+                        class="dash-metric flex items-baseline gap-1 text-[19px] leading-none font-semibold text-foreground"
+                    >
+                        <span v-if="claimState === 'claiming'">Claiming…</span>
+                        <template v-else>
+                            +{{ amount }}
+                            <span
+                                class="text-[11px] font-medium text-muted-foreground"
+                                >XP</span
+                            >
+                        </template>
                     </p>
-                    <p class="text-[17px] font-semibold text-foreground">
-                        <span v-if="claimState === 'claiming'">
-                            Claiming…
-                        </span>
+                    <p
+                        v-if="claimError"
+                        class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#CB7676]"
+                    >
+                        Failed — retry
+                    </p>
+                    <p
+                        v-else
+                        class="mt-1 flex items-center gap-1 text-[11px] font-medium text-brand"
+                    >
+                        <span v-if="claimState === 'claiming'"
+                            >Please wait</span
+                        >
+                        <span v-else>Tap to claim →</span>
+                    </p>
+                </div>
+            </button>
+        </template>
+
+        <!-- Desktop Presentation -->
+        <template v-else>
+            <!-- Desktop Claim button -->
+            <button
+                v-if="claimState === 'idle' || claimState === 'claiming'"
+                ref="buttonRef"
+                type="button"
+                @click="handleClaim"
+                :disabled="claimState === 'claiming'"
+                class="group relative flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 text-xs font-semibold text-foreground transition-all duration-200 hover:border-brand/50 hover:bg-brand/15 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+                <Gift
+                    v-if="claimState === 'idle'"
+                    class="h-4 w-4 shrink-0 text-brand"
+                />
+                <div
+                    v-else
+                    class="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-brand border-t-transparent"
+                />
+
+                <div class="flex min-w-0 items-center gap-1.5">
+                    <span class="font-medium text-brand">Daily reward</span>
+                    <span class="text-muted-foreground/60">·</span>
+                    <span class="font-semibold text-foreground">
+                        <span v-if="claimState === 'claiming'">Claiming…</span>
                         <template v-else>
                             Claim
                             <span class="tabular-nums">{{ amount }}</span>
                             XP
                         </template>
-                        <span
-                            v-if="streak > 0"
-                            class="text-[13px] font-medium text-muted-foreground"
-                        >
-                            · Streak {{ streak }}
-                        </span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Arrow indicator -->
-            <div
-                class="relative z-10 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-brand/20"
-            >
-                <Sparkles class="h-3.5 w-3.5 text-brand" />
-            </div>
-        </button>
-
-        <!-- Inline error hint -->
-        <p
-            v-if="claimError && claimState === 'idle'"
-            class="mt-1.5 text-center text-[11px] font-semibold text-[#CB7676]"
-        >
-            Couldn’t claim — try again.
-        </p>
-
-        <!-- Claimed state -->
-        <div
-            v-else-if="claimState === 'claimed'"
-            class="flex min-h-12 w-full items-center gap-2.5 rounded-xl bg-[#4D9375]/10 px-2.5 py-2 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
-        >
-            <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-[#4D9375]/20"
-            >
-                <Check class="h-4 w-4 text-[#4D9375]" />
-            </div>
-            <div class="min-w-0 flex-1">
-                <p class="text-[13px] font-medium text-[#4D9375]">Claimed</p>
-                <p class="text-[17px] font-semibold text-foreground">
-                    +{{ claimedAmount || amount }} XP
-                    <span class="text-[13px] font-medium text-muted-foreground">
-                        · {{ countdownText || 'Come back tomorrow!' }}
                     </span>
-                </p>
-            </div>
+                    <span
+                        v-if="streak > 0"
+                        class="hidden text-[11px] font-normal text-muted-foreground xl:inline"
+                    >
+                        · Streak {{ streak }}
+                    </span>
+                </div>
+
+                <Sparkles
+                    class="h-3.5 w-3.5 shrink-0 text-brand/70 transition-colors group-hover:text-brand"
+                />
+            </button>
+
+            <!-- Desktop Claimed state -->
             <div
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-[#4D9375]/20"
+                v-else-if="claimState === 'claimed'"
+                class="flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#4D9375]/30 bg-[#4D9375]/10 px-3 text-xs font-semibold text-[#4D9375]"
             >
-                <Clock class="h-3.5 w-3.5 text-[#4D9375]" />
+                <Check class="h-4 w-4 shrink-0 text-[#4D9375]" />
+                <div class="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span class="font-semibold text-[#4D9375]">Claimed</span>
+                    <span class="font-medium text-foreground"
+                        >+{{ claimedAmount || amount }} XP</span
+                    >
+                    <span
+                        v-if="countdownText"
+                        class="hidden text-[11px] font-normal text-muted-foreground xl:inline"
+                    >
+                        · {{ countdownText }}
+                    </span>
+                </div>
+                <Clock class="h-3.5 w-3.5 shrink-0 text-[#4D9375]/70" />
             </div>
-        </div>
+
+            <!-- Inline error hint -->
+            <p
+                v-if="claimError && claimState === 'idle'"
+                class="mt-1 text-center text-[11px] font-semibold text-[#CB7676]"
+            >
+                Couldn’t claim — try again.
+            </p>
+        </template>
     </div>
 </template>

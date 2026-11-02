@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+    addMqlListener,
+    removeMqlListener,
+    safeMatchMediaList,
+} from '@/lib/device';
 
 const props = withDefaults(
     defineProps<{
@@ -52,22 +57,31 @@ function syncPlayback() {
 }
 
 onMounted(() => {
-    motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    motionQuery.addEventListener('change', syncPlayback);
-    document.addEventListener('visibilitychange', syncPlayback);
+    motionQuery =
+        safeMatchMediaList('(prefers-reduced-motion: reduce)') ?? undefined;
+    addMqlListener(motionQuery, syncPlayback);
+    if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', syncPlayback);
+    }
     if (root.value && typeof IntersectionObserver !== 'undefined') {
-        observer = new IntersectionObserver(([entry]) => {
-            visible = entry.isIntersecting;
-            syncPlayback();
-        });
-        observer.observe(root.value);
+        try {
+            observer = new IntersectionObserver(([entry]) => {
+                visible = entry.isIntersecting;
+                syncPlayback();
+            });
+            observer.observe(root.value);
+        } catch {
+            observer = undefined;
+        }
     }
     syncPlayback();
 });
 
 onBeforeUnmount(() => {
-    motionQuery?.removeEventListener('change', syncPlayback);
-    document.removeEventListener('visibilitychange', syncPlayback);
+    removeMqlListener(motionQuery, syncPlayback);
+    if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', syncPlayback);
+    }
     observer?.disconnect();
 });
 </script>

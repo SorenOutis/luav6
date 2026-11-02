@@ -62,6 +62,11 @@ class StudentPageRegistry
                 'path' => '/ngl',
                 'description' => 'Anonymous classroom message board.',
             ],
+            'community' => [
+                'label' => 'Community Lounge',
+                'path' => '/community',
+                'description' => 'Student workspace social lounge and community feed.',
+            ],
             'chats' => [
                 'label' => 'Chats',
                 'path' => '/chats',

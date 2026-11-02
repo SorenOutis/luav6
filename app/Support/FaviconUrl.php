@@ -29,7 +29,7 @@ final class FaviconUrl
      * @param  int|null  $size  Optional square pixel size (e.g. 180 for the
      *                          apple-touch-icon); the controller clamps it.
      */
-    public static function url(?int $size = null): string
+    public static function url(?int $size = null, bool $absolute = true): string
     {
         if (! Route::has('favicon')) {
             return '/favicon.ico';
@@ -41,7 +41,7 @@ final class FaviconUrl
             $params['size'] = $size;
         }
 
-        return route('favicon', $params);
+        return route('favicon', $params, $absolute);
     }
 
     /** Whether a school logo is currently configured. */

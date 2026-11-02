@@ -2,10 +2,13 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import {
     BREAKPOINT_DESKTOP,
     BREAKPOINT_MOBILE,
+    addMqlListener,
     applyLowEndDocumentFlag,
     emptyDeviceSnapshot,
     isLowEndDeviceFrom,
     readDeviceSnapshot,
+    removeMqlListener,
+    safeMatchMediaList,
 } from '@/lib/device';
 import type { ConnectionEffectiveType } from '@/lib/device';
 
@@ -93,23 +96,23 @@ export function useMobile() {
     onMounted(() => {
         applySnapshot();
 
-        mqlMobile = window.matchMedia(
+        mqlMobile = safeMatchMediaList(
             `(max-width: ${BREAKPOINT_MOBILE - 1}px)`,
         );
-        mqlDesktop = window.matchMedia(`(min-width: ${BREAKPOINT_DESKTOP}px)`);
-        mqlCoarsePointer = window.matchMedia('(pointer: coarse)');
-        mqlReducedMotion = window.matchMedia(
+        mqlDesktop = safeMatchMediaList(`(min-width: ${BREAKPOINT_DESKTOP}px)`);
+        mqlCoarsePointer = safeMatchMediaList('(pointer: coarse)');
+        mqlReducedMotion = safeMatchMediaList(
             '(prefers-reduced-motion: reduce)',
         );
 
-        mqlMobile.addEventListener('change', onMqlUpdate);
-        mqlDesktop.addEventListener('change', onMqlUpdate);
-        mqlCoarsePointer.addEventListener('change', onMqlUpdate);
-        mqlReducedMotion.addEventListener('change', onMqlUpdate);
+        addMqlListener(mqlMobile, onMqlUpdate);
+        addMqlListener(mqlDesktop, onMqlUpdate);
+        addMqlListener(mqlCoarsePointer, onMqlUpdate);
+        addMqlListener(mqlReducedMotion, onMqlUpdate);
 
         const navConn = navigator as NavigatorWithConnection;
         connection = navConn.connection ?? null;
-        if (connection) {
+        if (connection && typeof connection.addEventListener === 'function') {
             connection.addEventListener('change', onMqlUpdate);
         }
 
@@ -117,12 +120,15 @@ export function useMobile() {
     });
 
     onBeforeUnmount(() => {
-        mqlMobile?.removeEventListener('change', onMqlUpdate);
-        mqlDesktop?.removeEventListener('change', onMqlUpdate);
-        mqlCoarsePointer?.removeEventListener('change', onMqlUpdate);
-        mqlReducedMotion?.removeEventListener('change', onMqlUpdate);
+        removeMqlListener(mqlMobile, onMqlUpdate);
+        removeMqlListener(mqlDesktop, onMqlUpdate);
+        removeMqlListener(mqlCoarsePointer, onMqlUpdate);
+        removeMqlListener(mqlReducedMotion, onMqlUpdate);
 
-        if (connection) {
+        if (
+            connection &&
+            typeof connection.removeEventListener === 'function'
+        ) {
             connection.removeEventListener('change', onMqlUpdate);
         }
 

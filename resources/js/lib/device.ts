@@ -40,6 +40,94 @@ interface NavigatorWithConnection extends Navigator {
     connection?: NetworkInformation;
 }
 
+export function safeMatchMedia(query: string): boolean {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
+        return false;
+    }
+    try {
+        return window.matchMedia(query).matches;
+    } catch {
+        return false;
+    }
+}
+
+export function safeMatchMediaList(query: string): MediaQueryList | null {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
+        return null;
+    }
+    try {
+        return window.matchMedia(query);
+    } catch {
+        return null;
+    }
+}
+
+export function addMqlListener(
+    mql: MediaQueryList | null | undefined,
+    listener: (e?: MediaQueryListEvent) => void,
+): void {
+    if (!mql) return;
+    try {
+        if (typeof mql.addEventListener === 'function') {
+            mql.addEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as {
+                    addListener?: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).addListener === 'function'
+        ) {
+            (
+                mql as unknown as {
+                    addListener: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).addListener(listener);
+        }
+    } catch {
+        // Fallback or ignore in restricted/unsupported web environments
+    }
+}
+
+export function removeMqlListener(
+    mql: MediaQueryList | null | undefined,
+    listener: (e?: MediaQueryListEvent) => void,
+): void {
+    if (!mql) return;
+    try {
+        if (typeof mql.removeEventListener === 'function') {
+            mql.removeEventListener('change', listener);
+        } else if (
+            typeof (
+                mql as unknown as {
+                    removeListener?: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).removeListener === 'function'
+        ) {
+            (
+                mql as unknown as {
+                    removeListener: (
+                        cb: (e?: MediaQueryListEvent) => void,
+                    ) => void;
+                }
+            ).removeListener(listener);
+        }
+    } catch {
+        // Fallback or ignore
+    }
+}
+
 export function emptyDeviceSnapshot(): DeviceSnapshot {
     return {
         isMobile: false,
@@ -76,10 +164,10 @@ export function readDeviceSnapshot(): DeviceSnapshot {
          * though `ontouchstart` exists; treating it as coarse used to flag
          * every Windows laptop as low-end and freeze the whole site.
          */
-        isCoarsePointer: window.matchMedia('(pointer: coarse)').matches,
-        prefersReducedMotion: window.matchMedia(
+        isCoarsePointer: safeMatchMedia('(pointer: coarse)'),
+        prefersReducedMotion: safeMatchMedia(
             '(prefers-reduced-motion: reduce)',
-        ).matches,
+        ),
         deviceMemory: navMem.deviceMemory ?? null,
         hardwareConcurrency: navigator.hardwareConcurrency ?? null,
         connectionType: navConn.connection?.effectiveType ?? null,

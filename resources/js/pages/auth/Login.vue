@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import { Eye, EyeOff } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import CommunityAppBadge from '@/components/community/CommunityAppBadge.vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import SocialAuthButtons from '@/components/SocialAuthButtons.vue';
@@ -12,9 +13,13 @@ import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    isStandaloneDisplay,
+    useStandaloneDisplay,
+} from '@/composables/useCommunityPwa';
 import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
-import { register } from '@/routes';
+import { login, register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -31,13 +36,47 @@ const props = withDefaults(
         loginEnabled: boolean;
         loginDisabledMessage: string;
         socialProviders?: SocialProvider[];
+        /** "community" when opened from the installed Community Lounge PWA. */
+        pwaApp?: string | null;
     }>(),
     {
         socialProviders: () => [],
+        pwaApp: null,
     },
 );
 
 defineOptions({ layout: AuthCard });
+
+const { isStandalone } = useStandaloneDisplay();
+
+/**
+ * Signing in from the installed Lounge app: brand the screen and keep the
+ * ?app=community marker on the Sign up link so registration also returns
+ * the student to /community.
+ */
+const isLoungeApp = computed(
+    () => props.pwaApp === 'community' || isStandalone.value,
+);
+const registerHref = computed(() =>
+    isLoungeApp.value ? register({ query: { app: 'community' } }) : register(),
+);
+
+// Landed on a plain /login inside the installed app (e.g. a bookmarked
+// screen): reload with the Lounge marker so the server arms the post-login
+// redirect back to /community. Skipped when a flash status would be lost.
+onMounted(() => {
+    if (
+        props.pwaApp !== 'community' &&
+        !props.status &&
+        isStandaloneDisplay()
+    ) {
+        router.get(
+            login.url({ query: { app: 'community' } }),
+            {},
+            { replace: true, preserveScroll: true },
+        );
+    }
+});
 
 const submitting = ref(false);
 const showDisabledModal = ref(false);
@@ -60,15 +99,22 @@ const onSubmit = (event: Event) => {
     <Head title="Log in" />
 
     <div class="text-center">
+        <CommunityAppBadge v-if="isLoungeApp" class="mb-3" />
         <h1
             class="text-2xl leading-tight font-bold tracking-tight text-foreground"
         >
-            Log in to your account
+            {{
+                isLoungeApp ? 'Welcome to the Lounge' : 'Log in to your account'
+            }}
         </h1>
         <p
             class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
         >
-            Enter your email and password below to log in
+            {{
+                isLoungeApp
+                    ? 'Log in to catch up with your section’s posts and stories'
+                    : 'Enter your email and password below to log in'
+            }}
         </p>
     </div>
 
@@ -207,7 +253,7 @@ const onSubmit = (event: Event) => {
                 class="text-center text-sm text-muted-foreground"
             >
                 Don't have an account?
-                <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
+                <TextLink :href="registerHref" :tabindex="5">Sign up</TextLink>
             </div>
         </div>
     </Form>

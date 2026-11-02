@@ -17,21 +17,28 @@ mkdir -p \
     storage/framework/sessions \
     storage/framework/views \
     storage/logs \
+    storage/app/public \
+    storage/app/private \
     bootstrap/cache
 touch database/database.sqlite 2>/dev/null || true
 
-# ── PHP memory limit ─────────────────────────────────────────────────────
-# The image bakes memory_limit into /usr/local/etc/php/conf.d, which the
+# ── PHP memory & upload limits ───────────────────────────────────────────
+# The image bakes limits into /usr/local/etc/php/conf.d, which the
 # non-root runtime user cannot edit. To allow a per-deploy override without
 # rebuilding, drop an extra ini into a writable scan dir under /tmp. Anything
 # that parses PDFs/DOCX or batch-grades essays needs well over 128M; going
 # under that reproduces "Allowed memory size of 134217728 bytes exhausted".
+# Upload limits default to 64M so Community Lounge photo/video uploads (>2M)
+# are not rejected by PHP's compiled 2M/8M defaults before reaching S3/R2.
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-256M}"
+PHP_UPLOAD_MAX_FILESIZE="${PHP_UPLOAD_MAX_FILESIZE:-64M}"
+PHP_POST_MAX_SIZE="${PHP_POST_MAX_SIZE:-64M}"
 PHP_EXTRA_INI_DIR=/tmp/php-conf.d
 mkdir -p "$PHP_EXTRA_INI_DIR"
-printf 'memory_limit = %s\n' "$PHP_MEMORY_LIMIT" > "$PHP_EXTRA_INI_DIR/zz-memory-limit.ini"
+printf 'memory_limit = %s\nupload_max_filesize = %s\npost_max_size = %s\n' \
+    "$PHP_MEMORY_LIMIT" "$PHP_UPLOAD_MAX_FILESIZE" "$PHP_POST_MAX_SIZE" > "$PHP_EXTRA_INI_DIR/zz-memory-limit.ini"
 export PHP_INI_SCAN_DIR="/usr/local/etc/php/conf.d:$PHP_EXTRA_INI_DIR"
-echo "[start] php memory_limit=$PHP_MEMORY_LIMIT"
+echo "[start] php memory_limit=$PHP_MEMORY_LIMIT upload_max_filesize=$PHP_UPLOAD_MAX_FILESIZE post_max_size=$PHP_POST_MAX_SIZE"
 
 # ── Deprecation log channel ──────────────────────────────────────────────
 # Production was throwing "EMERGENCY: Unable to create configured logger. ...

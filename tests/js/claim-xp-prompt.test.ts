@@ -210,4 +210,49 @@ describe('claim tile shrink behavior (mobile reward grid)', () => {
         expect(claimed.find('.flex-1.min-w-0').exists()).toBe(true);
         claimed.unmount();
     });
+
+    it('renders only compact elements without duplicating desktop widgets when compact is true', async () => {
+        const claimed = mount(ClaimXpButton, {
+            props: {
+                canClaim: false,
+                amount: 3,
+                baseXp: 1,
+                nextClaimAt: new Date(Date.now() + 3_600_000).toISOString(),
+                streak: 2,
+                showPrompt: false,
+                compact: true,
+            },
+        });
+        await flushPromises();
+
+        expect(claimed.findAll('.dash-icon-well')).toHaveLength(1);
+        expect(claimed.findAll('.dash-label')).toHaveLength(1);
+        expect(claimed.findAll('.dash-metric')).toHaveLength(1);
+        expect(claimed.text()).toContain('Claimed');
+        expect(claimed.find('.sm\\:min-h-14').exists()).toBe(false);
+        expect(claimed.find('button').exists()).toBe(false);
+        claimed.unmount();
+
+        const idle = mount(ClaimXpButton, {
+            props: {
+                canClaim: true,
+                amount: 3,
+                baseXp: 1,
+                nextClaimAt: null,
+                streak: 2,
+                showPrompt: false,
+                compact: true,
+            },
+        });
+        await flushPromises();
+
+        expect(idle.findAll('.dash-icon-well')).toHaveLength(1);
+        expect(idle.findAll('.dash-label')).toHaveLength(1);
+        expect(idle.findAll('.dash-metric')).toHaveLength(1);
+        expect(idle.text()).toContain('Daily reward');
+        expect(idle.text()).toContain('Tap to claim →');
+        expect(idle.findAll('button')).toHaveLength(1);
+        expect(idle.find('.sm\\:min-h-14').exists()).toBe(false);
+        idle.unmount();
+    });
 });

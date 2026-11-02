@@ -247,12 +247,18 @@ async function handleDailyClaim() {
     if (dailyErrorTimer) clearTimeout(dailyErrorTimer);
 
     try {
-        const { data } = await axios.post<{
-            claimed: boolean;
-            amount: number;
-            total_xp: number;
-            streak: number;
-        }>('/api/claim-xp', undefined, { timeout: 15000 });
+        const minSpinPromise = new Promise((resolve) =>
+            setTimeout(resolve, 400),
+        );
+        const [{ data }] = await Promise.all([
+            axios.post<{
+                claimed: boolean;
+                amount: number;
+                total_xp: number;
+                streak: number;
+            }>('/api/claim-xp', undefined, { timeout: 15000 }),
+            minSpinPromise,
+        ]);
 
         if (data.claimed) {
             dailyClaimedAmount.value = data.amount;

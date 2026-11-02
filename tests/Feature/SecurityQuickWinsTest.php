@@ -40,6 +40,17 @@ it('adds HSTS to secure requests without opting into preload by default', functi
     $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 });
 
+it('sends no-cache and no-store headers on HTML and Inertia page responses to prevent stale browser caching', function () {
+    $response = $this->get('/');
+
+    $response->assertOk();
+    $cacheControl = (string) $response->headers->get('Cache-Control');
+    expect($cacheControl)->toContain('no-store')
+        ->toContain('no-cache')
+        ->toContain('must-revalidate');
+    $response->assertHeader('Pragma', 'no-cache');
+});
+
 it('accepts bounded CSP reports without CSRF and logs only structured fields', function () {
     Log::spy();
 

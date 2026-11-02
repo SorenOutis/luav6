@@ -29,16 +29,32 @@ describe('welcome mobile performance', () => {
         expect(blade).toContain("setAttribute('data-low-end'");
         expect(blade).toContain('(pointer: coarse)');
         expect(blade).toContain('deviceMemory');
+        expect(blade).toContain('display: block !important');
     });
 
-    it('applies low-end CSS that kills backdrop-filter and looping animation', () => {
+    it('applies low-end CSS that kills backdrop-filter and looping animation while preserving html visibility', () => {
         const css = read('resources/css/app.css');
 
+        expect(css).toContain('html[data-low-end]');
+        expect(css).toContain('display: block !important');
         expect(css).toContain('html[data-low-end] *');
         expect(css).toContain('backdrop-filter: none !important');
         expect(css).toContain('content-visibility: auto');
         expect(css).toContain('.welcome-bg-grid');
+        expect(css).toContain('.safety-ambient');
+        expect(css).toContain('.voices-track.is-animated');
         expect(css).toContain('touch-action: manipulation');
+    });
+
+    it('prevents scoped Vue SFCs from compiling into rogue html[data-low-end] root display:none', () => {
+        const safetyBand = read('resources/js/components/welcome/SafetyBand.vue');
+        const testimonialMarquee = read('resources/js/components/welcome/TestimonialMarquee.vue');
+
+        // Vue SFC compiler transforms :global(html[data-low-end]) .child into html[data-low-end]{...},
+        // which in scoped styles strips the child selector and sets display:none on <html>.
+        // These rules must live in resources/css/app.css instead.
+        expect(safetyBand).not.toContain(':global(html[data-low-end])');
+        expect(testimonialMarquee).not.toContain(':global(html[data-low-end])');
     });
 
     it('keeps the welcome page free of autoplay media and expensive hero effects', () => {
@@ -97,12 +113,12 @@ describe('welcome mobile performance', () => {
             props: { prefersReducedMotion: true },
             global: { stubs: { Link: LinkStub, Motion: Passthrough } },
         });
-        expect(
-            parked.findAll('[data-phase]')[0].attributes('data-phase'),
-        ).toBe('3');
-        expect(
-            parked.findAll('[data-phase]')[1].attributes('data-phase'),
-        ).toBe('2');
+        expect(parked.findAll('[data-phase]')[0].attributes('data-phase')).toBe(
+            '3',
+        );
+        expect(parked.findAll('[data-phase]')[1].attributes('data-phase')).toBe(
+            '2',
+        );
         parked.unmount();
     });
 
@@ -152,14 +168,10 @@ describe('welcome mobile performance', () => {
         expect(brandMark).toContain('alt="KOAMISHIN logo"');
         expect(header).toContain('PublicBrandMark');
         expect(header).toContain('aria-label="KOAMISHIN home"');
-        expect(loader).toContain('PublicBrandMark');
-        expect(loader).toContain('FoxCompanion');
-        expect(loader).toContain('data-test="global-loader-fox"');
-        expect(loader).toContain('mascot="welcome"');
+        expect(loader).not.toContain('PublicBrandMark');
+        expect(loader).not.toContain('FoxCompanion');
+        expect(loader).not.toContain('data-test="global-loader-fox"');
         expect(loader).toContain('data-test="global-loader-editorial"');
-        expect(loader).toContain('absolute top-8 left-6');
-        expect(loader).toContain('LSI / GETTING READY');
-        expect(loader).toContain('Echo getting things ready');
         expect(loader).not.toContain("Today's note");
         expect(loader).not.toContain('Assessment workflow note');
         expect(loader).toContain('data-test="global-loader-status"');

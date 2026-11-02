@@ -6,15 +6,19 @@ import {
     ChevronRight,
     Clock,
     Download,
+    ExternalLink,
     Eye,
+    FileSpreadsheet,
     FileText,
     Filter,
     Library,
+    Loader2,
+    Presentation,
     Search,
     Users,
     X,
 } from 'lucide-vue-next';
-import { ref, computed, watch, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
@@ -71,6 +75,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const searchQuery = ref(props.filters.search || '');
 const selectedCategory = ref(props.filters.category || 'all');
 const previewMaterial = ref<Material | null>(null);
+const isPreviewLoading = ref(true);
 
 const filteredMaterials = computed(() => {
     let list = [...props.materials];
@@ -101,6 +106,20 @@ function formatFileSize(bytes: number | null): string {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+function formatDate(dateStr: string | null): string {
+    if (!dateStr) return '';
+    try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    } catch {
+        return '';
+    }
+}
+
 function previewUrl(material: Material): string {
     return `/library/${material.id}/file`;
 }
@@ -111,17 +130,89 @@ function downloadUrl(material: Material): string {
 
 function openPreview(material: Material) {
     previewMaterial.value = material;
+    isPreviewLoading.value = true;
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closePreview() {
     previewMaterial.value = null;
+    isPreviewLoading.value = false;
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+    }
 }
 
+function onIframeLoad() {
+    isPreviewLoading.value = false;
+}
+
+function getNormalizedExt(material: Material | null | undefined): string {
+    if (!material) return '';
+    const ext = material.file_extension || '';
+    if (ext) return ext.toLowerCase().replace('.', '');
+    const name = material.file_name || '';
+    const dotIdx = name.lastIndexOf('.');
+    return dotIdx !== -1 ? name.substring(dotIdx + 1).toLowerCase() : 'pdf';
+}
+
+function isPdf(material: Material | null | undefined): boolean {
+    const ext = getNormalizedExt(material);
+    return ext === 'pdf';
+}
+
+function isImage(material: Material | null | undefined): boolean {
+    const ext = getNormalizedExt(material);
+    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
+}
+
+function isOfficeDoc(material: Material | null | undefined): boolean {
+    const ext = getNormalizedExt(material);
+    return ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext);
+}
+
+function getFileTypeIcon(ext: string | null | undefined) {
+    const clean = (ext || '').toLowerCase().replace('.', '');
+    if (clean === 'pdf') return FileText;
+    if (['doc', 'docx'].includes(clean)) return FileText;
+    if (['ppt', 'pptx'].includes(clean)) return Presentation;
+    if (['xls', 'xlsx', 'csv'].includes(clean)) return FileSpreadsheet;
+    return BookOpen;
+}
+
+function getFallbackCoverGradient(ext: string | null | undefined): string {
+    const clean = (ext || '').toLowerCase().replace('.', '');
+    if (clean === 'pdf') {
+        return 'from-rose-500/15 via-primary/10 to-amber-500/10 text-rose-500 dark:from-rose-950/40 dark:via-background dark:to-muted';
+    }
+    if (['doc', 'docx'].includes(clean)) {
+        return 'from-sky-500/15 via-primary/10 to-indigo-500/10 text-sky-500 dark:from-sky-950/40 dark:via-background dark:to-muted';
+    }
+    if (['ppt', 'pptx'].includes(clean)) {
+        return 'from-amber-500/15 via-primary/10 to-orange-500/10 text-amber-500 dark:from-amber-950/40 dark:via-background dark:to-muted';
+    }
+    if (['xls', 'xlsx', 'csv'].includes(clean)) {
+        return 'from-emerald-500/15 via-primary/10 to-teal-500/10 text-emerald-500 dark:from-emerald-950/40 dark:via-background dark:to-muted';
+    }
+    return 'from-primary/15 via-primary/5 to-muted text-primary';
+}
+
+const onEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && previewMaterial.value) {
+        closePreview();
+    }
+};
+
 onMounted(() => {
-    const onEsc = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') closePreview();
-    };
     window.addEventListener('keydown', onEsc);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onEsc);
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+    }
 });
 </script>
 
@@ -323,8 +414,21 @@ onMounted(() => {
                                     v-if="material.cover_image"
                                     :src="material.cover_image"
                                     :alt="material.title"
+                                    class="h-full w-full object-cover"
+                                    @error="
+                                        (e) =>
+                                            ((
+                                                e.target as HTMLElement
+                                            ).style.display = 'none')
+                                    "
                                 />
-                                <BookOpen v-else class="h-5 w-5" />
+                                <component
+                                    v-else
+                                    :is="
+                                        getFileTypeIcon(material.file_extension)
+                                    "
+                                    class="h-5 w-5"
+                                />
                             </span>
                             <span class="min-w-0 flex-1">
                                 <strong class="mobile-course-row__title">{{
@@ -444,139 +548,231 @@ onMounted(() => {
                 <!-- Desktop Grid -->
                 <div
                     v-if="filteredMaterials.length > 0"
-                    class="courses-desktop-grid relative z-10 hidden grid-cols-1 gap-6 md:grid md:grid-cols-2 lg:grid-cols-3"
+                    class="courses-desktop-grid relative z-10 hidden grid-cols-2 gap-4 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
                 >
                     <Motion
                         v-for="(material, idx) in filteredMaterials"
                         :key="material.id"
-                        :initial="{ opacity: 0, y: 30 }"
+                        :initial="{ opacity: 0, y: 20 }"
                         :in-view="{ opacity: 1, y: 0 }"
-                        :in-view-options="{ once: true, margin: '-50px' }"
+                        :in-view-options="{ once: true, margin: '-30px' }"
                         :transition="{
-                            duration: 0.6,
-                            delay: idx * 0.05,
+                            duration: 0.45,
+                            delay: Math.min(idx * 0.03, 0.3),
                             easing: [0.16, 1, 0.3, 1],
                         }"
                     >
                         <div
-                            class="group/card flex h-full flex-col overflow-hidden rounded-2xl border border-border/40 bg-card transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
+                            class="group/card flex h-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
                         >
                             <!-- Cover -->
                             <div
-                                class="relative h-36 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-muted"
+                                class="relative aspect-[16/10] w-full cursor-pointer overflow-hidden bg-muted/30 select-none"
+                                @click="openPreview(material)"
+                                :title="'Preview ' + material.title"
                             >
-                                <img
-                                    v-if="material.cover_image"
-                                    :src="material.cover_image"
-                                    :alt="material.title"
-                                    class="h-full w-full object-cover transition duration-700 group-hover/card:scale-105"
-                                />
-                                <div
-                                    v-else
-                                    class="flex h-full items-center justify-center"
-                                >
-                                    <BookOpen
-                                        class="h-10 w-10 text-primary/20"
+                                <template v-if="material.cover_image">
+                                    <!-- Ambient blurred glow background -->
+                                    <img
+                                        :src="material.cover_image"
+                                        alt=""
+                                        aria-hidden="true"
+                                        class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-md select-none dark:opacity-20"
                                     />
-                                </div>
+                                    <!-- Sharp full-fit cover image -->
+                                    <img
+                                        :src="material.cover_image"
+                                        :alt="material.title"
+                                        class="relative z-10 h-full w-full object-contain p-1 transition-transform duration-500 group-hover/card:scale-[1.03]"
+                                        loading="lazy"
+                                        @error="
+                                            (e) =>
+                                                ((
+                                                    e.target as HTMLElement
+                                                ).style.display = 'none')
+                                        "
+                                    />
+                                    <!-- Subtle vignette gradient -->
+                                    <div
+                                        class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/50 via-transparent to-black/30"
+                                    ></div>
+                                </template>
+                                <!-- Fallback cover when no custom cover image is uploaded -->
+                                <template v-else>
+                                    <div
+                                        class="relative flex h-full w-full flex-col items-center justify-center bg-gradient-to-br p-3"
+                                        :class="
+                                            getFallbackCoverGradient(
+                                                material.file_extension,
+                                            )
+                                        "
+                                    >
+                                        <div
+                                            class="pointer-events-none absolute -right-2 -bottom-2 opacity-10"
+                                        >
+                                            <BookOpen class="h-20 w-20" />
+                                        </div>
+                                        <div
+                                            class="relative z-10 flex flex-col items-center justify-center rounded-xl border border-white/20 bg-background/80 px-3 py-2 shadow-xs backdrop-blur-sm transition-transform duration-300 group-hover/card:scale-105"
+                                        >
+                                            <component
+                                                :is="
+                                                    getFileTypeIcon(
+                                                        material.file_extension,
+                                                    )
+                                                "
+                                                class="h-6 w-6 text-primary"
+                                            />
+                                            <span
+                                                class="mt-0.5 text-[9px] font-black tracking-wider text-foreground uppercase"
+                                            >
+                                                {{
+                                                    (
+                                                        material.file_extension ||
+                                                        'PDF'
+                                                    ).toUpperCase()
+                                                }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Category badge (top-left) -->
                                 <div
-                                    class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"
-                                ></div>
-                                <div class="absolute top-3 left-3 flex gap-2">
+                                    class="absolute top-2 left-2 z-20 flex max-w-[calc(100%-4.5rem)] gap-1"
+                                >
                                     <span
                                         v-if="material.category"
-                                        class="rounded-full bg-background/80 px-2.5 py-1 text-[10px] font-black tracking-wide backdrop-blur"
-                                        >{{ material.category.name }}</span
+                                        class="truncate rounded-md bg-background/85 px-1.5 py-0.5 text-[9px] font-bold tracking-tight text-foreground shadow-xs backdrop-blur-md"
+                                        :title="material.category.name"
                                     >
+                                        {{ material.category.name }}
+                                    </span>
+                                </div>
+
+                                <!-- File Type badge (top-right) -->
+                                <div class="absolute top-2 right-2 z-20">
                                     <span
-                                        class="rounded-full bg-primary px-2.5 py-1 text-[10px] font-black tracking-wide text-primary-foreground"
-                                        >{{
+                                        class="rounded-md bg-primary/90 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-primary-foreground uppercase shadow-xs backdrop-blur-md"
+                                    >
+                                        {{
                                             (
                                                 material.file_extension || 'PDF'
                                             ).toUpperCase()
-                                        }}</span
-                                    >
-                                </div>
-                                <div
-                                    class="absolute right-3 bottom-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur"
-                                >
-                                    <Eye class="h-3 w-3" />
-                                    {{ material.view_count }}
-                                    <span class="mx-1 opacity-40">·</span>
-                                    <Download class="h-3 w-3" />
-                                    {{ material.download_count }}
+                                        }}
+                                    </span>
                                 </div>
                             </div>
+
                             <!-- Content -->
-                            <div class="flex flex-1 flex-col p-5">
+                            <div class="flex flex-1 flex-col p-3 sm:p-3.5">
                                 <h3
-                                    class="line-clamp-2 text-[15px] leading-snug font-bold tracking-tight transition-colors group-hover/card:text-primary"
+                                    class="line-clamp-2 cursor-pointer text-xs leading-snug font-bold tracking-tight text-foreground transition-colors group-hover/card:text-primary sm:text-sm"
+                                    @click="openPreview(material)"
+                                    :title="material.title"
                                 >
                                     {{ material.title }}
                                 </h3>
+
                                 <p
                                     v-if="material.description"
-                                    class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground/70"
+                                    class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground/75"
                                 >
                                     {{ material.description }}
                                 </p>
-                                <div class="mt-3 flex flex-wrap gap-1.5">
+
+                                <!-- Section Badges -->
+                                <div
+                                    v-if="material.sections?.length"
+                                    class="mt-2 flex flex-wrap gap-1"
+                                >
                                     <span
                                         v-for="sec in material.sections"
                                         :key="sec.id"
-                                        class="rounded-full border border-border/40 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
-                                        ><Users class="mr-1 inline h-3 w-3" />{{
-                                            sec.name
-                                        }}</span
+                                        class="truncate rounded-md border border-border/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground"
                                     >
+                                        <Users
+                                            class="mr-0.5 inline h-2.5 w-2.5"
+                                        />{{ sec.name }}
+                                    </span>
                                 </div>
+
+                                <!-- File Name & Size -->
                                 <div
-                                    class="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground"
+                                    class="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"
                                 >
-                                    <span class="inline-flex items-center gap-1"
-                                        ><FileText class="h-3.5 w-3.5" />
-                                        {{
-                                            material.file_name || 'document'
-                                        }}</span
+                                    <span
+                                        class="inline-flex min-w-0 items-center gap-1 truncate"
                                     >
-                                    <span>·</span>
-                                    <span>{{
+                                        <FileText class="h-3 w-3 shrink-0" />
+                                        <span class="truncate">{{
+                                            material.file_name || 'document'
+                                        }}</span>
+                                    </span>
+                                    <span class="shrink-0 opacity-40">·</span>
+                                    <span class="shrink-0 font-medium">{{
                                         formatFileSize(material.file_size)
                                     }}</span>
                                 </div>
-                                <div class="mt-4 flex gap-2">
+
+                                <!-- Footer: Date & Counters -->
+                                <div
+                                    class="mt-2 flex items-center justify-between text-[10px] text-muted-foreground/60"
+                                >
+                                    <span
+                                        v-if="material.created_at"
+                                        class="inline-flex items-center gap-1"
+                                    >
+                                        <Clock class="h-2.5 w-2.5" />
+                                        {{ formatDate(material.created_at) }}
+                                    </span>
+                                    <span
+                                        class="ml-auto inline-flex items-center gap-1"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-0.5"
+                                        >
+                                            <Eye class="h-2.5 w-2.5" />
+                                            {{ material.view_count }}
+                                        </span>
+                                        <span class="opacity-40">·</span>
+                                        <span
+                                            class="inline-flex items-center gap-0.5"
+                                        >
+                                            <Download class="h-2.5 w-2.5" />
+                                            {{ material.download_count }}
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div
+                                    class="mt-2.5 flex items-center gap-1.5 border-t border-border/40 pt-2"
+                                >
                                     <button
                                         @click="openPreview(material)"
-                                        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary/90"
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary px-2 py-1.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary/90"
                                     >
-                                        <Eye class="h-4 w-4" /> Preview
+                                        <Eye class="h-3.5 w-3.5" /> Preview
                                     </button>
                                     <a
                                         v-if="material.is_downloadable"
                                         :href="downloadUrl(material)"
-                                        class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border/40 bg-background px-3 py-2 text-xs font-bold hover:bg-muted"
+                                        class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-border/50 bg-background px-2 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
                                     >
-                                        <Download class="h-4 w-4" /> Download
+                                        <Download class="h-3.5 w-3.5" />
+                                        Download
                                     </a>
                                     <span
                                         v-else
-                                        class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/40 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground"
+                                        class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-dashed border-border/40 bg-muted/30 px-2 py-1.5 text-[11px] font-medium text-muted-foreground"
                                         title="Download disabled by teacher"
                                     >
-                                        <Download class="h-4 w-4 opacity-40" />
+                                        <Download
+                                            class="h-3.5 w-3.5 opacity-40"
+                                        />
                                         View only
                                     </span>
-                                </div>
-                                <div
-                                    v-if="material.created_at"
-                                    class="mt-3 flex items-center gap-1 text-[10px] text-muted-foreground/50"
-                                >
-                                    <Clock class="h-3 w-3" />
-                                    {{
-                                        new Date(
-                                            material.created_at,
-                                        ).toLocaleDateString()
-                                    }}
                                 </div>
                             </div>
                         </div>
@@ -626,49 +822,210 @@ onMounted(() => {
                 </Motion>
 
                 <!-- Preview Modal -->
-                <div
-                    v-if="previewMaterial"
-                    class="fixed inset-0 z-50 flex flex-col bg-background"
-                >
+                <Teleport to="body">
                     <div
-                        class="flex items-center justify-between border-b border-border/40 px-4 py-3"
+                        v-if="previewMaterial"
+                        class="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-md"
+                        role="dialog"
+                        aria-modal="true"
+                        :aria-label="'Preview ' + previewMaterial.title"
                     >
-                        <div class="min-w-0 flex-1">
-                            <h2 class="truncate text-sm font-bold">
-                                {{ previewMaterial.title }}
-                            </h2>
-                            <p class="truncate text-xs text-muted-foreground">
-                                {{ previewMaterial.file_name }} ·
-                                {{
-                                    (
-                                        previewMaterial.file_extension || ''
-                                    ).toUpperCase()
-                                }}
-                            </p>
+                        <!-- Modal Top Bar -->
+                        <div
+                            class="flex items-center justify-between border-b border-border/40 bg-card/50 px-4 py-2.5 sm:px-6"
+                        >
+                            <div class="min-w-0 flex-1 pr-4">
+                                <div class="flex items-center gap-2">
+                                    <h2
+                                        class="truncate text-sm font-bold text-foreground sm:text-base"
+                                    >
+                                        {{ previewMaterial.title }}
+                                    </h2>
+                                    <span
+                                        class="hidden rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase sm:inline-flex"
+                                    >
+                                        {{
+                                            (
+                                                previewMaterial.file_extension ||
+                                                'PDF'
+                                            ).toUpperCase()
+                                        }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="truncate text-xs text-muted-foreground"
+                                >
+                                    {{
+                                        previewMaterial.file_name || 'document'
+                                    }}
+                                    ·
+                                    {{
+                                        formatFileSize(
+                                            previewMaterial.file_size,
+                                        )
+                                    }}
+                                    <template v-if="previewMaterial.category">
+                                        · {{ previewMaterial.category.name }}
+                                    </template>
+                                </p>
+                            </div>
+
+                            <div class="flex shrink-0 items-center gap-2">
+                                <!-- Open in new tab link -->
+                                <a
+                                    :href="previewUrl(previewMaterial)"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+                                    title="Open in a new tab"
+                                >
+                                    <ExternalLink class="h-3.5 w-3.5" />
+                                    <span class="hidden sm:inline"
+                                        >New tab</span
+                                    >
+                                </a>
+
+                                <!-- Download button -->
+                                <a
+                                    v-if="previewMaterial.is_downloadable"
+                                    :href="downloadUrl(previewMaterial)"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary/90"
+                                >
+                                    <Download class="h-3.5 w-3.5" />
+                                    <span>Download</span>
+                                </a>
+
+                                <!-- Close button -->
+                                <button
+                                    @click="closePreview"
+                                    class="cursor-pointer rounded-lg border border-border/40 bg-background p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                    title="Close (Esc)"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
-                        <div class="ml-3 flex items-center gap-2">
-                            <a
-                                v-if="previewMaterial.is_downloadable"
-                                :href="downloadUrl(previewMaterial)"
-                                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
-                                ><Download class="h-4 w-4" /> Download</a
+
+                        <!-- Modal Content Area -->
+                        <div
+                            class="relative flex-1 overflow-hidden bg-muted/20"
+                        >
+                            <!-- Loading indicator for iframe -->
+                            <div
+                                v-if="
+                                    isPreviewLoading && isPdf(previewMaterial)
+                                "
+                                class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-xs"
                             >
-                            <button
-                                @click="closePreview"
-                                class="rounded-xl border border-border/40 p-2 hover:bg-muted"
-                            >
-                                <X class="h-4 w-4" />
-                            </button>
+                                <Loader2
+                                    class="h-8 w-8 animate-spin text-primary"
+                                />
+                                <p
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    Loading preview…
+                                </p>
+                            </div>
+
+                            <!-- PDF Viewer (iframe) -->
+                            <template v-if="isPdf(previewMaterial)">
+                                <div class="flex h-full w-full flex-col">
+                                    <iframe
+                                        :src="previewUrl(previewMaterial)"
+                                        @load="onIframeLoad"
+                                        class="h-full w-full border-0 bg-white dark:bg-zinc-900"
+                                        title="Document preview"
+                                    ></iframe>
+                                </div>
+                            </template>
+
+                            <!-- Image Viewer -->
+                            <template v-else-if="isImage(previewMaterial)">
+                                <div
+                                    class="flex h-full w-full items-center justify-center overflow-auto p-4"
+                                >
+                                    <img
+                                        :src="previewUrl(previewMaterial)"
+                                        :alt="previewMaterial.title"
+                                        class="max-h-full max-w-full rounded-lg object-contain shadow-lg"
+                                    />
+                                </div>
+                            </template>
+
+                            <!-- Office Document Notice (Word, PowerPoint, Excel) -->
+                            <template v-else-if="isOfficeDoc(previewMaterial)">
+                                <div
+                                    class="flex h-full w-full flex-col items-center justify-center p-6 text-center"
+                                >
+                                    <div
+                                        class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs"
+                                    >
+                                        <component
+                                            :is="
+                                                getFileTypeIcon(
+                                                    previewMaterial.file_extension,
+                                                )
+                                            "
+                                            class="h-8 w-8"
+                                        />
+                                    </div>
+                                    <h3
+                                        class="mt-4 text-base font-bold text-foreground"
+                                    >
+                                        {{ previewMaterial.file_name }}
+                                    </h3>
+                                    <p
+                                        class="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground"
+                                    >
+                                        This is an Office document ({{
+                                            (
+                                                previewMaterial.file_extension ||
+                                                ''
+                                            ).toUpperCase()
+                                        }}). Browsers cannot render Office files
+                                        directly in a web preview. Download the
+                                        file to view it in Microsoft Office,
+                                        Google Docs, or your preferred software.
+                                    </p>
+                                    <div class="mt-5 flex items-center gap-3">
+                                        <a
+                                            v-if="
+                                                previewMaterial.is_downloadable
+                                            "
+                                            :href="downloadUrl(previewMaterial)"
+                                            class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90"
+                                        >
+                                            <Download class="h-4 w-4" />
+                                            Download document ({{
+                                                formatFileSize(
+                                                    previewMaterial.file_size,
+                                                )
+                                            }})
+                                        </a>
+                                        <span
+                                            v-else
+                                            class="rounded-xl border border-dashed border-border px-4 py-2 text-xs font-medium text-muted-foreground"
+                                        >
+                                            Download disabled by instructor
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Generic fallback viewer for other formats -->
+                            <template v-else>
+                                <div class="flex h-full w-full flex-col">
+                                    <iframe
+                                        :src="previewUrl(previewMaterial)"
+                                        @load="onIframeLoad"
+                                        class="h-full w-full border-0"
+                                        title="Document preview"
+                                    ></iframe>
+                                </div>
+                            </template>
                         </div>
                     </div>
-                    <div class="flex-1 bg-muted/20">
-                        <iframe
-                            :src="previewUrl(previewMaterial)"
-                            class="h-full w-full border-0"
-                            title="Preview"
-                        ></iframe>
-                    </div>
-                </div>
+                </Teleport>
             </div>
         </template>
     </AppLayout>

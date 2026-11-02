@@ -17,12 +17,26 @@ class SecurityHeaders
         $response = $next($request);
 
         $isGraphify = $request->routeIs('admin.graphify.*');
+        $canEmbedInFrame = $isGraphify || $request->routeIs('library.file');
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', $isGraphify ? 'SAMEORIGIN' : 'DENY');
+        $response->headers->set('X-Frame-Options', $canEmbedInFrame ? 'SAMEORIGIN' : 'DENY');
         $response->headers->set('Referrer-Policy', (string) config('security.referrer_policy'));
         $response->headers->set('Permissions-Policy', (string) config('security.permissions_policy'));
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+
+        // Prevent browsers and intermediate proxies from serving stale HTML/Inertia documents.
+        // Hashed Vite assets (/build/assets/*) are immutable, but the HTML shell referencing them
+        // must always revalidate with the server so deployments and fixes take effect immediately.
+        if (! $request->is('build/*', 'images/*', 'fonts/*', 'favicon.*', 'brand/*')) {
+            $contentType = (string) $response->headers->get('Content-Type');
+            $isDownload = str_contains((string) $response->headers->get('Content-Disposition'), 'attachment');
+            if (! $isDownload && (str_contains($contentType, 'text/html') || $request->header('X-Inertia') || $contentType === '')) {
+                $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+                $response->headers->set('Pragma', 'no-cache');
+                $response->headers->set('Expires', '0');
+            }
+        }
 
         if ($this->shouldSendHsts($request)) {
             $response->headers->set('Strict-Transport-Security', $this->hstsValue());
@@ -43,12 +57,13 @@ class SecurityHeaders
     {
         $nonce = Vite::cspNonce();
         $isGraphify = $request->routeIs('admin.graphify.*');
+        $canEmbedInFrame = $isGraphify || $request->routeIs('library.file');
 
         $directives = [
             "default-src 'self'",
             "base-uri 'self'",
-            "object-src 'none'",
-            'frame-ancestors '.($isGraphify ? "'self'" : "'none'"),
+            'object-src '.($canEmbedInFrame ? "'self'" : "'none'"),
+            'frame-ancestors '.($canEmbedInFrame ? "'self'" : "'none'"),
             "form-action 'self'",
             "script-src 'self' ".($isGraphify ? "'unsafe-inline' https://unpkg.com" : "'nonce-{$nonce}' https://js.pusher.com"),
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",

@@ -250,7 +250,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
         <div class="flex min-w-0 flex-col gap-2 p-3 sm:p-5">
             <!-- Header + tabs -->
             <div
-                class="flex flex-wrap items-center justify-between gap-2 sm:gap-3"
+                class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
                 <div class="flex min-w-0 items-center gap-2">
                     <div
@@ -266,7 +266,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                 </div>
 
                 <div
-                    class="-mx-1 grid max-w-full scrollbar-none grid-cols-2 gap-1.5 px-1 py-0.5 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto"
+                    class="grid w-full grid-cols-2 gap-1 rounded-2xl border border-border/50 bg-muted/40 p-1 sm:flex sm:w-auto sm:items-center sm:gap-1 sm:overflow-x-auto sm:rounded-full sm:bg-background/60"
                     role="tablist"
                     aria-label="Task filter"
                 >
@@ -276,13 +276,13 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                         type="button"
                         role="tab"
                         :aria-selected="activeTab === tab.key"
-                        class="flex min-h-11 min-w-0 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:text-[13px]"
+                        class="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-xs font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:shrink-0 sm:rounded-full sm:px-3 sm:text-[13px]"
                         :class="
                             activeTab === tab.key
-                                ? 'bg-brand text-white'
+                                ? 'bg-brand text-white shadow-xs'
                                 : tab.count > 0 && tab.key === 'overdue'
-                                  ? 'text-[#CB7676] hover:bg-muted'
-                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                  ? 'text-[#CB7676] hover:bg-background/50 hover:text-[#CB7676]'
+                                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
                         "
                         @click="activeTab = tab.key"
                     >
@@ -292,8 +292,10 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                             class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
                             :class="
                                 activeTab === tab.key
-                                    ? 'bg-white/20'
-                                    : 'bg-muted'
+                                    ? 'bg-white/20 text-white'
+                                    : tab.count > 0 && tab.key === 'overdue'
+                                      ? 'bg-[#CB7676]/15 text-[#CB7676]'
+                                      : 'bg-background/60 text-muted-foreground'
                             "
                             >{{ tab.count }}</span
                         >

@@ -206,10 +206,12 @@ onBeforeUnmount(() => {
     >
         <RevealGroup class="mx-auto max-w-3xl px-4 text-center">
             <span
-                class="rv font-mono text-[11px] font-semibold tracking-[0.2em] text-brand uppercase"
+                class="rv inline-flex items-center gap-3 font-mono text-xs font-medium tracking-widest text-muted-foreground uppercase"
                 :style="{ '--rv-i': 0 }"
             >
-                ONE LOOP, THREE VIEWS
+                <span class="text-brand">04</span>
+                <span class="h-px w-8 bg-border" aria-hidden="true"></span>
+                One loop, three views
             </span>
             <h2
                 id="perspectives-heading"

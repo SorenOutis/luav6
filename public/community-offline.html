@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#f5f0e8" />
+        <meta name="color-scheme" content="light dark" />
+        <title>You're offline · Community Lounge</title>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <style>
+            :root {
+                color-scheme: light dark;
+                --bg: #f5f0e8;
+                --card: #fffaf2;
+                --border: rgba(60, 45, 30, 0.12);
+                --text: #2b2118;
+                --muted: #7a6a5a;
+                --brand: #c2703d;
+                --brand-text: #fffaf2;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #1a1410;
+                    --card: #241c16;
+                    --border: rgba(255, 240, 220, 0.1);
+                    --text: #f5eedc;
+                    --muted: #b3a291;
+                    --brand: #e6a875;
+                    --brand-text: #1a1410;
+                }
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                margin: 0;
+                min-height: 100%;
+                background: var(--bg);
+                color: var(--text);
+                font-family:
+                    Inter,
+                    ui-sans-serif,
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    Roboto,
+                    sans-serif;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            main {
+                display: flex;
+                min-height: 100vh;
+                min-height: 100dvh;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+            }
+
+            .card {
+                width: 100%;
+                max-width: 360px;
+                border: 1px solid var(--border);
+                border-radius: 24px;
+                background: var(--card);
+                padding: 32px 24px;
+                text-align: center;
+                box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.35);
+            }
+
+            .icon {
+                display: inline-flex;
+                height: 56px;
+                width: 56px;
+                align-items: center;
+                justify-content: center;
+                border-radius: 9999px;
+                background: color-mix(in srgb, var(--brand) 15%, transparent);
+                color: var(--brand);
+            }
+
+            .badge {
+                display: inline-block;
+                margin-top: 16px;
+                border-radius: 9999px;
+                border: 1px solid var(--border);
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+
+            h1 {
+                margin: 12px 0 0;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+            }
+
+            p {
+                margin: 8px 0 0;
+                font-size: 14px;
+                line-height: 1.55;
+                color: var(--muted);
+            }
+
+            .retry {
+                display: inline-flex;
+                margin-top: 24px;
+                width: 100%;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                border-radius: 14px;
+                background: var(--brand);
+                padding: 12px 16px;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--brand-text);
+                text-decoration: none;
+            }
+
+            .retry:active {
+                transform: scale(0.98);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <div class="card" data-test="community-offline-card">
+                <span class="icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h.01" />
+                        <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+                        <path d="M5 12.859a10 10 0 0 1 5.17-2.69" />
+                        <path d="M19 12.859a10 10 0 0 0-2.007-1.523" />
+                        <path d="M2 8.82a15 15 0 0 1 4.177-2.643" />
+                        <path d="M22 8.82a15 15 0 0 0-11.288-3.764" />
+                        <path d="m2 2 20 20" />
+                    </svg>
+                </span>
+                <div><span class="badge">Community Lounge</span></div>
+                <h1>You're offline</h1>
+                <p>The Lounge needs an internet connection to load your section's latest posts, stories and classmates.</p>
+                <p>Check your Wi-Fi or mobile data, then try again.</p>
+                <a class="retry" href="/community">Reconnect to Lounge</a>
+            </div>
+        </main>
+    </body>
+</html>

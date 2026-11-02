@@ -1,0 +1,1988 @@
+<?php
+
+use App\Models\CommunityComment;
+use App\Models\CommunityInvite;
+use App\Models\CommunityPost;
+use App\Models\CommunityPostMedia;
+use App\Models\CommunityProfileFeatured;
+use App\Models\CommunityStory;
+use App\Models\ProfileMusicTrack;
+use App\Models\Section;
+use App\Models\User;
+use App\Models\Workspace;
+use App\Support\StudentPageRegistry;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    $this->workspace = Workspace::factory()->create();
+    $this->student = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'token' => 'initial-token',
+        'accepted_at' => now(),
+    ]);
+});
+
+it('redirects unauthenticated guests to the login page', function () {
+    $this->get(route('community.index'))->assertRedirect(route('login'));
+});
+
+it('allows authenticated students to visit the community lounge', function () {
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->has('workspace')
+        );
+});
+
+it('renders community lounge feed with nested comments and replies', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Top level comment',
+    ]);
+
+    $reply = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $comment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Threaded child reply',
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->has('posts.0.comments', 1)
+            ->where('posts.0.comments.0.content', 'Top level comment')
+            ->has('posts.0.comments.0.replies', 1)
+            ->where('posts.0.comments.0.replies.0.content', 'Threaded child reply')
+        );
+});
+
+it('masks section name as Anonymous when post is anonymous or from a different section', function () {
+    $sectionA = Section::factory()->create([
+        'name' => 'Computer Application',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $sectionB = Section::factory()->create([
+        'name' => 'Computer Networking',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $this->student->sections()->attach($sectionA);
+    $otherStudent->sections()->attach($sectionB);
+
+    $crossPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $sectionB->id,
+        'user_id' => $otherStudent->id,
+        'content' => 'Cross section post',
+        'is_anonymous' => false,
+    ]);
+
+    $anonPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $sectionA->id,
+        'user_id' => $otherStudent->id,
+        'content' => 'Anonymous post',
+        'is_anonymous' => true,
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('posts.0.author.section_name', 'Anonymous')
+            ->where('posts.1.author.section_name', 'Anonymous')
+        );
+});
+
+it('returns a locked response when community page is disabled in registry', function () {
+    StudentPageRegistry::setControls([
+        'community' => [
+            'mode' => StudentPageRegistry::MODE_DISABLED,
+            'message' => 'Community is temporarily paused.',
+        ],
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertStatus(423)
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('StudentPageUnavailable')
+            ->where('pageTitle', 'Community Lounge')
+            ->where('message', 'Community is temporarily paused.')
+        );
+});
+
+it('allows admins to access community even when disabled', function () {
+    StudentPageRegistry::setControls([
+        'community' => [
+            'mode' => StudentPageRegistry::MODE_DISABLED,
+            'message' => 'Community is temporarily paused.',
+        ],
+    ]);
+
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Community'));
+});
+
+it('returns cached json presence data from presence polling endpoint', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $this->actingAs($this->student)
+        ->get(route('community.presence'))
+        ->assertOk()
+        ->assertJsonStructure([
+            'sectionName',
+            'onlineClassmates',
+            'onlineCount',
+            'totalEnrolledCount',
+        ]);
+});
+
+it('allows student with multiple sections to choose a section in presence and feed', function () {
+    $sectionA = Section::factory()->create([
+        'name' => 'Computer Application',
+        'workspace_id' => $this->workspace->id,
+    ]);
+    $sectionB = Section::factory()->create([
+        'name' => 'Computer Networking',
+        'workspace_id' => $this->workspace->id,
+    ]);
+
+    $this->student->sections()->attach([$sectionA->id, $sectionB->id]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index', ['section_id' => $sectionB->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('sectionName', 'Computer Networking')
+            ->where('currentSectionId', $sectionB->id)
+            ->has('availableSections', 2)
+        );
+
+    $this->actingAs($this->student)
+        ->get(route('community.presence', ['section_id' => $sectionB->id]))
+        ->assertOk()
+        ->assertJson([
+            'sectionName' => 'Computer Networking',
+            'sectionId' => $sectionB->id,
+        ]);
+
+    $this->actingAs($this->student)
+        ->post(route('community.section.select'), ['section_id' => $sectionA->id])
+        ->assertRedirect();
+
+    expect(session('community_active_section_id'))->toBe($sectionA->id);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->where('sectionName', 'Computer Application')
+            ->where('currentSectionId', $sectionA->id)
+        );
+});
+
+it('allows authenticated student to create a community post', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Studying for the network design quiz! #NetworkingLab',
+            'is_anonymous' => false,
+            'section_id' => $section->id,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_posts', [
+        'user_id' => $this->student->id,
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'content' => 'Studying for the network design quiz! #NetworkingLab',
+        'is_anonymous' => false,
+    ]);
+});
+
+it('allows a student enrolled in multiple sections to choose which section to post to', function () {
+    $sectionA = Section::factory()->create(['name' => 'Section A', 'workspace_id' => $this->workspace->id]);
+    $sectionB = Section::factory()->create(['name' => 'Section B', 'workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach([$sectionA->id, $sectionB->id]);
+
+    // Student explicitly posts to Section B
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Important update for Section B classmates!',
+            'section_id' => $sectionB->id,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_posts', [
+        'user_id' => $this->student->id,
+        'section_id' => $sectionB->id,
+        'content' => 'Important update for Section B classmates!',
+    ]);
+});
+
+it('allows creating a post with file attachment', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->create('study_notes.pdf', 500, 'application/pdf');
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Here are my notes for today.',
+            'attachment' => $file,
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->attachment_type)->toBe('document');
+    expect($post->attachment_name)->toBe('study_notes.pdf');
+    Storage::disk('public')->assertExists($post->attachment_url);
+});
+
+it('allows creating a post with multiple images and attached music track', function () {
+    Storage::fake('public');
+
+    $track = ProfileMusicTrack::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'is_active' => true,
+    ]);
+
+    $img1 = UploadedFile::fake()->image('photo1.jpg', 600, 600);
+    $img2 = UploadedFile::fake()->image('photo2.png', 800, 800);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Campus gallery with music!',
+            'profile_music_track_id' => $track->id,
+            'attachments' => [$img1, $img2],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->profile_music_track_id)->toBe($track->id);
+    expect($post->media()->count())->toBe(2);
+
+    $media = $post->media()->get();
+    expect($media[0]->media_type)->toBe('image');
+    expect($media[0]->file_name)->toBe('photo1.jpg');
+    expect($media[0]->sort_order)->toBe(0);
+    expect($media[1]->file_name)->toBe('photo2.png');
+    expect($media[1]->sort_order)->toBe(1);
+
+    Storage::disk('public')->assertExists($media[0]->media_url);
+    Storage::disk('public')->assertExists($media[1]->media_url);
+});
+
+it('allows creating a media-only post with no caption', function () {
+    Storage::fake('public');
+
+    $img = UploadedFile::fake()->image('snap.jpg', 400, 400);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => '',
+            'attachments' => [$img],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->content)->toBe('');
+    expect($post->media()->count())->toBe(1);
+});
+
+it('allows creating a video post and returns media and music in the community feed', function () {
+    Storage::fake('public');
+
+    $track = ProfileMusicTrack::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'title' => 'Coding Lofi',
+        'is_active' => true,
+    ]);
+
+    $video = UploadedFile::fake()->create('project_demo.mp4', 5000, 'video/mp4');
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.store'), [
+            'content' => 'Check out our project demo!',
+            'profile_music_track_id' => $track->id,
+            'attachments' => [$video],
+        ])
+        ->assertRedirect();
+
+    $post = CommunityPost::where('user_id', $this->student->id)->latest()->first();
+    expect($post)->not->toBeNull();
+    expect($post->media()->count())->toBe(1);
+    expect($post->media()->first()->media_type)->toBe('video');
+
+    $response = $this->actingAs($this->student)->get(route('community.index'));
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Community')
+        ->has('musicTracks')
+        ->where('posts.0.music.title', 'Coding Lofi')
+        ->where('posts.0.media.0.type', 'video')
+    );
+});
+
+it('allows toggling likes on a community post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    // Like
+    $this->actingAs($this->student)
+        ->post(route('community.posts.like', $post))
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_post_likes', [
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+    ]);
+    expect($post->fresh()->likes_count)->toBe(1);
+
+    // Unlike
+    $this->actingAs($this->student)
+        ->post(route('community.posts.like', $post))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('community_post_likes', [
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+    ]);
+    expect($post->fresh()->likes_count)->toBe(0);
+});
+
+it('keeps media likes independent from whole post and sibling media likes', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $media1 = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test1.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test1.jpg',
+        'sort_order' => 0,
+        'likes_count' => 0,
+    ]);
+
+    $media2 = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test2.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test2.jpg',
+        'sort_order' => 1,
+        'likes_count' => 0,
+    ]);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.media.like', $media1))
+        ->assertOk()
+        ->assertJsonPath('is_liked', true)
+        ->assertJsonPath('likes_count', 1)
+        ->assertJsonPath('post_likes_count', 0)
+        ->assertJsonPath('post_is_liked', false);
+
+    expect($media1->fresh()->likes_count)->toBe(1);
+    expect($media2->fresh()->likes_count)->toBe(0);
+    expect($post->fresh()->likes_count)->toBe(0);
+    expect($post->likes()->count())->toBe(0);
+
+    $this->assertDatabaseHas('community_post_media_likes', [
+        'post_media_id' => $media1->id,
+        'user_id' => $this->student->id,
+    ]);
+    $this->assertDatabaseMissing('community_post_media_likes', [
+        'post_media_id' => $media2->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $this->postJson(route('community.media.like', $media2))
+        ->assertOk()
+        ->assertJsonPath('post_likes_count', 0)
+        ->assertJsonPath('post_is_liked', false);
+
+    $this->postJson(route('community.posts.like', $post))
+        ->assertOk()
+        ->assertJsonPath('likes_count', 1);
+
+    expect($media1->fresh()->likes_count)->toBe(1);
+    expect($media2->fresh()->likes_count)->toBe(1);
+
+    $this->postJson(route('community.media.like', $media1))
+        ->assertOk()
+        ->assertJsonPath('is_liked', false)
+        ->assertJsonPath('likes_count', 0)
+        ->assertJsonPath('post_likes_count', 1)
+        ->assertJsonPath('post_is_liked', true);
+
+    expect($media1->fresh()->likes_count)->toBe(0);
+    expect($media2->fresh()->likes_count)->toBe(1);
+    expect($post->fresh()->likes_count)->toBe(1);
+    expect($post->likes()->count())->toBe(1);
+    expect($media1->likes()->count())->toBe(0);
+
+    $this->postJson(route('community.posts.like', $post))
+        ->assertOk()
+        ->assertJsonPath('likes_count', 0);
+
+    expect($post->likes()->count())->toBe(0);
+    expect($media2->fresh()->likes_count)->toBe(1);
+    expect($media2->likes()->count())->toBe(1);
+});
+
+it('allows adding comments specifically to a media item in a post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $media = CommunityPostMedia::create([
+        'post_id' => $post->id,
+        'media_url' => 'test_photo.jpg',
+        'media_type' => 'image',
+        'file_name' => 'test_photo.jpg',
+        'sort_order' => 0,
+        'likes_count' => 0,
+        'comments_count' => 0,
+    ]);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), [
+            'content' => 'Nice bottle of wine!',
+            'post_media_id' => $media->id,
+        ])
+        ->assertOk()
+        ->assertJson([
+            'comment' => [
+                'content' => 'Nice bottle of wine!',
+                'post_media_id' => $media->id,
+            ],
+        ])
+        ->assertJsonPath('comments_count', 1);
+
+    expect($media->fresh()->comments_count)->toBe(1);
+    expect($post->fresh()->comments_count)->toBe(0);
+
+    $this->assertDatabaseHas('community_comments', [
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'content' => 'Nice bottle of wine!',
+    ]);
+});
+
+it('keeps comment and reply counters scoped to their targets', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+
+    $this->actingAs($this->student);
+
+    $mediaComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media comment',
+        'post_media_id' => $media->id,
+    ])->assertOk()->assertJsonPath('comments_count', 1)->json('comment');
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media reply',
+        'post_media_id' => $media->id,
+        'parent_id' => $mediaComment['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2);
+
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(2);
+    expect($sibling->fresh()->comments_count)->toBe(0);
+
+    $postComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post comment',
+        'post_media_id' => null,
+    ])->assertOk()->assertJsonPath('comments_count', 1)->json('comment');
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post reply',
+        'parent_id' => $postComment['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2);
+
+    $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Sibling comment',
+        'post_media_id' => $sibling->id,
+    ])->assertOk()->assertJsonPath('comments_count', 1);
+
+    expect($post->fresh()->comments_count)->toBe(2);
+    expect($media->fresh()->comments_count)->toBe(2);
+    expect($sibling->fresh()->comments_count)->toBe(1);
+});
+
+it('rejects parents outside the exact comment target without changing counters', function (string $parentScope, string $targetScope, bool $omitMedia) {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $otherPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+    $otherMedia = $otherPost->media()->create(['media_url' => 'other.jpg', 'media_type' => 'image']);
+    $mediaIds = ['post' => null, 'media' => $media->id, 'sibling' => $sibling->id, 'other post' => null, 'other media' => $otherMedia->id];
+    $parent = CommunityComment::create([
+        'post_id' => in_array($parentScope, ['other post', 'other media'], true) ? $otherPost->id : $post->id,
+        'post_media_id' => $mediaIds[$parentScope],
+        'user_id' => $this->student->id,
+        'content' => 'Existing parent',
+    ]);
+    $payload = ['content' => 'Invalid reply', 'parent_id' => $parent->id];
+    if (! $omitMedia) {
+        $payload['post_media_id'] = $mediaIds[$targetScope];
+    }
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('parent_id');
+
+    expect(CommunityComment::count())->toBe(1);
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($otherPost->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(0);
+    expect($sibling->fresh()->comments_count)->toBe(0);
+    expect($otherMedia->fresh()->comments_count)->toBe(0);
+})->with([
+    'media parent with omitted media target' => ['media', 'post', true],
+    'media parent with null media target' => ['media', 'post', false],
+    'post parent with media target' => ['post', 'media', false],
+    'sibling media parent' => ['sibling', 'media', false],
+    'other post parent with post target' => ['other post', 'post', true],
+    'other post parent with media target' => ['other post', 'media', false],
+    'other media parent' => ['other media', 'media', false],
+]);
+
+it('rejects a media target from another post without creating a comment', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $otherPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $otherPost->media()->create(['media_url' => 'other.jpg', 'media_type' => 'image']);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), [
+            'content' => 'Invalid media comment',
+            'post_media_id' => $media->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('post_media_id');
+
+    expect(CommunityComment::count())->toBe(0);
+    expect($post->fresh()->comments_count)->toBe(0);
+    expect($otherPost->fresh()->comments_count)->toBe(0);
+    expect($media->fresh()->comments_count)->toBe(0);
+});
+
+it('reloads isolated post and media threads and reactions across lounge feeds and profiles', function (string $view) {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'comments_count' => 2,
+    ]);
+    $media = $post->media()->create([
+        'media_url' => 'photo.jpg',
+        'media_type' => 'image',
+        'comments_count' => 2,
+    ]);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video', 'sort_order' => 1]);
+    $postComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Legacy unscoped post comment',
+    ]);
+    $postReply = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $postComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post reply',
+    ]);
+    $mediaComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'user_id' => $this->student->id,
+        'content' => 'Photo comment',
+    ]);
+    $mediaReply = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'parent_id' => $mediaComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Photo reply',
+    ]);
+    $otherUser = User::factory()->create();
+    $mediaComment->likes()->create(['user_id' => $otherUser->id]);
+    $mediaComment->update(['likes_count' => 1]);
+    $post->bookmarks()->create(['user_id' => $this->student->id]);
+
+    $this->actingAs($this->student);
+    foreach ([$postComment, $mediaReply] as $comment) {
+        $this->postJson(route('community.comments.like', $comment))->assertOk();
+    }
+    $this->postJson(route('community.media.like', $media))->assertOk();
+
+    $isProfile = in_array($view, ['profile', 'saved profile'], true);
+    $prefix = match ($view) {
+        'profile' => 'profile.posts.0',
+        'saved profile' => 'profile.saved_posts.0',
+        default => 'posts.0',
+    };
+    $url = $isProfile
+        ? route('community.users.show', $this->student)
+        : route('community.index', $view === 'saved feed' ? ['tab' => 'saved'] : []);
+    $preventedLazyLoading = Model::preventsLazyLoading();
+    Model::preventLazyLoading();
+
+    try {
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component($isProfile ? 'CommunityProfile' : 'Community')
+                ->where($prefix.'.id', $post->id)
+                ->where($prefix.'.likes_count', 0)
+                ->where($prefix.'.is_liked', false)
+                ->where($prefix.'.comments_count', 2)
+                ->has($prefix.'.comments', 1)
+                ->where($prefix.'.comments.0.id', $postComment->id)
+                ->where($prefix.'.comments.0.post_media_id', null)
+                ->where($prefix.'.comments.0.likes_count', 1)
+                ->where($prefix.'.comments.0.is_liked', true)
+                ->has($prefix.'.comments.0.replies', 1)
+                ->where($prefix.'.comments.0.replies.0.id', $postReply->id)
+                ->where($prefix.'.comments.0.replies.0.is_liked', false)
+                ->has($prefix.'.media', 2)
+                ->where($prefix.'.media.0.id', $media->id)
+                ->where($prefix.'.media.0.likes_count', 1)
+                ->where($prefix.'.media.0.is_liked', true)
+                ->where($prefix.'.media.0.comments_count', 2)
+                ->has($prefix.'.media.0.comments', 1)
+                ->where($prefix.'.media.0.comments.0.id', $mediaComment->id)
+                ->where($prefix.'.media.0.comments.0.post_media_id', $media->id)
+                ->where($prefix.'.media.0.comments.0.likes_count', 1)
+                ->where($prefix.'.media.0.comments.0.is_liked', false)
+                ->has($prefix.'.media.0.comments.0.replies', 1)
+                ->where($prefix.'.media.0.comments.0.replies.0.id', $mediaReply->id)
+                ->where($prefix.'.media.0.comments.0.replies.0.post_media_id', $media->id)
+                ->where($prefix.'.media.0.comments.0.replies.0.likes_count', 1)
+                ->where($prefix.'.media.0.comments.0.replies.0.is_liked', true)
+                ->where($prefix.'.media.1.id', $sibling->id)
+                ->where($prefix.'.media.1.likes_count', 0)
+                ->where($prefix.'.media.1.is_liked', false)
+                ->where($prefix.'.media.1.comments_count', 0)
+                ->has($prefix.'.media.1.comments', 0)
+            );
+    } finally {
+        Model::preventLazyLoading($preventedLazyLoading);
+    }
+
+    expect($postComment->fresh()->post_media_id)->toBeNull();
+    expect($post->fresh()->likes_count)->toBe(0);
+})->with(['feed', 'saved feed', 'profile', 'saved profile']);
+
+it('does not expose legacy cross-scope replies in post or media threads', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $postComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post root',
+    ]);
+    $mediaComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'post_media_id' => $media->id,
+        'user_id' => $this->student->id,
+        'content' => 'Media root',
+    ]);
+    $legacyReplies = collect([
+        CommunityComment::create([
+            'post_id' => $post->id,
+            'post_media_id' => $media->id,
+            'parent_id' => $postComment->id,
+            'user_id' => $this->student->id,
+            'content' => 'Legacy media reply under post root',
+        ]),
+        CommunityComment::create([
+            'post_id' => $post->id,
+            'parent_id' => $mediaComment->id,
+            'user_id' => $this->student->id,
+            'content' => 'Legacy post reply under media root',
+        ]),
+    ]);
+
+    $this->actingAs($this->student)->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->has('posts.0.comments', 1)
+            ->where('posts.0.comments.0.id', $postComment->id)
+            ->has('posts.0.comments.0.replies', 0)
+            ->has('posts.0.media.0.comments', 1)
+            ->where('posts.0.media.0.comments.0.id', $mediaComment->id)
+            ->has('posts.0.media.0.comments.0.replies', 0)
+        );
+
+    foreach ($legacyReplies as $reply) {
+        $this->assertModelExists($reply);
+    }
+    expect($legacyReplies[0]->fresh()->post_media_id)->toBe($media->id);
+    expect($legacyReplies[1]->fresh()->post_media_id)->toBeNull();
+});
+
+it('keeps legacy attachment interactions on the whole post after reload', function (string $view) {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'attachment_url' => 'legacy-photo.jpg',
+        'attachment_type' => 'image',
+        'likes_count' => 1,
+        'comments_count' => 1,
+    ]);
+    $post->likes()->create(['user_id' => $this->student->id]);
+    $post->bookmarks()->create(['user_id' => $this->student->id]);
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Legacy unscoped comment',
+    ]);
+    $isProfile = in_array($view, ['profile', 'saved profile'], true);
+    $prefix = match ($view) {
+        'profile' => 'profile.posts.0',
+        'saved profile' => 'profile.saved_posts.0',
+        default => 'posts.0',
+    };
+    $url = $isProfile
+        ? route('community.users.show', $this->student)
+        : route('community.index', $view === 'saved feed' ? ['tab' => 'saved'] : []);
+
+    $this->actingAs($this->student)->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component($isProfile ? 'CommunityProfile' : 'Community')
+            ->where($prefix.'.likes_count', 1)
+            ->where($prefix.'.is_liked', true)
+            ->where($prefix.'.comments_count', 1)
+            ->has($prefix.'.comments', 1)
+            ->where($prefix.'.comments.0.id', $comment->id)
+            ->where($prefix.'.comments.0.post_media_id', null)
+            ->has($prefix.'.media', 1)
+            ->where($prefix.'.media.0.id', 0)
+            ->where($prefix.'.media.0.likes_count', 0)
+            ->where($prefix.'.media.0.is_liked', false)
+            ->where($prefix.'.media.0.comments_count', 0)
+            ->has($prefix.'.media.0.comments', 0)
+        );
+
+    expect($post->media()->count())->toBe(0);
+    expect($comment->fresh()->post_media_id)->toBeNull();
+    expect($post->fresh()->comments_count)->toBe(1);
+    expect($post->fresh()->likes_count)->toBe(1);
+})->with(['feed', 'saved feed', 'profile', 'saved profile']);
+
+it('deletes nested comment trees while decrementing only their own target counters', function (bool $isMedia, bool $deleteReply) {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $media = $post->media()->create(['media_url' => 'photo.jpg', 'media_type' => 'image']);
+    $sibling = $post->media()->create(['media_url' => 'video.mp4', 'media_type' => 'video']);
+    $this->actingAs($this->student);
+
+    $postComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Post root',
+    ])->assertOk()->json('comment');
+    $mediaComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Media root', 'post_media_id' => $media->id,
+    ])->assertOk()->json('comment');
+    $siblingComment = $this->postJson(route('community.posts.comments.store', $post), [
+        'content' => 'Sibling root', 'post_media_id' => $sibling->id,
+    ])->assertOk()->json('comment');
+    $root = $isMedia ? $mediaComment : $postComment;
+    $target = $isMedia ? $media : $post;
+    $payload = ['post_media_id' => $isMedia ? $media->id : null];
+    $reply = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Reply', 'parent_id' => $root['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 2)->json('comment');
+    $grandchild = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Nested reply', 'parent_id' => $reply['id'],
+    ])->assertOk()->assertJsonPath('comments_count', 3)->json('comment');
+    $survivor = $this->postJson(route('community.posts.comments.store', $post), [
+        ...$payload, 'content' => 'Separate root',
+    ])->assertOk()->assertJsonPath('comments_count', 4)->json('comment');
+    $this->postJson(route('community.comments.like', $grandchild['id']))->assertOk();
+
+    $this->deleteJson(route('community.comments.destroy', $deleteReply ? $reply['id'] : $root['id']))
+        ->assertOk()->assertJsonPath('status', 'deleted');
+
+    expect($target->fresh()->comments_count)->toBe($deleteReply ? 2 : 1);
+    expect(($isMedia ? $post : $media)->fresh()->comments_count)->toBe(1);
+    expect($sibling->fresh()->comments_count)->toBe(1);
+    expect(CommunityComment::find($reply['id']))->toBeNull();
+    expect(CommunityComment::find($grandchild['id']))->toBeNull();
+    expect(CommunityComment::find($root['id']) !== null)->toBe($deleteReply);
+    expect(CommunityComment::find($survivor['id']))->not->toBeNull();
+    expect(CommunityComment::find($siblingComment['id']))->not->toBeNull();
+    $this->assertDatabaseMissing('community_comment_likes', ['comment_id' => $grandchild['id']]);
+})->with([
+    'post root' => [false, false],
+    'post reply' => [false, true],
+    'media root' => [true, false],
+    'media reply' => [true, true],
+]);
+
+it('allows toggling bookmarks on a community post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    // Bookmark
+    $this->actingAs($this->student)
+        ->post(route('community.posts.bookmark', $post))
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_post_bookmarks', [
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    // Unbookmark
+    $this->actingAs($this->student)
+        ->post(route('community.posts.bookmark', $post))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('community_post_bookmarks', [
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+    ]);
+});
+
+it('allows adding a comment to a community post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $this->actingAs($this->student)
+        ->post(route('community.posts.comments.store', $post), [
+            'content' => 'Thanks for sharing these tips!',
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('community_comments', [
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Thanks for sharing these tips!',
+    ]);
+    expect($post->fresh()->comments_count)->toBe(1);
+});
+
+it('allows adding a threaded reply to a comment with JSON response', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $parentComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Parent comment',
+    ]);
+    $post->increment('comments_count');
+
+    $response = $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $post), [
+            'content' => 'This is a threaded reply!',
+            'parent_id' => $parentComment->id,
+        ])
+        ->assertOk()
+        ->assertJsonPath('comment.parent_id', $parentComment->id)
+        ->assertJsonPath('comment.content', 'This is a threaded reply!')
+        ->assertJsonPath('comments_count', 2);
+
+    $this->assertDatabaseHas('community_comments', [
+        'post_id' => $post->id,
+        'parent_id' => $parentComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'This is a threaded reply!',
+    ]);
+
+    expect($post->fresh()->comments_count)->toBe(2);
+});
+
+it('validates that parent comment must belong to the same post', function () {
+    $postA = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+    $postB = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $commentOnPostA = CommunityComment::create([
+        'post_id' => $postA->id,
+        'user_id' => $this->student->id,
+        'content' => 'Comment on Post A',
+    ]);
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.posts.comments.store', $postB), [
+            'content' => 'Attempt reply to post A comment on post B',
+            'parent_id' => $commentOnPostA->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['parent_id']);
+});
+
+it('allows toggling likes on a comment or threaded reply', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Insightful post!',
+        'likes_count' => 0,
+    ]);
+
+    // Like comment via JSON
+    $this->actingAs($this->student)
+        ->postJson(route('community.comments.like', $comment))
+        ->assertOk()
+        ->assertJson([
+            'is_liked' => true,
+            'likes_count' => 1,
+        ]);
+
+    $this->assertDatabaseHas('community_comment_likes', [
+        'comment_id' => $comment->id,
+        'user_id' => $this->student->id,
+    ]);
+    expect($comment->fresh()->likes_count)->toBe(1);
+
+    // Unlike comment via JSON
+    $this->actingAs($this->student)
+        ->postJson(route('community.comments.like', $comment))
+        ->assertOk()
+        ->assertJson([
+            'is_liked' => false,
+            'likes_count' => 0,
+        ]);
+
+    $this->assertDatabaseMissing('community_comment_likes', [
+        'comment_id' => $comment->id,
+        'user_id' => $this->student->id,
+    ]);
+    expect($comment->fresh()->likes_count)->toBe(0);
+});
+
+it('returns full profile preview for classmate in same section', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $classmate = User::factory()->create([
+        'name' => 'Sarah Chen',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $this->student->sections()->attach($section);
+    $classmate->sections()->attach($section);
+
+    $this->actingAs($this->student)
+        ->get(route('community.users.preview', $classmate))
+        ->assertOk()
+        ->assertJson([
+            'is_masked' => false,
+            'name' => 'Sarah Chen',
+            'can_follow' => true,
+        ]);
+});
+
+it('returns masked profile preview for student in another section', function () {
+    $otherSection = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $otherStudent = User::factory()->create([
+        'name' => 'Secret Student',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $otherStudent->sections()->attach($otherSection);
+
+    $this->actingAs($this->student)
+        ->get(route('community.users.preview', $otherStudent))
+        ->assertOk()
+        ->assertJson([
+            'is_masked' => true,
+            'can_follow' => false,
+            'likes_received' => 0,
+        ]);
+});
+
+it('renders dedicated community lounge profile page for classmate in same section', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $classmate = User::factory()->create([
+        'name' => 'Alex Rivera',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $this->student->sections()->attach($section);
+    $classmate->sections()->attach($section);
+
+    // Create posts with likes
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $classmate->id,
+        'section_id' => $section->id,
+        'content' => 'Studying computer networks in the lounge!',
+        'likes_count' => 5,
+        'is_anonymous' => false,
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.users.show', $classmate))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('CommunityProfile')
+            ->where('profile.is_masked', false)
+            ->where('profile.name', 'Alex Rivera')
+            ->where('profile.likes_received', 5)
+            ->where('profile.posts_count', 1)
+            ->has('profile.posts', 1)
+        );
+});
+
+it('shields community profile when student belongs to a different section', function () {
+    $otherSection = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $otherStudent = User::factory()->create([
+        'name' => 'Hidden Classmate',
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $otherStudent->sections()->attach($otherSection);
+
+    $this->actingAs($this->student)
+        ->get(route('community.users.show', $otherStudent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('CommunityProfile')
+            ->where('profile.is_masked', true)
+            ->where('profile.can_follow', false)
+            ->has('profile.posts', 0)
+        );
+});
+
+it('includes saved posts tab when viewing own community lounge profile', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $bookmarkedPost = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'content' => 'Resourceful network topology cheat sheet',
+    ]);
+
+    $this->student->communityBookmarks()->create([
+        'post_id' => $bookmarkedPost->id,
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.users.show', $this->student))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('CommunityProfile')
+            ->where('profile.is_self', true)
+            ->where('profile.is_masked', false)
+            ->has('profile.saved_posts', 1)
+        );
+});
+
+it('allows authenticated student to upload a 24h photo story (MyDay)', function () {
+    Storage::fake('public');
+
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $file = UploadedFile::fake()->image('my_day.jpg', 600, 800)->size(2048);
+
+    $response = $this->actingAs($this->student)
+        ->post(route('community.stories.store'), [
+            'media' => $file,
+            'caption' => 'Morning study session in the lounge!',
+            'duration_seconds' => 5,
+        ]);
+
+    $response->assertRedirect();
+
+    $story = CommunityStory::where('user_id', $this->student->id)->latest()->first();
+    expect($story)->not->toBeNull();
+    expect($story->media_type)->toBe('image');
+    expect($story->caption)->toBe('Morning study session in the lounge!');
+    expect($story->duration_seconds)->toBe(5);
+    expect($story->expires_at->isFuture())->toBeTrue();
+    Storage::disk('public')->assertExists($story->media_url);
+});
+
+it('allows authenticated student to upload a video story up to 30MB and records duration', function () {
+    Storage::fake('public');
+
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $videoFile = UploadedFile::fake()->create('clip.mp4', 15000, 'video/mp4');
+
+    $response = $this->actingAs($this->student)
+        ->postJson(route('community.stories.store'), [
+            'media' => $videoFile,
+            'caption' => 'Network lab demo',
+            'duration_seconds' => 20,
+        ]);
+
+    $response->assertCreated()
+        ->assertJsonStructure([
+            'id',
+            'media_url',
+            'media_type',
+            'duration_seconds',
+            'caption',
+            'expires_at',
+        ])
+        ->assertJson([
+            'media_type' => 'video',
+            'duration_seconds' => 20,
+            'caption' => 'Network lab demo',
+        ]);
+
+    $story = CommunityStory::find($response->json('id'));
+    expect($story->media_type)->toBe('video');
+    expect($story->duration_seconds)->toBe(20);
+});
+
+it('validates video duration and rejects duration exceeding 35s', function () {
+    Storage::fake('public');
+
+    $videoFile = UploadedFile::fake()->create('long_video.mp4', 5000, 'video/mp4');
+
+    $this->actingAs($this->student)
+        ->postJson(route('community.stories.store'), [
+            'media' => $videoFile,
+            'duration_seconds' => 45,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['duration_seconds']);
+});
+
+it('only includes non-expired active stories in community feed tray', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    // Active story (expires in 20 hours)
+    $activeStory = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/active.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->addHours(20),
+    ]);
+
+    // Expired story (expired 2 hours ago)
+    $expiredStory = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/expired.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->subHours(2),
+    ]);
+
+    $this->actingAs($this->student)
+        ->get(route('community.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Community')
+            ->has('stories', 1)
+            ->where('stories.0.stories.0.id', $activeStory->id)
+            ->has('stories.0.stories', 1)
+        );
+});
+
+it('records unique views on community story', function () {
+    $story = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/story.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'views_count' => 0,
+        'expires_at' => now()->addHours(24),
+    ]);
+
+    $viewer = User::factory()->create(['current_workspace_id' => $this->workspace->id]);
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $viewer->id,
+        'token' => 'viewer-token-1',
+        'accepted_at' => now(),
+    ]);
+
+    // First view: increments views_count
+    $this->actingAs($viewer)
+        ->postJson(route('community.stories.view', $story))
+        ->assertOk()
+        ->assertJson([
+            'status' => 'ok',
+            'views_count' => 1,
+        ]);
+
+    expect($story->fresh()->views_count)->toBe(1);
+
+    // Duplicate view by same viewer: does not double count
+    $this->actingAs($viewer)
+        ->postJson(route('community.stories.view', $story))
+        ->assertOk()
+        ->assertJson([
+            'status' => 'ok',
+            'views_count' => 1,
+        ]);
+
+    expect($story->fresh()->views_count)->toBe(1);
+});
+
+it('allows owner to delete their community story', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->image('delete_me.jpg');
+    $path = Storage::disk('public')->putFile('community-stories', $file);
+
+    $story = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'media_url' => $path,
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->addHours(24),
+    ]);
+
+    Storage::disk('public')->assertExists($path);
+
+    $this->actingAs($this->student)
+        ->deleteJson(route('community.stories.destroy', $story))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_stories', ['id' => $story->id]);
+    Storage::disk('public')->assertMissing($path);
+});
+
+it('allows authenticated student to react to a community story and toggles on repeated tap', function () {
+    $viewer = User::factory()->create();
+    CommunityInvite::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $viewer->id,
+        'token' => 'viewer-token-2',
+        'accepted_at' => now(),
+    ]);
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $viewer->sections()->attach($section);
+    $this->student->sections()->attach($section);
+
+    $story = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/story.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->addHours(24),
+    ]);
+
+    // First reaction
+    $response = $this->actingAs($viewer)
+        ->postJson(route('community.stories.react', $story), [
+            'reaction' => '🔥',
+        ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'success' => true,
+            'story_id' => $story->id,
+            'user_reaction' => '🔥',
+            'is_reacted' => true,
+            'reactions_count' => 1,
+        ]);
+
+    $this->assertDatabaseHas('community_story_reactions', [
+        'story_id' => $story->id,
+        'user_id' => $viewer->id,
+        'reaction' => '🔥',
+    ]);
+
+    // Second tap on same emoji toggles it off
+    $toggleResponse = $this->actingAs($viewer)
+        ->postJson(route('community.stories.react', $story), [
+            'reaction' => '🔥',
+        ]);
+
+    $toggleResponse->assertOk()
+        ->assertJson([
+            'success' => true,
+            'story_id' => $story->id,
+            'user_reaction' => null,
+            'is_reacted' => false,
+            'reactions_count' => 0,
+        ]);
+
+    $this->assertDatabaseMissing('community_story_reactions', [
+        'story_id' => $story->id,
+        'user_id' => $viewer->id,
+    ]);
+});
+
+it('returns story archive containing both active and expired stories', function () {
+    $section = Section::factory()->create(['workspace_id' => $this->workspace->id]);
+    $this->student->sections()->attach($section);
+
+    $activeStory = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/active.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->addHours(12),
+    ]);
+
+    $expiredStory = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'section_id' => $section->id,
+        'user_id' => $this->student->id,
+        'media_url' => 'community-stories/expired.jpg',
+        'media_type' => 'image',
+        'duration_seconds' => 5,
+        'expires_at' => now()->subHours(5),
+    ]);
+
+    $response = $this->actingAs($this->student)
+        ->getJson(route('community.stories.archive'));
+
+    $response->assertOk()
+        ->assertJsonCount(2, 'stories')
+        ->assertJsonFragment(['id' => $activeStory->id, 'is_expired' => false])
+        ->assertJsonFragment(['id' => $expiredStory->id, 'is_expired' => true]);
+});
+
+it('allows student to pin an active or expired story to their profile featured highlights', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->image('story_to_pin.jpg');
+    $path = Storage::disk('public')->putFile('community-stories', $file);
+
+    $story = CommunityStory::create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'media_url' => $path,
+        'media_type' => 'image',
+        'caption' => 'Memorable hackathon moment',
+        'duration_seconds' => 5,
+        'expires_at' => now()->subHours(2),
+    ]);
+
+    $response = $this->actingAs($this->student)
+        ->postJson(route('community.profile.featured.store'), [
+            'story_id' => $story->id,
+            'title' => 'Hackathon Win',
+        ]);
+
+    $response->assertCreated();
+
+    $featured = CommunityProfileFeatured::where('user_id', $this->student->id)->first();
+    expect($featured)->not->toBeNull();
+    expect($featured->title)->toBe('Hackathon Win');
+    expect($featured->media_type)->toBe('image');
+    Storage::disk('public')->assertExists($featured->media_url);
+    Storage::disk('public')->assertExists($path);
+});
+
+it('allows student to add and display featured media highlights on lounge profile', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->image('highlight1.jpg', 800, 600)->size(1500);
+
+    $this->actingAs($this->student)
+        ->post(route('community.profile.featured.store'), [
+            'media' => $file,
+            'title' => 'Campus Lab Setup',
+        ])
+        ->assertRedirect();
+
+    $featured = CommunityProfileFeatured::where('user_id', $this->student->id)->first();
+    expect($featured)->not->toBeNull();
+    expect($featured->title)->toBe('Campus Lab Setup');
+    expect($featured->media_type)->toBe('image');
+    Storage::disk('public')->assertExists($featured->media_url);
+
+    // Verify it is loaded on user profile
+    $this->actingAs($this->student)
+        ->get(route('community.users.show', $this->student))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('CommunityProfile')
+            ->has('profile.featured_media', 1)
+            ->where('profile.featured_media.0.title', 'Campus Lab Setup')
+        );
+});
+
+it('enforces maximum of 6 featured media items per profile', function () {
+    Storage::fake('public');
+
+    // Create 6 items
+    for ($i = 0; $i < 6; $i++) {
+        CommunityProfileFeatured::create([
+            'user_id' => $this->student->id,
+            'media_url' => "community-featured/item_{$i}.jpg",
+            'media_type' => 'image',
+            'title' => "Highlight {$i}",
+            'sort_order' => $i,
+        ]);
+    }
+
+    $file = UploadedFile::fake()->image('item_7.jpg');
+
+    $this->actingAs($this->student)
+        ->post(route('community.profile.featured.store'), [
+            'media' => $file,
+            'title' => '7th item attempt',
+        ])
+        ->assertSessionHasErrors(['media']);
+
+    expect(CommunityProfileFeatured::where('user_id', $this->student->id)->count())->toBe(6);
+});
+
+it('allows owner to delete a featured media item', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->image('remove_feat.jpg');
+    $path = Storage::disk('public')->putFile('community-featured', $file);
+
+    $featured = CommunityProfileFeatured::create([
+        'user_id' => $this->student->id,
+        'media_url' => $path,
+        'media_type' => 'image',
+        'title' => 'Delete Me',
+        'sort_order' => 0,
+    ]);
+
+    Storage::disk('public')->assertExists($path);
+
+    $this->actingAs($this->student)
+        ->deleteJson(route('community.profile.featured.destroy', $featured))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_profile_featured', ['id' => $featured->id]);
+    Storage::disk('public')->assertMissing($path);
+});
+
+it('allows post owner to update their post with json response', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Original post content',
+        'is_anonymous' => false,
+    ]);
+
+    $this->actingAs($this->student)
+        ->putJson(route('community.posts.update', $post), [
+            'content' => 'Updated post content by owner',
+            'is_anonymous' => true,
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => 'updated',
+            'post' => [
+                'id' => $post->id,
+                'content' => 'Updated post content by owner',
+                'is_anonymous' => true,
+            ],
+        ]);
+
+    $this->assertDatabaseHas('community_posts', [
+        'id' => $post->id,
+        'content' => 'Updated post content by owner',
+        'is_anonymous' => true,
+    ]);
+});
+
+it('allows admin to update another student post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Student post content',
+    ]);
+
+    $admin = User::factory()->superAdmin()->create();
+
+    $this->actingAs($admin)
+        ->putJson(route('community.posts.update', $post), [
+            'content' => 'Moderated by admin',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => 'updated',
+            'post' => [
+                'id' => $post->id,
+                'content' => 'Moderated by admin',
+            ],
+        ]);
+
+    $this->assertDatabaseHas('community_posts', [
+        'id' => $post->id,
+        'content' => 'Moderated by admin',
+    ]);
+});
+
+it('forbids another student from updating a post they do not own', function () {
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Student post',
+    ]);
+
+    $this->actingAs($otherStudent)
+        ->putJson(route('community.posts.update', $post), [
+            'content' => 'Malicious update attempt',
+        ])
+        ->assertForbidden();
+
+    expect($post->fresh()->content)->toBe('Student post');
+});
+
+it('allows post owner to delete their post and cleans up attachment and cascaded comments', function () {
+    Storage::fake('public');
+
+    $file = UploadedFile::fake()->image('test_doc.jpg');
+    $path = Storage::disk('public')->putFile('community-attachments', $file);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post with attachment and comments to delete',
+        'attachment_url' => $path,
+        'attachment_type' => 'image',
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Comment on post to be deleted',
+    ]);
+
+    Storage::disk('public')->assertExists($path);
+
+    $this->actingAs($this->student)
+        ->deleteJson(route('community.posts.destroy', $post))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_posts', ['id' => $post->id]);
+    $this->assertDatabaseMissing('community_comments', ['id' => $comment->id]);
+    Storage::disk('public')->assertMissing($path);
+});
+
+it('allows admin to delete another student post', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post to be removed by admin',
+    ]);
+
+    $admin = User::factory()->superAdmin()->create();
+
+    $this->actingAs($admin)
+        ->deleteJson(route('community.posts.destroy', $post))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_posts', ['id' => $post->id]);
+});
+
+it('forbids another student from deleting a post they do not own', function () {
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'content' => 'Post to remain intact',
+    ]);
+
+    $this->actingAs($otherStudent)
+        ->deleteJson(route('community.posts.destroy', $post))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('community_posts', ['id' => $post->id]);
+});
+
+it('allows comment owner to update their comment with json response', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Original comment',
+    ]);
+
+    $this->actingAs($this->student)
+        ->putJson(route('community.comments.update', $comment), [
+            'content' => 'Updated comment content',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => 'updated',
+            'comment' => [
+                'id' => $comment->id,
+                'content' => 'Updated comment content',
+            ],
+        ]);
+
+    $this->assertDatabaseHas('community_comments', [
+        'id' => $comment->id,
+        'content' => 'Updated comment content',
+    ]);
+});
+
+it('allows admin to update another student comment', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Student comment to moderate',
+    ]);
+
+    $admin = User::factory()->admin()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('community.comments.update', $comment), [
+            'content' => 'Moderated comment content',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => 'updated',
+            'comment' => [
+                'id' => $comment->id,
+                'content' => 'Moderated comment content',
+            ],
+        ]);
+
+    $this->assertDatabaseHas('community_comments', [
+        'id' => $comment->id,
+        'content' => 'Moderated comment content',
+    ]);
+});
+
+it('forbids another student from updating a comment they do not own', function () {
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Protected comment',
+    ]);
+
+    $this->actingAs($otherStudent)
+        ->putJson(route('community.comments.update', $comment), [
+            'content' => 'Hacked content',
+        ])
+        ->assertForbidden();
+
+    expect($comment->fresh()->content)->toBe('Protected comment');
+});
+
+it('allows comment owner to delete top level comment and decrements post comments_count including replies', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'comments_count' => 3,
+    ]);
+
+    $topComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Top comment to delete',
+    ]);
+
+    $reply1 = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $topComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Child reply 1',
+    ]);
+
+    $reply2 = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $topComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Child reply 2',
+    ]);
+
+    $this->actingAs($this->student)
+        ->deleteJson(route('community.comments.destroy', $topComment))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_comments', ['id' => $topComment->id]);
+    $this->assertDatabaseMissing('community_comments', ['id' => $reply1->id]);
+    $this->assertDatabaseMissing('community_comments', ['id' => $reply2->id]);
+    expect($post->fresh()->comments_count)->toBe(0);
+});
+
+it('allows reply owner to delete threaded reply and decrements post comments_count by 1', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'comments_count' => 2,
+    ]);
+
+    $topComment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Parent comment to stay',
+    ]);
+
+    $reply = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $topComment->id,
+        'user_id' => $this->student->id,
+        'content' => 'Child reply to delete',
+    ]);
+
+    $this->actingAs($this->student)
+        ->deleteJson(route('community.comments.destroy', $reply))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_comments', ['id' => $reply->id]);
+    $this->assertDatabaseHas('community_comments', ['id' => $topComment->id]);
+    expect($post->fresh()->comments_count)->toBe(1);
+});
+
+it('allows admin to delete any comment or reply', function () {
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+        'comments_count' => 1,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Inappropriate comment',
+    ]);
+
+    $admin = User::factory()->admin()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $this->actingAs($admin)
+        ->deleteJson(route('community.comments.destroy', $comment))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_comments', ['id' => $comment->id]);
+    expect($post->fresh()->comments_count)->toBe(0);
+});
+
+it('forbids another student from deleting a comment they do not own', function () {
+    $otherStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $this->student->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $this->student->id,
+        'content' => 'Student comment',
+    ]);
+
+    $this->actingAs($otherStudent)
+        ->deleteJson(route('community.comments.destroy', $comment))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('community_comments', ['id' => $comment->id]);
+});
+
+it('allows post owner to delete comments and replies posted by other users on their post', function () {
+    $postOwner = $this->student;
+    $commenter = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $replier = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+    $unrelatedStudent = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $postOwner->id,
+        'comments_count' => 2,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $commenter->id,
+        'content' => 'Top level comment by commenter',
+    ]);
+
+    $reply = CommunityComment::create([
+        'post_id' => $post->id,
+        'parent_id' => $comment->id,
+        'user_id' => $replier->id,
+        'content' => 'Reply by replier',
+    ]);
+
+    // Unrelated student cannot delete reply
+    $this->actingAs($unrelatedStudent)
+        ->deleteJson(route('community.comments.destroy', $reply))
+        ->assertForbidden();
+
+    // Post owner CAN delete the reply
+    $this->actingAs($postOwner)
+        ->deleteJson(route('community.comments.destroy', $reply))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_comments', ['id' => $reply->id]);
+    expect($post->fresh()->comments_count)->toBe(1);
+
+    // Unrelated student cannot delete top comment
+    $this->actingAs($unrelatedStudent)
+        ->deleteJson(route('community.comments.destroy', $comment))
+        ->assertForbidden();
+
+    // Post owner CAN delete the top comment
+    $this->actingAs($postOwner)
+        ->deleteJson(route('community.comments.destroy', $comment))
+        ->assertOk()
+        ->assertJson(['status' => 'deleted']);
+
+    $this->assertDatabaseMissing('community_comments', ['id' => $comment->id]);
+    expect($post->fresh()->comments_count)->toBe(0);
+});
+
+it('forbids post owner from updating other users comments on their post', function () {
+    $postOwner = $this->student;
+    $commenter = User::factory()->create([
+        'current_workspace_id' => $this->workspace->id,
+    ]);
+
+    $post = CommunityPost::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'user_id' => $postOwner->id,
+    ]);
+
+    $comment = CommunityComment::create([
+        'post_id' => $post->id,
+        'user_id' => $commenter->id,
+        'content' => 'Original text',
+    ]);
+
+    // Post owner cannot edit someone else's comment text
+    $this->actingAs($postOwner)
+        ->putJson(route('community.comments.update', $comment), [
+            'content' => 'Tampered text by post owner',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('community_comments', [
+        'id' => $comment->id,
+        'content' => 'Original text',
+    ]);
+});

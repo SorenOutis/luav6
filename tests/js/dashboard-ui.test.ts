@@ -202,6 +202,29 @@ describe('dashboard student shell', () => {
         expect(wrapper.findAll('.dash-metric')).toHaveLength(1);
         expect(text).not.toContain('Mo');
         expect(text).not.toContain('Tu');
+        wrapper.unmount();
+    });
+
+    it('renders horizontal compact streak card matching mobile reward proportion', () => {
+        const wrapper = mount(StreakCard, {
+            props: {
+                currentStreak: 5,
+                longestStreak: 30,
+                loginDates: [],
+                compact: true,
+            },
+        });
+
+        expect(wrapper.classes()).toContain('mobile-streak-card');
+        expect(wrapper.find('.mobile-streak-card__icon').exists()).toBe(true);
+        expect(wrapper.find('.mobile-streak-card__content').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Streak');
+        expect(wrapper.text()).toContain('5');
+        expect(wrapper.text()).toContain('days');
+        expect(wrapper.text()).not.toContain('Best:');
+        expect(wrapper.text()).not.toContain('Calendar');
+        expect(wrapper.findAll('.dash-metric')).toHaveLength(1);
+        wrapper.unmount();
     });
 
     it('shows only days left and the date on the season card', () => {
@@ -312,5 +335,15 @@ describe('dashboard student shell', () => {
         expect(identity).toContain('grid-column: 1');
         const fox = ruleBody(String.raw`\.mobile-dashboard-greeting__fox`);
         expect(fox).toContain('grid-column: 2');
+    });
+
+    it('preserves loading spinners by excluding animate-spin from low-end animation suppression', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const lowEndGuard = css.match(/html\[data-low-end\]\s*\*:not\(([^)]*)\)/s)?.[1] ?? '';
+        expect(lowEndGuard).toContain('.animate-spin');
+        expect(lowEndGuard).toContain("[class*='animate-spin']");
     });
 });

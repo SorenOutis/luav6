@@ -110,6 +110,109 @@ const stockTone = computed(() => {
     return 'text-[var(--st-ink)]';
 });
 
+const colorwaySwatch = (name: string): string => {
+    const lower = name.toLowerCase();
+    if (
+        lower.includes('obsidian') ||
+        lower.includes('black') ||
+        lower.includes('noir') ||
+        lower.includes('dark')
+    ) {
+        return '#1b1b1f';
+    }
+    if (
+        lower.includes('alabaster') ||
+        lower.includes('white') ||
+        lower.includes('cream') ||
+        lower.includes('ivory') ||
+        lower.includes('light')
+    ) {
+        return '#f4efe6';
+    }
+    if (
+        lower.includes('heather') ||
+        lower.includes('grey') ||
+        lower.includes('gray')
+    ) {
+        return '#8e8e93';
+    }
+    if (
+        lower.includes('navy') ||
+        lower.includes('blue') ||
+        lower.includes('indigo')
+    ) {
+        return '#1e293b';
+    }
+    if (
+        lower.includes('olive') ||
+        lower.includes('green') ||
+        lower.includes('sage') ||
+        lower.includes('forest')
+    ) {
+        return '#3f4f44';
+    }
+    if (
+        lower.includes('crimson') ||
+        lower.includes('red') ||
+        lower.includes('rust') ||
+        lower.includes('terracotta')
+    ) {
+        return '#b85437';
+    }
+    if (
+        lower.includes('tan') ||
+        lower.includes('sand') ||
+        lower.includes('camel') ||
+        lower.includes('khaki') ||
+        lower.includes('beige')
+    ) {
+        return '#d4c7b5';
+    }
+    return '#8a8378';
+};
+
+const modalSpecChips = computed<string[]>(() => {
+    const desc = props.merch?.description;
+    if (!desc) {
+        return [];
+    }
+
+    const chips: string[] = [];
+    const text = desc.toLowerCase();
+
+    if (text.includes('gsm')) {
+        const match = desc.match(/\b\d+\s*gsm\b/i);
+        if (match) {
+            chips.push(match[0].toUpperCase());
+        }
+    } else if (text.includes('16oz') || text.includes('oz')) {
+        const match = desc.match(/\b\d+\s*oz\b/i);
+        if (match) {
+            chips.push(match[0]);
+        }
+    }
+
+    if (text.includes('combed cotton')) {
+        chips.push('Combed Cotton');
+    } else if (text.includes('cotton canvas')) {
+        chips.push('Cotton Canvas');
+    } else if (text.includes('fleece')) {
+        chips.push('Fleece Knit');
+    } else if (text.includes('wool-blend') || text.includes('wool blend')) {
+        chips.push('Wool Blend');
+    }
+
+    if (text.includes('embroidered') || text.includes('embroidery')) {
+        chips.push('Embroidered');
+    } else if (text.includes('double-lined') || text.includes('double lined')) {
+        chips.push('Double-Lined Hood');
+    } else if (text.includes('structured')) {
+        chips.push('Structured Crown');
+    }
+
+    return chips.slice(0, 3);
+});
+
 const handlePrevious = () => {
     if (!props.items || props.items.length <= 1 || currentIndex.value === -1)
         return;
@@ -357,7 +460,22 @@ onUnmounted(() => {
                                             "
                                             @click="selectedVariantIndex = idx"
                                         >
-                                            {{ variant.name }}
+                                            <span
+                                                class="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-black/10 transition-transform duration-200 dark:border-white/20"
+                                                :class="
+                                                    selectedVariantIndex === idx
+                                                        ? 'scale-110 ring-1 ring-[var(--st-ink)]/20'
+                                                        : ''
+                                                "
+                                                :style="{
+                                                    backgroundColor:
+                                                        colorwaySwatch(
+                                                            variant.name,
+                                                        ),
+                                                }"
+                                                aria-hidden="true"
+                                            />
+                                            <span>{{ variant.name }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -376,6 +494,19 @@ onUnmounted(() => {
                                             'Crafted with premium materials and signature styling for creators, educators, and students.'
                                         }}
                                     </p>
+
+                                    <div
+                                        v-if="modalSpecChips.length > 0"
+                                        class="mt-3 flex flex-wrap gap-1.5"
+                                    >
+                                        <span
+                                            v-for="chip in modalSpecChips"
+                                            :key="chip"
+                                            class="inline-flex items-center rounded-md border border-[var(--st-hairline)] bg-[var(--st-well-bg)]/60 px-2 py-0.5 text-[11px] font-medium tracking-tight text-[var(--st-ink-mute)]"
+                                        >
+                                            {{ chip }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -406,11 +537,16 @@ onUnmounted(() => {
                                 </button>
                             </div>
 
-                            <p
-                                class="st-label mt-3 text-[var(--st-ink-mute)] opacity-70"
+                            <div
+                                class="mt-3 flex items-center justify-between text-[var(--st-ink-mute)] opacity-70"
                             >
-                                Opens koamishin.com — external store
-                            </p>
+                                <p class="st-label text-[10px]">
+                                    Opens koamishin.com — external store
+                                </p>
+                                <p class="st-label hidden text-[10px] sm:block">
+                                    Esc to close · ← → navigate
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
