@@ -64,6 +64,7 @@ class PendingAiActionService
         'generate_exam_questions',
         'manage_maintenance',
         'export_report',
+        'remember_bot_memory',
     ];
 
     public function __construct(
@@ -87,6 +88,8 @@ class PendingAiActionService
         array $preview,
         ?int $chatSessionId = null,
         ?int $workspaceId = null,
+        ?int $botId = null,
+        ?int $handoffId = null,
     ): PendingAiAction {
         $user = auth()->user();
         if (! $user?->is_admin) {
@@ -149,11 +152,13 @@ class PendingAiActionService
 
         $nonce = Str::random(64);
 
-        return DB::transaction(function () use ($workspaceId, $user, $chatSessionId, $type, $title, $summary, $payload, $payloadHash, $preview, $nonce): PendingAiAction {
+        return DB::transaction(function () use ($workspaceId, $user, $chatSessionId, $botId, $handoffId, $type, $title, $summary, $payload, $payloadHash, $preview, $nonce): PendingAiAction {
             $action = PendingAiAction::query()->create([
                 'workspace_id' => $workspaceId,
                 'user_id' => $user->id,
                 'chat_session_id' => $chatSessionId,
+                'bot_id' => $botId,
+                'handoff_id' => $handoffId,
                 'action_type' => $type,
                 'title' => $title,
                 'summary' => $summary,
@@ -363,7 +368,7 @@ class PendingAiActionService
             throw new PendingAiActionException('AI action not found.', 404);
         }
 
-        $action->loadMissing('workspace:id,public_id,name');
+        $action->loadMissing('workspace:id,public_id,name', 'bot:id,name,slug', 'handoff:id,from_bot_id,to_bot_id,depth');
 
         return [
             'id' => $action->public_id,
@@ -374,6 +379,17 @@ class PendingAiActionService
             'status' => $action->status,
             'policy' => $action->preview['policy'] ?? null,
             'policyChecks' => $action->preview['policy_checks'] ?? [],
+            'bot' => $action->bot ? [
+                'id' => $action->bot->id,
+                'name' => $action->bot->name,
+                'slug' => $action->bot->slug,
+            ] : null,
+            'handoff' => $action->handoff ? [
+                'id' => $action->handoff->id,
+                'fromBotId' => $action->handoff->from_bot_id,
+                'toBotId' => $action->handoff->to_bot_id,
+                'depth' => $action->handoff->depth,
+            ] : null,
             'workspace' => $action->workspace ? [
                 'id' => $action->workspace->public_id,
                 'name' => $action->workspace->name,

@@ -13,6 +13,8 @@ abstract class PendingWriteTool
     public function __construct(
         protected ?PendingAiActionService $pendingActions = null,
         protected ?int $chatSessionId = null,
+        protected ?int $botId = null,
+        protected ?int $handoffId = null,
     ) {
         $this->pendingActions ??= app(PendingAiActionService::class);
     }
@@ -59,6 +61,8 @@ abstract class PendingWriteTool
                 ['changes' => $changes],
                 $this->chatSessionId,
                 $targetWorkspaceId,
+                $this->botId,
+                $this->handoffId,
             );
         } catch (PendingAiActionException $exception) {
             return 'Error preparing approval: '.$exception->getMessage();

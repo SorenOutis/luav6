@@ -2,12 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\AiBot;
 use App\Models\ChatSession;
 use App\Models\PendingAiAction;
 use App\Models\Section;
 use App\Models\Setting;
 use App\Services\AiSdkProviderService;
 use App\Services\GeminiAIService;
+use App\Support\AiBotsGate;
 use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
@@ -104,6 +106,7 @@ class AdminAiChat extends Page
         $initialActiveSession = null;
 
         $sessionsQuery = ChatSession::query()
+            ->with('bot:id,name,slug')
             ->where('user_id', $user?->id)
             ->latest('updated_at')
             ->limit(30)
@@ -141,11 +144,25 @@ class AdminAiChat extends Page
             $initialActiveSession = $matchedSession;
         }
 
+        $workspaceId = $workspace?->id;
+        $activeBots = $workspaceId
+            ? AiBot::query()->withoutGlobalScope('workspace')->where('workspace_id', $workspaceId)->where('is_active', true)->orderBy('name')->get()
+            : collect();
+        $specialists = $activeBots->where('kind', AiBot::KIND_SPECIALIST)->values();
+        $coordinator = $activeBots->firstWhere('kind', AiBot::KIND_COORDINATOR);
+
         $initialSessions = $sessionsQuery
             ->map(fn (ChatSession $session) => [
                 'id' => $session->id,
                 'uuid' => $session->uuid ?? null,
                 'title' => $session->title ?: 'New chat',
+                'mode' => $session->mode,
+                'bot' => $session->bot ? [
+                    'id' => $session->bot->id,
+                    'name' => $session->bot->name,
+                    'slug' => $session->bot->slug,
+                ] : null,
+                'participantBotIds' => array_values(array_map('intval', (array) $session->participant_bot_ids)),
                 'updated_at' => $session->updated_at?->toISOString(),
                 'updated_at_human' => $session->updated_at?->diffForHumans(),
             ])
@@ -174,8 +191,29 @@ class AdminAiChat extends Page
                 'id' => $initialActiveSession->id,
                 'uuid' => $initialActiveSession->uuid,
                 'title' => $initialActiveSession->title ?: 'New chat',
+                'mode' => $initialActiveSession->mode,
+                'bot' => $initialActiveSession->bot ? [
+                    'id' => $initialActiveSession->bot->id,
+                    'name' => $initialActiveSession->bot->name,
+                    'slug' => $initialActiveSession->bot->slug,
+                ] : null,
+                'participantBotIds' => array_values(array_map('intval', (array) $initialActiveSession->participant_bot_ids)),
             ] : null,
             'workspaceStats' => $workspaceStats,
+            'botsDisabled' => ! AiBotsGate::enabled(),
+            'aiBotsSettingsUrl' => AiSettings::getUrl(),
+            'botPicker' => [
+                'coordinator' => $coordinator ? [
+                    'id' => $coordinator->id,
+                    'name' => $coordinator->name,
+                    'slug' => $coordinator->slug,
+                ] : null,
+                'specialists' => $specialists->map(fn (AiBot $bot): array => [
+                    'id' => $bot->id,
+                    'name' => $bot->name,
+                    'slug' => $bot->slug,
+                ])->all(),
+            ],
         ];
     }
 }

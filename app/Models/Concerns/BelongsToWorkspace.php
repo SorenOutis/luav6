@@ -68,6 +68,11 @@ trait BelongsToWorkspace
                 'ai_budget_events',
                 'ai_essay_feedback_drafts',
                 'ai_review_events',
+                'ai_bots',
+                'ai_bot_policy_revisions',
+                'ai_bot_handoffs',
+                'ai_bot_routines',
+                'ai_bot_memories',
                 'community_posts',
                 'community_stories',
             ], true);

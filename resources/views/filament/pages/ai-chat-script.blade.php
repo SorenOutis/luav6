@@ -13,6 +13,11 @@
                 modelName: config.modelName,
                 workspace: config.workspace,
                 adminUser: config.adminUser,
+                botPicker: config.botPicker || { coordinator: null, specialists: [] },
+                selectedBot: '',
+                teamBotIds: [],
+                activeSessionMode: 'solo',
+                activeBotId: null,
                 sessions: config.initialSessions || [],
                 initialActiveSession: config.initialActiveSession || null,
                 workspaceStats: config.workspaceStats || {},
@@ -296,6 +301,9 @@
                     if (session) {
                         this.activeSessionId = session.id;
                         this.activeSessionUuid = session.uuid || null;
+                        this.activeSessionMode = session.mode || 'solo';
+                        this.activeBotId = session.bot ? session.bot.id : null;
+                        this.teamBotIds = Array.isArray(session.participantBotIds) ? [...session.participantBotIds] : [];
                     } else {
                         if (typeof identifier === 'number' || (typeof identifier === 'string' && /^\d+$/.test(identifier))) {
                             this.activeSessionId = parseInt(identifier, 10);
@@ -387,6 +395,18 @@
 
                 async createChatSession() {
                     try {
+                        const payload = {};
+                        if (this.selectedBot === 'team') {
+                            if (!Array.isArray(this.teamBotIds) || this.teamBotIds.length === 0) {
+                                alert('Choose at least one specialist for a team chat.');
+                                return null;
+                            }
+                            payload.mode = 'group';
+                            payload.participant_bot_ids = this.teamBotIds.map((id) => parseInt(id, 10));
+                        } else if (this.selectedBot) {
+                            payload.bot_id = parseInt(this.selectedBot, 10);
+                        }
+
                         const res = await fetch('/api/chats', {
                             method: 'POST',
                             headers: {
@@ -395,28 +415,31 @@
                                 'X-CSRF-TOKEN': this.csrfToken,
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
-                            body: JSON.stringify({})
+                            body: JSON.stringify(payload)
                         });
-                        if (res.ok) {
-                            const json = await res.json();
-                            const newSession = {
-                                id: json.session.id,
-                                uuid: json.session.uuid,
-                                title: 'New chat',
-                                updated_at: new Date().toISOString(),
-                                updated_at_human: 'just now'
-                            };
-                            this.sessions.unshift(newSession);
-                            this.activeSessionId = newSession.id;
-                            this.activeSessionUuid = newSession.uuid;
-
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('c', newSession.uuid || newSession.id);
-                            url.searchParams.delete('session');
-                            window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
-
-                            return newSession.id;
+                        if (!res.ok) {
+                            const error = await res.json().catch(() => null);
+                            alert((error && (error.message || (error.errors && Object.values(error.errors).flat().join(' ')))) || 'Could not create the chat session.');
+                            return null;
                         }
+                        const json = await res.json();
+                        const newSession = {
+                            id: json.session.id,
+                            uuid: json.session.uuid,
+                            title: 'New chat',
+                            updated_at: new Date().toISOString(),
+                            updated_at_human: 'just now'
+                        };
+                        this.sessions.unshift(newSession);
+                        this.activeSessionId = newSession.id;
+                        this.activeSessionUuid = newSession.uuid;
+
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('c', newSession.uuid || newSession.id);
+                        url.searchParams.delete('session');
+                        window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
+
+                        return newSession.id;
                     } catch (e) {
                         console.error('Error creating new chat session:', e);
                     }

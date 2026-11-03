@@ -2,71 +2,10 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Contracts\RequiresReplyGuard;
 use App\Ai\Skills\AdminAssistantSkill;
 use App\Ai\Support\AdminAssistantIntent;
-use App\Ai\Tools\ActivityTasksAdminTool;
-use App\Ai\Tools\AdminGradesTool;
-use App\Ai\Tools\AiActionLogTool;
-use App\Ai\Tools\AnnouncementsAdminTool;
-use App\Ai\Tools\AssignmentsAdminTool;
-use App\Ai\Tools\AtRiskStudentsTool;
-use App\Ai\Tools\AwardStudentXpTool;
-use App\Ai\Tools\CoursesAdminTool;
-use App\Ai\Tools\CreateActivityTaskTool;
-use App\Ai\Tools\CreateAssignmentTool;
-use App\Ai\Tools\CreateCourseTool;
-use App\Ai\Tools\CreateExamTool;
-use App\Ai\Tools\CreateLearningMaterialTool;
-use App\Ai\Tools\CreateSectionTool;
-use App\Ai\Tools\CreateUserTool;
-use App\Ai\Tools\DailyReportTool;
-use App\Ai\Tools\DeleteActivityTaskTool;
-use App\Ai\Tools\DeleteAnnouncementTool;
-use App\Ai\Tools\DeleteAssignmentTool;
-use App\Ai\Tools\DeleteCourseTool;
-use App\Ai\Tools\DeleteExamTool;
-use App\Ai\Tools\DeleteGradeTool;
-use App\Ai\Tools\DeleteLearningMaterialTool;
-use App\Ai\Tools\DeleteSectionTool;
-use App\Ai\Tools\DeleteUserTool;
-use App\Ai\Tools\ExamsAdminTool;
-use App\Ai\Tools\ExportReportTool;
-use App\Ai\Tools\FailedJobsTool;
-use App\Ai\Tools\GenerateExamQuestionsTool;
-use App\Ai\Tools\GradeSubmissionTool;
-use App\Ai\Tools\LeaderboardTool;
-use App\Ai\Tools\LearningMaterialsAdminTool;
-use App\Ai\Tools\ListWorkspacesTool;
-use App\Ai\Tools\ManageBadgesRewardsTool;
-use App\Ai\Tools\ManageExamBlocksTool;
-use App\Ai\Tools\ManageLessonQuizTool;
-use App\Ai\Tools\ManageLessonTool;
-use App\Ai\Tools\ManageMaintenanceTool;
-use App\Ai\Tools\PlatformCountsTool;
-use App\Ai\Tools\PostAnnouncementTool;
-use App\Ai\Tools\RecordActivityTaskScoreTool;
-use App\Ai\Tools\RecordGradeTool;
-use App\Ai\Tools\ReplySupportTicketTool;
-use App\Ai\Tools\ResearchTopicTool;
-use App\Ai\Tools\ResetUserPasswordTool;
-use App\Ai\Tools\SeasonAdminTool;
-use App\Ai\Tools\SectionPerformanceTool;
-use App\Ai\Tools\SectionsAdminTool;
-use App\Ai\Tools\SendNotificationTool;
-use App\Ai\Tools\StudentsTool;
-use App\Ai\Tools\SubmissionsToGradeTool;
-use App\Ai\Tools\SupportTicketsTool;
-use App\Ai\Tools\UpdateActivityTaskTool;
-use App\Ai\Tools\UpdateAnnouncementTool;
-use App\Ai\Tools\UpdateAssignmentTool;
-use App\Ai\Tools\UpdateCourseTool;
-use App\Ai\Tools\UpdateExamTool;
-use App\Ai\Tools\UpdateGradeTool;
-use App\Ai\Tools\UpdateLearningMaterialTool;
-use App\Ai\Tools\UpdateSectionTool;
-use App\Ai\Tools\UpdateUserTool;
-use App\Ai\Tools\UserActivityTool;
-use App\Ai\Tools\WorkspaceOverviewTool;
+use App\Ai\Support\ToolRegistry;
 use App\Support\PlatformKnowledge;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Contracts\Agent;
@@ -86,7 +25,7 @@ use Stringable;
  * when write tools are scoped to matching groups rather than the full catalog.
  */
 #[MaxSteps(12)]
-class AdminAssistantAgent implements Agent, Conversational, HasTools
+class AdminAssistantAgent implements Agent, Conversational, HasTools, RequiresReplyGuard
 {
     use Promptable;
 
@@ -181,147 +120,20 @@ Export via export_report stages only — never invent a filename or download URL
      */
     public function tools(): iterable
     {
-        $sid = $this->chatSessionId;
         $groups = $this->intentGroups ?? [AdminAssistantIntent::ALL];
-        $all = in_array(AdminAssistantIntent::ALL, $groups, true);
+        $keys = [];
 
-        $tools = [
-            // Always-on reads
-            new WorkspaceOverviewTool,
-            new StudentsTool,
-            new UserActivityTool,
-            new AtRiskStudentsTool,
-            new SectionPerformanceTool,
-            new LeaderboardTool,
-            new AiActionLogTool,
-            new SupportTicketsTool,
-            new ExamsAdminTool,
-            new CoursesAdminTool,
-            new SectionsAdminTool,
-            new AssignmentsAdminTool,
-            new AnnouncementsAdminTool,
-            new LearningMaterialsAdminTool,
-            new ResearchTopicTool,
-            new ActivityTasksAdminTool,
-            new SubmissionsToGradeTool,
-            new AdminGradesTool,
-            // Platform reads (tool itself enforces Super Admin)
-            new DailyReportTool,
-            new ListWorkspacesTool,
-            new PlatformCountsTool,
-            new FailedJobsTool,
-            new ManageMaintenanceTool(chatSessionId: $sid),
-            new ExportReportTool(chatSessionId: $sid),
-        ];
-
-        if ($all || in_array(AdminAssistantIntent::EXAMS, $groups, true)) {
-            array_push(
-                $tools,
-                new GenerateExamQuestionsTool(chatSessionId: $sid),
-                new CreateExamTool(chatSessionId: $sid),
-                new UpdateExamTool(chatSessionId: $sid),
-                new DeleteExamTool(chatSessionId: $sid),
-                new ManageExamBlocksTool(chatSessionId: $sid),
-            );
+        foreach ($groups as $group) {
+            $keys = array_merge($keys, ToolRegistry::keysForIntent($group));
         }
 
-        if ($all || in_array(AdminAssistantIntent::GRADES, $groups, true)) {
-            array_push(
-                $tools,
-                new RecordGradeTool(chatSessionId: $sid),
-                new UpdateGradeTool(chatSessionId: $sid),
-                new DeleteGradeTool(chatSessionId: $sid),
-                new GradeSubmissionTool(chatSessionId: $sid),
-            );
-        }
+        // Echo has always mounted these two approval-gated platform/export
+        // tools regardless of intent; keep that behaviour for compatibility.
+        $keys = array_merge($keys, ['manage_maintenance', 'export_report']);
 
-        if ($all || in_array(AdminAssistantIntent::USERS, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateUserTool(chatSessionId: $sid),
-                new UpdateUserTool(chatSessionId: $sid),
-                new ResetUserPasswordTool(chatSessionId: $sid),
-                new DeleteUserTool(chatSessionId: $sid),
-                new SendNotificationTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::SECTIONS, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateSectionTool(chatSessionId: $sid),
-                new UpdateSectionTool(chatSessionId: $sid),
-                new DeleteSectionTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::COURSES, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateCourseTool(chatSessionId: $sid),
-                new UpdateCourseTool(chatSessionId: $sid),
-                new DeleteCourseTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::ANNOUNCEMENTS, $groups, true)) {
-            array_push(
-                $tools,
-                new PostAnnouncementTool(chatSessionId: $sid),
-                new UpdateAnnouncementTool(chatSessionId: $sid),
-                new DeleteAnnouncementTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::ASSIGNMENTS, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateAssignmentTool(chatSessionId: $sid),
-                new UpdateAssignmentTool(chatSessionId: $sid),
-                new DeleteAssignmentTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::MATERIALS, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateLearningMaterialTool(chatSessionId: $sid),
-                new UpdateLearningMaterialTool(chatSessionId: $sid),
-                new DeleteLearningMaterialTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::ACTIVITY, $groups, true)) {
-            array_push(
-                $tools,
-                new CreateActivityTaskTool(chatSessionId: $sid),
-                new UpdateActivityTaskTool(chatSessionId: $sid),
-                new DeleteActivityTaskTool(chatSessionId: $sid),
-                new RecordActivityTaskScoreTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::GAMIFICATION, $groups, true)) {
-            array_push(
-                $tools,
-                new AwardStudentXpTool(chatSessionId: $sid),
-                new SeasonAdminTool(chatSessionId: $sid),
-                new ManageBadgesRewardsTool(chatSessionId: $sid),
-            );
-        }
-
-        if ($all || in_array(AdminAssistantIntent::SUPPORT, $groups, true)) {
-            $tools[] = new ReplySupportTicketTool(chatSessionId: $sid);
-        }
-
-        if ($all || in_array(AdminAssistantIntent::LESSONS, $groups, true)) {
-            array_push(
-                $tools,
-                new ManageLessonTool(chatSessionId: $sid),
-                new ManageLessonQuizTool(chatSessionId: $sid),
-            );
-        }
-
-        return $tools;
+        return ToolRegistry::makeMany(
+            array_values(array_unique($keys)),
+            $this->chatSessionId,
+        );
     }
 }

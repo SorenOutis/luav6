@@ -48,5 +48,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CourseUserPivotSeeder::class);
         $this->call(LessonProgressSeeder::class);
         $this->call(MerchSeeder::class);
+        $this->call(AiBotRosterSeeder::class);
     }
 }

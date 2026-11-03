@@ -9,6 +9,7 @@ class ChatMessage extends Model
 {
     protected $fillable = [
         'session_id',
+        'bot_id',
         'role',
         'content',
         'thinking',
@@ -25,5 +26,10 @@ class ChatMessage extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(ChatSession::class, 'session_id');
+    }
+
+    public function bot(): BelongsTo
+    {
+        return $this->belongsTo(AiBot::class, 'bot_id');
     }
 }

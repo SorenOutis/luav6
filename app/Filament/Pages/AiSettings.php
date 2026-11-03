@@ -71,6 +71,8 @@ class AiSettings extends Page implements HasSchemas
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
             'admin_ai_chat_enabled' => (bool) Setting::get('admin_ai_chat_enabled', true),
+            'ai_bots_enabled' => (bool) Setting::get('ai_bots_enabled', true),
+            'ai_bots_maintenance_message' => Setting::get('ai_bots_maintenance_message', 'AI bots are currently disabled by a platform administrator.'),
             'ai_budget_enabled' => (string) Setting::get('ai_budget_enabled', '0') === '1',
             'ai_budget_daily_tokens' => (int) Setting::get('ai_budget_daily_tokens', 0),
             'ai_budget_monthly_tokens' => (int) Setting::get('ai_budget_monthly_tokens', 0),
@@ -209,6 +211,21 @@ class AiSettings extends Page implements HasSchemas
                             ->label('Enable Admin Panel AI Assistant')
                             ->helperText('If disabled, Echo AI is hidden and inaccessible for regular workspace/tenant admins. Super administrators always retain full access.')
                             ->reactive(),
+                    ]),
+
+                Section::make('AI Bots Kill Switch')
+                    ->description('Emergency stop for the entire bot roster across every workspace.')
+                    ->schema([
+                        Toggle::make('ai_bots_enabled')
+                            ->label('Enable AI Bots')
+                            ->helperText('When disabled, bot conversations, team chats, routines, delegation and handoffs stop for everyone — including super administrators. Regular (non-bot) Echo chat keeps working, and the bot control center stays accessible so you can switch bots back on.')
+                            ->reactive(),
+
+                        Textarea::make('ai_bots_maintenance_message')
+                            ->label('Disabled message')
+                            ->placeholder('AI bots are currently disabled by a platform administrator.')
+                            ->required()
+                            ->visible(fn ($get) => ! $get('ai_bots_enabled')),
                     ]),
 
                 Section::make('Echo AI Guardrails & Operational Policies')
@@ -933,6 +950,10 @@ class AiSettings extends Page implements HasSchemas
                 Setting::setGlobal('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
             Setting::setGlobal('admin_ai_chat_enabled', ($data['admin_ai_chat_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('ai_bots_enabled', ($data['ai_bots_enabled'] ?? true) ? '1' : '0');
+            if (isset($data['ai_bots_maintenance_message'])) {
+                Setting::setGlobal('ai_bots_maintenance_message', $data['ai_bots_maintenance_message']);
+            }
 
             // Workspace AI Budget & Fallback — genuinely tenant-scoped, so it
             // targets the admin's active workspace (or the workspace being
