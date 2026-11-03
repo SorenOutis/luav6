@@ -17,3 +17,6 @@ Session lists render via the `ai-chat-session-list` partial (real button rows, `
 
 ## Echo chat JS helpers live in window.EchoChat
 Markdown rendering (formatMarkdown/escapeHtml) and SSE frame parsing (createSseParser) live in public/js/ai-chat-format.js as window.EchoChat so they are vitest-covered (tests/js/ai-chat-format.test.ts). The Alpine component must keep the formatMarkdown(msg.content) delegate and the handleToolCallEvent/handleToolResultEvent/sendAdjustment method names because templates and AdminAiChatTest assert them. ai-chat.blade.php loads the helper script before the ai-chat-script include.
+
+## Blade-inline JS must parse — a syntax error blanks the whole Echo chat page
+ai-chat-script.blade.php holds an inline <script> parsed by the browser before Alpine boots; a single stray brace kills the entire file, Alpine never registers `adminAiChat`, and the page renders only the static header (blank body). Filament/PHP tests cannot catch this. Keep the inline script syntax-checked (tests/js/ai-chat-script.test.ts extracts and compiles it) and never leave refactoring debris like an unmatched `}` when unwrapping an `if` block. After editing any ai-chat blade script, run `npx vitest run tests/js/ai-chat-script.test.ts`.

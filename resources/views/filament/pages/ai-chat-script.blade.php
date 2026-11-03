@@ -18,6 +18,8 @@
                 teamBotIds: [],
                 activeSessionMode: 'solo',
                 activeBotId: null,
+                sessions: config.initialSessions || [],
+                initialActiveSession: config.initialActiveSession || null,
                 workspaceStats: config.workspaceStats || {},
 
                 // Start with the history sidebar closed on phones and in the
@@ -421,24 +423,23 @@
                             return null;
                         }
                         const json = await res.json();
-                            const newSession = {
-                                id: json.session.id,
-                                uuid: json.session.uuid,
-                                title: 'New chat',
-                                updated_at: new Date().toISOString(),
-                                updated_at_human: 'just now'
-                            };
-                            this.sessions.unshift(newSession);
-                            this.activeSessionId = newSession.id;
-                            this.activeSessionUuid = newSession.uuid;
+                        const newSession = {
+                            id: json.session.id,
+                            uuid: json.session.uuid,
+                            title: 'New chat',
+                            updated_at: new Date().toISOString(),
+                            updated_at_human: 'just now'
+                        };
+                        this.sessions.unshift(newSession);
+                        this.activeSessionId = newSession.id;
+                        this.activeSessionUuid = newSession.uuid;
 
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('c', newSession.uuid || newSession.id);
-                            url.searchParams.delete('session');
-                            window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('c', newSession.uuid || newSession.id);
+                        url.searchParams.delete('session');
+                        window.history.pushState({ sessionUuid: newSession.uuid || newSession.id }, '', url.toString());
 
-                            return newSession.id;
-                        }
+                        return newSession.id;
                     } catch (e) {
                         console.error('Error creating new chat session:', e);
                     }
