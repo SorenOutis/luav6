@@ -9,6 +9,7 @@ use App\Models\AiBot;
 use App\Models\AiBotHandoff;
 use App\Models\ChatSession;
 use App\Models\User;
+use App\Support\AiBotsGate;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
@@ -48,6 +49,10 @@ class DelegateToBot implements Tool
 
     public function handle(Request $request): Stringable|string
     {
+        if (! AiBotsGate::enabled()) {
+            return 'Error: '.AiBotsGate::disabledMessage();
+        }
+
         if (! $this->fromBot->isCoordinator()) {
             return 'Error: only the Chief of Staff can delegate work.';
         }

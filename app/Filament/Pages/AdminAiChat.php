@@ -9,6 +9,7 @@ use App\Models\Section;
 use App\Models\Setting;
 use App\Services\AiSdkProviderService;
 use App\Services\GeminiAIService;
+use App\Support\AiBotsGate;
 use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
@@ -199,6 +200,8 @@ class AdminAiChat extends Page
                 'participantBotIds' => array_values(array_map('intval', (array) $initialActiveSession->participant_bot_ids)),
             ] : null,
             'workspaceStats' => $workspaceStats,
+            'botsDisabled' => ! AiBotsGate::enabled(),
+            'aiBotsSettingsUrl' => AiSettings::getUrl(),
             'botPicker' => [
                 'coordinator' => $coordinator ? [
                     'id' => $coordinator->id,

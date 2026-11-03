@@ -21,6 +21,12 @@
     @endphp
 
     <div class="space-y-6" @if ($polling) wire:poll.15s @endif>
+        @if (! $bots_enabled)
+            <div class="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-800 dark:border-danger-500/20 dark:bg-danger-500/10 dark:text-danger-300" role="alert">
+                <strong>AI bots are disabled.</strong> {{ $bots_disabled_message }}
+                <a href="{{ $ai_bots_settings_url }}" class="font-semibold underline underline-offset-2">Re-enable in Platform Settings</a>
+            </div>
+        @endif
         {{-- Scope and freshness --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
             <div class="flex flex-wrap items-start justify-between gap-4">

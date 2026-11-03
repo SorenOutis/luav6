@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\AiOutputSanitizerService;
 use App\Services\AiProviderConfigurator;
 use App\Services\EchoReplyGuard;
+use App\Support\AiBotsGate;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -60,6 +61,12 @@ class RunAiBotRoutine implements ShouldBeUnique, ShouldQueue
         $routine = AiBotRoutine::query()->withoutGlobalScope('workspace')->find($this->routineId);
 
         if (! $routine || ! $routine->is_active) {
+            return;
+        }
+
+        if (! AiBotsGate::enabled()) {
+            $this->markSkipped($routine, AiBotsGate::disabledMessage());
+
             return;
         }
 

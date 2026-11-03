@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Services\AiChatLogger;
 use App\Services\AiSdkProviderService;
 use App\Services\ChatService;
+use App\Support\AiBotsGate;
 use App\Support\StudentPageRegistry;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\JsonResponse;
@@ -96,6 +97,26 @@ class ChatHistoryController extends Controller
         }
 
         return $this->pageBlockedMessage($request);
+    }
+
+    /**
+     * Bot conversations additionally require the global bot kill switch to
+     * be enabled. Ordinary Echo chat is unaffected.
+     */
+    private function botComposerBlockedMessage(ChatSession $session): ?string
+    {
+        if ($session->isBotSession() && ! AiBotsGate::enabled()) {
+            return AiBotsGate::disabledMessage();
+        }
+
+        return null;
+    }
+
+    private function requestWantsBots(Request $request): bool
+    {
+        return $request->filled('bot_id')
+            || $request->input('mode') === ChatSession::MODE_GROUP
+            || array_filter((array) $request->input('participant_bot_ids', [])) !== [];
     }
 
     public function index(Request $request)
@@ -264,6 +285,12 @@ class ChatHistoryController extends Controller
             ], 503);
         }
 
+        if ($this->requestWantsBots($request) && ! AiBotsGate::enabled()) {
+            return response()->json([
+                'response' => AiBotsGate::disabledMessage(),
+            ], 503);
+        }
+
         $request->validate([
             'bot_id' => ['sometimes', 'nullable', 'integer'],
             'mode' => ['sometimes', 'nullable', 'string', 'in:'.ChatSession::MODE_SOLO.','.ChatSession::MODE_GROUP],
@@ -397,6 +424,12 @@ class ChatHistoryController extends Controller
 
         $session = $this->sessionForUser($request, $session);
 
+        if ($message = $this->botComposerBlockedMessage($session)) {
+            return response()->json([
+                'response' => $message,
+            ], 503);
+        }
+
         $request->validate([
             'message' => $this->chatService->messageValidationRules(),
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
@@ -522,6 +555,10 @@ class ChatHistoryController extends Controller
         }
 
         $session = $this->sessionForUser($request, $session);
+
+        if ($message = $this->botComposerBlockedMessage($session)) {
+            return AiSseResponse::from($this->chatService->streamText($message));
+        }
 
         $request->validate([
             'message' => $this->chatService->messageValidationRules(),

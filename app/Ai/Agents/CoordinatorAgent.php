@@ -12,6 +12,7 @@ use App\Models\AiBot;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\AiBotsGate;
 use App\Support\PlatformKnowledge;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
@@ -88,6 +89,10 @@ class CoordinatorAgent implements Agent, Conversational, HasTools, RequiresReply
      */
     public function tools(): iterable
     {
+        if (! AiBotsGate::enabled()) {
+            return [];
+        }
+
         $policy = $this->coordinator->policyObject()->toArray();
         $delegationMode = $policy['delegation']['mode'] ?? BotPolicy::DELEGATION_NONE;
         $allowedTargets = $policy['delegation']['allowed_targets'] ?? [];

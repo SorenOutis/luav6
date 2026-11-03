@@ -59,6 +59,13 @@
                 </div>
 
                 {{-- Bot picker (admin teammate selection) --}}
+                @if ($botsDisabled ?? false)
+                    <div class="mb-2.5 rounded-xl border border-amber-200/90 bg-amber-50 p-2 text-xs text-amber-900 shadow-2xs dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200" role="alert">
+                        <p class="font-semibold">AI bots are disabled</p>
+                        <p class="mt-0.5 leading-snug">The bot roster is switched off platform-wide. New bot conversations, team chats, routines and handoffs are paused.</p>
+                        <a href="{{ $aiBotsSettingsUrl }}" class="mt-1.5 inline-block font-semibold underline underline-offset-2">Re-enable in Platform Settings</a>
+                    </div>
+                @else
                 <div x-show="botPicker && (botPicker.coordinator || (botPicker.specialists || []).length)" class="mb-2.5 rounded-xl border border-zinc-200/90 bg-white p-2 text-xs shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
                     <label class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Chat with</label>
                     <select
@@ -84,6 +91,7 @@
                         </template>
                     </div>
                 </div>
+                @endif
 
                 @if (\Filament\Facades\Filament::auth()->user()?->isSuperAdmin())
                     <div class="mb-2.5 rounded-xl border border-zinc-200/90 bg-white p-3 text-xs shadow-2xs dark:border-zinc-800 dark:bg-zinc-900" data-ai-app-install>

@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\PlatformAiBots\Pages;
 
+use App\Filament\Pages\AiSettings;
 use App\Filament\Resources\PlatformAiBots\PlatformAiBotResource;
 use App\Services\AiBotOperationsDashboardService;
+use App\Support\AiBotsGate;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Livewire\Attributes\Url;
@@ -73,6 +75,9 @@ class BotOperations extends Page
                 $selectedBotId,
             ),
             [
+                'bots_enabled' => AiBotsGate::enabled(),
+                'bots_disabled_message' => AiBotsGate::disabledMessage(),
+                'ai_bots_settings_url' => AiSettings::getUrl(),
                 'edit_bot_url' => fn (int $botId): string => PlatformAiBotResource::getUrl('edit', [
                     'record' => $botId,
                 ]),

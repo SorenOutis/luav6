@@ -11,6 +11,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\AiBotsGate;
 use App\Support\PlatformKnowledge;
 use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Agent;
@@ -113,6 +114,10 @@ class BotAgent implements Agent, CanActAsTool, Conversational, HasTools, Require
      */
     public function tools(): iterable
     {
+        if (! AiBotsGate::enabled()) {
+            return [];
+        }
+
         return ToolRegistry::makeMany(
             $this->bot->allowed_tools,
             $this->session?->id,

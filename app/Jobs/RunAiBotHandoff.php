@@ -15,6 +15,7 @@ use App\Services\AiInputGuardrailService;
 use App\Services\AiOutputSanitizerService;
 use App\Services\AiProviderConfigurator;
 use App\Services\EchoReplyGuard;
+use App\Support\AiBotsGate;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -57,6 +58,12 @@ class RunAiBotHandoff implements ShouldBeUnique, ShouldQueue
         $handoff = AiBotHandoff::query()->withoutGlobalScope('workspace')->find($this->handoffId);
 
         if (! $handoff || $handoff->status !== AiBotHandoff::STATUS_QUEUED) {
+            return;
+        }
+
+        if (! AiBotsGate::enabled()) {
+            $this->markFailed($handoff, AiBotsGate::disabledMessage());
+
             return;
         }
 

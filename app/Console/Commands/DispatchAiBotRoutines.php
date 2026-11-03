@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\RunAiBotRoutine;
 use App\Models\AiBotRoutine;
+use App\Support\AiBotsGate;
 use Cron\CronExpression;
 use Illuminate\Console\Command;
 use Throwable;
@@ -28,6 +29,12 @@ class DispatchAiBotRoutines extends Command
         $timezone = (string) config('app.timezone');
         $queued = 0;
         $invalid = 0;
+
+        if (! AiBotsGate::enabled()) {
+            $this->line('AI bots are disabled; no routines were dispatched.');
+
+            return self::SUCCESS;
+        }
 
         AiBotRoutine::query()
             ->withoutGlobalScope('workspace')
