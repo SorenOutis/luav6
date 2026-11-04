@@ -73,6 +73,8 @@ class AiSettings extends Page implements HasSchemas
             'admin_ai_chat_enabled' => (bool) Setting::get('admin_ai_chat_enabled', true),
             'ai_bots_enabled' => (bool) Setting::get('ai_bots_enabled', true),
             'ai_bots_maintenance_message' => Setting::get('ai_bots_maintenance_message', 'AI bots are currently disabled by a platform administrator.'),
+            'ai_bot_watchers_enabled' => (bool) Setting::get('ai_bot_watchers_enabled', true),
+            'ai_bot_watchers_alert_email' => (string) Setting::get('ai_bot_watchers_alert_email', ''),
             'ai_budget_enabled' => (string) Setting::get('ai_budget_enabled', '0') === '1',
             'ai_budget_daily_tokens' => (int) Setting::get('ai_budget_daily_tokens', 0),
             'ai_budget_monthly_tokens' => (int) Setting::get('ai_budget_monthly_tokens', 0),
@@ -226,6 +228,22 @@ class AiSettings extends Page implements HasSchemas
                             ->placeholder('AI bots are currently disabled by a platform administrator.')
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_bots_enabled')),
+                    ]),
+
+                Section::make('Bot Watchers (Proactive Monitoring)')
+                    ->description('Specialist bots patrol their domains every 30 minutes and report in the Bot Team Room.')
+                    ->schema([
+                        Toggle::make('ai_bot_watchers_enabled')
+                            ->label('Enable Bot Watchers')
+                            ->helperText('Every 30 minutes, each specialist runs read-only checks on its domain (support queue, grading backlog, at-risk students, course gaps, AI spend, engagement). Findings appear in the Bot Team Room on Bot Operations, and new actionable findings are emailed instantly to the platform super admin. Watchers never publish, send, or change anything without your approval, and they stop when the AI Bots Kill Switch is off.')
+                            ->reactive(),
+
+                        TextInput::make('ai_bot_watchers_alert_email')
+                            ->label('Watcher alert email')
+                            ->email()
+                            ->maxLength(190)
+                            ->helperText('Overrides the default recipient (the first platform super administrator\'s email) for watcher findings. Instant, actionable findings only — quiet checks never email.')
+                            ->visible(fn ($get) => (bool) $get('ai_bot_watchers_enabled')),
                     ]),
 
                 Section::make('Echo AI Guardrails & Operational Policies')
@@ -953,6 +971,13 @@ class AiSettings extends Page implements HasSchemas
             Setting::setGlobal('ai_bots_enabled', ($data['ai_bots_enabled'] ?? true) ? '1' : '0');
             if (isset($data['ai_bots_maintenance_message'])) {
                 Setting::setGlobal('ai_bots_maintenance_message', $data['ai_bots_maintenance_message']);
+            }
+            Setting::setGlobal('ai_bot_watchers_enabled', ($data['ai_bot_watchers_enabled'] ?? true) ? '1' : '0');
+
+            // The address input only shows while watchers are on; persist it
+            // in that state so a toggle-off never wipes the stored recipient.
+            if ($data['ai_bot_watchers_enabled'] ?? true) {
+                Setting::setGlobal('ai_bot_watchers_alert_email', mb_substr(trim((string) ($data['ai_bot_watchers_alert_email'] ?? '')), 0, 190));
             }
 
             // Workspace AI Budget & Fallback — genuinely tenant-scoped, so it

@@ -73,6 +73,8 @@ trait BelongsToWorkspace
                 'ai_bot_handoffs',
                 'ai_bot_routines',
                 'ai_bot_memories',
+                'ai_bot_findings',
+                'ai_bot_team_messages',
                 'community_posts',
                 'community_stories',
             ], true);

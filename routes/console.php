@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\DispatchAiBotRoutines;
+use App\Console\Commands\DispatchAiBotWatchers;
 use App\Console\Commands\DispatchAiDailyReport;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,4 +23,12 @@ Schedule::command(DispatchAiBotRoutines::class, ['--no-interaction'])
     ->everyMinute()
     ->timezone(config('app.timezone'))
     ->withoutOverlapping(5)
+    ->onOneServer();
+
+// Watchers wake up half-hourly; per-workspace unique locks keep slow passes
+// from stacking duplicates between ticks.
+Schedule::command(DispatchAiBotWatchers::class, ['--no-interaction'])
+    ->everyThirtyMinutes()
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping(10)
     ->onOneServer();
