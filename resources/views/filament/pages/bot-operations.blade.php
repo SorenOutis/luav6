@@ -323,6 +323,60 @@
             </section>
         </div>
 
+        {{-- Bot team room --}}
+        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+            <div class="border-b border-gray-200 px-5 py-4 dark:border-white/10">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="font-semibold text-gray-950 dark:text-white">Bot team room</h3>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">How the specialists explain what they saw and suggest what happens next. Internal, super-admin only, and read-only — approval always stays with you.</p>
+                    </div>
+                    @if ($team_room['watchers_enabled'])
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset {{ $toneClasses('success') }}">Watchers on</span>
+                    @else
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset {{ $toneClasses('warning') }}">Watchers off</span>
+                    @endif
+                </div>
+            </div>
+            @if ($team_room['items'] === [])
+                <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                    @if ($team_room['watchers_enabled'])
+                        Nothing posted yet — the first watcher pass arrives within 30 minutes.
+                    @else
+                        Watchers are currently disabled. Turn them on in Platform Settings to give the bots autonomous patrol shifts.
+                    @endif
+                </div>
+            @else
+                <div class="max-h-[36rem] divide-y divide-gray-100 overflow-y-auto dark:divide-white/5">
+                    @foreach ($team_room['items'] as $entry)
+                        <div class="flex gap-3 px-5 py-3">
+                            <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-white/5 dark:text-gray-300">
+                                {{ $entry['bot']['avatar'] ?? ($entry['bot']['name'][0] ?? '?') }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span class="text-sm font-semibold text-gray-950 dark:text-white">{{ $entry['bot']['name'] ?? 'Retired bot' }}</span>
+                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset {{ match ($entry['kind']) {
+                                        'suggestion' => $toneClasses('primary'),
+                                        'all_clear' => $toneClasses('success'),
+                                        default => $toneClasses('gray'),
+                                    } }}">{{ str_replace('_', ' ', $entry['kind']) }}</span>
+                                    @if ($entry['severity'] === 'critical' || $entry['severity'] === 'warning')
+                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset {{ $severityClasses($entry['severity']) }}">{{ $entry['severity'] }}</span>
+                                    @endif
+                                    @if ($workspace['is_all'] && $entry['workspace_name'])
+                                        <span class="rounded-full bg-gray-50 px-2 py-0.5 font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20 dark:bg-white/5 dark:text-gray-300 dark:ring-white/10">{{ $entry['workspace_name'] }}</span>
+                                    @endif
+                                    <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">{{ $entry['posted_at_label'] }}</span>
+                                </div>
+                                <p class="mt-1 whitespace-pre-line text-sm text-gray-700 dark:text-gray-300">{{ $entry['body'] }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
         {{-- Handoffs --}}
         <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
             <div class="border-b border-gray-200 px-5 py-4 dark:border-white/10">
