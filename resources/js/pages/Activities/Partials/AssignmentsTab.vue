@@ -82,6 +82,7 @@ interface Assignment {
     status: 'draft' | 'published' | 'closed';
     due_date: string | null;
     points_possible: number | string | null;
+    allow_bat_files?: boolean;
     group_rules: {
         min: number | null;
         max: number | null;
@@ -661,6 +662,38 @@ const selectedAssignment = computed(() => {
     );
 });
 
+// Base formats every assignment accepts; .bat only when the admin enables it.
+const BASE_UPLOAD_EXTENSIONS = [
+    'pdf',
+    'doc',
+    'docx',
+    'ppt',
+    'pptx',
+    'xls',
+    'xlsx',
+    'png',
+    'jpg',
+    'jpeg',
+];
+
+const allowedUploadExtensions = computed(() =>
+    selectedAssignment.value?.allow_bat_files
+        ? [...BASE_UPLOAD_EXTENSIONS, 'bat']
+        : BASE_UPLOAD_EXTENSIONS,
+);
+
+const uploadAcceptAttribute = computed(() =>
+    allowedUploadExtensions.value.map((ext) => `.${ext}`).join(','),
+);
+
+const uploadFormatsLabel = computed(
+    () =>
+        'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), ' +
+        (selectedAssignment.value?.allow_bat_files
+            ? 'Images (jpg/png), or Batch files (bat)'
+            : 'or Images (jpg/png)'),
+);
+
 const form =
     typeof useForm === 'function'
         ? useForm({
@@ -702,22 +735,9 @@ const validateAndSetFile = (file: File | null) => {
         return;
     }
 
-    const allowedExtensions = [
-        'pdf',
-        'doc',
-        'docx',
-        'ppt',
-        'pptx',
-        'xls',
-        'xlsx',
-        'png',
-        'jpg',
-        'jpeg',
-    ];
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!allowedExtensions.includes(ext)) {
-        fileError.value =
-            'Unsupported file format. Please upload PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), or Images (jpg/png).';
+    if (!allowedUploadExtensions.value.includes(ext)) {
+        fileError.value = `Unsupported file format. Please upload ${uploadFormatsLabel.value}.`;
         return;
     }
 
@@ -2167,7 +2187,7 @@ onMounted(() => {
                         ref="fileInput"
                         type="file"
                         class="hidden"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg"
+                        :accept="uploadAcceptAttribute"
                         @change="handleFileInputChange"
                     />
 
@@ -2185,8 +2205,7 @@ onMounted(() => {
                                 Click to upload or drag &amp; drop
                             </p>
                             <p class="mt-1 text-xs text-muted-foreground">
-                                PDF, Word (docx), PowerPoint (pptx), Excel
-                                (xls/xlsx), or Images (jpg/png) — Max 10 MB
+                                {{ uploadFormatsLabel }} — Max 10 MB
                             </p>
                         </div>
                     </div>

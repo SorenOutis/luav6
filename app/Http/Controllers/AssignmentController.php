@@ -60,8 +60,15 @@ class AssignmentController extends Controller
 
     public function store(Request $request, Assignment $assignment)
     {
+        $isBatUpload = $assignment->allow_bat_files
+            && strtolower((string) $request->file('file')?->getClientOriginalExtension()) === 'bat';
+
+        // Batch scripts are plain text, so content sniffing reports "txt";
+        // require the .bat extension and plain-text content instead of mimes:bat.
         $request->validate([
-            'file' => 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
+            'file' => $isBatUpload
+                ? 'required|file|extensions:bat|mimes:txt|max:10240'
+                : 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
         ]);
 
         $user = auth()->user();
@@ -82,7 +89,13 @@ class AssignmentController extends Controller
         // Checked before storing so a rejected request leaves no partial state.
         $service->assertSubmittable($assignment, $user);
 
-        $path = $request->file('file')->store('assignments/'.$user->id, 'public');
+        $file = $request->file('file');
+        $directory = 'assignments/'.$user->id;
+
+        // store() names files by sniffed type, which would turn .bat into .txt.
+        $path = $isBatUpload
+            ? $file->storeAs($directory, pathinfo($file->hashName(), PATHINFO_FILENAME).'.bat', 'public')
+            : $file->store($directory, 'public');
 
         $user->assignments()->syncWithoutDetaching([
             $assignment->id => [

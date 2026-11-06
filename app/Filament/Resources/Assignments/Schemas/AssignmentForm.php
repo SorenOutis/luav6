@@ -8,6 +8,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -109,6 +110,11 @@ class AssignmentForm
                     ->placeholder('Select a course (optional)')
                     ->helperText('Optional label only — visibility is controlled by the sections above.')
                     ->columnSpan(1),
+                Toggle::make('allow_bat_files')
+                    ->label('Accept .bat files')
+                    ->default(false)
+                    ->helperText('Allow students to submit Windows batch (.bat) files in addition to the usual documents and images.')
+                    ->columnSpanFull(),
             ]);
     }
 
