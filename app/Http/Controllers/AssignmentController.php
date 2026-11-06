@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 class AssignmentController extends Controller
 {
-    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png';
+    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,zip';
 
     public function index(StudentAssignmentService $studentAssignments)
     {
@@ -82,7 +82,8 @@ class AssignmentController extends Controller
         // Checked before storing so a rejected request leaves no partial state.
         $service->assertSubmittable($assignment, $user);
 
-        $path = $request->file('file')->store('assignments/'.$user->id, 'public');
+        $file = $request->file('file');
+        $path = $file->store('assignments/'.$user->id, 'public');
 
         $user->assignments()->syncWithoutDetaching([
             $assignment->id => [

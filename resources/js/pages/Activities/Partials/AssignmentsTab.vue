@@ -661,6 +661,26 @@ const selectedAssignment = computed(() => {
     );
 });
 
+// Formats every assignment accepts. Batch scripts go in as a .zip — raw .bat stays blocked.
+const allowedUploadExtensions = [
+    'pdf',
+    'doc',
+    'docx',
+    'ppt',
+    'pptx',
+    'xls',
+    'xlsx',
+    'png',
+    'jpg',
+    'jpeg',
+    'zip',
+];
+const uploadAcceptAttribute = allowedUploadExtensions
+    .map((ext) => `.${ext}`)
+    .join(',');
+const uploadFormatsLabel =
+    'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), Images (jpg/png), or Zip files';
+
 const form =
     typeof useForm === 'function'
         ? useForm({
@@ -702,22 +722,9 @@ const validateAndSetFile = (file: File | null) => {
         return;
     }
 
-    const allowedExtensions = [
-        'pdf',
-        'doc',
-        'docx',
-        'ppt',
-        'pptx',
-        'xls',
-        'xlsx',
-        'png',
-        'jpg',
-        'jpeg',
-    ];
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!allowedExtensions.includes(ext)) {
-        fileError.value =
-            'Unsupported file format. Please upload PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), or Images (jpg/png).';
+    if (!allowedUploadExtensions.includes(ext)) {
+        fileError.value = `Unsupported file format. Please upload ${uploadFormatsLabel}.`;
         return;
     }
 
@@ -2167,7 +2174,7 @@ onMounted(() => {
                         ref="fileInput"
                         type="file"
                         class="hidden"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg"
+                        :accept="uploadAcceptAttribute"
                         @change="handleFileInputChange"
                     />
 
@@ -2185,8 +2192,7 @@ onMounted(() => {
                                 Click to upload or drag &amp; drop
                             </p>
                             <p class="mt-1 text-xs text-muted-foreground">
-                                PDF, Word (docx), PowerPoint (pptx), Excel
-                                (xls/xlsx), or Images (jpg/png) — Max 10 MB
+                                {{ uploadFormatsLabel }} — Max 10 MB
                             </p>
                         </div>
                     </div>
