@@ -5,14 +5,10 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AssignmentRosterService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $season = Season::factory()->active()->create();
