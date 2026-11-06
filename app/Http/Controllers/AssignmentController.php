@@ -63,11 +63,9 @@ class AssignmentController extends Controller
         $isBatUpload = $assignment->allow_bat_files
             && strtolower((string) $request->file('file')?->getClientOriginalExtension()) === 'bat';
 
-        // Batch scripts are plain text, so content sniffing reports "txt";
-        // require the .bat extension and plain-text content instead of mimes:bat.
         $request->validate([
             'file' => $isBatUpload
-                ? 'required|file|extensions:bat|mimes:txt|max:10240'
+                ? 'required|file|extensions:bat|mimes:bat,txt|max:10240'
                 : 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
         ]);
 

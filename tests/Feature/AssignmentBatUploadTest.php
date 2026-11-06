@@ -5,14 +5,16 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AssignmentRosterService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
-    Storage::fake('public');
-
     $season = Season::factory()->active()->create();
     $this->section = Section::factory()->forSeason($season)->create();
     $this->student = User::factory()->create();
@@ -39,6 +41,8 @@ function fakeBatFile(): UploadedFile
 }
 
 it('does not accept bat files by default', function () {
+    Storage::fake('public');
+
     $assignment = makeBatAssignment($this->section, false);
 
     expect($assignment->fresh()->allow_bat_files)->toBeFalse();
@@ -55,6 +59,8 @@ it('does not accept bat files by default', function () {
 });
 
 it('accepts a bat file when the assignment allows it and keeps the extension', function () {
+    Storage::fake('public');
+
     $assignment = makeBatAssignment($this->section, true);
 
     $this->actingAs($this->student)
@@ -83,12 +89,22 @@ it('still accepts regular documents when bat files are allowed', function () {
         ->assertRedirect();
 });
 
-it('rejects a binary file renamed to bat', function () {
+it('rejects unsupported files even when bat files are allowed', function () {
     $assignment = makeBatAssignment($this->section, true);
 
     $this->actingAs($this->student)
         ->post(route('assignments.submit', $assignment), [
-            'file' => UploadedFile::fake()->create('virus.bat', 10, 'application/x-msdownload'),
+            'file' => UploadedFile::fake()->create('archive.zip', 10, 'application/zip'),
+        ])
+        ->assertSessionHasErrors('file');
+});
+
+it('rejects an invalid file disguised as bat', function () {
+    $assignment = makeBatAssignment($this->section, true);
+
+    $this->actingAs($this->student)
+        ->post(route('assignments.submit', $assignment), [
+            'file' => UploadedFile::fake()->create('archive.bat', 10, 'application/zip'),
         ])
         ->assertSessionHasErrors('file');
 });
