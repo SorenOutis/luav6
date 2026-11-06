@@ -98,14 +98,16 @@ it('does not accept raw bat files', function () {
         ->exists())->toBeFalse();
 });
 
-it('rejects a file disguised as zip', function () {
+it('rejects a file with an undetectable type named as zip', function () {
     Storage::fake('public');
 
     $assignment = makeZipAssignment($this->section);
 
+    // Symfony detects payloads it cannot identify as application/octet-stream,
+    // which guesses to .bin and must not be accepted as an archive.
     $this->actingAs($this->student)
         ->post(route('assignments.submit', $assignment), [
-            'file' => UploadedFile::fake()->createWithContent('archive.zip', "@echo off\r\necho Hello World\r\n"),
+            'file' => UploadedFile::fake()->create('archive.zip', 10, 'application/octet-stream'),
         ])
         ->assertSessionHasErrors('file');
 });
