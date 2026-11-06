@@ -82,7 +82,6 @@ interface Assignment {
     status: 'draft' | 'published' | 'closed';
     due_date: string | null;
     points_possible: number | string | null;
-    allow_bat_files?: boolean;
     group_rules: {
         min: number | null;
         max: number | null;
@@ -662,8 +661,8 @@ const selectedAssignment = computed(() => {
     );
 });
 
-// Base formats every assignment accepts; .bat only when the admin enables it.
-const BASE_UPLOAD_EXTENSIONS = [
+// Formats every assignment accepts. Batch scripts go in as a .zip — raw .bat stays blocked.
+const allowedUploadExtensions = [
     'pdf',
     'doc',
     'docx',
@@ -674,25 +673,13 @@ const BASE_UPLOAD_EXTENSIONS = [
     'png',
     'jpg',
     'jpeg',
+    'zip',
 ];
-
-const allowedUploadExtensions = computed(() =>
-    selectedAssignment.value?.allow_bat_files
-        ? [...BASE_UPLOAD_EXTENSIONS, 'bat']
-        : BASE_UPLOAD_EXTENSIONS,
-);
-
-const uploadAcceptAttribute = computed(() =>
-    allowedUploadExtensions.value.map((ext) => `.${ext}`).join(','),
-);
-
-const uploadFormatsLabel = computed(
-    () =>
-        'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), ' +
-        (selectedAssignment.value?.allow_bat_files
-            ? 'Images (jpg/png), or Batch files (bat)'
-            : 'or Images (jpg/png)'),
-);
+const uploadAcceptAttribute = allowedUploadExtensions
+    .map((ext) => `.${ext}`)
+    .join(',');
+const uploadFormatsLabel =
+    'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), Images (jpg/png), or Zip files';
 
 const form =
     typeof useForm === 'function'
@@ -736,8 +723,8 @@ const validateAndSetFile = (file: File | null) => {
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!allowedUploadExtensions.value.includes(ext)) {
-        fileError.value = `Unsupported file format. Please upload ${uploadFormatsLabel.value}.`;
+    if (!allowedUploadExtensions.includes(ext)) {
+        fileError.value = `Unsupported file format. Please upload ${uploadFormatsLabel}.`;
         return;
     }
 

@@ -95,7 +95,6 @@ class StudentAssignmentService
                 'status' => $assignment->status()?->value ?? AssignmentStatus::Draft->value,
                 'due_date' => $assignment->dueDateForClient(),
                 'points_possible' => $assignment->points_possible,
-                'allow_bat_files' => (bool) $assignment->allow_bat_files,
                 'group_rules' => [
                     'min' => $assignment->min_group_size,
                     'max' => $assignment->max_group_size,

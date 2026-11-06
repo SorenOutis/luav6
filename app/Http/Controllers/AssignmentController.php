@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 class AssignmentController extends Controller
 {
-    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png';
+    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,zip';
 
     public function index(StudentAssignmentService $studentAssignments)
     {
@@ -60,13 +60,8 @@ class AssignmentController extends Controller
 
     public function store(Request $request, Assignment $assignment)
     {
-        $isBatUpload = $assignment->allow_bat_files
-            && strtolower((string) $request->file('file')?->getClientOriginalExtension()) === 'bat';
-
         $request->validate([
-            'file' => $isBatUpload
-                ? 'required|file|extensions:bat|mimes:bat,txt|max:10240'
-                : 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
+            'file' => 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
         ]);
 
         $user = auth()->user();
@@ -88,12 +83,7 @@ class AssignmentController extends Controller
         $service->assertSubmittable($assignment, $user);
 
         $file = $request->file('file');
-        $directory = 'assignments/'.$user->id;
-
-        // store() names files by sniffed type, which would turn .bat into .txt.
-        $path = $isBatUpload
-            ? $file->storeAs($directory, pathinfo($file->hashName(), PATHINFO_FILENAME).'.bat', 'public')
-            : $file->store($directory, 'public');
+        $path = $file->store('assignments/'.$user->id, 'public');
 
         $user->assignments()->syncWithoutDetaching([
             $assignment->id => [

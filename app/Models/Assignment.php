@@ -14,7 +14,7 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'term', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'allow_bat_files', 'is_active', 'status'];
+    protected $fillable = ['title', 'description', 'due_date', 'term', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active', 'status'];
 
     protected $attributes = [
         'is_active' => true,
@@ -26,7 +26,6 @@ class Assignment extends Model
         'points_possible' => 'decimal:2',
         'min_group_size' => 'integer',
         'max_group_size' => 'integer',
-        'allow_bat_files' => 'boolean',
         'is_active' => 'boolean',
     ];
 
