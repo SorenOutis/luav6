@@ -44,7 +44,7 @@ const CURSOR_TRAVEL_MS = 400;
 const PRESS_MS = 280;
 /** A long sweep across the window — back to the keyboard, or to the history. */
 const POINTER_SWEEP_MS = 700;
-/** Phase 1 — the request lands and Echo's result pill confirms it. */
+/** Phase 1 — the request lands and the header confirms it was sent. */
 const ANSWERED_MS = 1900;
 /** Phase 2 — Echo works; the skeleton holds the bubble. */
 const THINKING_MS = 2100;
@@ -60,6 +60,9 @@ const SWITCH_TRAVEL_MS = POINTER_SWEEP_MS;
 const SWITCH_CLICK_MS = 260;
 /** Slack so the pointer's click lands before the loop would auto-advance. */
 const SWITCH_SLACK_MS = 140;
+/** Maria reviews Echo's finished answer before confirming it. */
+const APPROVAL_TRAVEL_MS = POINTER_SWEEP_MS;
+const APPROVAL_SLACK_MS = 140;
 
 /** How the highlighted values in Echo's third line read when strung together. */
 const RESULT_JOIN = ' · ';
@@ -107,8 +110,7 @@ interface Scenario {
     echoGreeting: string;
     /** What the teacher types into the composer. */
     teacherRequest: string;
-    /** Confirmation pill that lands with the request. */
-    resultLabel: string;
+    /** Value shown in the active conversation's history preview. */
     resultValue: string;
     echoThinking: string;
     echoSteps: {
@@ -137,13 +139,12 @@ const scenarios: Scenario[] = [
         echoGreeting:
             'Hi Maria! Ready to build tomorrow’s quiz? I can draft it from your syllabus.',
         teacherRequest: 'Build me a 15-item quiz on quadratics for tomorrow.',
-        resultLabel: 'Drafted in 6s ·',
         resultValue: '15 items ready',
         echoThinking: 'Echo is aligning items to your syllabus',
         echoSteps: {
             bold: 'Drafted 15 items across three difficulty tiers.',
             detail: 'Every item maps directly to quadratic equations.',
-            resultIntro: 'Answer key verified — ',
+            resultIntro: 'Assessment mix — ',
             resultValues: ['14 auto-scored', '1 free response'],
             note: '“Checked against last term’s item bank.”',
         },
@@ -159,7 +160,6 @@ const scenarios: Scenario[] = [
         echoGreeting:
             'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
         teacherRequest: 'Who has actually logged in today?',
-        resultLabel: 'Checked in 2s ·',
         resultValue: '21 of 28 active',
         echoThinking: 'Echo is reading today’s activity log',
         echoSteps: {
@@ -181,7 +181,6 @@ const scenarios: Scenario[] = [
         echoGreeting:
             'Hi Maria! I’ve finished scoring Term 2 — want the item analysis?',
         teacherRequest: 'Which students are struggling with quadratics?',
-        resultLabel: 'Scored in 2s ·',
         resultValue: '6 flagged at risk',
         echoThinking: 'Echo is cross-referencing item scores',
         echoSteps: {
@@ -203,7 +202,6 @@ const scenarios: Scenario[] = [
         echoGreeting:
             'Hi Maria! Term 2 reporting is packaged whenever you’re ready for it.',
         teacherRequest: 'Export Grade 8 term grades.',
-        resultLabel: 'Packaged in 4s ·',
         resultValue: '3 files ready',
         echoThinking: 'Echo is preparing the grade report',
         echoSteps: {
@@ -222,6 +220,13 @@ const scenarios: Scenario[] = [
  * Per-scenario budgets, sized from its own copy so every typewriter lands
  * just before its phase flips — no rushed stream, no dead air.
  */
+const quizDraftOptions = [
+    { label: 'A', text: 'x = 2, x = 6', isCorrect: false },
+    { label: 'B', text: 'x = 3, x = 4', isCorrect: true },
+    { label: 'C', text: 'x = −3, x = −4', isCorrect: false },
+    { label: 'D', text: 'x = −2, x = −6', isCorrect: false },
+];
+
 const SCENARIO_TIMINGS = scenarios.map((scenario) => {
     const promptChars = scenario.teacherRequest.length;
     const echoChars =
@@ -248,7 +253,12 @@ const SCENARIO_TIMINGS = scenarios.map((scenario) => {
                 PRESS_MS,
             ANSWERED_MS,
             THINKING_MS,
-            ECHO_LEAD_MS + echo + ECHO_TAIL_MS,
+            ECHO_LEAD_MS +
+                echo +
+                ECHO_TAIL_MS +
+                APPROVAL_TRAVEL_MS +
+                PRESS_MS +
+                APPROVAL_SLACK_MS,
             APPROVED_MS + SWITCH_TRAVEL_MS + SWITCH_CLICK_MS + SWITCH_SLACK_MS,
         ],
     };
@@ -289,7 +299,6 @@ const activeScenario = computed(() => {
 
 const answered = computed(() => phase.value >= 1);
 const drafting = computed(() => phase.value === 2);
-const draftReady = computed(() => phase.value >= 3);
 const confirmed = computed(() => phase.value >= 4);
 
 /**
@@ -338,7 +347,7 @@ const badges = computed(() => [
         class: 'border border-brand/30 bg-brand/15 text-brand dark:border-brand/30 dark:bg-brand/15 dark:text-brand',
     },
     {
-        label: 'Needs your OK',
+        label: 'Ready for review',
         class: 'border border-amber-500/30 bg-amber-500/15 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300',
     },
     {
@@ -443,10 +452,13 @@ const cursor = reactive({
 const pointedIndex = ref<number | null>(null);
 
 const sendButtonRef = ref<HTMLElement | null>(null);
+const approveButtonRef = ref<HTMLElement | null>(null);
 const conversationNavRef = ref<HTMLElement | null>(null);
 /** The pointer has been dropped into the window at least once. */
 let cursorPlaced = false;
 let cursorTimer: ReturnType<typeof setTimeout> | undefined;
+let approvalTimer: ReturnType<typeof setTimeout> | undefined;
+let approvalClickTimer: ReturnType<typeof setTimeout> | undefined;
 let pressTimer: ReturnType<typeof setTimeout> | undefined;
 let switchTimer: ReturnType<typeof setTimeout> | undefined;
 let switchFireTimer: ReturnType<typeof setTimeout> | undefined;
@@ -463,6 +475,21 @@ function enterKeyPoint(): { x: number; y: number } {
     return {
         x: key.left - frame.left + key.width / 2,
         y: key.top - frame.top + key.height / 2,
+    };
+}
+
+/** Where Maria's pointer lands to review and confirm Echo's draft. */
+function approvalButtonPoint(): { x: number; y: number } {
+    const frame = root.value?.getBoundingClientRect();
+    const button = approveButtonRef.value?.getBoundingClientRect();
+
+    if (!frame || !button || button.width === 0) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: button.left - frame.left + button.width / 2,
+        y: button.top - frame.top + button.height / 2,
     };
 }
 
@@ -522,6 +549,26 @@ function beginCursorApproach() {
         cursor.pressing = true;
         pressing.value = true;
     }, CURSOR_TRAVEL_MS);
+}
+
+/** Maria's pointer reaches for the review control after Echo finishes typing. */
+function beginApproval() {
+    if (phase.value !== 3 || !draftReady.value) {
+        return;
+    }
+
+    cursor.travel = APPROVAL_TRAVEL_MS;
+    cursor.pressing = false;
+    cursor.visible = true;
+    glideTo(approvalButtonPoint());
+
+    pressTimer = setTimeout(() => {
+        cursor.pressing = true;
+    }, APPROVAL_TRAVEL_MS);
+
+    approvalClickTimer = setTimeout(() => {
+        approveButtonRef.value?.click();
+    }, APPROVAL_TRAVEL_MS + PRESS_MS);
 }
 
 /** Fades the pointer out. */
@@ -615,6 +662,14 @@ function clearTypingTimers() {
     if (cursorTimer !== undefined) {
         clearTimeout(cursorTimer);
         cursorTimer = undefined;
+    }
+    if (approvalTimer !== undefined) {
+        clearTimeout(approvalTimer);
+        approvalTimer = undefined;
+    }
+    if (approvalClickTimer !== undefined) {
+        clearTimeout(approvalClickTimer);
+        approvalClickTimer = undefined;
     }
     if (pressTimer !== undefined) {
         clearTimeout(pressTimer);
@@ -777,6 +832,13 @@ const isEchoTyping = computed(() => {
         currentEchoChars.value < totalEchoChars.value
     );
 });
+
+const draftReady = computed(
+    () => phase.value >= 4 || (phase.value === 3 && !isEchoTyping.value),
+);
+const badgePhase = computed(() =>
+    phase.value === 3 && !draftReady.value ? 2 : phase.value,
+);
 
 // Line 1 calculations
 const line1Chars = computed(() => {
@@ -944,6 +1006,12 @@ watch(
                     SCENARIO_TIMINGS[activeScenarioIndex.value].echo,
                 );
             }, ECHO_LEAD_MS);
+            approvalTimer = setTimeout(
+                beginApproval,
+                ECHO_LEAD_MS +
+                    SCENARIO_TIMINGS[activeScenarioIndex.value].echo +
+                    ECHO_TAIL_MS,
+            );
         } else if (newPhase >= 4) {
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
@@ -1032,10 +1100,9 @@ function handleSendPrompt() {
 }
 
 function handleConfirmSend() {
-    if (!enabled.value) return;
-    if (phase.value === 3) {
-        set(4);
-    }
+    if (!enabled.value || !draftReady.value) return;
+
+    set(4);
 }
 
 watch(phase, (newPhase) => {
@@ -1126,7 +1193,10 @@ watch(
                         v-for="(badge, index) in badges"
                         :key="badge.label"
                         class="hdw-badge inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium whitespace-nowrap sm:text-xs"
-                        :class="[badge.class, { 'is-on': phase === index }]"
+                        :class="[
+                            badge.class,
+                            { 'is-on': badgePhase === index },
+                        ]"
                     >
                         <span
                             v-if="index === 2"
@@ -1453,31 +1523,6 @@ watch(
                                             {{ activeScenario.teacherRequest }}
                                         </p>
                                     </div>
-                                    <!-- Result confirmation pill -->
-                                    <div
-                                        class="hdw-score inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
-                                        :class="{ 'is-on': answered }"
-                                    >
-                                        <svg
-                                            viewBox="0 0 16 16"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            class="h-3 w-3"
-                                            aria-hidden="true"
-                                        >
-                                            <path d="m3.5 8.5 3 3 6-6" />
-                                        </svg>
-                                        {{ activeScenario.resultLabel }}
-                                        <span
-                                            class="hdw-answer-text font-mono font-medium"
-                                            >{{
-                                                activeScenario.resultValue
-                                            }}</span
-                                        >
-                                    </div>
                                 </div>
                                 <div
                                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-secondary text-xs font-semibold text-foreground shadow-xs dark:border-[#382e26] dark:bg-[#251e18] dark:text-[#f5f0eb]"
@@ -1653,6 +1698,71 @@ watch(
                                                 ></span>
                                             </p>
 
+                                            <div
+                                                v-if="
+                                                    activeScenario.id ===
+                                                        'quiz-builder' &&
+                                                    line3Complete
+                                                "
+                                                data-testid="quiz-draft-preview"
+                                                role="group"
+                                                aria-label="Preview of quiz item 1 of 15"
+                                                class="mt-3 rounded-xl border border-border/70 bg-secondary/30 p-3 dark:border-[#2c2520] dark:bg-[#17120e]"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-between gap-3 font-mono text-[9px] tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
+                                                >
+                                                    <span>Quiz item 01</span>
+                                                    <span>Multiple choice</span>
+                                                </div>
+                                                <p
+                                                    class="mt-2 text-xs font-medium text-foreground dark:text-[#f5f0eb]"
+                                                >
+                                                    Solve x² − 7x + 12 = 0.
+                                                </p>
+                                                <ul
+                                                    aria-label="Answer choices"
+                                                    class="mt-2 grid grid-cols-2 gap-1.5 text-[10px]"
+                                                >
+                                                    <li
+                                                        v-for="option in quizDraftOptions"
+                                                        :key="option.label"
+                                                        :aria-label="
+                                                            option.isCorrect
+                                                                ? `Option ${option.label}, correct answer`
+                                                                : `Option ${option.label}`
+                                                        "
+                                                        class="flex min-w-0 items-center gap-1.5 rounded-lg border px-2 py-1.5"
+                                                        :class="
+                                                            option.isCorrect
+                                                                ? 'border-brand/35 bg-brand/10 text-foreground dark:border-brand/40 dark:bg-brand/10 dark:text-[#f5f0eb]'
+                                                                : 'border-border/70 bg-background/60 text-muted-foreground dark:border-[#2c2520] dark:bg-[#120e0b] dark:text-[#a1968a]'
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="font-mono text-[9px] opacity-70"
+                                                            >{{
+                                                                option.label
+                                                            }}</span
+                                                        >
+                                                        <span
+                                                            class="truncate"
+                                                            >{{
+                                                                option.text
+                                                            }}</span
+                                                        >
+                                                    </li>
+                                                </ul>
+                                                <p
+                                                    class="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                                                >
+                                                    <span aria-hidden="true"
+                                                        >✓</span
+                                                    >
+                                                    Answer key verified
+                                                </p>
+                                            </div>
+
                                             <!-- Line 4: Provenance / next step -->
                                             <p
                                                 v-if="line4Chars > 0"
@@ -1673,11 +1783,16 @@ watch(
                                         class="hdw-swap justify-items-start pt-1"
                                     >
                                         <button
+                                            ref="approveButtonRef"
+                                            data-testid="approve-draft-button"
                                             type="button"
                                             class="hdw-approve hdw-approve--pending inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-4 text-xs font-semibold text-amber-800 transition-transform active:scale-95 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
                                             :class="{
                                                 'is-on':
                                                     draftReady && !confirmed,
+                                                'is-pressing':
+                                                    cursor.pressing &&
+                                                    phase === 3,
                                             }"
                                             @click="handleConfirmSend"
                                         >
@@ -1929,7 +2044,7 @@ watch(
     transform: translateY(0);
 }
 
-/* ── Student answer type-in ── */
+/* ── Teacher request entrance ── */
 .hdw-answer {
     opacity: 0;
     transform: translateY(6px);
@@ -1941,30 +2056,6 @@ watch(
 .hdw-answer.is-on {
     opacity: 1;
     transform: translateY(0);
-}
-
-.hdw-answer-text {
-    display: inline-block;
-    clip-path: inset(0 100% 0 0);
-}
-
-.hdw-answer.is-on .hdw-answer-text {
-    clip-path: inset(0 0 0 0);
-    transition: clip-path 700ms steps(16, end);
-}
-
-/* ── Auto-score chip pop ── */
-.hdw-score {
-    opacity: 0;
-    transform: scale(0.7) translateY(3px);
-    transition:
-        opacity var(--dur-pop) var(--ease-pop),
-        transform var(--dur-pop) var(--ease-pop);
-}
-
-.hdw-score.is-on {
-    opacity: 1;
-    transform: scale(1) translateY(0);
 }
 
 /* ── Draft skeleton → text ── */
@@ -2080,6 +2171,16 @@ watch(
 .hdw-approve.is-on {
     opacity: 1;
     transform: translateY(0) scale(1);
+}
+
+.hdw-approve--pending {
+    transition:
+        opacity var(--dur-hover) var(--ease-out-expo),
+        transform 140ms var(--ease-out-expo);
+}
+
+.hdw-approve--pending.is-pressing {
+    transform: translateY(0) scale(0.97);
 }
 
 .hdw-approve--done.is-on {
@@ -2259,8 +2360,6 @@ watch(
 @media (prefers-reduced-motion: reduce) {
     .hdw-swap > *,
     .hdw-answer,
-    .hdw-answer-text,
-    .hdw-score,
     .hdw-approve,
     .hdw-progress,
     .hdw-delivered,
