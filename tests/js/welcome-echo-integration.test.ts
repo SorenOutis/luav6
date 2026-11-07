@@ -353,11 +353,17 @@ describe('Welcome page Echo AI integration', () => {
 
         await releaseEntrance(wrapper);
 
-        // Maria's request lands with the result pill.
+        // Maria's request lands; the draft preview waits for Echo's reply.
         await advanceToPhase(wrapper, 1);
         expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
             'Request sent',
         );
+        expect(wrapper.find('.hdw-answer').text()).not.toContain(
+            '15 items ready',
+        );
+        expect(
+            wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain('15 items ready');
 
         // Echo starts working — orb switches to thinking.
@@ -372,7 +378,7 @@ describe('Welcome page Echo AI integration', () => {
             'micro',
         );
         expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
-            'Needs your OK',
+            'Echo working',
         );
 
         // Confirmed — it reaches the class, loop completes before restarting.
@@ -407,7 +413,9 @@ describe('Welcome page Echo AI integration', () => {
         // the finished turn of the one it replaced.
         expect(wrapper.attributes('data-phase')).toBe('0');
         expect(wrapper.text()).toContain('Echo is thinking');
-        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
+        ).toBe(false);
 
         // Echo greets the new topic.
         await vi.advanceTimersByTimeAsync(1600);
@@ -431,7 +439,9 @@ describe('Welcome page Echo AI integration', () => {
         // replaced.
         await vi.advanceTimersByTimeAsync(1200);
         expect(wrapper.attributes('data-phase')).toBe('0');
-        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
+        ).toBe(false);
 
         await advanceToPhase(wrapper, 1);
         expect(wrapper.text()).toContain('21 of 28 active');
@@ -467,7 +477,50 @@ describe('Welcome page Echo AI integration', () => {
         await advanceToPhase(wrapper, 1);
         expect(isPressing()).toBe(false);
         expect(pointer.classes()).toContain('is-visible');
-        expect(wrapper.find('.hdw-score.is-on').exists()).toBe(true);
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Request sent',
+        );
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('moves Maria’s pointer to approve Echo’s finished draft', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+        await advanceToPhase(wrapper, 3);
+
+        const pointer = wrapper.get('[data-testid="demo-cursor"]');
+        const approvalButton = wrapper.get(
+            '[data-testid="approve-draft-button"]',
+        );
+
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Echo working',
+        );
+        expect(approvalButton.classes()).not.toContain('is-on');
+
+        await advanceUntil(() =>
+            approvalButton.classes().includes('is-pressing'),
+        );
+
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Ready for review',
+        );
+        expect(
+            wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
+        ).toBe(true);
+        expect(pointer.classes()).toContain('is-pressing');
+
+        await advanceToPhase(wrapper, 4);
+
+        expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
+            'Sent to class',
+        );
+        expect(wrapper.find('.hdw-approve--done.is-on').exists()).toBe(true);
+        expect(pointer.classes()).toContain('is-visible');
 
         vi.useRealTimers();
         wrapper.unmount();
@@ -568,6 +621,15 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.hdw-badge.is-on').text()).toContain(
             'Sent to class',
         );
+        const quizPreview = wrapper.find('[data-testid="quiz-draft-preview"]');
+        expect(quizPreview.exists()).toBe(true);
+        expect(quizPreview.text()).toContain('Solve x² − 7x + 12 = 0.');
+        expect(
+            quizPreview
+                .find('[aria-label="Option B, correct answer"]')
+                .exists(),
+        ).toBe(true);
+        expect(quizPreview.text()).toContain('Answer key verified');
         wrapper.unmount();
     });
 
