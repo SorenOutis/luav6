@@ -9,7 +9,6 @@ import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
 import RevealGroup from '@/components/welcome/RevealGroup.vue';
 import SafetyBand from '@/components/welcome/SafetyBand.vue';
-import SectionRail from '@/components/welcome/SectionRail.vue';
 import StatsBand from '@/components/welcome/StatsBand.vue';
 import TestimonialMarquee from '@/components/welcome/TestimonialMarquee.vue';
 import UpdatesList from '@/components/welcome/UpdatesList.vue';
@@ -157,8 +156,6 @@ const webSiteJsonLd = [
     <div
         class="welcome-root mobile-ui-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
-        <SectionRail />
-
         <WelcomeHeader
             :can-register="props.canRegister"
             :auth="$page.props.auth"
