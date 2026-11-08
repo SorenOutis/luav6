@@ -612,7 +612,7 @@ describe('Welcome page Echo AI integration', () => {
         wrapper.unmount();
     });
 
-    it('parks the hero demo on the finished state when motion is reduced', () => {
+    it('keeps the finished demo mobile-friendly when motion is reduced', () => {
         const wrapper = mount(HeroDemoWindow, {
             props: { prefersReducedMotion: true },
         });
@@ -630,6 +630,15 @@ describe('Welcome page Echo AI integration', () => {
                 .exists(),
         ).toBe(true);
         expect(quizPreview.text()).toContain('Answer key verified');
+        expect(
+            wrapper.find('[data-testid="demo-cursor"]').classes(),
+        ).not.toContain('is-visible');
+        expect(wrapper.find('[aria-label="Send message"]').exists()).toBe(true);
+        expect(wrapper.find('.hdw-approve--done.is-on').exists()).toBe(true);
+        expect(quizPreview.find('.grid-cols-2').exists()).toBe(true);
+        expect(wrapper.find('.hdw-delivered').classes()).toContain('sm:block');
+        expect(wrapper.find('.hdw-delivered').classes()).toContain('hidden');
+        expect(wrapper.find('.relative.min-w-0.flex-1').exists()).toBe(true);
         wrapper.unmount();
     });
 

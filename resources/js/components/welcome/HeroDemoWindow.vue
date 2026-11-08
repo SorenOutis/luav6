@@ -1786,7 +1786,7 @@ watch(
                                             ref="approveButtonRef"
                                             data-testid="approve-draft-button"
                                             type="button"
-                                            class="hdw-approve hdw-approve--pending inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-4 text-xs font-semibold text-amber-800 transition-transform active:scale-95 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+                                            class="hdw-approve hdw-approve--pending inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-4 text-xs font-semibold text-amber-800 transition-transform active:scale-95 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
                                             :class="{
                                                 'is-on':
                                                     draftReady && !confirmed,
@@ -1808,7 +1808,7 @@ watch(
                                             ></span>
                                         </button>
                                         <span
-                                            class="hdw-approve hdw-approve--done inline-flex min-h-9 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
+                                            class="hdw-approve hdw-approve--done inline-flex min-h-11 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
                                             :class="{ 'is-on': confirmed }"
                                         >
                                             <svg
@@ -1835,7 +1835,7 @@ watch(
                     <div
                         class="mt-4 flex shrink-0 items-center justify-between gap-3 border-t border-border/80 pt-3 dark:border-[#2c2520]"
                     >
-                        <div class="relative flex-1">
+                        <div class="relative min-w-0 flex-1">
                             <div
                                 data-testid="prompt-input"
                                 class="flex min-h-[40px] w-full items-center overflow-hidden rounded-full border border-border/80 bg-secondary/50 py-2 pr-20 pl-4 text-xs text-foreground transition-all duration-300 select-none dark:border-[#2c2520] dark:bg-[#17120e] dark:text-[#f5f0eb]"
@@ -1894,7 +1894,7 @@ watch(
                             </button>
                         </div>
                         <span
-                            class="hdw-delivered shrink-0 text-xs font-medium text-emerald-800 transition-opacity duration-300 dark:text-emerald-400"
+                            class="hdw-delivered hidden shrink-0 text-xs font-medium text-emerald-800 transition-opacity duration-300 sm:block dark:text-emerald-400"
                             :class="{ 'is-on': confirmed }"
                         >
                             Delivered to class ✓
