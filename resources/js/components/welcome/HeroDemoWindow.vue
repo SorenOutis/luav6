@@ -1539,24 +1539,24 @@ watch(
 
                 <!-- Sidebar: previous conversations -->
                 <aside
-                    class="hdw-stage hidden w-full shrink-0 flex-col gap-3 border-b border-border/80 bg-[#f0ebe1]/90 p-4 text-xs sm:flex md:w-56 md:border-r md:border-b-0 dark:border-[#2c2520] dark:bg-[#17120e]"
+                    class="hdw-stage hidden w-full shrink-0 flex-col gap-3 border-b border-border/80 bg-[#f0ebe1]/90 p-4 text-xs sm:flex md:w-[15.5rem] md:border-r md:border-b-0 dark:border-[#2c2520] dark:bg-[#17120e]"
                     :class="{ 'is-hidden': !booted }"
                 >
-                    <div class="flex min-h-0 flex-1 flex-col gap-2">
-                        <div class="flex items-center justify-between">
+                    <div class="flex min-h-0 flex-col gap-2">
+                        <div class="flex items-center justify-between px-2">
                             <span
-                                class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
+                                class="font-mono text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase dark:text-[#a1968a]"
                             >
                                 Conversations
                             </span>
                             <span
-                                class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
+                                class="font-mono text-[10px] text-muted-foreground/70 tabular-nums dark:text-[#72695f]"
                                 >{{ scenarios.length }}</span
                             >
                         </div>
                         <nav
                             ref="conversationNavRef"
-                            class="min-h-0 flex-1 space-y-0.5 overflow-y-auto pe-0.5"
+                            class="space-y-0.5"
                             aria-label="Demo conversations"
                             data-testid="worker-conversations"
                         >
@@ -1566,11 +1566,11 @@ watch(
                                 :data-conversation="i"
                                 :data-worker-row="conv.botSlug"
                                 type="button"
-                                class="flex w-full cursor-pointer items-start gap-1.5 rounded-lg px-2 py-[3px] text-left transition-colors duration-150"
+                                class="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-[5px] text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
                                 :class="[
                                     activeScenarioIndex === i
-                                        ? 'bg-card text-foreground shadow-xs dark:bg-[#221b15] dark:text-[#f5f0eb]'
-                                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
+                                        ? 'bg-card text-foreground shadow-xs ring-1 ring-border/70 dark:bg-[#221b15] dark:text-[#f5f0eb] dark:ring-[#2c2520]'
+                                        : 'text-muted-foreground hover:bg-secondary/55 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
                                     pointedIndex === i &&
                                     activeScenarioIndex !== i
                                         ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
@@ -1581,17 +1581,16 @@ watch(
                                 @click="selectScenario(i)"
                             >
                                 <span
-                                    class="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] leading-none"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-secondary/60 text-[12px] leading-none"
                                     aria-hidden="true"
                                     >{{ botFor(conv.botSlug).avatar }}</span
                                 >
                                 <span class="min-w-0 flex-1">
-                                    <span class="flex items-center gap-1.5">
+                                    <span class="flex items-center gap-2">
                                         <span
-                                            class="min-w-0 truncate text-[11px] font-medium"
+                                            class="min-w-0 flex-1 truncate text-[11.5px] font-medium tracking-[-0.01em]"
                                             >{{ conv.topic }}</span
                                         >
-                                        <!-- The bot is mid-turn in the open thread. -->
                                         <span
                                             v-if="
                                                 activeScenarioIndex === i &&
@@ -1618,11 +1617,9 @@ watch(
                                             aria-hidden="true"
                                         ></span>
                                     </span>
-                                    <!-- Only the open thread shows its last line;
-                                         the rest collapse to the bot name. -->
                                     <span
                                         v-if="activeScenarioIndex === i"
-                                        class="mt-0.5 hidden truncate text-[10px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
+                                        class="mt-0.5 block truncate text-[10px] leading-snug text-muted-foreground dark:text-[#7d736a]"
                                     >
                                         {{ activePreview }}
                                     </span>
@@ -1631,18 +1628,18 @@ watch(
                         </nav>
 
                         <div
-                            class="flex shrink-0 items-center gap-2 rounded-lg px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground dark:text-[#a1968a] dark:hover:text-[#f5f0eb]"
+                            class="mt-2 flex items-center gap-2 border-t border-border/60 px-2 pt-2.5 text-[11px] text-muted-foreground dark:border-[#2c2520] dark:text-[#a1968a]"
                         >
                             <span class="truncate">Review Queue</span>
                             <span
-                                class="py-0.2 ml-auto rounded-full bg-amber-500/20 px-1.5 font-mono text-[9px] text-amber-800 dark:text-amber-300"
+                                class="ml-auto rounded-full bg-amber-500/20 px-1.5 py-0.5 font-mono text-[9px] text-amber-800 tabular-nums dark:text-amber-300"
                                 >1</span
                             >
                         </div>
                     </div>
 
                     <div
-                        class="space-y-1 border-t border-border/80 pt-3 text-[11px] text-muted-foreground dark:border-[#2c2520] dark:text-[#a1968a]"
+                        class="mt-auto space-y-1 border-t border-border/80 pt-3 text-[11px] text-muted-foreground dark:border-[#2c2520] dark:text-[#a1968a]"
                     >
                         <p
                             class="font-medium text-foreground dark:text-[#f5f0eb]"
@@ -2112,7 +2109,7 @@ watch(
 
                                     <!-- Teacher confirmation action swap -->
                                     <div
-                                        class="hdw-swap justify-items-start gap-2 pt-1 sm:flex sm:w-full sm:items-center sm:justify-between"
+                                        class="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between"
                                     >
                                         <p
                                             class="flex min-w-0 items-center gap-1.5 text-[10px] leading-relaxed text-muted-foreground dark:text-[#a1968a]"
@@ -2126,49 +2123,56 @@ watch(
                                             Every AI draft still needs Maria’s
                                             OK.
                                         </p>
-                                        <button
-                                            ref="approveButtonRef"
-                                            data-testid="approve-draft-button"
-                                            type="button"
-                                            class="hdw-approve hdw-approve--pending inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-4 text-xs font-semibold text-amber-800 transition-transform active:scale-95 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
-                                            :class="{
-                                                'is-on':
-                                                    draftReady && !confirmed,
-                                                'is-pressing':
-                                                    cursor.pressing &&
-                                                    phase === 3,
-                                            }"
-                                            @click="handleConfirmSend"
+                                        <div
+                                            class="hdw-swap shrink-0 justify-items-start sm:justify-items-end"
                                         >
-                                            <span>Needs your OK</span>
-                                            <span
-                                                class="text-muted-foreground/60 dark:text-[#72695f]"
-                                                >·</span
+                                            <button
+                                                ref="approveButtonRef"
+                                                data-testid="approve-draft-button"
+                                                type="button"
+                                                class="hdw-approve hdw-approve--pending inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-4 text-xs font-semibold text-amber-800 transition-transform active:scale-95 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+                                                :class="{
+                                                    'is-on':
+                                                        draftReady &&
+                                                        !confirmed,
+                                                    'is-pressing':
+                                                        cursor.pressing &&
+                                                        phase === 3,
+                                                }"
+                                                @click="handleConfirmSend"
                                             >
-                                            <span>Confirm &amp; send</span>
+                                                <span>Needs your OK</span>
+                                                <span
+                                                    class="text-muted-foreground/60 dark:text-[#72695f]"
+                                                    >·</span
+                                                >
+                                                <span>Confirm &amp; send</span>
+                                                <span
+                                                    class="hdw-nudge h-1.5 w-1.5 rounded-full bg-current"
+                                                    aria-hidden="true"
+                                                ></span>
+                                            </button>
                                             <span
-                                                class="hdw-nudge h-1.5 w-1.5 rounded-full bg-current"
-                                                aria-hidden="true"
-                                            ></span>
-                                        </button>
-                                        <span
-                                            class="hdw-approve hdw-approve--done inline-flex min-h-11 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
-                                            :class="{ 'is-on': confirmed }"
-                                        >
-                                            <svg
-                                                viewBox="0 0 16 16"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                class="h-3.5 w-3.5"
-                                                aria-hidden="true"
+                                                class="hdw-approve hdw-approve--done inline-flex min-h-11 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
+                                                :class="{ 'is-on': confirmed }"
                                             >
-                                                <path d="m3.5 8.5 3 3 6-6" />
-                                            </svg>
-                                            Sent to class
-                                        </span>
+                                                <svg
+                                                    viewBox="0 0 16 16"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    class="h-3.5 w-3.5"
+                                                    aria-hidden="true"
+                                                >
+                                                    <path
+                                                        d="m3.5 8.5 3 3 6-6"
+                                                    />
+                                                </svg>
+                                                Sent to class
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
