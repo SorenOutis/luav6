@@ -20,9 +20,9 @@ const props = withDefaults(
 );
 
 /**
- * Scripted vignette, seen from the teacher's console: Maria asks Echo to
- * build a quiz / check the roster / read the scores / export grades → Echo
- * works → Echo types its answer line by line → the teacher confirms and it
+ * Scripted vignette, seen from the teacher's console: Maria asks the Echo team
+ * to build a quiz / check the roster / read the scores / export grades → the
+ * Chief of Staff dispatches specialists → Maria reviews and approves the answer
  * goes out to the class. The script stays parked behind a boot placeholder
  * until the hero window's entrance animation has finished, so the
  * conversation never plays underneath the fade-in. Runs only while visible;
@@ -46,8 +46,8 @@ const PRESS_MS = 280;
 const POINTER_SWEEP_MS = 700;
 /** Phase 1 — the request lands and the header confirms it was sent. */
 const ANSWERED_MS = 1900;
-/** Phase 2 — Echo works; the skeleton holds the bubble. */
-const THINKING_MS = 2100;
+/** Phase 2 — the Chief dispatches up to three specialists, one at a time. */
+const THINKING_MS = 3200;
 /** Phase 3 — Echo streams its answer, one line breathing at a time. */
 const ECHO_LEAD_MS = 420;
 const ECHO_MS_PER_CHAR = 33;
@@ -60,6 +60,9 @@ const SWITCH_TRAVEL_MS = POINTER_SWEEP_MS;
 const SWITCH_CLICK_MS = 260;
 /** Slack so the pointer's click lands before the loop would auto-advance. */
 const SWITCH_SLACK_MS = 140;
+/** The simulated Chief dispatches one specialist at a time. */
+const TEAM_CLICK_TRAVEL_MS = 300;
+const TEAM_CLICK_GAP_MS = 120;
 /** Maria reviews Echo's finished answer before confirming it. */
 const APPROVAL_TRAVEL_MS = POINTER_SWEEP_MS;
 const APPROVAL_SLACK_MS = 140;
@@ -98,6 +101,74 @@ const ENTRANCE_ANIMATION = 'hero-window-in';
 /** 500ms animation-delay + 950ms duration from app.css, plus slack. */
 const ENTRANCE_FALLBACK_MS = 1600;
 
+const TEAM_WORKERS = [
+    {
+        slug: 'chief',
+        name: 'Chief of Staff',
+        shortName: 'Chief of Staff',
+        avatar: '🎯',
+        role: 'Plans the request, routes each stage, and reviews the final answer.',
+    },
+    {
+        slug: 'registrar',
+        name: 'Registrar',
+        shortName: 'Registrar',
+        avatar: '📋',
+        role: 'Owns enrollment, sections, and learner records.',
+    },
+    {
+        slug: 'curriculum-designer',
+        name: 'Curriculum Designer',
+        shortName: 'Curriculum',
+        avatar: '📚',
+        role: 'Builds lessons, learning materials, and assignments.',
+    },
+    {
+        slug: 'assessment-officer',
+        name: 'Assessment Officer',
+        shortName: 'Assessment',
+        avatar: '📝',
+        role: 'Prepares exams, reviews submissions, and checks grades.',
+    },
+    {
+        slug: 'student-success-coach',
+        name: 'Student Success Coach',
+        shortName: 'Success Coach',
+        avatar: '🌱',
+        role: 'Finds learners who need support and drafts next steps.',
+    },
+    {
+        slug: 'communications-lead',
+        name: 'Communications Lead',
+        shortName: 'Comms Lead',
+        avatar: '📣',
+        role: 'Drafts clear announcements, notifications, and replies.',
+    },
+    {
+        slug: 'operations-controller',
+        name: 'Operations Controller',
+        shortName: 'Operations',
+        avatar: '⚙️',
+        role: 'Checks workspace readiness and everyday operations.',
+    },
+    {
+        slug: 'data-steward',
+        name: 'Data Steward',
+        shortName: 'Data Steward',
+        avatar: '📊',
+        role: 'Checks reporting, data quality, and exports.',
+    },
+    {
+        slug: 'engagement-manager',
+        name: 'Engagement Manager',
+        shortName: 'Engagement',
+        avatar: '🏆',
+        role: 'Designs seasons, badges, rewards, and student motivation.',
+    },
+] as const;
+
+type TeamWorkerSlug = (typeof TEAM_WORKERS)[number]['slug'];
+
 interface Scenario {
     id: string;
     topic: string;
@@ -112,6 +183,8 @@ interface Scenario {
     teacherRequest: string;
     /** Value shown in the active conversation's history preview. */
     resultValue: string;
+    /** Specialists picked by the Chief of Staff for this request. */
+    workerAssignments: Partial<Record<TeamWorkerSlug, string>>;
     echoThinking: string;
     echoSteps: {
         /** The one-line takeaway. */
@@ -140,7 +213,13 @@ const scenarios: Scenario[] = [
             'Hi Maria! Ready to build tomorrow’s quiz? I can draft it from your syllabus.',
         teacherRequest: 'Build me a 15-item quiz on quadratics for tomorrow.',
         resultValue: '15 items ready',
-        echoThinking: 'Echo is aligning items to your syllabus',
+        workerAssignments: {
+            'curriculum-designer': 'Maps items to Quadratics outcomes',
+            'assessment-officer': 'Checks balance, distractors, and answer key',
+            'data-steward': 'Verifies alignment with last term’s item bank',
+        },
+        echoThinking:
+            'Your curriculum and assessment teams are preparing the quiz',
         echoSteps: {
             bold: 'Drafted 15 items across three difficulty tiers.',
             detail: 'Every item maps directly to quadratic equations.',
@@ -161,7 +240,12 @@ const scenarios: Scenario[] = [
             'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
         teacherRequest: 'Who has actually logged in today?',
         resultValue: '21 of 28 active',
-        echoThinking: 'Echo is reading today’s activity log',
+        workerAssignments: {
+            registrar: 'Checks today’s section roster',
+            'student-success-coach': 'Flags learners who may need a nudge',
+        },
+        echoThinking:
+            'Your Registrar and Success Coach are checking today’s activity',
         echoSteps: {
             bold: '21 of 28 learners opened a task today.',
             detail: 'Last activity: Reyes, Aquino, and Limbu, six minutes ago.',
@@ -182,7 +266,13 @@ const scenarios: Scenario[] = [
             'Hi Maria! I’ve finished scoring Term 2 — want the item analysis?',
         teacherRequest: 'Which students are struggling with quadratics?',
         resultValue: '6 flagged at risk',
-        echoThinking: 'Echo is cross-referencing item scores',
+        workerAssignments: {
+            'assessment-officer': 'Finds missed items and score patterns',
+            'student-success-coach': 'Prepares a focused support plan',
+            'curriculum-designer': 'Suggests the right skill to reteach',
+        },
+        echoThinking:
+            'Your assessment and support teams are comparing item results',
         echoSteps: {
             bold: '6 of 28 learners sit below 70% on quadratics.',
             detail: 'All six missed the same factoring items in Item 3.',
@@ -203,7 +293,12 @@ const scenarios: Scenario[] = [
             'Hi Maria! Term 2 reporting is packaged whenever you’re ready for it.',
         teacherRequest: 'Export Grade 8 term grades.',
         resultValue: '3 files ready',
-        echoThinking: 'Echo is preparing the grade report',
+        workerAssignments: {
+            'data-steward': 'Compiles the term report and grade exports',
+            registrar: 'Checks class lists and enrollment counts',
+            'operations-controller': 'Checks every section is included',
+        },
+        echoThinking: 'Your data and operations teams are preparing the report',
         echoSteps: {
             bold: 'Compiled 28 learners across your three sections.',
             detail: 'Included item-level scores, standards breakdown, and rubric ratings.',
@@ -220,6 +315,10 @@ const scenarios: Scenario[] = [
  * Per-scenario budgets, sized from its own copy so every typewriter lands
  * just before its phase flips — no rushed stream, no dead air.
  */
+function assignedWorkerCount(scenario: Scenario): number {
+    return Object.keys(scenario.workerAssignments).length;
+}
+
 const quizDraftOptions = [
     { label: 'A', text: 'x = 2, x = 6', isCorrect: false },
     { label: 'B', text: 'x = 3, x = 4', isCorrect: true },
@@ -252,7 +351,11 @@ const SCENARIO_TIMINGS = scenarios.map((scenario) => {
                 CURSOR_TRAVEL_MS +
                 PRESS_MS,
             ANSWERED_MS,
-            THINKING_MS,
+            THINKING_MS +
+                CURSOR_TRAVEL_MS +
+                PRESS_MS +
+                assignedWorkerCount(scenario) *
+                    (TEAM_CLICK_TRAVEL_MS + PRESS_MS + TEAM_CLICK_GAP_MS),
             ECHO_LEAD_MS +
                 echo +
                 ECHO_TAIL_MS +
@@ -296,6 +399,185 @@ const activeScenarioIndex = computed(() => {
 const activeScenario = computed(() => {
     return scenarios[activeScenarioIndex.value];
 });
+
+const assignedWorkerSlugs = computed(() =>
+    TEAM_WORKERS.filter(
+        (worker) =>
+            worker.slug !== 'chief' &&
+            activeScenario.value.workerAssignments[worker.slug],
+    ).map((worker) => worker.slug),
+);
+
+const focusedWorkerSlug = ref<TeamWorkerSlug>('chief');
+const activeWorkerSlug = ref<TeamWorkerSlug | null>(null);
+const completedWorkerSlugs = ref<TeamWorkerSlug[]>([]);
+const teamRosterRef = ref<HTMLElement | null>(null);
+let teamActionTimer: ReturnType<typeof setTimeout> | undefined;
+
+const focusedWorker = computed(
+    () =>
+        TEAM_WORKERS.find(
+            (worker) => worker.slug === focusedWorkerSlug.value,
+        ) ?? TEAM_WORKERS[0],
+);
+
+function workerStatus(slug: TeamWorkerSlug): string {
+    if (slug === 'chief') {
+        if (phase.value === 0) return 'Ready';
+        if (phase.value === 1) return 'Planning';
+        if (phase.value === 2) return 'Routing';
+        if (phase.value === 3) return 'Reviewing';
+        return 'Approved';
+    }
+
+    if (!assignedWorkerSlugs.value.includes(slug)) {
+        return 'Available';
+    }
+
+    if (phase.value === 1) {
+        return 'Queued';
+    }
+
+    if (phase.value === 2 && activeWorkerSlug.value === slug) {
+        return 'Working';
+    }
+
+    if (phase.value === 3 && !draftReady.value) {
+        return 'Working';
+    }
+
+    if (completedWorkerSlugs.value.includes(slug) || phase.value >= 3) {
+        return phase.value >= 4 ? 'Sent' : 'Complete';
+    }
+
+    return phase.value === 2 ? 'Up next' : 'Ready';
+}
+
+/** Reads as staffing, not as a score — most requests use a subset of the nine. */
+const teamBadgeLabel = computed(() => {
+    if (phase.value === 0) return '9 standing by';
+
+    return `${1 + assignedWorkerSlugs.value.length} engaged`;
+});
+
+const teamWorkflowSummary = computed(() => {
+    if (phase.value === 0)
+        return 'The Chief of Staff and eight specialists are standing by.';
+    if (phase.value === 1)
+        return 'The Chief of Staff is planning this request.';
+    if (phase.value === 2)
+        return 'The Chief of Staff is assigning a clear stage to each specialist.';
+    if (phase.value === 3 && completedWorkerSlugs.value.length > 0)
+        return `The assigned team completed ${completedWorkerSlugs.value.length} specialist checks. Maria still reviews the draft.`;
+    if (phase.value === 3 && !draftReady.value)
+        return 'The assigned specialists are preparing their findings.';
+    if (phase.value === 3)
+        return 'The team is ready. Maria reviews and approves the draft.';
+    return 'Maria approved the draft. It is ready for the class.';
+});
+
+function clearTeamActionTimer(): void {
+    if (teamActionTimer !== undefined) {
+        clearTimeout(teamActionTimer);
+        teamActionTimer = undefined;
+    }
+
+    cursor.pressing = false;
+}
+
+function focusWorker(slug: TeamWorkerSlug): void {
+    focusedWorkerSlug.value = slug;
+
+    if (
+        phase.value !== 2 ||
+        slug === 'chief' ||
+        !assignedWorkerSlugs.value.includes(slug)
+    ) {
+        clearTeamActionTimer();
+        activeWorkerSlug.value = null;
+        cursor.travel = POINTER_SWEEP_MS;
+        glideTo(conversationPoint(activeScenarioIndex.value));
+    }
+}
+
+function workerPoint(slug: TeamWorkerSlug): { x: number; y: number } {
+    const frame = root.value?.getBoundingClientRect();
+    const card = teamRosterRef.value?.querySelector<HTMLElement>(
+        `[data-worker="${slug}"]`,
+    );
+
+    if (!frame || !card) return { x: 0, y: 0 };
+
+    const rect = card.getBoundingClientRect();
+
+    return {
+        x: rect.left - frame.left + rect.width / 2,
+        y: rect.top - frame.top + rect.height / 2,
+    };
+}
+
+function clickWorkerWithCursor(
+    slug: TeamWorkerSlug,
+    afterClick?: () => void,
+): void {
+    cursor.travel = slug === 'chief' ? CURSOR_TRAVEL_MS : TEAM_CLICK_TRAVEL_MS;
+    cursor.pressing = false;
+    cursor.visible = true;
+    activeWorkerSlug.value = slug;
+    glideTo(workerPoint(slug));
+
+    const travel = cursor.travel;
+    pressTimer = setTimeout(() => {
+        cursor.pressing = true;
+    }, travel);
+
+    teamActionTimer = setTimeout(() => {
+        teamActionTimer = undefined;
+        if (pressTimer !== undefined) {
+            clearTimeout(pressTimer);
+            pressTimer = undefined;
+        }
+        teamRosterRef.value
+            ?.querySelector<HTMLButtonElement>(`[data-worker="${slug}"]`)
+            ?.click();
+        cursor.pressing = false;
+        afterClick?.();
+    }, travel + PRESS_MS);
+}
+
+function beginSpecialistHandoffs(index = 0): void {
+    if (phase.value !== 2 || !inView.value || !enabled.value) {
+        activeWorkerSlug.value = null;
+
+        return;
+    }
+
+    const slug = assignedWorkerSlugs.value[index];
+
+    if (!slug) {
+        activeWorkerSlug.value = null;
+        return;
+    }
+
+    clickWorkerWithCursor(slug, () => {
+        if (phase.value !== 2) {
+            activeWorkerSlug.value = null;
+
+            return;
+        }
+
+        completedWorkerSlugs.value = [
+            ...completedWorkerSlugs.value.filter(
+                (completed) => completed !== slug,
+            ),
+            slug,
+        ];
+        teamActionTimer = setTimeout(
+            () => beginSpecialistHandoffs(index + 1),
+            TEAM_CLICK_GAP_MS,
+        );
+    });
+}
 
 const answered = computed(() => phase.value >= 1);
 const drafting = computed(() => phase.value === 2);
@@ -594,6 +876,7 @@ function beginConversationSwitch() {
     const current = activeScenarioIndex.value;
     const next = (current + 1) % scenarios.length;
 
+    focusedWorkerSlug.value = 'chief';
     cursor.travel = SWITCH_TRAVEL_MS;
     cursor.pressing = false;
     cursor.visible = true;
@@ -663,6 +946,9 @@ function clearTypingTimers() {
         clearTimeout(cursorTimer);
         cursorTimer = undefined;
     }
+    clearTeamActionTimer();
+    activeWorkerSlug.value = null;
+    completedWorkerSlugs.value = [];
     if (approvalTimer !== undefined) {
         clearTimeout(approvalTimer);
         approvalTimer = undefined;
@@ -930,6 +1216,10 @@ watch(
         resetCursor();
 
         if (!isEnabled) {
+            clearTeamActionTimer();
+            activeWorkerSlug.value = null;
+            completedWorkerSlugs.value = [];
+            focusedWorkerSlug.value = 'chief';
             hideCursor();
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
@@ -948,7 +1238,12 @@ watch(
             return;
         }
 
+        activeWorkerSlug.value = null;
+        completedWorkerSlugs.value = [];
+
         if (newPhase === 0) {
+            clearTeamActionTimer();
+            focusedWorkerSlug.value = 'chief';
             greetingReady.value = false;
             typedGreetingChars.value = 0;
             typedPromptChars.value = 0;
@@ -992,7 +1287,20 @@ watch(
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
             typedEchoChars.value = 0;
+            focusedWorkerSlug.value = 'chief';
+
+            if (newPhase === 2) {
+                clickWorkerWithCursor('chief', () => {
+                    if (phase.value === 2) {
+                        beginSpecialistHandoffs();
+                    }
+                });
+            }
         } else if (newPhase === 3) {
+            clearTeamActionTimer();
+            activeWorkerSlug.value = null;
+            completedWorkerSlugs.value = [...assignedWorkerSlugs.value];
+            focusedWorkerSlug.value = 'chief';
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
@@ -1013,12 +1321,14 @@ watch(
                     ECHO_TAIL_MS,
             );
         } else if (newPhase >= 4) {
+            clearTeamActionTimer();
+            activeWorkerSlug.value = null;
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
             typedEchoChars.value = totalEchoChars.value;
 
-            // 4. Maria moves on: the pointer crosses to the next thread
+            // 4. The reviewed request moves to the next conversation.
             switchTimer = setTimeout(beginConversationSwitch, APPROVED_MS);
         }
     },
@@ -1043,6 +1353,9 @@ watch(
         if (visible) {
             start();
         } else {
+            clearTeamActionTimer();
+            activeWorkerSlug.value = null;
+            cursor.visible = false;
             stop();
         }
     },
@@ -1102,6 +1415,7 @@ function handleSendPrompt() {
 function handleConfirmSend() {
     if (!enabled.value || !draftReady.value) return;
 
+    clearTypingTimers();
     set(4);
 }
 
@@ -1143,7 +1457,7 @@ watch(
         class="hero-window-in relative w-full scroll-mt-32"
         :data-phase="phase"
         @animationend="onEntranceEnd"
-        aria-label="Live preview: a teacher asks Echo to build a quiz, check the roster, read the scores, or export grades, then confirms it goes to the class"
+        aria-label="Interactive preview of the nine-worker Echo team. The Chief of Staff delegates classroom requests to eight specialists, and Maria approves every result before it reaches students."
     >
         <div
             class="overflow-hidden rounded-2xl border border-border/80 bg-card text-foreground shadow-[0_24px_70px_rgba(40,30,20,0.08),0_2px_8px_rgba(40,30,20,0.04)] sm:rounded-3xl dark:border-[#2c2520] dark:bg-[#14100d] dark:text-[#f5f0eb] dark:shadow-[0_24px_70px_rgba(0,0,0,0.45),0_2px_8px_rgba(0,0,0,0.3)]"
@@ -1362,6 +1676,133 @@ watch(
                     class="hdw-stage flex flex-1 flex-col justify-between overflow-hidden bg-card p-4 text-left sm:p-6 dark:bg-[#120e0b]"
                     :class="{ 'is-hidden': !booted }"
                 >
+                    <section
+                        ref="teamRosterRef"
+                        class="mb-2 shrink-0 rounded-xl border border-border/70 bg-background/60 p-2.5 dark:border-[#2c2520] dark:bg-[#17120e]"
+                        aria-label="Echo's nine-worker team"
+                        data-testid="team-roster"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <p
+                                    class="font-mono text-[9px] font-semibold tracking-[0.16em] text-muted-foreground uppercase dark:text-[#a1968a]"
+                                >
+                                    Echo · 9-worker team
+                                </p>
+                                <p
+                                    class="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground dark:text-[#7d736a]"
+                                    data-testid="team-workflow-summary"
+                                >
+                                    {{ teamWorkflowSummary }}
+                                </p>
+                            </div>
+                            <span
+                                class="shrink-0 rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 font-mono text-[9px] text-brand"
+                                data-testid="team-progress"
+                            >
+                                {{ teamBadgeLabel }}
+                            </span>
+                        </div>
+
+                        <div
+                            class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3"
+                            role="group"
+                            aria-label="Nine Echo workers"
+                        >
+                            <button
+                                v-for="worker in TEAM_WORKERS"
+                                :key="worker.slug"
+                                :data-worker="worker.slug"
+                                type="button"
+                                class="team-worker group/worker flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 py-1.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring sm:gap-2 sm:px-2"
+                                :class="[
+                                    focusedWorkerSlug === worker.slug
+                                        ? 'border-brand/45 bg-brand/10 text-foreground dark:border-brand/50 dark:bg-brand/10 dark:text-[#f5f0eb]'
+                                        : 'border-border/60 bg-card/70 text-muted-foreground dark:border-[#2c2520] dark:bg-[#120e0b] dark:text-[#a1968a]',
+                                    {
+                                        'team-worker--assigned':
+                                            worker.slug !== 'chief' &&
+                                            assignedWorkerSlugs.includes(
+                                                worker.slug,
+                                            ),
+                                        'team-worker--working':
+                                            activeWorkerSlug === worker.slug,
+                                        'team-worker--done':
+                                            completedWorkerSlugs.includes(
+                                                worker.slug,
+                                            ) ||
+                                            (worker.slug === 'chief' &&
+                                                phase >= 3),
+                                    },
+                                ]"
+                                :aria-pressed="
+                                    focusedWorkerSlug === worker.slug
+                                "
+                                :aria-label="`${worker.name}. ${worker.role} ${workerStatus(worker.slug)}${activeScenario.workerAssignments[worker.slug] ? `. ${activeScenario.workerAssignments[worker.slug]}` : ''}`"
+                                @mouseenter="focusWorker(worker.slug)"
+                                @focus="focusWorker(worker.slug)"
+                                @click="focusWorker(worker.slug)"
+                            >
+                                <span
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-[13px] leading-none sm:h-7 sm:w-7"
+                                    aria-hidden="true"
+                                >
+                                    {{ worker.avatar }}
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span
+                                        class="block truncate text-[10px] leading-tight font-semibold text-foreground sm:text-[10px] dark:text-[#f5f0eb]"
+                                    >
+                                        {{ worker.shortName }}
+                                    </span>
+                                    <span
+                                        class="mt-0.5 flex items-center gap-1 font-mono text-[9px] leading-tight sm:text-[9px]"
+                                    >
+                                        <span
+                                            class="team-worker__dot h-1 w-1 shrink-0 rounded-full bg-current"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <span class="truncate">{{
+                                            workerStatus(worker.slug)
+                                        }}</span>
+                                    </span>
+                                </span>
+                            </button>
+                        </div>
+
+                        <p
+                            class="mt-2 flex min-h-7 items-start gap-1.5 border-t border-border/60 pt-1.5 text-[10px] leading-relaxed text-muted-foreground dark:border-[#2c2520] dark:text-[#a1968a]"
+                            aria-live="polite"
+                            data-testid="worker-detail"
+                        >
+                            <span aria-hidden="true">{{
+                                focusedWorker.avatar
+                            }}</span>
+                            <span
+                                class="shrink-0 font-semibold whitespace-nowrap text-foreground dark:text-[#f5f0eb]"
+                                >{{ focusedWorker.name }}</span
+                            >
+                            <span
+                                v-if="
+                                    activeScenario.workerAssignments[
+                                        focusedWorker.slug
+                                    ]
+                                "
+                                class="min-w-0"
+                            >
+                                ·
+                                {{
+                                    activeScenario.workerAssignments[
+                                        focusedWorker.slug
+                                    ]
+                                }}
+                            </span>
+                            <span v-else class="min-w-0"
+                                >· {{ focusedWorker.role }}</span
+                            >
+                        </p>
+                    </section>
+
                     <!-- Top item metadata bar -->
                     <div
                         class="flex shrink-0 items-center justify-between border-b border-border/80 pb-3 text-xs dark:border-[#2c2520]"
@@ -1698,6 +2139,41 @@ watch(
                                                 ></span>
                                             </p>
 
+                                            <p
+                                                v-if="
+                                                    line1Chars > 0 &&
+                                                    assignedWorkerSlugs.length >
+                                                        0
+                                                "
+                                                class="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] leading-relaxed text-muted-foreground dark:text-[#a1968a]"
+                                                data-testid="team-handoff-summary"
+                                            >
+                                                Routed by
+                                                <span
+                                                    class="font-semibold text-foreground dark:text-[#f5f0eb]"
+                                                    >Chief of Staff</span
+                                                >
+                                                <template
+                                                    v-for="slug in assignedWorkerSlugs"
+                                                    :key="slug"
+                                                >
+                                                    <span aria-hidden="true"
+                                                        >·</span
+                                                    >
+                                                    <span
+                                                        class="rounded-full border border-brand/20 bg-brand/5 px-2 py-0.5 text-foreground/80 dark:border-brand/25 dark:bg-brand/5 dark:text-[#d3ccc2]"
+                                                    >
+                                                        {{
+                                                            TEAM_WORKERS.find(
+                                                                (worker) =>
+                                                                    worker.slug ===
+                                                                    slug,
+                                                            )?.shortName
+                                                        }}
+                                                    </span>
+                                                </template>
+                                            </p>
+
                                             <div
                                                 v-if="
                                                     activeScenario.id ===
@@ -1780,8 +2256,20 @@ watch(
 
                                     <!-- Teacher confirmation action swap -->
                                     <div
-                                        class="hdw-swap justify-items-start pt-1"
+                                        class="hdw-swap justify-items-start gap-2 pt-1 sm:flex sm:w-full sm:items-center sm:justify-between"
                                     >
+                                        <p
+                                            class="flex min-w-0 items-center gap-1.5 text-[10px] leading-relaxed text-muted-foreground dark:text-[#a1968a]"
+                                            data-testid="team-human-gate"
+                                        >
+                                            <span
+                                                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[11px]"
+                                                aria-hidden="true"
+                                                >👩‍🏫</span
+                                            >
+                                            Every AI draft still needs Maria’s
+                                            OK.
+                                        </p>
                                         <button
                                             ref="approveButtonRef"
                                             data-testid="approve-draft-button"
@@ -1928,9 +2416,12 @@ watch(
                     100% human-verified AI actions
                 </span>
             </div>
+            <span class="sr-only" data-testid="team-worker-count">
+                {{ TEAM_WORKERS.length }} workers
+            </span>
         </div>
 
-        <!-- Scripted pointer — Maria's hand on the keyboard. -->
+        <!-- Scripted pointer — Chief assignments, then Maria's review. -->
         <div
             data-testid="demo-cursor"
             class="hdw-cursor pointer-events-none absolute top-0 left-0 z-20"
@@ -2088,6 +2579,57 @@ watch(
 .hdw-draft.is-on {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* The nine-worker directory is a product preview, so keep its state legible
+   even when low-end mode trims decorative transitions elsewhere on the page. */
+.team-worker {
+    transition:
+        border-color 160ms ease-out,
+        background-color 160ms ease-out,
+        color 160ms ease-out,
+        opacity 160ms ease-out;
+}
+
+.team-worker--assigned {
+    border-color: color-mix(
+        in oklab,
+        var(--color-brand) 28%,
+        var(--color-border)
+    );
+}
+
+.team-worker--working {
+    border-color: color-mix(
+        in oklab,
+        var(--color-brand) 58%,
+        var(--color-border)
+    );
+    background-color: color-mix(
+        in oklab,
+        var(--color-brand) 12%,
+        var(--color-card)
+    );
+}
+
+.team-worker--done .team-worker__dot {
+    color: var(--color-success, #15803d);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .team-worker:not(.team-worker--working):hover {
+        border-color: color-mix(
+            in oklab,
+            var(--color-brand) 42%,
+            var(--color-border)
+        );
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .team-worker {
+        transition: none;
+    }
 }
 
 /* ── Result chip in Echo line 3 ── */

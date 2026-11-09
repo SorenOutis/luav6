@@ -285,7 +285,7 @@ describe('Welcome page Echo AI integration', () => {
         // Phase 2 — Echo is visibly working, skeleton on, answer off.
         await advanceToPhase(wrapper, 2);
         expect(wrapper.text()).toContain(
-            'Echo is aligning items to your syllabus',
+            'Your curriculum and assessment teams are preparing the quiz',
         );
         expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(false);
         expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(false);
@@ -341,6 +341,116 @@ describe('Welcome page Echo AI integration', () => {
         expect(previous).toBeGreaterThan(0);
 
         vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('renders the Chief of Staff and all eight distinct specialist roles', () => {
+        const wrapper = mount(HeroDemoWindow, {
+            props: { prefersReducedMotion: true },
+        });
+        const workers = wrapper.findAll('[data-worker]');
+
+        expect(workers).toHaveLength(9);
+        expect(
+            wrapper.get('[data-testid="team-worker-count"]').text(),
+        ).toContain('9 workers');
+        expect(wrapper.get('[data-worker="chief"]').text()).toContain(
+            'Chief of Staff',
+        );
+        expect(
+            workers.map((worker) => worker.attributes('data-worker')),
+        ).toEqual([
+            'chief',
+            'registrar',
+            'curriculum-designer',
+            'assessment-officer',
+            'student-success-coach',
+            'communications-lead',
+            'operations-controller',
+            'data-steward',
+            'engagement-manager',
+        ]);
+
+        wrapper.unmount();
+    });
+
+    it('announces the specialists assigned to a request in the visible answer', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+
+        await releaseEntrance(wrapper);
+        await advanceToPhase(wrapper, 3);
+        await advanceUntil(() =>
+            wrapper.find('[data-testid="team-handoff-summary"]').exists(),
+        );
+
+        const handoffSummary = wrapper.find(
+            '[data-testid="team-handoff-summary"]',
+        );
+        expect(handoffSummary.exists()).toBe(true);
+        expect(handoffSummary.text()).toContain('Chief of Staff');
+        expect(handoffSummary.text()).toContain('Curriculum');
+        expect(handoffSummary.text()).toContain('Assessment');
+        expect(handoffSummary.text()).toContain('Data Steward');
+        expect(
+            wrapper.find('[data-testid="team-human-gate"]').text(),
+        ).toContain('Maria’s OK');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('shows the Chief routing the request to assigned specialists one at a time', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(HeroDemoWindow);
+        const pointer = wrapper.get('[data-testid="demo-cursor"]');
+        const roster = wrapper.find('[data-testid="team-roster"]');
+
+        await releaseEntrance(wrapper);
+        await advanceToPhase(wrapper, 2);
+
+        expect(roster.find('[data-worker="chief"]').classes()).toContain(
+            'team-worker--working',
+        );
+        await advanceUntil(() =>
+            roster
+                .find('[data-worker="curriculum-designer"]')
+                .classes()
+                .includes('team-worker--working'),
+        );
+        await advanceUntil(() => pointer.classes().includes('is-pressing'));
+        expect(pointer.classes()).toContain('is-pressing');
+        await advanceUntil(() =>
+            roster
+                .find('[data-worker="curriculum-designer"]')
+                .classes()
+                .includes('team-worker--done'),
+        );
+        expect(pointer.classes()).not.toContain('is-pressing');
+        expect(roster.text()).toContain('Maps items to Quadratics outcomes');
+        await advanceToPhase(wrapper, 3);
+        expect(roster.findAll('.team-worker--done')).toHaveLength(4);
+        expect(wrapper.get('[data-testid="team-progress"]').text()).toContain(
+            '4 engaged',
+        );
+        expect(roster.text()).toContain('Chief of Staff');
+
+        vi.useRealTimers();
+        wrapper.unmount();
+    });
+
+    it('lets visitors inspect a worker role using pointer and keyboard focus', async () => {
+        const wrapper = mount(HeroDemoWindow, {
+            props: { prefersReducedMotion: true },
+        });
+        const registrar = wrapper.get('[data-worker="registrar"]');
+        await registrar.trigger('mouseenter');
+        expect(wrapper.find('[data-testid="worker-detail"]').text()).toContain(
+            'Owns enrollment, sections, and learner records.',
+        );
+        await registrar.trigger('click');
+        expect(registrar.attributes('aria-pressed')).toBe('true');
+
         wrapper.unmount();
     });
 
