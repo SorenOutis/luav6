@@ -168,6 +168,9 @@ type TeamWorkerSlug = (typeof TEAM_WORKERS)[number]['slug'];
 
 interface Scenario {
     id: string;
+    /** The bot whose conversation this is. */
+    botSlug: TeamWorkerSlug;
+    /** Thread label as it reads in the conversation list. */
     topic: string;
     /** Left half of the chat header, e.g. `Draft · 15 items`. */
     contextLabel: string;
@@ -175,12 +178,16 @@ interface Scenario {
     alignment: string;
     /** Last line of the exchange, as the history list shows it. */
     historyPreview: string;
+    /** The bot greets the teacher first — every thread opens with this. */
     echoGreeting: string;
     /** What the teacher types into the composer. */
     teacherRequest: string;
     /** Value shown in the active conversation's history preview. */
     resultValue: string;
-    /** Specialists picked by the Chief of Staff for this request. */
+    /**
+     * Only the Chief of Staff routes work: the specialists engaged for this
+     * request, keyed by slug, with the stage each one owns.
+     */
     workerAssignments: Partial<Record<TeamWorkerSlug, string>>;
     echoThinking: string;
     echoSteps: {
@@ -191,7 +198,7 @@ interface Scenario {
         /** Leads into the highlighted values. */
         resultIntro: string;
         resultValues: string[];
-        /** Provenance / what Echo can do next. */
+        /** Provenance / what the bot can do next. */
         note: string;
     };
     /** Footer telemetry under the progress rail. */
@@ -201,75 +208,93 @@ interface Scenario {
 
 const scenarios: Scenario[] = [
     {
-        id: 'quiz-builder',
-        topic: 'Quadratics · Quiz Builder',
-        contextLabel: 'Draft · 15 items',
-        alignment: 'Standards Aligned · Quadratics',
-        historyPreview: 'Drafted 15 items across three difficulty tiers.',
+        id: 'chief',
+        botSlug: 'chief',
+        topic: 'Team chat',
+        contextLabel: 'Queue · 1 request',
+        alignment: 'Section Diamond · Term 2',
+        historyPreview: 'Routed the quadratics quiz to three specialists.',
         echoGreeting:
-            'Hi Maria! Ready to build tomorrow’s quiz? I can draft it from your syllabus.',
-        teacherRequest: 'Build me a 15-item quiz on quadratics for tomorrow.',
-        resultValue: '15 items ready',
+            'Morning, Maria. Tell me what you need and I’ll give each stage to the right specialist.',
+        teacherRequest:
+            'Create a 15-item quiz on quadratics for Section Diamond.',
+        resultValue: 'Draft ready for review',
         workerAssignments: {
-            'curriculum-designer': 'Maps items to Quadratics outcomes',
-            'assessment-officer': 'Checks balance, distractors, and answer key',
-            'data-steward': 'Verifies alignment with last term’s item bank',
+            'curriculum-designer': 'Maps every item to a quadratics objective',
+            'assessment-officer': 'Checks difficulty, distractors, and the key',
+            'data-steward': 'Compares it with last term’s item bank',
         },
         echoThinking:
-            'Your curriculum and assessment teams are preparing the quiz',
+            'The Chief of Staff is assigning this request to three specialists',
         echoSteps: {
-            bold: 'Drafted 15 items across three difficulty tiers.',
-            detail: 'Every item maps directly to quadratic equations.',
-            resultIntro: 'Assessment mix — ',
-            resultValues: ['14 auto-scored', '1 free response'],
-            note: '“Checked against last term’s item bank.”',
+            bold: 'Curriculum, Assessment, and Data finished the draft.',
+            detail: 'Every item maps to a quadratics objective and the key is verified.',
+            resultIntro: 'Handed back to you — ',
+            resultValues: ['15 items drafted', '3 specialists'],
+            note: '“Approve it and I’ll publish it to Section Diamond.”',
         },
         footNote: '28 learners · Section Diamond',
         progressWidth: '86%',
     },
     {
-        id: 'roster',
-        topic: 'Section Diamond · Roster',
-        contextLabel: 'Live · 28 enrolled',
-        alignment: 'Today · Term 2',
-        historyPreview: '21 of 28 learners opened a task today.',
+        id: 'registrar',
+        botSlug: 'registrar',
+        topic: 'Registrar',
+        contextLabel: 'Roster · 28 enrolled',
+        alignment: 'Section Diamond · Term 2',
+        historyPreview: 'Checked the Section Diamond roster.',
         echoGreeting:
-            'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
-        teacherRequest: 'Who has actually logged in today?',
-        resultValue: '21 of 28 active',
-        workerAssignments: {
-            registrar: 'Checks today’s section roster',
-            'student-success-coach': 'Flags learners who may need a nudge',
-        },
-        echoThinking:
-            'Your Registrar and Success Coach are checking today’s activity',
+            'Hi Maria! I look after enrolment and learner records. What do you need?',
+        teacherRequest: 'Who is enrolled in Section Diamond this term?',
+        resultValue: '28 learners · 3 new',
+        workerAssignments: {},
+        echoThinking: 'The Registrar is checking the section roster',
         echoSteps: {
-            bold: '21 of 28 learners opened a task today.',
-            detail: 'Last activity: Reyes, Aquino, and Limbu, six minutes ago.',
-            resultIntro: 'Worth a nudge — ',
-            resultValues: ['5 not yet opened', '2 flagged offline'],
-            note: '“I can export these names to CSV if you follow up.”',
+            bold: '28 learners are enrolled in Section Diamond.',
+            detail: 'Three joined this week; one is still missing a guardian email.',
+            resultIntro: 'Record check — ',
+            resultValues: ['25 verified', '3 pending'],
+            note: '“I can send the three enrolment follow-ups for you.”',
         },
-        footNote: 'Last synced 6 min ago',
-        progressWidth: '90%',
+        footNote: '28 enrolled · Term 2',
+        progressWidth: '80%',
     },
     {
-        id: 'scores',
-        topic: 'Grade 8 · Analytics',
+        id: 'curriculum-designer',
+        botSlug: 'curriculum-designer',
+        topic: 'Curriculum Designer',
+        contextLabel: 'Lesson · Quadratics',
+        alignment: 'Grade 8 · Term 2',
+        historyPreview: 'Drafted a 45-minute factoring lesson.',
+        echoGreeting:
+            'Hi Maria! Ready to plan the next quadratics lesson whenever you are.',
+        teacherRequest: 'Draft a lesson plan for factoring quadratics.',
+        resultValue: '45-minute plan',
+        workerAssignments: {},
+        echoThinking: 'The Curriculum Designer is outlining the lesson',
+        echoSteps: {
+            bold: 'Drafted a 45-minute lesson on factoring quadratics.',
+            detail: 'Warm-up, worked examples, and an exit ticket are included.',
+            resultIntro: 'Structure — ',
+            resultValues: ['12 min teaching', '25 min practice'],
+            note: '“Want me to attach last term’s slides too?”',
+        },
+        footNote: 'Grade 8 · Quadratics',
+        progressWidth: '84%',
+    },
+    {
+        id: 'assessment-officer',
+        botSlug: 'assessment-officer',
+        topic: 'Assessment Officer',
         contextLabel: 'Term 2 · Item analysis',
-        alignment: 'Quadratic Equations · 6 at risk',
+        alignment: 'Quadratic equations · 6 at risk',
         historyPreview: '6 of 28 learners sit below 70% on quadratics.',
         echoGreeting:
-            'Hi Maria! I’ve finished scoring Term 2 — want the item analysis?',
+            'Hi Maria! Term 2 scoring is ready — ask me about any item or learner.',
         teacherRequest: 'Which students are struggling with quadratics?',
         resultValue: '6 flagged at risk',
-        workerAssignments: {
-            'assessment-officer': 'Finds missed items and score patterns',
-            'student-success-coach': 'Prepares a focused support plan',
-            'curriculum-designer': 'Suggests the right skill to reteach',
-        },
-        echoThinking:
-            'Your assessment and support teams are comparing item results',
+        workerAssignments: {},
+        echoThinking: 'The Assessment Officer is reading item-level scores',
         echoSteps: {
             bold: '6 of 28 learners sit below 70% on quadratics.',
             detail: 'All six missed the same factoring items in Item 3.',
@@ -281,30 +306,121 @@ const scenarios: Scenario[] = [
         progressWidth: '93%',
     },
     {
-        id: 'export',
-        topic: 'Grade 8 · Reports',
-        contextLabel: 'Report · Term 2',
-        alignment: 'Official Records · School year 2026',
-        historyPreview: 'Compiled 28 learners across your three sections.',
+        id: 'student-success-coach',
+        botSlug: 'student-success-coach',
+        topic: 'Student Success Coach',
+        contextLabel: 'Support · 5 quiet',
+        alignment: 'This week · Section Diamond',
+        historyPreview: 'Flagged five learners who went quiet.',
         echoGreeting:
-            'Hi Maria! Term 2 reporting is packaged whenever you’re ready for it.',
+            'Hi Maria! I keep an eye on learners who go quiet. Want the list?',
+        teacherRequest: 'Who needs support this week?',
+        resultValue: '5 need a nudge',
+        workerAssignments: {},
+        echoThinking: 'The Success Coach is checking activity and scores',
+        echoSteps: {
+            bold: 'Five learners have gone quiet since Monday.',
+            detail: 'Two missed the last quiz; three have not opened the reviewer.',
+            resultIntro: 'Outreach prepared — ',
+            resultValues: ['5 check-ins', '2 guardian notes'],
+            note: '“Approve them and I’ll send them after class.”',
+        },
+        footNote: '5 learners · Section Diamond',
+        progressWidth: '88%',
+    },
+    {
+        id: 'communications-lead',
+        botSlug: 'communications-lead',
+        topic: 'Communications Lead',
+        contextLabel: 'Draft · Parent note',
+        alignment: 'Section Diamond · Friday',
+        historyPreview: 'Drafted a parent note about Friday’s quiz.',
+        echoGreeting:
+            'Hi Maria! Give me the message and the audience, and I’ll write the draft.',
+        teacherRequest: 'Announce Friday’s quiz to the parents.',
+        resultValue: 'Draft ready to send',
+        workerAssignments: {},
+        echoThinking: 'The Communications Lead is drafting the announcement',
+        echoSteps: {
+            bold: 'Drafted a parent note about Friday’s quadratics quiz.',
+            detail: 'Plain language, 90 words, with the reviewer link included.',
+            resultIntro: 'Audience — ',
+            resultValues: ['28 guardians', '1 section'],
+            note: '“Read it once and I’ll schedule it for 4pm.”',
+        },
+        footNote: '28 guardians · Section Diamond',
+        progressWidth: '90%',
+    },
+    {
+        id: 'operations-controller',
+        botSlug: 'operations-controller',
+        topic: 'Operations Controller',
+        contextLabel: 'Readiness · Week 6',
+        alignment: '3 courses · 1 issue',
+        historyPreview: 'Checked Section Diamond readiness for the week.',
+        echoGreeting:
+            'Hi Maria! I check sections and courses so nothing slips on Monday.',
+        teacherRequest: 'Is Section Diamond ready for the week?',
+        resultValue: 'Ready · 1 issue',
+        workerAssignments: {},
+        echoThinking:
+            'The Operations Controller is running the readiness checks',
+        echoSteps: {
+            bold: 'Section Diamond is ready for the week.',
+            detail: 'One course is still missing its Thursday material.',
+            resultIntro: 'Checklist — ',
+            resultValues: ['3 courses live', '1 item missing'],
+            note: '“I can queue the missing material for your approval.”',
+        },
+        footNote: '3 courses · Week 6',
+        progressWidth: '82%',
+    },
+    {
+        id: 'data-steward',
+        botSlug: 'data-steward',
+        topic: 'Data Steward',
+        contextLabel: 'Report · Term 2',
+        alignment: 'Official records · 2026',
+        historyPreview: 'Compiled 28 learners across three sections.',
+        echoGreeting:
+            'Hi Maria! Reports, exports, or a data check — I have the numbers.',
         teacherRequest: 'Export Grade 8 term grades.',
         resultValue: '3 files ready',
-        workerAssignments: {
-            'data-steward': 'Compiles the term report and grade exports',
-            registrar: 'Checks class lists and enrollment counts',
-            'operations-controller': 'Checks every section is included',
-        },
-        echoThinking: 'Your data and operations teams are preparing the report',
+        workerAssignments: {},
+        echoThinking: 'The Data Steward is compiling the term report',
         echoSteps: {
             bold: 'Compiled 28 learners across your three sections.',
-            detail: 'Included item-level scores, standards breakdown, and rubric ratings.',
+            detail: 'Included item-level scores, standards, and rubric ratings.',
             resultIntro: 'Attached — ',
             resultValues: ['grades-g8.csv', 'report-g8.pdf'],
             note: '“Add your signature and it is ready to submit.”',
         },
         footNote: '84 learners · all sections',
         progressWidth: '96%',
+    },
+    {
+        id: 'engagement-manager',
+        botSlug: 'engagement-manager',
+        topic: 'Engagement Manager',
+        contextLabel: 'Season · Week 6',
+        alignment: 'Levels, badges, XP',
+        historyPreview: 'Found nine learners close to their next badge.',
+        echoGreeting:
+            'Hi Maria! The Week 6 season is live — want a quick look at momentum?',
+        teacherRequest: 'Which learners are close to the next badge?',
+        resultValue: '9 close to a badge',
+        workerAssignments: {},
+        echoThinking:
+            'The Engagement Manager is checking XP and badge progress',
+        echoSteps: {
+            bold: 'Nine learners are one quiz away from Level 5.',
+            detail: 'The leaderboard moved twice since Monday’s XP drop.',
+            resultIntro: 'Suggested nudge — ',
+            resultValues: ['+120 XP', '9 badges'],
+            note: '“Approve the XP bump and I’ll post it to the section.”',
+        },
+        footNote: '28 learners · Week 6',
+        progressWidth: '87%',
     },
 ];
 
@@ -382,12 +498,21 @@ let entranceTimer: ReturnType<typeof setTimeout> | undefined;
 const booted = computed(() => !enabled.value || entranceDone.value);
 
 const activeScenarioIndex = computed(() => {
-    return enabled.value ? cycle.value % scenarios.length : 0;
+    return cycle.value % scenarios.length;
 });
 
 const activeScenario = computed(() => {
     return scenarios[activeScenarioIndex.value];
 });
+
+/** The bot that owns the open conversation. */
+const activeBot = computed(() => botFor(activeScenario.value.botSlug));
+
+const activeBotRole = computed(
+    () =>
+        activeScenario.value.workerAssignments[activeBot.value.slug] ??
+        activeBot.value.role,
+);
 
 const assignedWorkerSlugs = computed(() =>
     TEAM_WORKERS.filter(
@@ -399,6 +524,12 @@ const assignedWorkerSlugs = computed(() =>
 
 const focusedWorkerSlug = ref<TeamWorkerSlug>('chief');
 const activeWorkerSlug = ref<TeamWorkerSlug | null>(null);
+
+function botFor(slug: TeamWorkerSlug): (typeof TEAM_WORKERS)[number] {
+    return (
+        TEAM_WORKERS.find((worker) => worker.slug === slug) ?? TEAM_WORKERS[0]
+    );
+}
 
 function workerStatus(slug: TeamWorkerSlug): string {
     if (slug === 'chief') {
@@ -443,10 +574,6 @@ function workerRowDot(slug: TeamWorkerSlug): string {
     if (status === 'Queued' || status === 'Up next') return 'bg-amber-500';
 
     return 'bg-muted-foreground/35';
-}
-
-function focusWorker(slug: TeamWorkerSlug): void {
-    focusedWorkerSlug.value = slug;
 }
 
 const answered = computed(() => phase.value >= 1);
@@ -553,7 +680,7 @@ const activePreview = computed(() => {
     }
 
     if (echoWorking.value) {
-        return 'Echo is typing…';
+        return `${activeBot.value.name} is typing…`;
     }
 
     if (phase.value === 0) {
@@ -1247,7 +1374,16 @@ function scrollToBottom(smooth = true) {
  * instead of inheriting the leftover of the phase it replaced.
  */
 function selectScenario(index: number) {
-    if (!enabled.value) return;
+    // Reduced motion still lets the teacher open a bot's thread; it just opens
+    // on the finished frame instead of replaying the script.
+    if (!enabled.value) {
+        cycle.value = index;
+        replay.value += 1;
+        set(STATIC_PHASE);
+
+        return;
+    }
+
     cycle.value = index;
     replay.value += 1;
     set(0);
@@ -1339,8 +1475,7 @@ watch(
                         ></span>
                         <span
                             class="font-medium text-foreground dark:text-[#f5f0eb]"
-                            >LSI ·
-                            {{ activeScenario.topic.split(' · ')[0] }}</span
+                            >LSI · Section Diamond</span
                         >
                         <span
                             class="text-muted-foreground/60 dark:text-[#72695f]"
@@ -1348,7 +1483,7 @@ watch(
                         >
                         <span
                             class="font-mono text-[11px] text-muted-foreground dark:text-[#a1968a]"
-                            >Echo 2.5 Active</span
+                            >{{ activeBot.name }}</span
                         >
                     </div>
                 </div>
@@ -1407,154 +1542,93 @@ watch(
                     class="hdw-stage hidden w-full shrink-0 flex-col gap-3 border-b border-border/80 bg-[#f0ebe1]/90 p-4 text-xs sm:flex md:w-56 md:border-r md:border-b-0 dark:border-[#2c2520] dark:bg-[#17120e]"
                     :class="{ 'is-hidden': !booted }"
                 >
-                    <div
-                        class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pe-1"
-                    >
-                        <div>
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
-                                >
-                                    Team chats
-                                </span>
-                                <span
-                                    class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
-                                    >{{ scenarios.length }}</span
-                                >
-                            </div>
-                            <nav
-                                ref="conversationNavRef"
-                                class="mt-1.5 space-y-1.5"
-                                aria-label="Demo conversations"
+                    <div class="flex min-h-0 flex-1 flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
                             >
-                                <button
-                                    v-for="(conv, i) in scenarios"
-                                    :key="conv.id"
-                                    :data-conversation="i"
-                                    type="button"
-                                    class="flex w-full cursor-pointer items-start gap-2 rounded-lg px-2 py-[3px] text-left transition-all duration-300"
-                                    :class="[
-                                        activeScenarioIndex === i
-                                            ? 'border border-border/80 bg-card shadow-xs dark:border-[#2c2520] dark:bg-[#221b15] dark:shadow-none'
-                                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
-                                        pointedIndex === i &&
-                                        activeScenarioIndex !== i
-                                            ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
-                                            : '',
-                                    ]"
-                                    @click="selectScenario(i)"
+                                Conversations
+                            </span>
+                            <span
+                                class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
+                                >{{ scenarios.length }}</span
+                            >
+                        </div>
+                        <nav
+                            ref="conversationNavRef"
+                            class="min-h-0 flex-1 space-y-0.5 overflow-y-auto pe-0.5"
+                            aria-label="Demo conversations"
+                            data-testid="worker-conversations"
+                        >
+                            <button
+                                v-for="(conv, i) in scenarios"
+                                :key="conv.id"
+                                :data-conversation="i"
+                                :data-worker-row="conv.botSlug"
+                                type="button"
+                                class="flex w-full cursor-pointer items-start gap-1.5 rounded-lg px-2 py-[3px] text-left transition-colors duration-150"
+                                :class="[
+                                    activeScenarioIndex === i
+                                        ? 'bg-card text-foreground shadow-xs dark:bg-[#221b15] dark:text-[#f5f0eb]'
+                                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
+                                    pointedIndex === i &&
+                                    activeScenarioIndex !== i
+                                        ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
+                                        : '',
+                                ]"
+                                :title="`${botFor(conv.botSlug).name} — ${workerStatus(conv.botSlug)}`"
+                                :aria-pressed="activeScenarioIndex === i"
+                                @click="selectScenario(i)"
+                            >
+                                <span
+                                    class="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] leading-none"
+                                    aria-hidden="true"
+                                    >{{ botFor(conv.botSlug).avatar }}</span
                                 >
-                                    <span class="min-w-0 flex-1">
+                                <span class="min-w-0 flex-1">
+                                    <span class="flex items-center gap-1.5">
                                         <span
-                                            class="flex items-center gap-1.5 text-xs"
+                                            class="min-w-0 truncate text-[11px] font-medium"
+                                            >{{ conv.topic }}</span
+                                        >
+                                        <!-- The bot is mid-turn in the open thread. -->
+                                        <span
+                                            v-if="
+                                                activeScenarioIndex === i &&
+                                                echoWorking
+                                            "
+                                            class="flex shrink-0 items-center gap-0.5"
+                                            aria-hidden="true"
                                         >
                                             <span
-                                                class="min-w-0 truncate font-medium"
-                                                :class="
-                                                    activeScenarioIndex === i
-                                                        ? 'text-foreground dark:text-[#f5f0eb]'
-                                                        : ''
-                                                "
-                                                >{{ conv.topic }}</span
-                                            >
-                                            <!-- Echo is mid-turn in the open thread. -->
-                                            <span
-                                                v-if="
-                                                    activeScenarioIndex === i &&
-                                                    echoWorking
-                                                "
-                                                class="flex shrink-0 items-center gap-0.5"
-                                                aria-hidden="true"
-                                            >
-                                                <span
-                                                    v-for="dot in 3"
-                                                    :key="dot"
-                                                    class="demo-dot h-1 w-1 rounded-full bg-brand"
-                                                    :style="{
-                                                        '--dot-index': String(
-                                                            dot - 1,
-                                                        ),
-                                                    }"
-                                                ></span>
-                                            </span>
-                                            <span
-                                                v-else-if="
-                                                    activeScenarioIndex === i
-                                                "
-                                                class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
-                                                aria-hidden="true"
+                                                v-for="dot in 3"
+                                                :key="dot"
+                                                class="demo-dot h-1 w-1 rounded-full bg-brand"
+                                                :style="{
+                                                    '--dot-index': String(
+                                                        dot - 1,
+                                                    ),
+                                                }"
                                             ></span>
                                         </span>
-                                        <!-- The stacked sidebar below md has no room
-                                             for a second line. -->
-                                        <!-- Only the open thread shows its last line, the
-                                             way a busy inbox collapses the rest. -->
                                         <span
-                                            v-if="activeScenarioIndex === i"
-                                            class="mt-0.5 hidden truncate text-[10px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
-                                        >
-                                            {{ activePreview }}
-                                        </span>
+                                            v-else
+                                            class="h-1.5 w-1.5 shrink-0 rounded-full"
+                                            :class="workerRowDot(conv.botSlug)"
+                                            aria-hidden="true"
+                                        ></span>
                                     </span>
-                                </button>
-                            </nav>
-                        </div>
-
-                        <div class="flex min-h-0 flex-1 flex-col">
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
-                                >
-                                    Workers
+                                    <!-- Only the open thread shows its last line;
+                                         the rest collapse to the bot name. -->
+                                    <span
+                                        v-if="activeScenarioIndex === i"
+                                        class="mt-0.5 hidden truncate text-[10px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
+                                    >
+                                        {{ activePreview }}
+                                    </span>
                                 </span>
-                                <span
-                                    class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
-                                    >{{ TEAM_WORKERS.length }}</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1.5 space-y-0.5"
-                                role="group"
-                                aria-label="Conversations with each worker"
-                                data-testid="worker-conversations"
-                            >
-                                <button
-                                    v-for="worker in TEAM_WORKERS"
-                                    :key="worker.slug"
-                                    :data-worker-row="worker.slug"
-                                    type="button"
-                                    class="flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-[3px] text-left transition-colors duration-150"
-                                    :class="
-                                        focusedWorkerSlug === worker.slug
-                                            ? 'bg-card text-foreground shadow-xs dark:bg-[#221b15] dark:text-[#f5f0eb]'
-                                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]'
-                                    "
-                                    :title="`${worker.name} — ${workerStatus(worker.slug)}`"
-                                    :aria-pressed="
-                                        focusedWorkerSlug === worker.slug
-                                    "
-                                    :aria-label="`Talk to ${worker.name}. ${workerStatus(worker.slug)}. ${activeScenario.workerAssignments[worker.slug] ?? worker.role}`"
-                                    @click="focusWorker(worker.slug)"
-                                    @mouseenter="focusWorker(worker.slug)"
-                                    @focus="focusWorker(worker.slug)"
-                                >
-                                    <span
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] leading-none"
-                                        aria-hidden="true"
-                                        >{{ worker.avatar }}</span
-                                    >
-                                    <span
-                                        class="min-w-0 flex-1 truncate text-[11px] font-medium"
-                                        >{{ worker.shortName }}</span
-                                    >
-                                    <span
-                                        class="h-1.5 w-1.5 shrink-0 rounded-full"
-                                        :class="workerRowDot(worker.slug)"
-                                        aria-hidden="true"
-                                    ></span>
-                                </button>
-                            </div>
-                        </div>
+                            </button>
+                        </nav>
 
                         <div
                             class="flex shrink-0 items-center gap-2 rounded-lg px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground dark:text-[#a1968a] dark:hover:text-[#f5f0eb]"
@@ -1603,10 +1677,7 @@ watch(
                             >
                             <span
                                 class="font-medium text-foreground dark:text-[#f5f0eb]"
-                                >{{
-                                    activeScenario.topic.split(' · ')[1] ||
-                                    activeScenario.topic
-                                }}</span
+                                >{{ activeScenario.topic }}</span
                             >
                         </div>
                         <span
@@ -1640,12 +1711,13 @@ watch(
                                 class="w-full max-w-xl space-y-1.5 sm:max-w-2xl"
                             >
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs font-medium text-brand"
-                                        >Echo</span
+                                    <span
+                                        class="text-xs font-medium text-brand"
+                                        >{{ activeBot.name }}</span
                                     >
                                     <span
                                         class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
-                                        >Teaching Copilot</span
+                                        >{{ activeBotRole }}</span
                                     >
                                     <span
                                         class="text-[10px] text-muted-foreground/50 dark:text-[#524b44]"
@@ -1781,11 +1853,11 @@ watch(
                                     <div class="flex items-center gap-2">
                                         <span
                                             class="text-xs font-medium text-brand"
-                                            >Echo</span
+                                            >{{ activeBot.name }}</span
                                         >
                                         <span
                                             class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
-                                            >Teaching Copilot</span
+                                            >{{ activeBotRole }}</span
                                         >
                                         <span
                                             class="text-[10px] text-muted-foreground/50 dark:text-[#524b44]"
@@ -1961,9 +2033,8 @@ watch(
 
                                             <div
                                                 v-if="
-                                                    activeScenario.id ===
-                                                        'quiz-builder' &&
-                                                    line3Complete
+                                                    activeScenario.botSlug ===
+                                                        'chief' && line3Complete
                                                 "
                                                 data-testid="quiz-draft-preview"
                                                 role="group"
@@ -2133,7 +2204,11 @@ watch(
                                     v-else
                                     class="truncate text-muted-foreground dark:text-[#72695f]"
                                 >
-                                    Ask Echo anything about your class...
+                                    {{
+                                        activeBot.slug === 'chief'
+                                            ? 'Ask the team anything about your class…'
+                                            : `Message ${activeBot.name}…`
+                                    }}
                                 </span>
                             </div>
                             <button

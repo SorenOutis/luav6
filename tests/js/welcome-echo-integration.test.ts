@@ -214,14 +214,14 @@ describe('Welcome page Echo AI integration', () => {
         await releaseEntrance(wrapper);
 
         expect(wrapper.text()).toContain('Echo is thinking');
-        expect(wrapper.text()).not.toContain('Hi Maria!');
+        expect(wrapper.text()).not.toContain('Morning, Maria.');
         expect(wrapper.find('.wolf-persona').attributes('data-motion')).toBe(
             'thinking',
         );
 
         await vi.advanceTimersByTimeAsync(800);
         expect(wrapper.text()).toContain(
-            'Hi Maria! Ready to build tomorrow’s quiz?',
+            'Morning, Maria. Tell me what you need and I’ll give each stage to the right specialist.',
         );
         expect(wrapper.text()).not.toContain('Echo is thinking');
 
@@ -234,7 +234,7 @@ describe('Welcome page Echo AI integration', () => {
 
         expect(wrapper.text()).toContain('Maria Santos · Teacher');
         expect(wrapper.text()).toContain('Grade 8 · 3 sections · 84 learners');
-        expect(wrapper.text()).toContain('Teaching Copilot');
+        expect(wrapper.text()).toContain('Chief of Staff');
         expect(wrapper.text()).not.toContain('Maria Santos · Student');
         expect(wrapper.text()).not.toContain('Formative Companion');
 
@@ -250,7 +250,7 @@ describe('Welcome page Echo AI integration', () => {
         await vi.advanceTimersByTimeAsync(GREETING_PLUS_START_MS);
 
         const promptInput = wrapper.get('[data-testid="prompt-input"]');
-        const total = 'Build me a 15-item quiz on quadratics for tomorrow.'
+        const total = 'Create a 15-item quiz on quadratics for Section Diamond.'
             .length;
 
         // A believable hand: a fraction of the line per 200ms, never a flood.
@@ -269,7 +269,7 @@ describe('Welcome page Echo AI integration', () => {
         // And it does finish inside the phase.
         await advanceToPhase(wrapper, 1);
         expect(wrapper.text()).toContain(
-            'Build me a 15-item quiz on quadratics for tomorrow.',
+            'Create a 15-item quiz on quadratics for Section Diamond.',
         );
 
         vi.useRealTimers();
@@ -285,7 +285,7 @@ describe('Welcome page Echo AI integration', () => {
         // Phase 2 — Echo is visibly working, skeleton on, answer off.
         await advanceToPhase(wrapper, 2);
         expect(wrapper.text()).toContain(
-            'Your curriculum and assessment teams are preparing the quiz',
+            'The Chief of Staff is assigning this request to three specialists',
         );
         expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(false);
         expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(false);
@@ -301,11 +301,13 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(true);
         expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(true);
 
-        const firstLine = wrapper.find('.hdw-type-line').text();
-        expect(firstLine.startsWith('Drafted 15')).toBe(true);
-        expect(firstLine.length).toBeLessThan(
-            'Drafted 15 items across three difficulty tiers.'.length,
-        );
+        const firstLine = wrapper.find('.hdw-type-line').text().trim();
+        expect(firstLine.length).toBeGreaterThan(0);
+        expect(
+            'Curriculum, Assessment, and Data finished the draft.'.startsWith(
+                firstLine,
+            ),
+        ).toBe(true);
 
         vi.useRealTimers();
         wrapper.unmount();
@@ -336,7 +338,7 @@ describe('Welcome page Echo AI integration', () => {
 
         expect(landed().length).toBeGreaterThan(1);
         expect(landed()[0].length).toBe(
-            'Drafted 15 items across three difficulty tiers.'.length,
+            'Curriculum, Assessment, and Data finished the draft.'.length,
         );
         expect(previous).toBeGreaterThan(0);
 
@@ -354,9 +356,9 @@ describe('Welcome page Echo AI integration', () => {
         expect(
             wrapper.get('[data-testid="team-worker-count"]').text(),
         ).toContain('9 workers');
-        expect(wrapper.get('[data-worker-row="chief"]').text()).toContain(
-            'Chief of Staff',
-        );
+        expect(
+            wrapper.get('[data-worker-row="chief"]').attributes('title'),
+        ).toContain('Chief of Staff');
         expect(
             workers.map((worker) => worker.attributes('data-worker-row')),
         ).toEqual([
@@ -447,10 +449,7 @@ describe('Welcome page Echo AI integration', () => {
             props: { prefersReducedMotion: true },
         });
         const registrar = wrapper.get('[data-worker-row="registrar"]');
-        await registrar.trigger('mouseenter');
-        expect(registrar.attributes('aria-label')).toContain(
-            'Owns enrollment, sections, and learner records.',
-        );
+        expect(registrar.attributes('title')).toContain('Registrar');
         await registrar.trigger('click');
         expect(registrar.attributes('aria-pressed')).toBe('true');
 
@@ -472,12 +471,12 @@ describe('Welcome page Echo AI integration', () => {
             'Request sent',
         );
         expect(wrapper.find('.hdw-answer').text()).not.toContain(
-            '15 items ready',
+            'Draft ready for review',
         );
         expect(
             wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
         ).toBe(false);
-        expect(wrapper.text()).toContain('15 items ready');
+        expect(wrapper.text()).toContain('Draft ready for review');
 
         // Echo starts working — orb switches to thinking.
         await advanceToPhase(wrapper, 2);
@@ -501,7 +500,7 @@ describe('Welcome page Echo AI integration', () => {
         );
         expect(wrapper.text()).toContain('Delivered to class ✓');
         expect(wrapper.text()).toContain(
-            '“Checked against last term’s item bank.”',
+            '“Approve it and I’ll publish it to Section Diamond.”',
         );
 
         vi.useRealTimers();
@@ -534,7 +533,7 @@ describe('Welcome page Echo AI integration', () => {
         await vi.advanceTimersByTimeAsync(1600);
         expect(wrapper.text()).not.toContain('Echo is thinking');
         expect(wrapper.get('[data-testid="greeting-text"]').text()).toBe(
-            'Hi Maria! Want a live look at Section Diamond? I can pull it right now.',
+            'Hi Maria! I look after enrolment and learner records. What do you need?',
         );
 
         // Then Maria types her request, letter by letter.
@@ -543,7 +542,7 @@ describe('Welcome page Echo AI integration', () => {
         const firstTick = promptInput.text().trim();
         expect(firstTick.length).toBeGreaterThan(0);
         expect(firstTick.length).toBeLessThan(
-            'Who has actually logged in today?'.length / 2,
+            'Who is enrolled in Section Diamond this term?'.length / 2,
         );
         expect(wrapper.find('.typing-cursor').exists()).toBe(true);
 
@@ -557,8 +556,10 @@ describe('Welcome page Echo AI integration', () => {
         ).toBe(false);
 
         await advanceToPhase(wrapper, 1);
-        expect(wrapper.text()).toContain('21 of 28 active');
-        expect(wrapper.text()).toContain('Who has actually logged in today?');
+        expect(wrapper.text()).toContain('28 learners · 3 new');
+        expect(wrapper.text()).toContain(
+            'Who is enrolled in Section Diamond this term?',
+        );
 
         vi.useRealTimers();
         wrapper.unmount();
@@ -663,7 +664,7 @@ describe('Welcome page Echo AI integration', () => {
 
         // It clicks, and the next conversation opens.
         await advanceUntil(() => activeRow() === 1);
-        expect(wrapper.text()).toContain('Section Diamond · Roster');
+        expect(wrapper.text()).toContain('Registrar');
 
         // The pointer goes back to the keyboard for the next request.
         expect(pointer.classes()).toContain('is-visible');
@@ -684,12 +685,12 @@ describe('Welcome page Echo AI integration', () => {
         const activeRow = () => rows[0].text();
 
         // Echo is thinking, and the history says so.
-        expect(activeRow()).toContain('Echo is typing…');
+        expect(activeRow()).toContain('Chief of Staff is typing…');
 
         // Closed threads collapse to their title; only the open one keeps a line.
-        expect(rows[1].text()).toBe('Section Diamond · Roster');
-        expect(rows[2].text()).toBe('Grade 8 · Analytics');
-        expect(rows[3].text()).toBe('Grade 8 · Reports');
+        expect(rows[1].text()).toContain('Registrar');
+        expect(rows[2].text()).toContain('Curriculum Designer');
+        expect(rows[3].text()).toContain('Assessment Officer');
 
         // Once Maria is typing, the history follows her request live.
         await vi.advanceTimersByTimeAsync(2000);
@@ -710,10 +711,15 @@ describe('Welcome page Echo AI integration', () => {
         await releaseEntrance(wrapper);
 
         const sidebar = wrapper.find('nav[aria-label="Demo conversations"]');
-        expect(sidebar.text()).toContain('Quadratics · Quiz Builder');
-        expect(sidebar.text()).toContain('Section Diamond · Roster');
-        expect(sidebar.text()).toContain('Grade 8 · Analytics');
-        expect(sidebar.text()).toContain('Grade 8 · Reports');
+        expect(sidebar.text()).toContain('Team chat');
+        expect(sidebar.text()).toContain('Registrar');
+        expect(sidebar.text()).toContain('Curriculum Designer');
+        expect(sidebar.text()).toContain('Assessment Officer');
+        expect(sidebar.text()).toContain('Student Success Coach');
+        expect(sidebar.text()).toContain('Communications Lead');
+        expect(sidebar.text()).toContain('Operations Controller');
+        expect(sidebar.text()).toContain('Data Steward');
+        expect(sidebar.text()).toContain('Engagement Manager');
 
         vi.useRealTimers();
         wrapper.unmount();
