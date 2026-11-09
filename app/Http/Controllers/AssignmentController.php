@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 class AssignmentController extends Controller
 {
-    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,zip';
+    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,zip,rar';
 
     public function index(StudentAssignmentService $studentAssignments)
     {

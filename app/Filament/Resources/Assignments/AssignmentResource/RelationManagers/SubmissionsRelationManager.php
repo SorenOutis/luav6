@@ -88,11 +88,17 @@ class SubmissionsRelationManager extends RelationManager
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         'image/jpeg',
                         'image/png',
+                        'application/zip',
+                        'application/x-zip',
+                        'application/x-zip-compressed',
+                        'application/vnd.rar',
+                        'application/x-rar',
+                        'application/x-rar-compressed',
                     ])
                     ->maxSize(10240)
                     ->openable()
                     ->downloadable()
-                    ->helperText('Allowed: docx, pptx, excel (xls/xlsx), pdf, jpg, png. Max 10MB. Stored on R2 via public disk (same as avatars). Preview works for images/pdf.'),
+                    ->helperText('Allowed: docx, pptx, excel (xls/xlsx), pdf, jpg, png, zip, rar. Max 10MB. Stored on R2 via public disk (same as avatars). Preview works for images/pdf.'),
                 DateTimePicker::make('submitted_at')
                     ->label('Submitted At'),
                 DateTimePicker::make('graded_at')
