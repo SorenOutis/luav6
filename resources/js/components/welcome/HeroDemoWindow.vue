@@ -10,6 +10,7 @@ import {
 } from 'vue';
 import type { Ref } from 'vue';
 import ChatAiOrb from '@/components/ChatAiOrb.vue';
+import QuizDraftPreview from '@/components/welcome/QuizDraftPreview.vue';
 import { useDemoLoop, useInView } from '@/composables/useDemoLoop';
 
 const props = withDefaults(
@@ -180,6 +181,11 @@ interface Scenario {
     historyPreview: string;
     /** The bot greets the teacher first — every thread opens with this. */
     echoGreeting: string;
+    /**
+     * A group thread: several bots reply in order inside this conversation.
+     * The Chief of Staff's team chat uses it; a specialist DM leaves it unset.
+     */
+    thread?: { botSlug: TeamWorkerSlug; text: string }[];
     /** What the teacher types into the composer. */
     teacherRequest: string;
     /** Value shown in the active conversation's history preview. */
@@ -216,6 +222,28 @@ const scenarios: Scenario[] = [
         historyPreview: 'Routed the quadratics quiz to three specialists.',
         echoGreeting:
             'Morning, Maria. Tell me what you need and I’ll give each stage to the right specialist.',
+        thread: [
+            {
+                botSlug: 'chief',
+                text: 'On it. Curriculum drafts the items, Assessment verifies them, Data checks the item bank.',
+            },
+            {
+                botSlug: 'curriculum-designer',
+                text: 'Drafted 15 items across three difficulty tiers, every one mapped to a quadratics objective.',
+            },
+            {
+                botSlug: 'assessment-officer',
+                text: 'Distractors and the key check out — 14 auto-scored, 1 free response.',
+            },
+            {
+                botSlug: 'data-steward',
+                text: 'Compared with last term’s bank: no overlap with released items.',
+            },
+            {
+                botSlug: 'chief',
+                text: 'Draft is ready for you, Maria. Approve it and I’ll publish it to Section Diamond.',
+            },
+        ],
         teacherRequest:
             'Create a 15-item quiz on quadratics for Section Diamond.',
         resultValue: 'Draft ready for review',
@@ -428,12 +456,6 @@ const scenarios: Scenario[] = [
  * Per-scenario budgets, sized from its own copy so every typewriter lands
  * just before its phase flips — no rushed stream, no dead air.
  */
-const quizDraftOptions = [
-    { label: 'A', text: 'x = 2, x = 6', isCorrect: false },
-    { label: 'B', text: 'x = 3, x = 4', isCorrect: true },
-    { label: 'C', text: 'x = −3, x = −4', isCorrect: false },
-    { label: 'D', text: 'x = −2, x = −6', isCorrect: false },
-];
 
 const SCENARIO_TIMINGS = scenarios.map((scenario) => {
     const promptChars = scenario.teacherRequest.length;
@@ -1061,7 +1083,15 @@ const line3FullText = computed(() => {
 });
 const line4Text = computed(() => activeScenario.value.echoSteps.note);
 
+const threadText = computed(() =>
+    (activeScenario.value.thread ?? []).map((turn) => turn.text),
+);
+
 const totalEchoChars = computed(() => {
+    if (threadText.value.length > 0) {
+        return threadText.value.reduce((sum, text) => sum + text.length, 0);
+    }
+
     return (
         line1Text.value.length +
         line2Text.value.length +
@@ -1076,12 +1106,15 @@ const totalEchoChars = computed(() => {
  * an extra beat so the caret visibly hops between lines.
  */
 const echoWeights = computed(() => {
-    const lines = [
-        line1Text.value,
-        line2Text.value,
-        line3FullText.value,
-        line4Text.value,
-    ];
+    const lines =
+        threadText.value.length > 0
+            ? threadText.value
+            : [
+                  line1Text.value,
+                  line2Text.value,
+                  line3FullText.value,
+                  line4Text.value,
+              ];
 
     return lines.flatMap((line, lineIndex) =>
         Array.from(line, (char, charIndex) =>
@@ -1090,6 +1123,60 @@ const echoWeights = computed(() => {
                 : charWeight(char),
         ),
     );
+});
+
+/** Group-thread turns, revealed by the same typed-character counter. */
+const renderedThread = computed(() => {
+    const turns = activeScenario.value.thread;
+
+    if (!turns || turns.length === 0) {
+        return [];
+    }
+
+    const rendered: {
+        key: string;
+        name: string;
+        role: string;
+        avatar: string;
+        text: string;
+        active: boolean;
+        showChips: boolean;
+    }[] = [];
+
+    let start = 0;
+
+    turns.forEach((turn, index) => {
+        const end = start + turn.text.length;
+        const typed = Math.max(
+            0,
+            Math.min(currentEchoChars.value - start, turn.text.length),
+        );
+
+        if (typed > 0) {
+            const bot = botFor(turn.botSlug);
+
+            rendered.push({
+                key: `${turn.botSlug}-${index}`,
+                name: bot.name,
+                role: bot.role,
+                avatar: bot.avatar,
+                text: turn.text.slice(0, typed),
+                active:
+                    isEchoTyping.value &&
+                    currentEchoChars.value > start &&
+                    currentEchoChars.value < end,
+                showChips:
+                    index === turns.length - 1 &&
+                    (typed >= turn.text.length ||
+                        phase.value >= 4 ||
+                        !enabled.value),
+            });
+        }
+
+        start = end;
+    });
+
+    return rendered;
 });
 
 const promptWeights = computed(() => {
@@ -1175,6 +1262,14 @@ const isLine3Active = computed(() => {
 });
 
 const line3Complete = computed(() => {
+    if (threadText.value.length > 0) {
+        return (
+            currentEchoChars.value >= totalEchoChars.value ||
+            phase.value >= 4 ||
+            !enabled.value
+        );
+    }
+
     return (
         line3Chars.value >= line3FullText.value.length ||
         phase.value >= 4 ||
@@ -1847,7 +1942,10 @@ watch(
                                 </div>
 
                                 <div class="w-full max-w-2xl space-y-2">
-                                    <div class="flex items-center gap-2">
+                                    <div
+                                        v-if="!activeScenario.thread"
+                                        class="flex items-center gap-2"
+                                    >
                                         <span
                                             class="text-xs font-medium text-brand"
                                             >{{ activeBot.name }}</span
@@ -1914,8 +2012,86 @@ watch(
                                             ></div>
                                         </div>
 
-                                        <!-- Final Echo answer (Phase 3+) -->
+                                        <!-- Team chat: every bot answers in turn -->
                                         <div
+                                            v-if="activeScenario.thread"
+                                            class="hdw-draft space-y-3"
+                                            :class="{ 'is-on': draftVisible }"
+                                            data-testid="team-thread"
+                                        >
+                                            <div
+                                                v-for="turn in renderedThread"
+                                                :key="turn.key"
+                                                class="hdw-thread-turn flex items-start gap-2.5"
+                                                :data-speaker="turn.name"
+                                            >
+                                                <span
+                                                    class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand/20 bg-brand/10 text-[13px] leading-none"
+                                                    aria-hidden="true"
+                                                    >{{ turn.avatar }}</span
+                                                >
+                                                <div class="min-w-0 flex-1">
+                                                    <div
+                                                        class="flex flex-wrap items-baseline gap-x-2"
+                                                    >
+                                                        <span
+                                                            class="text-xs font-medium text-brand"
+                                                            >{{
+                                                                turn.name
+                                                            }}</span
+                                                        >
+                                                        <span
+                                                            class="truncate font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
+                                                            >{{
+                                                                turn.role
+                                                            }}</span
+                                                        >
+                                                    </div>
+                                                    <div
+                                                        class="mt-1 rounded-2xl rounded-tl-xs border border-border/80 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-foreground shadow-xs dark:border-[#2c2520] dark:bg-[#1a1410] dark:text-[#f5f0eb]"
+                                                    >
+                                                        <span>{{
+                                                            turn.text
+                                                        }}</span>
+                                                        <span
+                                                            v-if="turn.active"
+                                                            class="typing-cursor ml-0.5"
+                                                            aria-hidden="true"
+                                                        ></span>
+                                                        <template
+                                                            v-if="
+                                                                turn.showChips
+                                                            "
+                                                        >
+                                                            <div
+                                                                class="mt-2 flex flex-wrap items-center gap-1.5"
+                                                            >
+                                                                <span
+                                                                    v-for="val in activeScenario
+                                                                        .echoSteps
+                                                                        .resultValues"
+                                                                    :key="val"
+                                                                    class="hdw-result-chip inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[11px] font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400"
+                                                                    >{{
+                                                                        val
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                            <QuizDraftPreview
+                                                                v-if="
+                                                                    activeScenario.botSlug ===
+                                                                    'chief'
+                                                                "
+                                                            />
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Specialist DM: one answer bubble (Phase 3+) -->
+                                        <div
+                                            v-else
                                             class="hdw-draft rounded-2xl rounded-tl-xs border border-border/80 bg-white p-4 text-sm leading-relaxed text-foreground shadow-xs dark:border-[#2c2520] dark:bg-[#1a1410] dark:text-[#f5f0eb]"
                                             :class="{ 'is-on': draftVisible }"
                                         >
@@ -1992,105 +2168,6 @@ watch(
                                                     aria-hidden="true"
                                                 ></span>
                                             </p>
-
-                                            <p
-                                                v-if="
-                                                    line1Chars > 0 &&
-                                                    assignedWorkerSlugs.length >
-                                                        0
-                                                "
-                                                class="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] leading-relaxed text-muted-foreground dark:text-[#a1968a]"
-                                                data-testid="team-handoff-summary"
-                                            >
-                                                Routed by
-                                                <span
-                                                    class="font-semibold text-foreground dark:text-[#f5f0eb]"
-                                                    >Chief of Staff</span
-                                                >
-                                                <template
-                                                    v-for="slug in assignedWorkerSlugs"
-                                                    :key="slug"
-                                                >
-                                                    <span aria-hidden="true"
-                                                        >·</span
-                                                    >
-                                                    <span
-                                                        class="rounded-full border border-brand/20 bg-brand/5 px-2 py-0.5 text-foreground/80 dark:border-brand/25 dark:bg-brand/5 dark:text-[#d3ccc2]"
-                                                    >
-                                                        {{
-                                                            TEAM_WORKERS.find(
-                                                                (worker) =>
-                                                                    worker.slug ===
-                                                                    slug,
-                                                            )?.shortName
-                                                        }}
-                                                    </span>
-                                                </template>
-                                            </p>
-
-                                            <div
-                                                v-if="
-                                                    activeScenario.botSlug ===
-                                                        'chief' && line3Complete
-                                                "
-                                                data-testid="quiz-draft-preview"
-                                                role="group"
-                                                aria-label="Preview of quiz item 1 of 15"
-                                                class="mt-3 rounded-xl border border-border/70 bg-secondary/30 p-3 dark:border-[#2c2520] dark:bg-[#17120e]"
-                                            >
-                                                <div
-                                                    class="flex items-center justify-between gap-3 font-mono text-[9px] tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
-                                                >
-                                                    <span>Quiz item 01</span>
-                                                    <span>Multiple choice</span>
-                                                </div>
-                                                <p
-                                                    class="mt-2 text-xs font-medium text-foreground dark:text-[#f5f0eb]"
-                                                >
-                                                    Solve x² − 7x + 12 = 0.
-                                                </p>
-                                                <ul
-                                                    aria-label="Answer choices"
-                                                    class="mt-2 grid grid-cols-2 gap-1.5 text-[10px]"
-                                                >
-                                                    <li
-                                                        v-for="option in quizDraftOptions"
-                                                        :key="option.label"
-                                                        :aria-label="
-                                                            option.isCorrect
-                                                                ? `Option ${option.label}, correct answer`
-                                                                : `Option ${option.label}`
-                                                        "
-                                                        class="flex min-w-0 items-center gap-1.5 rounded-lg border px-2 py-1.5"
-                                                        :class="
-                                                            option.isCorrect
-                                                                ? 'border-brand/35 bg-brand/10 text-foreground dark:border-brand/40 dark:bg-brand/10 dark:text-[#f5f0eb]'
-                                                                : 'border-border/70 bg-background/60 text-muted-foreground dark:border-[#2c2520] dark:bg-[#120e0b] dark:text-[#a1968a]'
-                                                        "
-                                                    >
-                                                        <span
-                                                            class="font-mono text-[9px] opacity-70"
-                                                            >{{
-                                                                option.label
-                                                            }}</span
-                                                        >
-                                                        <span
-                                                            class="truncate"
-                                                            >{{
-                                                                option.text
-                                                            }}</span
-                                                        >
-                                                    </li>
-                                                </ul>
-                                                <p
-                                                    class="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
-                                                >
-                                                    <span aria-hidden="true"
-                                                        >✓</span
-                                                    >
-                                                    Answer key verified
-                                                </p>
-                                            </div>
 
                                             <!-- Line 4: Provenance / next step -->
                                             <p

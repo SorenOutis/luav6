@@ -301,46 +301,43 @@ describe('Welcome page Echo AI integration', () => {
         expect(wrapper.find('.hdw-draft.is-on').exists()).toBe(true);
         expect(wrapper.find('.hdw-skeleton.is-hidden').exists()).toBe(true);
 
-        const firstLine = wrapper.find('.hdw-type-line').text().trim();
-        expect(firstLine.length).toBeGreaterThan(0);
-        expect(
-            'Curriculum, Assessment, and Data finished the draft.'.startsWith(
-                firstLine,
-            ),
-        ).toBe(true);
+        const firstTurn = wrapper.find('[data-speaker]');
+        expect(firstTurn.exists()).toBe(true);
+        expect(firstTurn.attributes('data-speaker')).toBe('Chief of Staff');
+        expect(firstTurn.text()).toContain('On it. Curriculu');
 
         vi.useRealTimers();
         wrapper.unmount();
     });
 
-    it('streams Echo’s answer line by line instead of flooding the bubble', async () => {
+    it('lets every bot answer in turn inside the team chat', async () => {
         vi.useFakeTimers();
         const wrapper = mount(HeroDemoWindow);
 
         await releaseEntrance(wrapper);
         await advanceToPhase(wrapper, 3);
-        await vi.advanceTimersByTimeAsync(700);
+        const speakers = () =>
+            wrapper
+                .findAll('[data-speaker]')
+                .map((turn) => turn.attributes('data-speaker'));
 
-        const landed = () =>
-            wrapper.findAll('.hdw-type-line').map((line) => line.text());
+        await advanceUntil(() => speakers().length >= 1);
+        expect(speakers()[0]).toBe('Chief of Staff');
 
-        expect(landed()).toHaveLength(1);
-        expect(wrapper.text()).not.toContain('Every item maps to');
+        await advanceUntil(() => speakers().length >= 3);
+        expect(speakers()).toContain('Curriculum Designer');
 
-        // The next line only appears once the first has finished streaming.
-        let previous = landed()[0].length;
-        let guard = 0;
-        while (landed().length === 1 && guard < 200) {
-            await vi.advanceTimersByTimeAsync(100);
-            guard += 1;
-            previous = previous + 1;
-        }
-
-        expect(landed().length).toBeGreaterThan(1);
-        expect(landed()[0].length).toBe(
-            'Curriculum, Assessment, and Data finished the draft.'.length,
-        );
-        expect(previous).toBeGreaterThan(0);
+        await advanceToPhase(wrapper, 4);
+        expect(speakers()).toEqual([
+            'Chief of Staff',
+            'Curriculum Designer',
+            'Assessment Officer',
+            'Data Steward',
+            'Chief of Staff',
+        ]);
+        expect(
+            wrapper.find('[data-testid="quiz-draft-preview"]').exists(),
+        ).toBe(true);
 
         vi.useRealTimers();
         wrapper.unmount();
@@ -376,27 +373,18 @@ describe('Welcome page Echo AI integration', () => {
         wrapper.unmount();
     });
 
-    it('announces the specialists assigned to a request in the visible answer', async () => {
+    it('keeps the human approval gate beside the team answer', async () => {
         vi.useFakeTimers();
         const wrapper = mount(HeroDemoWindow);
 
         await releaseEntrance(wrapper);
-        await advanceToPhase(wrapper, 3);
-        await advanceUntil(() =>
-            wrapper.find('[data-testid="team-handoff-summary"]').exists(),
-        );
+        await advanceToPhase(wrapper, 4);
 
-        const handoffSummary = wrapper.find(
-            '[data-testid="team-handoff-summary"]',
-        );
-        expect(handoffSummary.exists()).toBe(true);
-        expect(handoffSummary.text()).toContain('Chief of Staff');
-        expect(handoffSummary.text()).toContain('Curriculum');
-        expect(handoffSummary.text()).toContain('Assessment');
-        expect(handoffSummary.text()).toContain('Data Steward');
+        expect(wrapper.find('[data-testid="team-thread"]').exists()).toBe(true);
         expect(
             wrapper.find('[data-testid="team-human-gate"]').text(),
         ).toContain('Maria’s OK');
+        expect(wrapper.find('.hdw-approve--done.is-on').exists()).toBe(true);
 
         vi.useRealTimers();
         wrapper.unmount();
@@ -500,7 +488,7 @@ describe('Welcome page Echo AI integration', () => {
         );
         expect(wrapper.text()).toContain('Delivered to class ✓');
         expect(wrapper.text()).toContain(
-            '“Approve it and I’ll publish it to Section Diamond.”',
+            'Draft is ready for you, Maria. Approve it and I’ll publish it to Section Diamond.',
         );
 
         vi.useRealTimers();
