@@ -348,17 +348,17 @@ describe('Welcome page Echo AI integration', () => {
         const wrapper = mount(HeroDemoWindow, {
             props: { prefersReducedMotion: true },
         });
-        const workers = wrapper.findAll('[data-worker]');
+        const workers = wrapper.findAll('[data-worker-row]');
 
         expect(workers).toHaveLength(9);
         expect(
             wrapper.get('[data-testid="team-worker-count"]').text(),
         ).toContain('9 workers');
-        expect(wrapper.get('[data-worker="chief"]').text()).toContain(
+        expect(wrapper.get('[data-worker-row="chief"]').text()).toContain(
             'Chief of Staff',
         );
         expect(
-            workers.map((worker) => worker.attributes('data-worker')),
+            workers.map((worker) => worker.attributes('data-worker-row')),
         ).toEqual([
             'chief',
             'registrar',
@@ -400,71 +400,45 @@ describe('Welcome page Echo AI integration', () => {
         wrapper.unmount();
     });
 
-    it('shows the Chief routing the request to assigned specialists one at a time', async () => {
+    it('marks the engaged workers as they move through the request', async () => {
         vi.useFakeTimers();
         const wrapper = mount(HeroDemoWindow);
-        const pointer = wrapper.get('[data-testid="demo-cursor"]');
-        const roster = wrapper.find('[data-testid="team-roster"]');
+        const row = (slug: string) =>
+            wrapper.get(`[data-worker-row="${slug}"]`);
 
         await releaseEntrance(wrapper);
-        await advanceToPhase(wrapper, 2);
 
-        expect(roster.find('[data-worker="chief"]').classes()).toContain(
-            'team-worker--working',
+        // Idle: everyone is available, the Chief is planning.
+        expect(row('registrar').attributes('title')).toContain('Available');
+
+        // Request sent: the assigned specialists queue up.
+        await advanceToPhase(wrapper, 1);
+        expect(row('curriculum-designer').attributes('title')).toContain(
+            'Queued',
         );
-        await advanceUntil(() =>
-            roster
-                .find('[data-worker="curriculum-designer"]')
-                .classes()
-                .includes('team-worker--working'),
+        expect(row('data-steward').attributes('title')).toContain('Queued');
+        expect(row('communications-lead').attributes('title')).toContain(
+            'Available',
         );
-        await advanceUntil(() => pointer.classes().includes('is-pressing'));
-        expect(pointer.classes()).toContain('is-pressing');
-        await advanceUntil(() =>
-            roster
-                .find('[data-worker="curriculum-designer"]')
-                .classes()
-                .includes('team-worker--done'),
-        );
-        expect(pointer.classes()).not.toContain('is-pressing');
-        expect(roster.text()).toContain('Maps items to Quadratics outcomes');
+
+        // Echo streams its answer, then the engaged team flips to complete.
         await advanceToPhase(wrapper, 3);
-        expect(roster.findAll('.team-worker--done')).toHaveLength(4);
-        expect(wrapper.get('[data-testid="team-progress"]').text()).toContain(
-            '4 engaged',
+        expect(row('curriculum-designer').attributes('title')).toContain(
+            'Working',
         );
-        expect(roster.text()).toContain('Chief of Staff');
+        await advanceUntil(() =>
+            (row('curriculum-designer').attributes('title') ?? '').includes(
+                'Complete',
+            ),
+        );
+
+        // Delivered.
+        await advanceToPhase(wrapper, 4);
+        expect(row('curriculum-designer').attributes('title')).toContain(
+            'Sent',
+        );
 
         vi.useRealTimers();
-        wrapper.unmount();
-    });
-
-    it('lists every worker as a conversation in the sidebar', async () => {
-        const wrapper = mount(HeroDemoWindow, {
-            props: { prefersReducedMotion: true },
-        });
-        const list = wrapper.get('[data-testid="worker-conversations"]');
-        const rows = list.findAll('[data-worker-row]');
-
-        expect(rows).toHaveLength(9);
-        expect(rows.map((row) => row.attributes('data-worker-row'))).toEqual([
-            'chief',
-            'registrar',
-            'curriculum-designer',
-            'assessment-officer',
-            'student-success-coach',
-            'communications-lead',
-            'operations-controller',
-            'data-steward',
-            'engagement-manager',
-        ]);
-        expect(rows[0].text()).toContain('Chief of Staff');
-
-        await rows[1].trigger('click');
-        expect(wrapper.get('[data-testid="worker-detail"]').text()).toContain(
-            'Registrar',
-        );
-
         wrapper.unmount();
     });
 
@@ -472,9 +446,9 @@ describe('Welcome page Echo AI integration', () => {
         const wrapper = mount(HeroDemoWindow, {
             props: { prefersReducedMotion: true },
         });
-        const registrar = wrapper.get('[data-worker="registrar"]');
+        const registrar = wrapper.get('[data-worker-row="registrar"]');
         await registrar.trigger('mouseenter');
-        expect(wrapper.find('[data-testid="worker-detail"]').text()).toContain(
+        expect(registrar.attributes('aria-label')).toContain(
             'Owns enrollment, sections, and learner records.',
         );
         await registrar.trigger('click');

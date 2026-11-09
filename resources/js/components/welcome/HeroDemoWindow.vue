@@ -60,9 +60,6 @@ const SWITCH_TRAVEL_MS = POINTER_SWEEP_MS;
 const SWITCH_CLICK_MS = 260;
 /** Slack so the pointer's click lands before the loop would auto-advance. */
 const SWITCH_SLACK_MS = 140;
-/** The simulated Chief dispatches one specialist at a time. */
-const TEAM_CLICK_TRAVEL_MS = 300;
-const TEAM_CLICK_GAP_MS = 120;
 /** Maria reviews Echo's finished answer before confirming it. */
 const APPROVAL_TRAVEL_MS = POINTER_SWEEP_MS;
 const APPROVAL_SLACK_MS = 140;
@@ -315,10 +312,6 @@ const scenarios: Scenario[] = [
  * Per-scenario budgets, sized from its own copy so every typewriter lands
  * just before its phase flips — no rushed stream, no dead air.
  */
-function assignedWorkerCount(scenario: Scenario): number {
-    return Object.keys(scenario.workerAssignments).length;
-}
-
 const quizDraftOptions = [
     { label: 'A', text: 'x = 2, x = 6', isCorrect: false },
     { label: 'B', text: 'x = 3, x = 4', isCorrect: true },
@@ -351,11 +344,7 @@ const SCENARIO_TIMINGS = scenarios.map((scenario) => {
                 CURSOR_TRAVEL_MS +
                 PRESS_MS,
             ANSWERED_MS,
-            THINKING_MS +
-                CURSOR_TRAVEL_MS +
-                PRESS_MS +
-                assignedWorkerCount(scenario) *
-                    (TEAM_CLICK_TRAVEL_MS + PRESS_MS + TEAM_CLICK_GAP_MS),
+            THINKING_MS,
             ECHO_LEAD_MS +
                 echo +
                 ECHO_TAIL_MS +
@@ -410,16 +399,6 @@ const assignedWorkerSlugs = computed(() =>
 
 const focusedWorkerSlug = ref<TeamWorkerSlug>('chief');
 const activeWorkerSlug = ref<TeamWorkerSlug | null>(null);
-const completedWorkerSlugs = ref<TeamWorkerSlug[]>([]);
-const teamRosterRef = ref<HTMLElement | null>(null);
-let teamActionTimer: ReturnType<typeof setTimeout> | undefined;
-
-const focusedWorker = computed(
-    () =>
-        TEAM_WORKERS.find(
-            (worker) => worker.slug === focusedWorkerSlug.value,
-        ) ?? TEAM_WORKERS[0],
-);
 
 function workerStatus(slug: TeamWorkerSlug): string {
     if (slug === 'chief') {
@@ -446,164 +425,28 @@ function workerStatus(slug: TeamWorkerSlug): string {
         return 'Working';
     }
 
-    if (completedWorkerSlugs.value.includes(slug) || phase.value >= 3) {
+    if (phase.value >= 3) {
         return phase.value >= 4 ? 'Sent' : 'Complete';
     }
 
     return phase.value === 2 ? 'Up next' : 'Ready';
 }
 
-/** Reads as staffing, not as a score — most requests use a subset of the nine. */
-const teamBadgeLabel = computed(() => {
-    if (phase.value === 0) return '9 standing by';
-
-    return `${1 + assignedWorkerSlugs.value.length} engaged`;
-});
-
-const teamWorkflowSummary = computed(() => {
-    if (phase.value === 0)
-        return 'The Chief of Staff and eight specialists are standing by.';
-    if (phase.value === 1)
-        return 'The Chief of Staff is planning this request.';
-    if (phase.value === 2)
-        return 'The Chief of Staff is assigning a clear stage to each specialist.';
-    if (phase.value === 3 && completedWorkerSlugs.value.length > 0)
-        return `The assigned team completed ${completedWorkerSlugs.value.length} specialist checks. Maria still reviews the draft.`;
-    if (phase.value === 3 && !draftReady.value)
-        return 'The assigned specialists are preparing their findings.';
-    if (phase.value === 3)
-        return 'The team is ready. Maria reviews and approves the draft.';
-    return 'Maria approved the draft. It is ready for the class.';
-});
-
-function clearTeamActionTimer(): void {
-    if (teamActionTimer !== undefined) {
-        clearTimeout(teamActionTimer);
-        teamActionTimer = undefined;
-    }
-
-    cursor.pressing = false;
-}
-
+/** Dot colour for a sidebar worker row, mirroring the status text above. */
 function workerRowDot(slug: TeamWorkerSlug): string {
     const status = workerStatus(slug);
 
     if (status === 'Working') return 'bg-brand';
-    if (status === 'Complete' || status === 'Sent') return 'bg-emerald-500';
-    if (status === 'Approved') return 'bg-emerald-500';
+    if (status === 'Complete' || status === 'Sent' || status === 'Approved') {
+        return 'bg-emerald-500';
+    }
     if (status === 'Queued' || status === 'Up next') return 'bg-amber-500';
 
     return 'bg-muted-foreground/35';
 }
 
-/** Sidebar bot row: open that worker's thread and bring the card into focus. */
-function focusWorkerFromSidebar(slug: TeamWorkerSlug): void {
-    focusWorker(slug);
-
-    nextTick(() => {
-        const card = teamRosterRef.value?.querySelector<HTMLElement>(
-            `[data-worker="${slug}"]`,
-        );
-
-        // jsdom (tests) has no scrollIntoView.
-        if (typeof card?.scrollIntoView === 'function') {
-            card.scrollIntoView({ block: 'nearest' });
-        }
-    });
-}
-
 function focusWorker(slug: TeamWorkerSlug): void {
     focusedWorkerSlug.value = slug;
-
-    if (
-        phase.value !== 2 ||
-        slug === 'chief' ||
-        !assignedWorkerSlugs.value.includes(slug)
-    ) {
-        clearTeamActionTimer();
-        activeWorkerSlug.value = null;
-        cursor.travel = POINTER_SWEEP_MS;
-        glideTo(conversationPoint(activeScenarioIndex.value));
-    }
-}
-
-function workerPoint(slug: TeamWorkerSlug): { x: number; y: number } {
-    const frame = root.value?.getBoundingClientRect();
-    const card = teamRosterRef.value?.querySelector<HTMLElement>(
-        `[data-worker="${slug}"]`,
-    );
-
-    if (!frame || !card) return { x: 0, y: 0 };
-
-    const rect = card.getBoundingClientRect();
-
-    return {
-        x: rect.left - frame.left + rect.width / 2,
-        y: rect.top - frame.top + rect.height / 2,
-    };
-}
-
-function clickWorkerWithCursor(
-    slug: TeamWorkerSlug,
-    afterClick?: () => void,
-): void {
-    cursor.travel = slug === 'chief' ? CURSOR_TRAVEL_MS : TEAM_CLICK_TRAVEL_MS;
-    cursor.pressing = false;
-    cursor.visible = true;
-    activeWorkerSlug.value = slug;
-    glideTo(workerPoint(slug));
-
-    const travel = cursor.travel;
-    pressTimer = setTimeout(() => {
-        cursor.pressing = true;
-    }, travel);
-
-    teamActionTimer = setTimeout(() => {
-        teamActionTimer = undefined;
-        if (pressTimer !== undefined) {
-            clearTimeout(pressTimer);
-            pressTimer = undefined;
-        }
-        teamRosterRef.value
-            ?.querySelector<HTMLButtonElement>(`[data-worker="${slug}"]`)
-            ?.click();
-        cursor.pressing = false;
-        afterClick?.();
-    }, travel + PRESS_MS);
-}
-
-function beginSpecialistHandoffs(index = 0): void {
-    if (phase.value !== 2 || !inView.value || !enabled.value) {
-        activeWorkerSlug.value = null;
-
-        return;
-    }
-
-    const slug = assignedWorkerSlugs.value[index];
-
-    if (!slug) {
-        activeWorkerSlug.value = null;
-        return;
-    }
-
-    clickWorkerWithCursor(slug, () => {
-        if (phase.value !== 2) {
-            activeWorkerSlug.value = null;
-
-            return;
-        }
-
-        completedWorkerSlugs.value = [
-            ...completedWorkerSlugs.value.filter(
-                (completed) => completed !== slug,
-            ),
-            slug,
-        ];
-        teamActionTimer = setTimeout(
-            () => beginSpecialistHandoffs(index + 1),
-            TEAM_CLICK_GAP_MS,
-        );
-    });
 }
 
 const answered = computed(() => phase.value >= 1);
@@ -973,9 +816,7 @@ function clearTypingTimers() {
         clearTimeout(cursorTimer);
         cursorTimer = undefined;
     }
-    clearTeamActionTimer();
     activeWorkerSlug.value = null;
-    completedWorkerSlugs.value = [];
     if (approvalTimer !== undefined) {
         clearTimeout(approvalTimer);
         approvalTimer = undefined;
@@ -1243,9 +1084,7 @@ watch(
         resetCursor();
 
         if (!isEnabled) {
-            clearTeamActionTimer();
             activeWorkerSlug.value = null;
-            completedWorkerSlugs.value = [];
             focusedWorkerSlug.value = 'chief';
             hideCursor();
             greetingReady.value = true;
@@ -1266,10 +1105,8 @@ watch(
         }
 
         activeWorkerSlug.value = null;
-        completedWorkerSlugs.value = [];
 
         if (newPhase === 0) {
-            clearTeamActionTimer();
             focusedWorkerSlug.value = 'chief';
             greetingReady.value = false;
             typedGreetingChars.value = 0;
@@ -1315,18 +1152,8 @@ watch(
             typedPromptChars.value = activeScenario.value.teacherRequest.length;
             typedEchoChars.value = 0;
             focusedWorkerSlug.value = 'chief';
-
-            if (newPhase === 2) {
-                clickWorkerWithCursor('chief', () => {
-                    if (phase.value === 2) {
-                        beginSpecialistHandoffs();
-                    }
-                });
-            }
         } else if (newPhase === 3) {
-            clearTeamActionTimer();
             activeWorkerSlug.value = null;
-            completedWorkerSlugs.value = [...assignedWorkerSlugs.value];
             focusedWorkerSlug.value = 'chief';
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
@@ -1348,7 +1175,6 @@ watch(
                     ECHO_TAIL_MS,
             );
         } else if (newPhase >= 4) {
-            clearTeamActionTimer();
             activeWorkerSlug.value = null;
             greetingReady.value = true;
             typedGreetingChars.value = activeScenario.value.echoGreeting.length;
@@ -1380,7 +1206,6 @@ watch(
         if (visible) {
             start();
         } else {
-            clearTeamActionTimer();
             activeWorkerSlug.value = null;
             cursor.visible = false;
             stop();
@@ -1709,7 +1534,7 @@ watch(
                                         focusedWorkerSlug === worker.slug
                                     "
                                     :aria-label="`Talk to ${worker.name}. ${workerStatus(worker.slug)}. ${activeScenario.workerAssignments[worker.slug] ?? worker.role}`"
-                                    @click="focusWorkerFromSidebar(worker.slug)"
+                                    @click="focusWorker(worker.slug)"
                                     @mouseenter="focusWorker(worker.slug)"
                                     @focus="focusWorker(worker.slug)"
                                 >
@@ -1763,133 +1588,6 @@ watch(
                     class="hdw-stage flex flex-1 flex-col justify-between overflow-hidden bg-card p-4 text-left sm:p-6 dark:bg-[#120e0b]"
                     :class="{ 'is-hidden': !booted }"
                 >
-                    <section
-                        ref="teamRosterRef"
-                        class="mb-2 shrink-0 rounded-xl border border-border/70 bg-background/60 p-2.5 dark:border-[#2c2520] dark:bg-[#17120e]"
-                        aria-label="Echo's nine-worker team"
-                        data-testid="team-roster"
-                    >
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="min-w-0">
-                                <p
-                                    class="font-mono text-[9px] font-semibold tracking-[0.16em] text-muted-foreground uppercase dark:text-[#a1968a]"
-                                >
-                                    Echo · 9-worker team
-                                </p>
-                                <p
-                                    class="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground dark:text-[#7d736a]"
-                                    data-testid="team-workflow-summary"
-                                >
-                                    {{ teamWorkflowSummary }}
-                                </p>
-                            </div>
-                            <span
-                                class="shrink-0 rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 font-mono text-[9px] text-brand"
-                                data-testid="team-progress"
-                            >
-                                {{ teamBadgeLabel }}
-                            </span>
-                        </div>
-
-                        <div
-                            class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3"
-                            role="group"
-                            aria-label="Nine Echo workers"
-                        >
-                            <button
-                                v-for="worker in TEAM_WORKERS"
-                                :key="worker.slug"
-                                :data-worker="worker.slug"
-                                type="button"
-                                class="team-worker group/worker flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 py-1.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring sm:gap-2 sm:px-2"
-                                :class="[
-                                    focusedWorkerSlug === worker.slug
-                                        ? 'border-brand/45 bg-brand/10 text-foreground dark:border-brand/50 dark:bg-brand/10 dark:text-[#f5f0eb]'
-                                        : 'border-border/60 bg-card/70 text-muted-foreground dark:border-[#2c2520] dark:bg-[#120e0b] dark:text-[#a1968a]',
-                                    {
-                                        'team-worker--assigned':
-                                            worker.slug !== 'chief' &&
-                                            assignedWorkerSlugs.includes(
-                                                worker.slug,
-                                            ),
-                                        'team-worker--working':
-                                            activeWorkerSlug === worker.slug,
-                                        'team-worker--done':
-                                            completedWorkerSlugs.includes(
-                                                worker.slug,
-                                            ) ||
-                                            (worker.slug === 'chief' &&
-                                                phase >= 3),
-                                    },
-                                ]"
-                                :aria-pressed="
-                                    focusedWorkerSlug === worker.slug
-                                "
-                                :aria-label="`${worker.name}. ${worker.role} ${workerStatus(worker.slug)}${activeScenario.workerAssignments[worker.slug] ? `. ${activeScenario.workerAssignments[worker.slug]}` : ''}`"
-                                @mouseenter="focusWorker(worker.slug)"
-                                @focus="focusWorker(worker.slug)"
-                                @click="focusWorker(worker.slug)"
-                            >
-                                <span
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-[13px] leading-none sm:h-7 sm:w-7"
-                                    aria-hidden="true"
-                                >
-                                    {{ worker.avatar }}
-                                </span>
-                                <span class="min-w-0 flex-1">
-                                    <span
-                                        class="block truncate text-[10px] leading-tight font-semibold text-foreground sm:text-[10px] dark:text-[#f5f0eb]"
-                                    >
-                                        {{ worker.shortName }}
-                                    </span>
-                                    <span
-                                        class="mt-0.5 flex items-center gap-1 font-mono text-[9px] leading-tight sm:text-[9px]"
-                                    >
-                                        <span
-                                            class="team-worker__dot h-1 w-1 shrink-0 rounded-full bg-current"
-                                            aria-hidden="true"
-                                        ></span>
-                                        <span class="truncate">{{
-                                            workerStatus(worker.slug)
-                                        }}</span>
-                                    </span>
-                                </span>
-                            </button>
-                        </div>
-
-                        <p
-                            class="mt-2 flex min-h-7 items-start gap-1.5 border-t border-border/60 pt-1.5 text-[10px] leading-relaxed text-muted-foreground dark:border-[#2c2520] dark:text-[#a1968a]"
-                            aria-live="polite"
-                            data-testid="worker-detail"
-                        >
-                            <span aria-hidden="true">{{
-                                focusedWorker.avatar
-                            }}</span>
-                            <span
-                                class="shrink-0 font-semibold whitespace-nowrap text-foreground dark:text-[#f5f0eb]"
-                                >{{ focusedWorker.name }}</span
-                            >
-                            <span
-                                v-if="
-                                    activeScenario.workerAssignments[
-                                        focusedWorker.slug
-                                    ]
-                                "
-                                class="min-w-0"
-                            >
-                                ·
-                                {{
-                                    activeScenario.workerAssignments[
-                                        focusedWorker.slug
-                                    ]
-                                }}
-                            </span>
-                            <span v-else class="min-w-0"
-                                >· {{ focusedWorker.role }}</span
-                            >
-                        </p>
-                    </section>
-
                     <!-- Top item metadata bar -->
                     <div
                         class="flex shrink-0 items-center justify-between border-b border-border/80 pb-3 text-xs dark:border-[#2c2520]"
@@ -2666,57 +2364,6 @@ watch(
 .hdw-draft.is-on {
     opacity: 1;
     transform: translateY(0);
-}
-
-/* The nine-worker directory is a product preview, so keep its state legible
-   even when low-end mode trims decorative transitions elsewhere on the page. */
-.team-worker {
-    transition:
-        border-color 160ms ease-out,
-        background-color 160ms ease-out,
-        color 160ms ease-out,
-        opacity 160ms ease-out;
-}
-
-.team-worker--assigned {
-    border-color: color-mix(
-        in oklab,
-        var(--color-brand) 28%,
-        var(--color-border)
-    );
-}
-
-.team-worker--working {
-    border-color: color-mix(
-        in oklab,
-        var(--color-brand) 58%,
-        var(--color-border)
-    );
-    background-color: color-mix(
-        in oklab,
-        var(--color-brand) 12%,
-        var(--color-card)
-    );
-}
-
-.team-worker--done .team-worker__dot {
-    color: var(--color-success, #15803d);
-}
-
-@media (hover: hover) and (pointer: fine) {
-    .team-worker:not(.team-worker--working):hover {
-        border-color: color-mix(
-            in oklab,
-            var(--color-brand) 42%,
-            var(--color-border)
-        );
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .team-worker {
-        transition: none;
-    }
 }
 
 /* ── Result chip in Echo line 3 ── */
