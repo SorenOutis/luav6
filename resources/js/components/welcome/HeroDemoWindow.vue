@@ -485,6 +485,33 @@ function clearTeamActionTimer(): void {
     cursor.pressing = false;
 }
 
+function workerRowDot(slug: TeamWorkerSlug): string {
+    const status = workerStatus(slug);
+
+    if (status === 'Working') return 'bg-brand';
+    if (status === 'Complete' || status === 'Sent') return 'bg-emerald-500';
+    if (status === 'Approved') return 'bg-emerald-500';
+    if (status === 'Queued' || status === 'Up next') return 'bg-amber-500';
+
+    return 'bg-muted-foreground/35';
+}
+
+/** Sidebar bot row: open that worker's thread and bring the card into focus. */
+function focusWorkerFromSidebar(slug: TeamWorkerSlug): void {
+    focusWorker(slug);
+
+    nextTick(() => {
+        const card = teamRosterRef.value?.querySelector<HTMLElement>(
+            `[data-worker="${slug}"]`,
+        );
+
+        // jsdom (tests) has no scrollIntoView.
+        if (typeof card?.scrollIntoView === 'function') {
+            card.scrollIntoView({ block: 'nearest' });
+        }
+    });
+}
+
 function focusWorker(slug: TeamWorkerSlug): void {
     focusedWorkerSlug.value = slug;
 
@@ -1552,107 +1579,167 @@ watch(
 
                 <!-- Sidebar: previous conversations -->
                 <aside
-                    class="hdw-stage hidden w-full shrink-0 flex-col justify-between border-b border-border/80 bg-[#f0ebe1]/90 p-4 text-xs sm:flex md:w-56 md:border-r md:border-b-0 dark:border-[#2c2520] dark:bg-[#17120e]"
+                    class="hdw-stage hidden w-full shrink-0 flex-col gap-3 border-b border-border/80 bg-[#f0ebe1]/90 p-4 text-xs sm:flex md:w-56 md:border-r md:border-b-0 dark:border-[#2c2520] dark:bg-[#17120e]"
                     :class="{ 'is-hidden': !booted }"
                 >
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <span
-                                class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
-                            >
-                                Conversations
-                            </span>
-                            <span
-                                class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
-                                >{{ scenarios.length + 1 }}</span
-                            >
-                        </div>
-                        <nav
-                            ref="conversationNavRef"
-                            class="space-y-1.5"
-                            aria-label="Demo conversations"
-                        >
-                            <button
-                                v-for="(conv, i) in scenarios"
-                                :key="conv.id"
-                                :data-conversation="i"
-                                type="button"
-                                class="flex w-full cursor-pointer items-start gap-2 rounded-lg px-3 py-2 text-left transition-all duration-300"
-                                :class="[
-                                    activeScenarioIndex === i
-                                        ? 'border border-border/80 bg-card shadow-xs dark:border-[#2c2520] dark:bg-[#221b15] dark:shadow-none'
-                                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
-                                    pointedIndex === i &&
-                                    activeScenarioIndex !== i
-                                        ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
-                                        : '',
-                                ]"
-                                @click="selectScenario(i)"
-                            >
-                                <span class="min-w-0 flex-1">
-                                    <span
-                                        class="flex items-center gap-1.5 text-xs"
-                                    >
-                                        <span
-                                            class="min-w-0 truncate font-medium"
-                                            :class="
-                                                activeScenarioIndex === i
-                                                    ? 'text-foreground dark:text-[#f5f0eb]'
-                                                    : ''
-                                            "
-                                            >{{ conv.topic }}</span
-                                        >
-                                        <!-- Echo is mid-turn in the open thread. -->
-                                        <span
-                                            v-if="
-                                                activeScenarioIndex === i &&
-                                                echoWorking
-                                            "
-                                            class="flex shrink-0 items-center gap-0.5"
-                                            aria-hidden="true"
-                                        >
-                                            <span
-                                                v-for="dot in 3"
-                                                :key="dot"
-                                                class="demo-dot h-1 w-1 rounded-full bg-brand"
-                                                :style="{
-                                                    '--dot-index': String(
-                                                        dot - 1,
-                                                    ),
-                                                }"
-                                            ></span>
-                                        </span>
-                                        <span
-                                            v-else-if="
-                                                activeScenarioIndex === i
-                                            "
-                                            class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
-                                            aria-hidden="true"
-                                        ></span>
-                                    </span>
-                                    <!-- The stacked sidebar below md has no room
-                                         for a second line. -->
-                                    <span
-                                        class="mt-0.5 hidden truncate text-[11px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
-                                    >
-                                        {{
-                                            activeScenarioIndex === i
-                                                ? activePreview
-                                                : conv.historyPreview
-                                        }}
-                                    </span>
-                                </span>
-                            </button>
-                            <div
-                                class="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground dark:text-[#a1968a] dark:hover:text-[#f5f0eb]"
-                            >
-                                <span class="truncate">Review Queue</span>
+                    <div
+                        class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pe-1"
+                    >
+                        <div>
+                            <div class="flex items-center justify-between">
                                 <span
-                                    class="py-0.2 ml-auto rounded-full bg-amber-500/20 px-1.5 font-mono text-[9px] text-amber-800 dark:text-amber-300"
-                                    >1</span
+                                    class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
+                                >
+                                    Team chats
+                                </span>
+                                <span
+                                    class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
+                                    >{{ scenarios.length }}</span
                                 >
                             </div>
-                        </nav>
+                            <nav
+                                ref="conversationNavRef"
+                                class="mt-1.5 space-y-1.5"
+                                aria-label="Demo conversations"
+                            >
+                                <button
+                                    v-for="(conv, i) in scenarios"
+                                    :key="conv.id"
+                                    :data-conversation="i"
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-start gap-2 rounded-lg px-2 py-[3px] text-left transition-all duration-300"
+                                    :class="[
+                                        activeScenarioIndex === i
+                                            ? 'border border-border/80 bg-card shadow-xs dark:border-[#2c2520] dark:bg-[#221b15] dark:shadow-none'
+                                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]',
+                                        pointedIndex === i &&
+                                        activeScenarioIndex !== i
+                                            ? 'bg-secondary/50 text-foreground dark:bg-[#1f1914] dark:text-[#f5f0eb]'
+                                            : '',
+                                    ]"
+                                    @click="selectScenario(i)"
+                                >
+                                    <span class="min-w-0 flex-1">
+                                        <span
+                                            class="flex items-center gap-1.5 text-xs"
+                                        >
+                                            <span
+                                                class="min-w-0 truncate font-medium"
+                                                :class="
+                                                    activeScenarioIndex === i
+                                                        ? 'text-foreground dark:text-[#f5f0eb]'
+                                                        : ''
+                                                "
+                                                >{{ conv.topic }}</span
+                                            >
+                                            <!-- Echo is mid-turn in the open thread. -->
+                                            <span
+                                                v-if="
+                                                    activeScenarioIndex === i &&
+                                                    echoWorking
+                                                "
+                                                class="flex shrink-0 items-center gap-0.5"
+                                                aria-hidden="true"
+                                            >
+                                                <span
+                                                    v-for="dot in 3"
+                                                    :key="dot"
+                                                    class="demo-dot h-1 w-1 rounded-full bg-brand"
+                                                    :style="{
+                                                        '--dot-index': String(
+                                                            dot - 1,
+                                                        ),
+                                                    }"
+                                                ></span>
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    activeScenarioIndex === i
+                                                "
+                                                class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                                                aria-hidden="true"
+                                            ></span>
+                                        </span>
+                                        <!-- The stacked sidebar below md has no room
+                                             for a second line. -->
+                                        <!-- Only the open thread shows its last line, the
+                                             way a busy inbox collapses the rest. -->
+                                        <span
+                                            v-if="activeScenarioIndex === i"
+                                            class="mt-0.5 hidden truncate text-[10px] text-muted-foreground/80 md:block dark:text-[#7d736a]"
+                                        >
+                                            {{ activePreview }}
+                                        </span>
+                                    </span>
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="flex min-h-0 flex-1 flex-col">
+                            <div class="flex items-center justify-between">
+                                <span
+                                    class="font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase dark:text-[#a1968a]"
+                                >
+                                    Workers
+                                </span>
+                                <span
+                                    class="font-mono text-[10px] text-muted-foreground dark:text-[#a1968a]"
+                                    >{{ TEAM_WORKERS.length }}</span
+                                >
+                            </div>
+                            <div
+                                class="mt-1.5 space-y-0.5"
+                                role="group"
+                                aria-label="Conversations with each worker"
+                                data-testid="worker-conversations"
+                            >
+                                <button
+                                    v-for="worker in TEAM_WORKERS"
+                                    :key="worker.slug"
+                                    :data-worker-row="worker.slug"
+                                    type="button"
+                                    class="flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-[3px] text-left transition-colors duration-150"
+                                    :class="
+                                        focusedWorkerSlug === worker.slug
+                                            ? 'bg-card text-foreground shadow-xs dark:bg-[#221b15] dark:text-[#f5f0eb]'
+                                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground dark:text-[#a1968a] dark:hover:bg-[#1f1914] dark:hover:text-[#f5f0eb]'
+                                    "
+                                    :title="`${worker.name} — ${workerStatus(worker.slug)}`"
+                                    :aria-pressed="
+                                        focusedWorkerSlug === worker.slug
+                                    "
+                                    :aria-label="`Talk to ${worker.name}. ${workerStatus(worker.slug)}. ${activeScenario.workerAssignments[worker.slug] ?? worker.role}`"
+                                    @click="focusWorkerFromSidebar(worker.slug)"
+                                    @mouseenter="focusWorker(worker.slug)"
+                                    @focus="focusWorker(worker.slug)"
+                                >
+                                    <span
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] leading-none"
+                                        aria-hidden="true"
+                                        >{{ worker.avatar }}</span
+                                    >
+                                    <span
+                                        class="min-w-0 flex-1 truncate text-[11px] font-medium"
+                                        >{{ worker.shortName }}</span
+                                    >
+                                    <span
+                                        class="h-1.5 w-1.5 shrink-0 rounded-full"
+                                        :class="workerRowDot(worker.slug)"
+                                        aria-hidden="true"
+                                    ></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex shrink-0 items-center gap-2 rounded-lg px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground dark:text-[#a1968a] dark:hover:text-[#f5f0eb]"
+                        >
+                            <span class="truncate">Review Queue</span>
+                            <span
+                                class="py-0.2 ml-auto rounded-full bg-amber-500/20 px-1.5 font-mono text-[9px] text-amber-800 dark:text-amber-300"
+                                >1</span
+                            >
+                        </div>
                     </div>
 
                     <div

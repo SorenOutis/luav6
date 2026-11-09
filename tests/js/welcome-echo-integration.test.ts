@@ -439,6 +439,35 @@ describe('Welcome page Echo AI integration', () => {
         wrapper.unmount();
     });
 
+    it('lists every worker as a conversation in the sidebar', async () => {
+        const wrapper = mount(HeroDemoWindow, {
+            props: { prefersReducedMotion: true },
+        });
+        const list = wrapper.get('[data-testid="worker-conversations"]');
+        const rows = list.findAll('[data-worker-row]');
+
+        expect(rows).toHaveLength(9);
+        expect(rows.map((row) => row.attributes('data-worker-row'))).toEqual([
+            'chief',
+            'registrar',
+            'curriculum-designer',
+            'assessment-officer',
+            'student-success-coach',
+            'communications-lead',
+            'operations-controller',
+            'data-steward',
+            'engagement-manager',
+        ]);
+        expect(rows[0].text()).toContain('Chief of Staff');
+
+        await rows[1].trigger('click');
+        expect(wrapper.get('[data-testid="worker-detail"]').text()).toContain(
+            'Registrar',
+        );
+
+        wrapper.unmount();
+    });
+
     it('lets visitors inspect a worker role using pointer and keyboard focus', async () => {
         const wrapper = mount(HeroDemoWindow, {
             props: { prefersReducedMotion: true },
@@ -683,16 +712,10 @@ describe('Welcome page Echo AI integration', () => {
         // Echo is thinking, and the history says so.
         expect(activeRow()).toContain('Echo is typing…');
 
-        // The closed conversations keep their own last line.
-        expect(rows[1].text()).toContain(
-            '21 of 28 learners opened a task today.',
-        );
-        expect(rows[2].text()).toContain(
-            '6 of 28 learners sit below 70% on quadratics.',
-        );
-        expect(rows[3].text()).toContain(
-            'Compiled 28 learners across your three sections.',
-        );
+        // Closed threads collapse to their title; only the open one keeps a line.
+        expect(rows[1].text()).toBe('Section Diamond · Roster');
+        expect(rows[2].text()).toBe('Grade 8 · Analytics');
+        expect(rows[3].text()).toBe('Grade 8 · Reports');
 
         // Once Maria is typing, the history follows her request live.
         await vi.advanceTimersByTimeAsync(2000);
