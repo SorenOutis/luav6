@@ -40,6 +40,12 @@ function fakeBatFile(): UploadedFile
     return UploadedFile::fake()->createWithContent('script.bat', "@echo off\r\necho Hello World\r\npause\r\n");
 }
 
+function fakeRarFile(): UploadedFile
+{
+    // RAR4 signature plus padding; enough for fileinfo to identify the archive.
+    return UploadedFile::fake()->createWithContent('archive.rar', "Rar!\x1a\x07\x00".str_repeat("\x00", 40));
+}
+
 it('accepts a zip file in addition to the usual documents', function () {
     Storage::fake('public');
 
@@ -57,6 +63,26 @@ it('accepts a zip file in addition to the usual documents', function () {
         ->value('file_path');
 
     expect($path)->toEndWith('.zip');
+    Storage::disk('public')->assertExists($path);
+});
+
+it('accepts a rar archive in addition to zips and documents', function () {
+    Storage::fake('public');
+
+    $assignment = makeZipAssignment($this->section);
+
+    $this->actingAs($this->student)
+        ->post(route('assignments.submit', $assignment), ['file' => fakeRarFile()])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $path = DB::table('assignment_user')
+        ->where('assignment_id', $assignment->id)
+        ->where('user_id', $this->student->id)
+        ->where('submitted', true)
+        ->value('file_path');
+
+    expect($path)->toEndWith('.rar');
     Storage::disk('public')->assertExists($path);
 });
 

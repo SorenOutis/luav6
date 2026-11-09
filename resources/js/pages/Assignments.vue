@@ -767,7 +767,7 @@ const selectedAssignment = computed(() => {
     );
 });
 
-// Formats every assignment accepts. Batch scripts go in as a .zip — raw .bat stays blocked.
+// Formats every assignment accepts. Batch scripts go in as a .zip or .rar — raw .bat stays blocked.
 const allowedUploadExtensions = [
     'pdf',
     'doc',
@@ -780,12 +780,13 @@ const allowedUploadExtensions = [
     'jpg',
     'jpeg',
     'zip',
+    'rar',
 ];
 const uploadAcceptAttribute = allowedUploadExtensions
     .map((ext) => `.${ext}`)
     .join(',');
 const uploadFormatsLabel =
-    'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), Images (jpg/png), or Zip files';
+    'PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), Images (jpg/png), or Zip/Rar archives';
 
 const form = useForm({
     file: null as File | null,
@@ -823,7 +824,7 @@ const validateAndSetFile = (file: File | null) => {
         return;
     }
 
-    // Allowed extensions: docx, pptx, excel (xls/xlsx), pdf, jpg, png + legacy, zip
+    // Allowed extensions: docx, pptx, excel (xls/xlsx), pdf, jpg, png + legacy, zip, rar
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (!allowedUploadExtensions.includes(ext)) {
         fileError.value = `Unsupported file format. Please upload ${uploadFormatsLabel}.`;
