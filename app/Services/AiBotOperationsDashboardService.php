@@ -9,11 +9,14 @@ use App\Models\AiBot;
 use App\Models\AiBotHandoff;
 use App\Models\AiBotPolicyRevision;
 use App\Models\AiBotRoutine;
+use App\Models\AiBotTeamMessage;
 use App\Models\AiUsageLog;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\PendingAiAction;
 use App\Models\Workspace;
+use App\Support\AiBotsGate;
+use App\Support\AiBotWatchers;
 use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
@@ -55,6 +58,8 @@ class AiBotOperationsDashboardService
     public const LIVE_SESSION_MINUTES = 15;
 
     public const APPROVAL_EXPIRY_WINDOW_HOURS = 24;
+
+    public const TEAM_ROOM_ITEMS = 30;
 
     public function __construct(
         private readonly WorkspaceContext $workspaceContext,
@@ -121,6 +126,7 @@ class AiBotOperationsDashboardService
             'sessions' => $this->sessionSection($workspaceId, $range['from'], $botMap),
             'usage' => $this->usageSection($botCards, $usageByBot),
             'health' => $this->healthWarnings($bots, $botCards, $workspaceId, $range['from']),
+            'team_room' => $this->teamRoom($workspaceId),
             'selected_bot' => $selectedBotId
                 ? $this->botDetail($selectedBotId, $botMap, $botCards, $range['from'])
                 : null,
@@ -549,6 +555,53 @@ class AiBotOperationsDashboardService
         return AiBotRoutine::query()
             ->withoutGlobalScope('workspace')
             ->when($workspaceId, fn (Builder $query): Builder => $query->where('workspace_id', $workspaceId));
+    }
+
+    /**
+     * The internal Bot Team Room: watcher reasoning the specialists posted
+     * while patrolling. Bot-authored only; never user messages or raw payload
+     * contents, so the read-only dashboard can render it safely.
+     */
+    private function teamRoom(?int $workspaceId): array
+    {
+        $items = AiBotTeamMessage::query()
+            ->withoutGlobalScope('workspace')
+            ->when($workspaceId, fn (Builder $query): Builder => $query->where('workspace_id', $workspaceId))
+            ->with(['bot:id,name,slug,avatar,kind', 'workspace:id,name'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(self::TEAM_ROOM_ITEMS)
+            ->get()
+            ->map(fn (AiBotTeamMessage $message): array => [
+                'id' => $message->id,
+                'bot' => $message->bot ? [
+                    'id' => $message->bot->id,
+                    'name' => $message->bot->name,
+                    'avatar' => $message->bot->avatar,
+                    'is_coordinator' => $message->bot->kind === AiBot::KIND_COORDINATOR,
+                ] : null,
+                'kind' => $message->kind,
+                'severity' => $message->severity,
+                'body' => $message->body,
+                'workspace_name' => $message->workspace?->name,
+                'posted_at' => $message->created_at,
+                'posted_at_label' => $message->created_at?->diffForHumans(),
+            ])
+            ->values()
+            ->all();
+
+        $todayCount = AiBotTeamMessage::query()
+            ->withoutGlobalScope('workspace')
+            ->when($workspaceId, fn (Builder $query): Builder => $query->where('workspace_id', $workspaceId))
+            ->where('created_at', '>=', now()->startOfDay())
+            ->count();
+
+        return [
+            'items' => $items,
+            'total_today' => $todayCount,
+            'watchers_enabled' => AiBotsGate::enabled() && AiBotWatchers::enabled(),
+            'watchers_alert_email' => AiBotWatchers::alertEmail(),
+        ];
     }
 
     /** @return Builder<PendingAiAction> */
